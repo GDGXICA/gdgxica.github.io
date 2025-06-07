@@ -73,7 +73,7 @@ Todos los comandos se ejecutan desde la raíz del proyecto, desde una terminal:
 
 #### Commits
 
-Si es posible describe tus proyectos para que los mantenedores los puedan analizar de una forma más rápida y eficiente.
+Si es posible describe tus commits para que los mantenedores los puedan analizar de una forma más rápida y eficiente.
 
 - `feat:` - Nuevas características
 - `fix:` - Correcciones de bugs
