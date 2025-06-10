@@ -34,5 +34,6 @@
     "*.{json,md,yml,css}": [
       "prettier --write"
     ]
-  }
+  },
+  "packageManager":"pnpm@10.11.0"
 }
