@@ -21,9 +21,12 @@ Consulta los términos completos en el archivo [LICENSE.md](LICENSE.md).
 - [TailwindCSS 4](https://tailwindcss.com)
 
 
-## Requerimientos
+## ⚠️ Requerimientos
+
+- Git
 - Node 22.15.0
 - PNPM 10.11.0
+
 
 ## 🔧 Instalación
 
