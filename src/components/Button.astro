@@ -1,0 +1,19 @@
+---
+const { href, target, variant } = Astro.props;
+const variantValues = {
+  solid: "bg-google-blue text-white border-google-blue",
+  outline: "bg-white text-primary border-gray-custom",
+  white: "bg-white text-primary border-white",
+} as const;
+
+type Variant = keyof typeof variantValues;
+---
+
+<a
+  target={target}
+  href={href}
+  rel={target === "_blank" ? "noopener noreferrer" : ""}
+  class=`inline-flex  gap-[10px] items-center font-medium justify-center px-8 py-[10px] border rounded-md ${variantValues[variant as Variant]}`
+>
+  <slot />
+</a>
