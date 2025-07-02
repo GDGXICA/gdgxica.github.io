@@ -1,0 +1,41 @@
+---
+import { Star } from "@lucide/astro";
+import { cn } from "@/utils/cn";
+
+const typeStyles = {
+  devfest: "bg-[#DBEAFE] text-[#1E40AF]",
+  io: "bg-[#FEE2E2] text-[#991B1B]",
+  studyjam: "bg-[#DCFCE7] text-[#166534]",
+  wtm: "bg-[#F3E8FF] text-[#6B21A8]",
+  meetup: "bg-[#FEF9C3] text-[#854D0E]",
+  hackaton: "bg-[#FCEBDC] text-[#D66A05]",
+  upcoming: "bg-[#DCFCE7] text-[#166534]",
+  "in-progress": "bg-[#DBEAFE] text-[#1E40AF]",
+  completed: "bg-[#F3F4F6] text-[#1F2937]",
+} as const;
+type Type = keyof typeof typeStyles;
+
+const { label, type, isHighLight } = Astro.props;
+---
+
+{
+  isHighLight ? (
+    <div
+      class={cn(
+        "inline-flex items-center justify-center gap-[2px] rounded-4xl bg-gradient-to-tr from-[#FACC15] to-[#CA8A04] px-[10px] py-[2px] text-xs font-semibold text-[#713F12]"
+      )}
+    >
+      <Star size={16} />
+      <span>{label}</span>
+    </div>
+  ) : (
+    <div
+      class={cn(
+        "inline-flex rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px] text-xs font-semibold text-[#1F2937]",
+        typeStyles[type as Type]
+      )}
+    >
+      <span>{label}</span>
+    </div>
+  )
+}
