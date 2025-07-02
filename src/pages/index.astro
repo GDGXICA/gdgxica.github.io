@@ -1,13 +1,181 @@
 ---
-import Welcome from "@/components/Welcome.astro";
-import Header from "@/components/Header.astro";
-import Footer from "@/components/Footer.astro";
 import Layout from "@/layouts/Layout.astro";
+import CallToActionSection from "@/components/CallToActionSection.astro";
+import Button from "@/components/Button.astro";
+import {
+  Users,
+  ArrowRight,
+  UsersRound,
+  Lightbulb,
+  HeartHandshake,
+  Sprout,
+} from "@lucide/astro";
+import Marquee from "@/components/Marquee.astro";
+import Stats from "@/components/Stats.astro";
+import FeatureCard from "@/components/FeatureCard.astro";
+import EventCard from "@/components/EventCard.astro";
+
+const data = {
+  carouselImages: [
+    {
+      url: "https://i.imgur.com/F9VrDiT.jpeg",
+      alt: "",
+    },
+    {
+      url: "https://i.imgur.com/bvA2dbV.png",
+      alt: "",
+    },
+    {
+      url: "https://i.imgur.com/ZOKty3W.jpeg",
+      alt: "",
+    },
+  ],
+  stats: [
+    {
+      value: "1000+",
+      text: "Miembros activos",
+      color: "text-google-blue",
+    },
+    {
+      value: "50+",
+      text: "Eventos",
+      color: "text-google-red",
+    },
+    {
+      value: "25+",
+      text: "Expertos speakers",
+      color: "text-google-yellow",
+    },
+    {
+      value: "10+",
+      text: "Años activos",
+      color: "text-google-green",
+    },
+  ],
+};
 ---
 
 <Layout>
-  <h1 class="text-4xl text-blue-600">TITULO</h1>
-  <Header />
-  <Welcome />
-  <Footer />
+  <section class="py-10">
+    <div class="container">
+      <div class="flex flex-col-reverse items-center gap-10 md:flex-row">
+        <div class="md:basis-1/2">
+          <h2 class="text-primary mb-6 text-[2rem] font-bold lg:text-6xl">
+            <span class="text-google-blue">Conecta. </span><span
+              class="text-google-red"
+              >Aprende.
+            </span><span class="text-google-yellow">Construye. </span>
+            <span class="text-google-green">Crece</span> con el GDG ICA
+          </h2>
+          <p class="text-secondary mb-10 text-xl font-medium">
+            Somos una comunidad de jóvenes apasionados por la tecnología en ICA.
+            Únete a nuestros eventos, comparte conocimiento y lleva tus
+            habilidades al siguiente nivel.
+          </p>
+          <div class="flex flex-col gap-4 lg:flex-row">
+            <Button variant="solid" href="/" target="_blank">
+              Unete a GDG hoy
+              <ArrowRight stroke-width={1.5} />
+            </Button>
+            <Button variant="outline" href="/eventos"> Ver eventos </Button>
+          </div>
+        </div>
+        <div class="md:basis-1/2">
+          <Marquee images={data.carouselImages} />
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="bg-section py-16">
+    <div class="container">
+      <Stats stats={data.stats} />
+    </div>
+  </section>
+  <section class="py-10 md:py-20">
+    <div class="container">
+      <div class="mx-auto mb-16 max-w-[500px] text-center">
+        <h2 class="text-primary mb-4 text-4xl font-bold">
+          ¿Por qué unirte al GDG ICA?
+        </h2>
+        <p class="text-secondary text-xl">
+          Descubra los beneficios de ser parte de nuestra vibrante comunidad de
+          desarrolladores
+        </p>
+      </div>
+      <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <FeatureCard className="border-t-google-blue border-t-4">
+          <UsersRound
+            stroke-width={1.5}
+            size={48}
+            class="text-google-blue mb-4"
+          />
+          <p class="text-primary mb-4 text-2xl font-bold">Conectar</p>
+          <p class="text-secondary text-sm">
+            Hacer networking con profesionales, estudiantes y otros apasionados
+            por la tecnología de Ica y alrededores.
+          </p>
+        </FeatureCard>
+        <FeatureCard className="border-t-google-red border-t-4">
+          <Lightbulb
+            stroke-width={1.5}
+            size={48}
+            class="text-google-red mb-4"
+          />
+          <p class="text-primary mb-4 text-2xl font-bold">Aprender</p>
+          <p class="text-secondary text-sm">
+            Participar en charlas técnicas, workshops y study jams sobre
+            Android, Google Cloud, Web, AI/ML, Firebase, Flutter y mucho más.
+          </p>
+        </FeatureCard>
+        <FeatureCard className="border-t-google-yellow border-t-4">
+          <HeartHandshake
+            stroke-width={1.5}
+            size={48}
+            class="text-google-yellow mb-4"
+          />
+          <p class="text-primary mb-4 text-2xl font-bold">Compartir</p>
+          <p class="text-secondary text-sm">
+            Presentar tus propios proyectos, compartir tus conocimientos y
+            convertirte en un referente para otros.
+          </p>
+        </FeatureCard>
+        <FeatureCard className="border-t-google-green border-t-4">
+          <Sprout stroke-width={1.5} size={48} class="text-google-green mb-4" />
+          <p class="text-primary mb-4 text-2xl font-bold">Crecer</p>
+          <p class="text-secondary text-sm">
+            Desarrollar tus habilidades técnicas y blandas, y dar un impulso a
+            tu trayectoria profesional con el apoyo de una red activa.
+          </p>
+        </FeatureCard>
+      </div>
+    </div>
+  </section>
+  <section class="bg-section py-10 md:py-20">
+    <div class="container">
+      <div class="mx-auto mb-16 max-w-[540px] text-center">
+        <h2 class="text-primary mb-4 text-4xl font-bold">Próximos eventos</h2>
+        <p class="text-secondary text-xl">
+          No te pierdas nuestros emocionantes próximos eventos
+        </p>
+      </div>
+      <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3">
+        <EventCard />
+        <EventCard />
+        <EventCard />
+      </div>
+    </div>
+  </section>
+  <CallToActionSection>
+    <h2 class="mb-6 text-4xl font-bold text-white">
+      ¿Listo para unirte a nuestra comunidad?
+    </h2>
+    <p class="mb-8 text-xl text-white">
+      Conéctese con desarrolladores, aprenda nuevas tecnologías y construyan
+      proyectos increíbles juntos.
+    </p>
+    <Button variant="white" href="/" target="_blank">
+      <Users />
+      Unete a GDG hoy
+    </Button>
+  </CallToActionSection>
 </Layout>
