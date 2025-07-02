@@ -1,0 +1,21 @@
+---
+interface Stats {
+  value: string;
+  text: string;
+  color: string;
+}
+const { stats } = Astro.props;
+---
+
+<div
+  class="grid grid-cols-2 place-items-center gap-10 md:flex md:justify-between"
+>
+  {
+    stats.map((stat: Stats) => (
+      <div>
+        <p class={`text-[2rem] font-bold ${stat.color}`}>{stat.value}</p>
+        <p class="text-secondary">{stat.text}</p>
+      </div>
+    ))
+  }
+</div>
