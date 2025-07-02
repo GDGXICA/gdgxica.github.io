@@ -1,0 +1,41 @@
+---
+import { Coffee } from "@lucide/astro";
+const { type } = Astro.props;
+---
+
+{
+  type === "break" ? (
+    <article class="flex items-center justify-center gap-5 p-4">
+      <hr class="text-gray-custom grow" />
+      <div class="flex flex-col items-center justify-center">
+        <h3 class="text-primary flex items-center gap-2 text-sm font-medium">
+          <Coffee size={16} color="#111827" /> Fotos + Networking
+        </h3>
+        <p class="text-primary text-sm font-medium">01:15 PM - 02:00 PM</p>
+      </div>
+      <hr class="text-gray-custom grow" />
+    </article>
+  ) : (
+    <article class="bg-section border-gray-custom rounded-md border p-4 md:flex md:items-center md:justify-between">
+      <p class="text-google-blue mb-4 text-sm font-medium md:mb-0">
+        08:00 AM - 09:00 AM
+      </p>
+      <h3 class="text-primary mb-4 text-base font-semibold md:mb-0 md:basis-1/2">
+        GCP para Universitarios - ¡Desbloquea el poder de los datos! Parte I
+      </h3>
+      <div class="flex gap-4">
+        <img
+          src="/placeholder.svg"
+          alt="foto de Fiorella Arias"
+          height={48}
+          width={48}
+          class="rounded-md"
+        />
+        <div class="flex flex-col gap-[6px]">
+          <p class="text-secondary text-sm">Fiorella Arias</p>
+          <p class="text-google-blue text-sm">Organizadora</p>
+        </div>
+      </div>
+    </article>
+  )
+}
