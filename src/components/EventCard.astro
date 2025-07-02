@@ -1,0 +1,138 @@
+---
+import { Calendar, Clock, MapPin, Globe, Users, Ticket } from "@lucide/astro";
+import Button from "./Button.astro";
+import Tag from "./Tag.astro";
+const { isHorizontal } = Astro.props;
+---
+
+{
+  isHorizontal ? (
+    <article class="border-gray-custom relative rounded-lg border shadow-sm md:flex">
+      <div class="md:basis-1/2">
+        <img
+          src="/placeholder.svg"
+          class="h- aspect-video h-full w-full rounded-t-lg object-cover md:rounded-none md:rounded-tl-lg md:rounded-bl-lg"
+          width={385}
+          height={192}
+          alt="text alt"
+        />
+      </div>
+      <div class="basis-1/2 bg-white">
+        <div class="p-6">
+          <div class="mb-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <Tag label="DevFest" type="devfest" />
+              <Tag label="Próximo" type="upcoming" />
+            </div>
+            <Tag label="Destacado" type="devfest" isHighLight={true} />
+          </div>
+          <p class="text-primary mb-1 text-2xl font-bold">Nombre del evento</p>
+          <p class="text-secondary mb-6">Descripción del evento</p>
+          <ul class="text-secondary mb-4 flex flex-col gap-3">
+            <li class="flex items-center gap-3">
+              <Calendar stroke-width={1.5} size={16} color="#2463EB" />
+              sábado, 14 de diciembre de 2025
+            </li>
+            <li class="flex items-center gap-3">
+              <Clock stroke-width={1.5} size={16} color="#EF4444" />
+              09:00 AM - 06:00 PM
+            </li>
+            <li class="flex items-center gap-3">
+              <MapPin stroke-width={1.5} size={16} color="#16A34A" />
+              Zegel - Sede Ica, Av Cutervo cutervo
+            </li>
+            <li class="flex items-center gap-3">
+              <Globe stroke-width={1.5} size={16} color="#16A34A" />
+              Virtual
+            </li>
+            <li class="flex items-center gap-3">
+              <Users stroke-width={1.5} size={16} color="#EBB308" />
+              387/500 registrados
+            </li>
+          </ul>
+          <ul class="mb-4 flex flex-wrap gap-1">
+            <li>
+              <Tag label="Cloud" />
+            </li>
+            <li>
+              <Tag label="Android" />
+            </li>
+          </ul>
+          <div class="mb-4">
+            <p class="text-secondary">Speakers:</p>
+            <p class="text-primary">Elena Vásquez, Carlos Mendoza</p>
+          </div>
+
+          <p class="grid">
+            <Button variant="solid" href="/eventos/devfest-2025">
+              <Ticket stroke-width={1.5} />
+              Ver Detalles
+            </Button>
+          </p>
+        </div>
+      </div>
+    </article>
+  ) : (
+    <article class="border-gray-custom relative rounded-lg border shadow-sm">
+      <img
+        src="/placeholder.svg"
+        class="aspect-video h-[192px] w-full rounded-t-lg object-cover"
+        width={385}
+        height={192}
+        alt="text alt"
+      />
+      <div class="absolute top-4 left-6">
+        <Tag label="DevFest" type="devfest" />
+        <Tag label="Próximo" type="upcoming" />
+      </div>
+      <div class="absolute top-4 right-6">
+        <Tag label="Destacado" type="devfest" isHighLight={true} />
+      </div>
+      <div class="p-6">
+        <p class="text-primary mb-1 text-2xl font-bold">Nombre del evento</p>
+        <p class="text-secondary mb-6">Descripción del evento</p>
+        <ul class="text-secondary mb-4 flex flex-col gap-3">
+          <li class="flex items-center gap-3">
+            <Calendar stroke-width={1.5} size={16} color="#2463EB" />
+            sábado, 14 de diciembre de 2025
+          </li>
+          <li class="flex items-center gap-3">
+            <Clock stroke-width={1.5} size={16} color="#EF4444" />
+            09:00 AM - 06:00 PM
+          </li>
+          <li class="flex items-center gap-3">
+            <MapPin stroke-width={1.5} size={16} color="#16A34A" />
+            Zegel - Sede Ica, Av Cutervo cutervo
+          </li>
+          <li class="flex items-center gap-3">
+            <Globe stroke-width={1.5} size={16} color="#16A34A" />
+            Virtual
+          </li>
+          <li class="flex items-center gap-3">
+            <Users stroke-width={1.5} size={16} color="#EBB308" />
+            387/500 registrados
+          </li>
+        </ul>
+        <ul class="mb-4 flex flex-wrap gap-1">
+          <li>
+            <Tag label="Cloud" />
+          </li>
+          <li>
+            <Tag label="Android" />
+          </li>
+        </ul>
+        <div class="mb-4">
+          <p class="text-secondary">Speakers:</p>
+          <p class="text-primary">Elena Vásquez, Carlos Mendoza</p>
+        </div>
+
+        <p class="grid">
+          <Button variant="solid" href="/evento/devfest-2025">
+            <Ticket stroke-width={1.5} />
+            Ver Detalles
+          </Button>
+        </p>
+      </div>
+    </article>
+  )
+}
