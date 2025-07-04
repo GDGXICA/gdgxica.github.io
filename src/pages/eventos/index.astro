@@ -6,6 +6,9 @@ import HeroPage from "@/components/HeroPage.astro";
 import Stats from "@/components/Stats.astro";
 import Layout from "@/layouts/Layout.astro";
 import { Calendar } from "@lucide/astro";
+import { getCollection } from "astro:content";
+const allEvents = await getCollection("events");
+const highLightEvent = allEvents.find((event) => event.data.isHighlight);
 
 const data = {
   stats: [
@@ -55,7 +58,11 @@ const data = {
       <p class="mt-[65px] mb-8 text-2xl font-bold">Próximo Evento Destacado</p>
     </div>
     <div class="mx-auto max-w-[1152px]">
-      <EventCard isHorizontal={true} />
+      <EventCard
+        isHorizontal={true}
+        slug={highLightEvent?.id}
+        {...highLightEvent?.data}
+      />
     </div>
   </HeroPage>
   <section class="py-20">
