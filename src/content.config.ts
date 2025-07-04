@@ -71,6 +71,7 @@ const events = defineCollection({
       z.object({
         id: z.number(),
         image: z.string(),
+        alt: z.string(),
       })
     ),
   }),
