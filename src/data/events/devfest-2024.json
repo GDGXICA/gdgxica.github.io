@@ -1,0 +1,231 @@
+{
+  "name": "DevFest 2024",
+  "image": "/events/devfest-2024.webp",
+  "shortDescription": " Disfruta de charlas inspiradoras y aprendizaje de vanguardia",
+  "date": "sábado, 23 de noviembre de 2024",
+  "time": "09:00 AM - 06:00 PM",
+  "location": {
+    "name": "Universidad Continental, campus Ica",
+    "direction": "Universidad Continental, 95 Calle A Ica, Ica 11004",
+    "googleMapEmbed": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3870.458597317126!2d-75.75041310000002!3d-14.0500755!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x9110e2d222156cc9%3A0x4cba745cedd6457f!2sUniversidad%20Continental%2C%20campus%20Ica!5e0!3m2!1ses!2spe!4v1751565024675!5m2!1ses!2spe",
+    "googleMapLink": "https://maps.app.goo.gl/rzTBgMfbCZwjmssm9"
+  },
+  "isVirtual": false,
+  "participants": 387,
+  "maxParticipants": 500,
+  "category": {
+    "label": "DevFest",
+    "type": "devfest"
+  },
+  "status": {
+    "label": "Finalizado",
+    "type": "completed"
+  },
+  "isHighlight": false,
+  "tags": ["cloud", "Machine Learning", "Android"],
+  "speakerNames": [],
+  "largeDescription": "¡DEVFEST ICA llega el 23 de noviembre! sumérgete en el mundo de la tecnología. Disfruta de charlas inspiradoras y aprendizaje de vanguardia",
+  "registerFormLink": "/",
+  "requirements": ["requisitos 01", "requisitos 02"],
+  "include": ["Coffe breaks", "Swag oficial de Google y GitHub"],
+  "technologies": ["Github", "IA", "Web", "Android", "Flutter", "GCP", "Cloud"],
+  "schedule": [
+    {
+      "id": 1,
+      "time": "08:30 AM - 09:30 AM",
+      "title": "Registro de asistentes",
+      "name": "Fiorella Ariás",
+      "image": "/team/fiorella-arias.webp",
+      "role": "GDG Ica",
+      "type": "event"
+    },
+    {
+      "id": 2,
+      "time": "09:30 AM - 09:40 AM",
+      "title": "Inauguración DevFest Ica",
+      "name": "Eduardo Ormeño",
+      "image": "/team/eduardo-ormeno.jpeg",
+      "role": "GDG Ica",
+      "type": "event"
+    },
+    {
+      "id": 3,
+      "time": "09:40 AM - 09:45 AM",
+      "title": "Bienvenida - Cámara de Comercio",
+      "name": "Eduardo Ojeda",
+      "image": "",
+      "role": "Presidente de la Cámara de Comercio Ica",
+      "type": "event"
+    },
+    {
+      "id": 4,
+      "time": "09:45 AM - 10:15 AM",
+      "title": "Las soft skills que todo ingeniero de software necesita.",
+      "name": "Luis Landa",
+      "image": "",
+      "role": "Agile Coach @NTTDATA",
+      "type": "event"
+    },
+    {
+      "id": 5,
+      "time": "10:15 AM - 10:45 AM",
+      "title": "404: Impuestos no Encontrados - Evita Errores Fiscales con SUNAT",
+      "name": "Jimy Dolores",
+      "image": "",
+      "role": "Frontend Lead @NTTDATA",
+      "type": "event"
+    },
+    {
+      "id": 6,
+      "time": "10:45 AM - 11:10 AM",
+      "title": "Desarrollo web colaborativo en la nube con GitHub Codespaces y Copilot.",
+      "name": "Eduardo Ormeño",
+      "image": "",
+      "role": "GitHub Campus Expert",
+      "type": "event"
+    },
+    {
+      "id": 7,
+      "time": "11:15 AM - 11:40 AM",
+      "title": "Transformando la Educación con Realidad Virtual e IA",
+      "name": "Miguel Córdova",
+      "image": "",
+      "role": "Director de Tecnología Digitales U.C",
+      "type": "event"
+    },
+    {
+      "id": 8,
+      "time": "11:45 AM - 12:10 AM",
+      "title": "IA en la web: Cómo integrar inteligencia artificial en tus aplicaciones web",
+      "name": "Damián Siré",
+      "image": "",
+      "role": "GDE Uruguay",
+      "type": "event"
+    },
+    {
+      "id": 9,
+      "time": "12:15 AM - 12:40 AM",
+      "title": "¿Cómo iniciar en el desarrollo móvil en el 2024?",
+      "name": "Bruno Aybar",
+      "image": "",
+      "role": "Android Dev Perú",
+      "type": "event"
+    },
+    {
+      "id": 10,
+      "time": "12:45 AM - 01:40 PM",
+      "title": "Los skills que no aparecen en listados que necesitas para no fracasar como dev",
+      "name": "Noe Branagan",
+      "image": "",
+      "role": "Engineering Leader @Nubank",
+      "type": "event"
+    },
+    {
+      "id": 11,
+      "time": "01:15 AM - 03:00 PM",
+      "title": "Break + Networking",
+      "name": "",
+      "image": "",
+      "role": "",
+      "type": "break"
+    },
+    {
+      "id": 10,
+      "time": "03:00 PM - 03:25 PM",
+      "title": "¡Despierta tu creatividad! Crea tu primera app increíble con Flutter",
+      "name": "Hansy Smitch",
+      "image": "",
+      "role": "Flutter Perú",
+      "type": "event"
+    },
+    {
+      "id": 10,
+      "time": "03:00 PM - 03:25 PM",
+      "title": "El perfecto candidato: ¿La IA o yo?",
+      "name": "Isabel Cordova",
+      "image": "",
+      "role": "Globant Ecuador",
+      "type": "event"
+    },
+    {
+      "id": 10,
+      "time": "04:00 PM - 04:25 PM",
+      "title": "Creación de aplicaciones de Android con agentes de Inteligencia Artificial",
+      "name": "Santiago Carrillo",
+      "image": "",
+      "role": "GDE Colombia",
+      "type": "event"
+    },
+    {
+      "id": 10,
+      "time": "04:30 PM - 04:55 PM",
+      "title": "El futuro del trabajo en IT: De lo técnico a lo humano",
+      "name": "Joel Ibaceta",
+      "image": "",
+      "role": "CTO @Kwema",
+      "type": "event"
+    },
+    {
+      "id": 10,
+      "time": "05:30 PM - 05:55 PM",
+      "title": "Usando Servicios de Google para crear videojuegos de éxito",
+      "name": "Rafael Gonzales",
+      "image": "",
+      "role": "Gerente Netdreams",
+      "type": "event"
+    },
+    {
+      "id": 10,
+      "time": "06:00 PM - 06:25 PM",
+      "title": "¡Vamos a divertirnos jugando con IA en tu app de Angular usando Gemini!",
+      "name": "Will Mendes",
+      "image": "",
+      "role": "GDE Brasil",
+      "type": "event"
+    },
+    {
+      "id": 9,
+      "time": "06:00 PM - 06:25 PM",
+      "title": "Cierre del evento",
+      "name": "Eduardo Ormeño",
+      "image": "/team/eduardo-ormeno.jpeg",
+      "role": "GDG Ica",
+      "type": "event"
+    },
+    {
+      "id": 10,
+      "time": "06:25 PM - 07:00 PM",
+      "title": "Break + Networking",
+      "name": "",
+      "image": "",
+      "role": "",
+      "type": "break"
+    }
+  ],
+  "speakers": [
+    {
+      "id": 1,
+      "image": "",
+      "name": "Bruno Aybar Guerrero",
+      "role": "Senior Software Engineer at Shopify",
+      "description": "Arquitecto de soluciones cloud con Google Cloud Platform (GCP)",
+      "linkedin": "link",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    }
+  ],
+  "sponsors": [
+    {
+      "id": 1,
+      "image": "/sponsors/google.png",
+      "alt": "Google"
+    },
+    {
+      "id": 2,
+      "image": "/sponsors/github.svg",
+      "alt": "Github"
+    }
+  ]
+}
