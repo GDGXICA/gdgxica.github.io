@@ -76,9 +76,11 @@ const data = {
       <div
         class="grid-col-1 sm:grid-col-2 md:grid-col-2 mt-12 grid gap-8 lg:grid-cols-3"
       >
-        <!-- <EventCard />
-        <EventCard />
-        <EventCard /> -->
+        {
+          allEvents.map((event) => (
+            <EventCard slug={event.id} {...event.data} />
+          ))
+        }
       </div>
     </div>
   </section>
