@@ -1,37 +1,58 @@
 ---
 import { Globe, Twitter, Linkedin, Github, Youtube } from "@lucide/astro";
+const {
+  image,
+  name,
+  role,
+  description,
+  linkedin,
+  web,
+  youtube,
+  twitter,
+  github,
+} = Astro.props;
 ---
 
 <article class="flex flex-col items-start gap-5 sm:flex-row md:flex-row">
   <img
-    src="https://i.imgur.com/MVTHX64.png"
+    src={image || "/placeholder.svg"}
     width={120}
     height={120}
-    alt="Foto del speaker x"
+    alt={`Foto del speaker ${name}`}
     class="rounded-md"
   />
   <div>
-    <h3 class="text-primary font-bold">Tony Trujillo</h3>
-    <p class="text-google-blue mb-2 text-sm">Data Architect</p>
+    <h3 class="text-primary font-bold">{name}</h3>
+    <p class="text-google-blue mb-2 text-sm">{role}</p>
     <ul class="mb-2 flex gap-2">
       <li>
-        <a href="/" target="_blank"><Linkedin size={16} color="#71717a" /></a>
+        <a href={linkedin} target="_blank" rel="noopener noreferrer"
+          ><Linkedin size={16} color="#71717a" /></a
+        >
       </li>
       <li>
-        <a href="/" target="_blank"><Twitter size={16} color="#71717a" /></a>
+        <a href={twitter} target="_blank" rel="noopener noreferrer"
+          ><Twitter size={16} color="#71717a" /></a
+        >
       </li>
       <li>
-        <a href="/" target="_blank"><Github size={16} color="#71717a" /></a>
+        <a href={github} target="_blank" rel="noopener noreferrer"
+          ><Github size={16} color="#71717a" /></a
+        >
       </li>
       <li>
-        <a href="/" target="_blank"><Youtube size={16} color="#71717a" /></a>
+        <a href={youtube} target="_blank" rel="noopener noreferrer"
+          ><Youtube size={16} color="#71717a" /></a
+        >
       </li>
       <li>
-        <a href="/" target="_blank"><Globe size={16} color="#71717a" /></a>
+        <a href={web} target="_blank" rel="noopener noreferrer"
+          ><Globe size={16} color="#71717a" /></a
+        >
       </li>
     </ul>
     <p class="text-secondary">
-      Arquitecto de soluciones cloud con expertise en Google Cloud Platform
+      {description}
     </p>
   </div>
 </article>
