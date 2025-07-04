@@ -1,0 +1,58 @@
+---
+import { Globe, Twitter, Linkedin, Github, Youtube } from "@lucide/astro";
+const {
+  image,
+  name,
+  role,
+  description,
+  linkedin,
+  web,
+  youtube,
+  twitter,
+  github,
+} = Astro.props;
+---
+
+<article class="flex flex-col items-start gap-5 sm:flex-row md:flex-row">
+  <img
+    src={image || "/placeholder.svg"}
+    width={120}
+    height={120}
+    alt={`Foto del speaker ${name}`}
+    class="rounded-md"
+  />
+  <div>
+    <h3 class="text-primary font-bold">{name}</h3>
+    <p class="text-google-blue mb-2 text-sm">{role}</p>
+    <ul class="mb-2 flex gap-2">
+      <li>
+        <a href={linkedin} target="_blank" rel="noopener noreferrer"
+          ><Linkedin size={16} color="#71717a" /></a
+        >
+      </li>
+      <li>
+        <a href={twitter} target="_blank" rel="noopener noreferrer"
+          ><Twitter size={16} color="#71717a" /></a
+        >
+      </li>
+      <li>
+        <a href={github} target="_blank" rel="noopener noreferrer"
+          ><Github size={16} color="#71717a" /></a
+        >
+      </li>
+      <li>
+        <a href={youtube} target="_blank" rel="noopener noreferrer"
+          ><Youtube size={16} color="#71717a" /></a
+        >
+      </li>
+      <li>
+        <a href={web} target="_blank" rel="noopener noreferrer"
+          ><Globe size={16} color="#71717a" /></a
+        >
+      </li>
+    </ul>
+    <p class="text-secondary">
+      {description}
+    </p>
+  </div>
+</article>

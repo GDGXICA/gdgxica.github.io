@@ -1,0 +1,109 @@
+---
+interface image {
+  url: string;
+  alt: string;
+}
+const { images } = Astro.props;
+---
+
+<style>
+  .marquee-root {
+    --size: clamp(10rem, 1rem + 40vmin, 30rem);
+    --gap: calc(var(--size) / 14);
+    --duration: 60s;
+    --scroll-start: 0;
+    --scroll-end: calc(-100% - var(--gap));
+    --mask-direction: to bottom;
+    display: flex;
+    flex-direction: row;
+    height: 50vh;
+    gap: var(--gap);
+  }
+
+  .marquee {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+    gap: var(--gap);
+    mask-image: linear-gradient(
+      var(--mask-direction, to right),
+      hsl(0 0% 0% / 0),
+      hsl(0 0% 0% / 1) 20%,
+      hsl(0 0% 0% / 1) 80%,
+      hsl(0 0% 0% / 0)
+    );
+  }
+
+  .marquee__group {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+    gap: var(--gap);
+    min-width: 100%;
+    animation: scroll-y var(--duration) linear infinite forwards;
+  }
+
+  .marquee--reverse .marquee__group {
+    animation-direction: reverse;
+    animation-delay: -3s;
+  }
+
+  .marquee img {
+    border-radius: 0.5rem;
+    aspect-ratio: 1;
+    object-fit: cover;
+    /* width: calc(var(--size) / 1.5); */
+  }
+
+  @keyframes scroll-y {
+    from {
+      transform: translateY(var(--scroll-start));
+    }
+    to {
+      transform: translateY(var(--scroll-end));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marquee__group {
+      animation-play-state: paused;
+    }
+  }
+
+  @media (width>=992px) {
+    .marquee-root {
+      height: 100vh;
+    }
+  }
+</style>
+
+<article class="marquee-root">
+  <div class="marquee">
+    <div class="marquee__group">
+      {images.map((image: image) => <img src={image.url} alt={image.alt} />)}
+    </div>
+    <div aria-hidden="true" class="marquee__group">
+      {images.map((image: image) => <img src={image.url} alt={image.alt} />)}
+    </div>
+  </div>
+
+  <div class="marquee marquee--reverse">
+    <div class="marquee__group">
+      {
+        images
+          .reverse()
+          .map((image: image) => <img src={image.url} alt={image.alt} />)
+      }
+    </div>
+    <div aria-hidden="true" class="marquee__group">
+      {
+        images
+          .reverse()
+          .map((image: image) => <img src={image.url} alt={image.alt} />)
+      }
+    </div>
+  </div>
+</article>

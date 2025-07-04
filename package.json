@@ -12,8 +12,12 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@fontsource-variable/geist": "^5.2.6",
+    "@lucide/astro": "^0.525.0",
     "@tailwindcss/vite": "^4.1.8",
-    "astro": "^5.9.0",
+    "astro": "^5.10.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.8"
   },
   "devDependencies": {
@@ -24,7 +28,8 @@
     "lint-staged": "^16.1.0",
     "prettier": "^3.5.3",
     "prettier-plugin-astro": "^0.14.1",
-    "prettier-plugin-tailwindcss": "^0.6.12"
+    "prettier-plugin-tailwindcss": "^0.6.12",
+    "typescript-eslint": "^8.35.1"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,astro}": [
@@ -35,7 +40,7 @@
       "prettier --write"
     ]
   },
-  "packageManager":"pnpm@10.11.0",
+  "packageManager": "pnpm@10.11.0",
   "engines": {
     "node": "22.15.0"
   }

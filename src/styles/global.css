@@ -1,1 +1,27 @@
 @import "tailwindcss";
+@import "@fontsource-variable/geist";
+
+@theme {
+  --font-geist: "Geist Variable", sans-serif;
+  /* brand colors */
+  --color-google-blue: #2463eb;
+  --color-google-red: #ef4444;
+  --color-google-yellow: #ebb308;
+  --color-google-green: #16a34a;
+  /* text colors */
+  --color-primary: #111827;
+  --color-secondary: #4b5563;
+  --color-tertiary: #71717a;
+  /* border color */
+  --color-gray-custom: #e4e4e7;
+  /* surface colors */
+  --color-section: #f9fafb;
+}
+
+body {
+  font-family: "Geist Variable", sans-serif;
+}
+
+.container {
+  @apply mx-auto max-w-[1400px] px-4;
+}

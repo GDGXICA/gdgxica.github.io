@@ -1,0 +1,39 @@
+---
+import { Coffee } from "@lucide/astro";
+const { time, title, name, image, role, type } = Astro.props;
+---
+
+{
+  type === "break" ? (
+    <article class="flex items-center justify-center gap-5 p-4">
+      <hr class="text-gray-custom grow" />
+      <div class="flex flex-col items-center justify-center">
+        <h3 class="text-primary flex items-center gap-2 text-sm font-medium">
+          <Coffee size={16} color="#111827" /> {title}
+        </h3>
+        <p class="text-primary text-sm font-medium">{time}</p>
+      </div>
+      <hr class="text-gray-custom grow" />
+    </article>
+  ) : (
+    <article class="bg-section border-gray-custom rounded-md border p-4 md:flex md:items-center md:justify-between">
+      <p class="text-google-blue mb-4 text-sm font-medium md:mb-0">{time}</p>
+      <h3 class="text-primary mb-4 text-base font-semibold md:mb-0 md:basis-1/2">
+        {title}
+      </h3>
+      <div class="flex gap-4 md:basis-[30%]">
+        <img
+          src={image || "/placeholder.svg"}
+          alt={`Foto de ${name}`}
+          height={48}
+          width={48}
+          class="aspect-square h-12 w-12 rounded-md"
+        />
+        <div class="flex flex-col gap-[6px]">
+          <p class="text-secondary text-sm">{name}</p>
+          <p class="text-google-blue text-sm">{role}</p>
+        </div>
+      </div>
+    </article>
+  )
+}

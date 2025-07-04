@@ -1,7 +1,131 @@
 ---
 const year = new Date().getFullYear();
+const data = {
+  logo: "/logo.png",
+  description:
+    "Construir una comunidad de desarrolladores más fuerte a través de la colaboración y el aprendizaje.",
+  items: [
+    {
+      id: 1,
+      title: "Comunidad",
+      links: [
+        {
+          id: 1,
+          text: "Nosotros",
+          url: "/",
+          target: "_self",
+        },
+        {
+          id: 2,
+          text: "Equipo",
+          url: "/",
+          target: "_self",
+        },
+        {
+          id: 3,
+          text: "Voluntarios",
+          url: "/",
+          target: "_self",
+        },
+        {
+          id: 4,
+          text: "Patrocinadores",
+          url: "/",
+          target: "_self",
+        },
+      ],
+    },
+    {
+      id: 2,
+      title: "Eventos",
+      links: [
+        {
+          id: 1,
+          text: "Próximos",
+          url: "/",
+          target: "_self",
+        },
+        {
+          id: 2,
+          text: "Eventos pasados",
+          url: "/",
+          target: "_self",
+        },
+        {
+          id: 3,
+          text: "Speakers",
+          url: "/",
+          target: "_self",
+        },
+      ],
+    },
+    {
+      id: 3,
+      title: "Conectar",
+      links: [
+        {
+          id: 1,
+          text: "Linkedin",
+          url: "/",
+          target: "_blank",
+        },
+        {
+          id: 2,
+          text: "Facebook",
+          url: "/",
+          target: "_blank",
+        },
+        {
+          id: 3,
+          text: "Instagram",
+          url: "/",
+          target: "_blank",
+        },
+      ],
+    },
+  ],
+  copyright: `©${year} Google Developer Groups ICA. All rights reserved.`,
+};
 ---
 
-<footer>
-  <p>&copy; {year} GDG ICA. All rights reserved.</p>
+<footer class="bg-primary py-12">
+  <div class="mx-auto max-w-[1400px] px-4">
+    <div class="flex flex-col gap-8 md:flex-row">
+      <div class="basis-1/4">
+        <div class="mb-4 flex items-center gap-3">
+          <img
+            src="/gdg-logo.png"
+            alt="Logo del GDG ICA"
+            height={32}
+            width={32}
+            class="rounded-sm"
+          />
+          <p class="text-lg font-bold text-white">GDG ICA</p>
+        </div>
+        <p class="text-[#9CA3AF]">{data.description}</p>
+      </div>
+      {
+        data.items.map((item) => (
+          <div class="grow">
+            <p class="mb-4 text-base font-bold text-white">{item.title}</p>
+            <ul class="flex flex-col gap-2">
+              {item.links.map((link) => (
+                <li>
+                  <a
+                    class="text-[#9CA3AF]"
+                    href={link.url}
+                    aria-label={`Enlace a ${link.text}`}
+                  >
+                    {link.text}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </div>
+    <hr class="my-6 text-[#1F2937]" />
+    <p class="text-center text-[#9CA3AF]">{data.copyright}</p>
+  </div>
 </footer>
