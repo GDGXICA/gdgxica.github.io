@@ -1,0 +1,238 @@
+{
+  "name": "Google Cloud",
+  "image": "/events/google-cloud.webp",
+  "shortDescription": "descripción del evento",
+  "date": "sábado, 21 de junio de 2025",
+  "time": "09:00 AM - 01:00 PM",
+  "location": {
+    "name": "Zegel - Sede Ica",
+    "direction": "Zegel - Sede Ica, Av Cutervo cutervo",
+    "googleMapEmbed": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d654.7451125109739!2d-75.73739077639843!3d-14.076390464957747!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x9110e3a6e60b8c25%3A0xf591df23f20354d1!2sZegel%20-%20ICA!5e0!3m2!1ses!2spe!4v1751564151532!5m2!1ses!2spe",
+    "googleMapLink": "https://maps.app.goo.gl/GUd4wJh42tNoY7nC7"
+  },
+  "isVirtual": false,
+  "participants": 30,
+  "maxParticipants": 60,
+  "category": {
+    "label": "Study Jam",
+    "type": "studyjam"
+  },
+  "status": {
+    "label": "Finalizado",
+    "type": "completed"
+  },
+  "isHighlight": true,
+  "tags": ["Cloud", "GCP", "Google Cloud"],
+  "speakerNames": [],
+  "largeDescription": "¡Únete a nosotros en este evento exclusivo de Google Cloud y descubre cómo las herramientas y servicios de la nube pueden transformar el desarrollo, la infraestructura y la innovación en tu organización! A lo largo de esta sesión, exploraremos las soluciones clave que ofrece Google Cloud Platform (GCP), desde computación escalable y almacenamiento inteligente hasta herramientas de análisis de datos, inteligencia artificial y machine learning.",
+  "registerFormLink": "",
+  "requirements": ["Registrarse", "Ser puntuales"],
+  "include": [
+    "Acceso a Google Cloud",
+    "Certificado de participación",
+    "Laboratorio moderno",
+    "Swag oficial de Google y GitHub",
+    "Coffe breaks"
+  ],
+  "technologies": ["Cloud", "GCP", "Google Cloud"],
+  "schedule": [
+    {
+      "id": 1,
+      "time": "08:00 AM - 09:00 AM",
+      "title": "Registro de asistentes",
+      "name": "Fiorella Ariás",
+      "image": "/team/fiorella-arias.webp",
+      "role": "Organizadora",
+      "type": "event"
+    },
+    {
+      "id": 2,
+      "time": "09:00 AM - 09:15 PM",
+      "title": "Inicio del evento",
+      "name": "Eduardo Ormeño",
+      "image": "/team/eduardo-ormeno.jpeg",
+      "role": "Organizador",
+      "type": "event"
+    },
+    {
+      "id": 3,
+      "time": "09:15 AM - 10:15 PM",
+      "title": "GCP para Universitarios - ¡Desbloquea el poder de los datos! Parte I",
+      "name": "Tony Trujillo",
+      "image": "/speakers/tony-trujillo.webp",
+      "role": "Data Architect @IDATHA",
+      "type": "event"
+    },
+    {
+      "id": 4,
+      "time": "10:15 AM - 10:30 PM",
+      "title": "Break + Networking",
+      "name": "",
+      "image": "",
+      "role": "",
+      "type": "break"
+    },
+    {
+      "id": 5,
+      "time": "10:30 AM - 11:15 PM",
+      "title": "GCP para Universitarios - ¡Desbloquea el poder de los datos! Parte II",
+      "name": "Tony Trujillo",
+      "image": "/speakers/tony-trujillo.webp",
+      "role": "Data Architect @IDATHA",
+      "type": "event"
+    },
+    {
+      "id": 6,
+      "time": "11:15 AM - 11:30 PM",
+      "title": "Break + Networking",
+      "name": "",
+      "image": "",
+      "role": "",
+      "type": "break"
+    },
+    {
+      "id": 7,
+      "time": "11:30 AM - 12:00 PM",
+      "title": "Dinámica",
+      "name": "Pablo Ramos",
+      "image": "/team/pablo-ramos.jpeg",
+      "role": "Organizador",
+      "type": "event"
+    },
+    {
+      "id": 8,
+      "time": "12:00 AM - 01:00 PM",
+      "title": "GCP para Universitarios - ¡Desbloquea el poder de los datos! Parte III",
+      "name": "Tony Trujillo",
+      "image": "/speakers/tony-trujillo.webp",
+      "role": "Data Architect @IDATHA",
+      "type": "event"
+    },
+    {
+      "id": 9,
+      "time": "01:00 AM - 01:15 PM",
+      "title": "Cierre del evento",
+      "name": "Eduardo Ormeño",
+      "image": "/team/eduardo-ormeno.jpeg",
+      "role": "Organizador",
+      "type": "event"
+    },
+    {
+      "id": 10,
+      "time": "01:15 AM - 02:00 PM",
+      "title": "Break + Networking",
+      "name": "",
+      "image": "",
+      "role": "",
+      "type": "break"
+    }
+  ],
+  "speakers": [
+    {
+      "id": 1,
+      "image": "/speakers/tony-trujillo.webp",
+      "name": "Tony Trujillo",
+      "role": "Data Architect",
+      "description": "Arquitecto de soluciones cloud con Google Cloud Platform (GCP)",
+      "linkedin": "link",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    },
+    {
+      "id": 1,
+      "image": "/speakers/tony-trujillo.webp",
+      "name": "Tony Trujillo",
+      "role": "Data Architect",
+      "description": "Arquitecto de soluciones cloud con Google Cloud Platform (GCP)",
+      "linkedin": "link",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    },
+    {
+      "id": 1,
+      "image": "/speakers/tony-trujillo.webp",
+      "name": "Tony Trujillo",
+      "role": "Data Architect",
+      "description": "Arquitecto de soluciones cloud con Google Cloud Platform (GCP)",
+      "linkedin": "link",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    },
+    {
+      "id": 1,
+      "image": "/speakers/tony-trujillo.webp",
+      "name": "Tony Trujillo",
+      "role": "Data Architect",
+      "description": "Arquitecto de soluciones cloud con Google Cloud Platform (GCP)",
+      "linkedin": "link",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    },
+    {
+      "id": 1,
+      "image": "/speakers/tony-trujillo.webp",
+      "name": "Tony Trujillo",
+      "role": "Data Architect",
+      "description": "Arquitecto de soluciones cloud con Google Cloud Platform (GCP)",
+      "linkedin": "link",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    },
+    {
+      "id": 1,
+      "image": "/speakers/tony-trujillo.webp",
+      "name": "Tony Trujillo",
+      "role": "Data Architect",
+      "description": "Arquitecto de soluciones cloud con Google Cloud Platform (GCP)",
+      "linkedin": "link",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    },
+    {
+      "id": 1,
+      "image": "/speakers/tony-trujillo.webp",
+      "name": "Tony Trujillo",
+      "role": "Data Architect",
+      "description": "Arquitecto de soluciones cloud con Google Cloud Platform (GCP)",
+      "linkedin": "link",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    }
+  ],
+  "sponsors": [
+    {
+      "id": 1,
+      "image": "/sponsors/google.png",
+      "alt": "Google"
+    },
+    {
+      "id": 2,
+      "image": "/sponsors/github.svg",
+      "alt": "Github"
+    },
+    {
+      "id": 3,
+      "image": "/sponsors/chocotejas-don-juan.jpg",
+      "alt": "Chocotejas Don Juan"
+    },
+    {
+      "id": 4,
+      "image": "/sponsors/zegel.webp",
+      "alt": "Zegel"
+    }
+  ]
+}
