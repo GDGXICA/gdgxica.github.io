@@ -1,4 +1,6 @@
 ---
+import { Image } from "astro:assets";
+import { getCollection } from "astro:content";
 import Button from "@/components/Button.astro";
 import FeatureCard from "@/components/FeatureCard.astro";
 import Tag from "@/components/Tag.astro";
@@ -15,40 +17,64 @@ import {
   CircleCheckBig,
   Heart,
   MapPinned,
+  TrafficCone,
+  MicVocal,
+  Trophy,
 } from "@lucide/astro";
 import SpeakerCard from "@/components/SpeakerCard.astro";
 
-export function getStaticPaths() {
-  return [{ params: { slug: "devfest-2025" } }];
+export async function getStaticPaths() {
+  const events = await getCollection("events");
+  return events.map((event) => ({
+    params: { slug: event.id },
+    props: { event },
+  }));
 }
-
-const iframe = true;
+const { event } = Astro.props;
 ---
 
 <Layout>
   <section class="relative py-20">
     <span class="absolute inset-0 z-[1] bg-black/50"></span>
-    <img
-      src="/placeholder.svg"
-      alt=""
-      class="absolute inset-0 h-full w-full object-cover"
+    <Image
+      src={event.data.image || "/placeholder.svg"}
+      alt={`Foto de evento ${event.data.name}`}
+      class="absolute inset-0 h-full w-full object-cover object-center"
+      width={1200}
+      height={600}
     />
     <div class="relative z-[2] container">
       <div class="max-w-[768px]">
         <div class="mb-4 flex gap-2">
-          <Tag label="DevFest" type="devfest" />
-          <Tag label="Próximo" type="upcoming" />
+          {
+            event.data.category && (
+              <Tag
+                label={event.data.category.label}
+                type={event.data.category.type}
+              />
+            )
+          }
+          {
+            event.data.status && (
+              <Tag
+                label={event.data.status.label}
+                type={event.data.status.type}
+              />
+            )
+          }
         </div>
         <h1 class="mb-4 text-4xl font-bold text-white lg:text-5xl">
-          DevFest 2025 - Ciudad de Ica
+          {event.data.name}
         </h1>
         <p class="mb-6 text-xl text-white">
-          El evento más grande del año con charlas, workshops y networking.
-          Únete a más de 500 desarrolladores para aprender sobre las últimas
-          tecnologías de Google.
+          {event.data.shortDescription}
         </p>
         <div class="flex flex-col gap-4 md:flex-row">
-          <Button variant="solid" href="/">
+          <Button
+            variant="solid"
+            href={event.data.registerFormLink}
+            target="_blank"
+          >
             <Ticket size={16} /> Registrarse Gratis
           </Button>
           <Button variant="white" href="/"
@@ -66,22 +92,26 @@ const iframe = true;
         <FeatureCard className="text-center">
           <Calendar stroke-width={1.5} color="#2463EB" class="mx-auto mb-3" />
           <strong class="text-primary mb-2 font-semibold">Fecha</strong>
-          <p class="text-secondary">sábado, 14 de diciembre de 2025</p>
+          <p class="text-secondary">{event.data.date}</p>
         </FeatureCard>
         <FeatureCard className="text-center">
           <Clock stroke-width={1.5} color="#EF4444" class="mx-auto mb-3" />
           <strong class="text-primary mb-2 font-semibold">Horario</strong>
-          <p class="text-secondary">09:00 AM - 06:00 PM</p>
+          <p class="text-secondary">{event.data.time}</p>
         </FeatureCard>
         <FeatureCard className="text-center">
           <Building stroke-width={1.5} color="#16A34A" class="mx-auto mb-3" />
           <strong class="text-primary mb-2 font-semibold">Ubicación</strong>
-          <p class="text-secondary">Centro de Convenciones WTC Ciudad de Ica</p>
+          <p class="text-secondary">{event.data.location.name}</p>
         </FeatureCard>
         <FeatureCard className="text-center">
           <Users stroke-width={1.5} color="#EBB308" class="mx-auto mb-3" />
           <strong class="text-primary mb-2 font-semibold">Asistentes</strong>
-          <p class="text-secondary"><span>387</span>/<span>500</span></p>
+          <p class="text-secondary">
+            <span>{event.data.participants}</span>/<span
+              >{event.data.maxParticipants}</span
+            >
+          </p>
         </FeatureCard>
       </div>
     </div>
@@ -95,86 +125,76 @@ const iframe = true;
             <h2 class="text-primary mb-6 text-2xl font-semibold">
               Acerca del Evento
             </h2>
+
             <p class="text-secondary">
-              DevFest es el evento anual más importante de Google Developer
-              Groups a nivel mundial. En esta edición 2025 en Ciudad de Ica,
-              reuniremos a más de 500 desarrolladores, estudiantes y
-              profesionales de la tecnología para compartir conocimiento, hacer
-              networking y descubrir las últimas innovaciones de Google. El
-              evento incluye charlas magistrales, workshops prácticos, sesiones
-              de networking y oportunidades únicas de conectar con expertos de
-              la industria.
+              {event.data.largeDescription}
             </p>
           </div>
           <!-- agenda -->
           <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
             <h2 class="text-primary mb-6 text-2xl font-semibold">Agenda</h2>
-            <div class="flex flex-col gap-4">
-              <ScheduleCard />
-              <ScheduleCard type="break" />
-              <ScheduleCard />
-              <ScheduleCard />
-              <ScheduleCard type="break" />
-            </div>
+            {
+              event.data.schedule.length > 0 ? (
+                <div class="flex flex-col gap-4">
+                  {event.data.schedule.map((item) => (
+                    <ScheduleCard {...item} />
+                  ))}
+                </div>
+              ) : (
+                <div class="flex flex-col items-center justify-center gap-4 text-center text-gray-400">
+                  <TrafficCone size={48} stroke-width={1} />
+                  <p>Nuestra agenda está en construcción. ¡Vuelve pronto!</p>
+                </div>
+              )
+            }
           </div>
           <!-- speakers -->
           <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
             <h2 class="text-primary mb-6 text-2xl font-semibold">Speakers</h2>
-            <div class="grid grid-cols-1 gap-8 sm:grid-cols-1 md:grid-cols-2">
-              <SpeakerCard />
-              <SpeakerCard />
-              <SpeakerCard />
-              <SpeakerCard />
-              <SpeakerCard />
-            </div>
+            {
+              event.data.speakers.length > 0 ? (
+                <div class="grid grid-cols-1 gap-8 sm:grid-cols-1 md:grid-cols-2">
+                  {event.data.speakers.map((speaker) => (
+                    <SpeakerCard {...speaker} />
+                  ))}
+                </div>
+              ) : (
+                <div class="flex flex-col items-center justify-center gap-4 text-center text-gray-400">
+                  <MicVocal size={48} stroke-width={1} />
+                  <p>
+                    Pronto revelaremos a nuestros speakers invitados. ¡Estate
+                    atento!
+                  </p>
+                </div>
+              )
+            }
           </div>
           <!-- sponsors -->
           <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
             <h2 class="text-primary mb-6 text-2xl font-semibold">Sponsors</h2>
-            <div class="flex flex-wrap gap-8">
-              <img
-                src="/placeholder.svg"
-                width={120}
-                height={120}
-                alt="Logo de sponsor"
-              />
-              <img
-                src="/placeholder.svg"
-                width={120}
-                height={120}
-                alt="Logo de sponsor"
-              />
-              <img
-                src="/placeholder.svg"
-                width={120}
-                height={120}
-                alt="Logo de sponsor"
-              />
-              <img
-                src="/placeholder.svg"
-                width={120}
-                height={120}
-                alt="Logo de sponsor"
-              />
-              <img
-                src="/placeholder.svg"
-                width={120}
-                height={120}
-                alt="Logo de sponsor"
-              />
-              <img
-                src="/placeholder.svg"
-                width={120}
-                height={120}
-                alt="Logo de sponsor"
-              />
-              <img
-                src="/placeholder.svg"
-                width={120}
-                height={120}
-                alt="Logo de sponsor"
-              />
-            </div>
+            {
+              event.data.sponsors.length > 0 ? (
+                <div class="grid grid-cols-2 gap-8 sm:grid-cols-3 md:grid-cols-5">
+                  {event.data.sponsors.map((sponsor) => (
+                    <Image
+                      src={sponsor.image || "/placeholder.svg"}
+                      width={120}
+                      height={120}
+                      class="aspect-square"
+                      alt={`Logo de ${sponsor.alt}`}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div class="flex flex-col items-center justify-center gap-4 text-center text-gray-400">
+                  <Trophy size={48} stroke-width={1} />
+                  <p>
+                    Estamos preparando una gran alianza de patrocinadores. ¡Muy
+                    pronto!
+                  </p>
+                </div>
+              )
+            }
           </div>
         </div>
         <div class="flex flex-col gap-8 lg:basis-1/3">
@@ -185,10 +205,10 @@ const iframe = true;
               Gratuito
             </p>
             <p class="text-secondary mb-4 text-center">
-              113 lugares disponibles
+              {event.data.maxParticipants - event.data.participants} lugares disponibles
             </p>
             <div class="flex flex-col gap-4">
-              <Button variant="solid" href="/">
+              <Button variant="solid" href={event.data.registerFormLink}>
                 <Ticket size={16} /> Registrarse Gratis
               </Button>
               <Button variant="outline" href="/"
@@ -200,28 +220,28 @@ const iframe = true;
           <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
             <h2 class="text-primary mb-6 text-2xl font-semibold">Requisitos</h2>
             <ul class="flex flex-col gap-2">
-              <li class="text-secondary flex items-center gap-3 text-sm">
-                <CircleCheckBig size={16} color="#16A34A" />
-                Laptop personal (para workshops)
-              </li>
-              <li class="text-secondary flex items-center gap-3 text-sm">
-                <CircleCheckBig size={16} color="#16A34A" />
-                Conocimientos básicos de programación
-              </li>
+              {
+                event.data.requirements.map((requeriment) => (
+                  <li class="text-secondary flex items-center gap-3 text-sm">
+                    <CircleCheckBig size={16} color="#16A34A" />
+                    {requeriment}
+                  </li>
+                ))
+              }
             </ul>
           </div>
           <!-- includes -->
           <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
             <h2 class="text-primary mb-6 text-2xl font-semibold">Incluye</h2>
             <ul class="flex flex-col gap-2">
-              <li class="text-secondary flex items-center gap-3 text-sm">
-                <Heart size={16} color="#EF4444" />
-                Coffe breaks
-              </li>
-              <li class="text-secondary flex items-center gap-3 text-sm">
-                <Heart size={16} color="#EF4444" />
-                Materiales del evento
-              </li>
+              {
+                event.data.include.map((item) => (
+                  <li class="text-secondary flex items-center gap-3 text-sm">
+                    <Heart size={16} color="#EF4444" />
+                    {item}
+                  </li>
+                ))
+              }
             </ul>
           </div>
           <!-- technologies -->
@@ -230,35 +250,27 @@ const iframe = true;
               Tecnologías
             </h2>
             <ul class="flex flex-wrap gap-2">
-              <li>
-                <Tag label="Cloud" />
-              </li>
-              <li>
-                <Tag label="Machine Learning" />
-              </li>
-              <li>
-                <Tag label="Firebase" />
-              </li>
-              <li>
-                <Tag label="Android" />
-              </li>
-              <li>
-                <Tag label="Flutter" />
-              </li>
+              {
+                event.data.technologies.map((technology) => (
+                  <li>
+                    <Tag label={technology} />
+                  </li>
+                ))
+              }
             </ul>
           </div>
           <!-- ubication -->
           <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
             <h2 class="text-primary mb-6 text-2xl font-semibold">Ubicación</h2>
-            <p class="text-primary font-semibold">Centro de Convenciones WTC</p>
+            <p class="text-primary font-semibold">{event.data.location.name}</p>
             <p class="text-secondary mb-3 text-sm">
-              Montecito 38, Nápoles, Benito Juárez, 03810 Ciudad de México, CDMX
+              {event.data.location.direction}
             </p>
             <!-- is false -->
             {
-              iframe ? (
+              event.data.location.googleMapEmbed ? (
                 <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d30960.518155752074!2d-75.7437587!3d-14.0733526!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x9110e2bdb02af083%3A0xf459f8f69b351df!2sPlaza%20de%20Armas%20de%20Ica!5e0!3m2!1ses!2spe!4v1751376000544!5m2!1ses!2spe"
+                  src={event.data.location.googleMapEmbed}
                   width="600"
                   height="450"
                   style="border:0;"
@@ -279,7 +291,7 @@ const iframe = true;
               <Button
                 variant="outline"
                 target="_blank"
-                href="https://maps.app.goo.gl/TkJHxXRUEbYyKMy59"
+                href={event.data.location.googleMapLink}
                 ><ExternalLink />Ver en Google Maps</Button
               >
             </p>
