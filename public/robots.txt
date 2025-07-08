@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://gdgica.com/sitemap-index.xml
