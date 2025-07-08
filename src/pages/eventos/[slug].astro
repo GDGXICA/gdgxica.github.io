@@ -31,9 +31,15 @@ export async function getStaticPaths() {
   }));
 }
 const { event } = Astro.props;
+const metadata = {
+  title: `${event.data.name}`,
+  description: `${event.data.shortDescription}`,
+  image: "",
+  url: `https://gdgica.com/eventos/${event.data.name}`,
+};
 ---
 
-<Layout>
+<Layout {...metadata}>
   <section class="relative py-20">
     <span class="absolute inset-0 z-[1] bg-black/50"></span>
     <Image
