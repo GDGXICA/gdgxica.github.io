@@ -1,0 +1,202 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import VolunteerCard from "@/components/VolunteerCard.astro";
+import OpportunityCard from "@/components/OpportunityCard.astro";
+
+import volunteers from "@/data/volunteers/volunteers.json";
+import opportunities from "@/data/opportunities/opportunities.json";
+
+import {
+  Camera,
+  Headphones,
+  Handshake,
+  Paintbrush,
+  Megaphone,
+  Languages,
+  Code2,
+  Boxes,
+} from "@lucide/astro";
+
+const areas = [...new Set(volunteers.map((v) => v.area))].sort();
+
+const stats = [
+  { value: "50+", text: "Voluntarios activos", color: "text-google-blue" },
+  { value: "1 500+", text: "Horas contribuidas", color: "text-google-red" },
+  { value: "100+", text: "Eventos apoyados", color: "text-google-yellow" },
+  { value: "9", text: "Áreas de apoyo", color: "text-google-green" },
+];
+
+const iconMapping = {
+  Camera,
+  Headphones,
+  Handshake,
+  Paintbrush,
+  Megaphone,
+  Languages,
+  Code2,
+  Boxes,
+};
+
+const metadata = {
+  title: "Voluntarios - Google Developer Group Ica",
+  description: "Conoce al equipo de voluntarios y oportunidades de GDG ICA",
+  image: "",
+  url: "https://gdgica.com/voluntarios",
+};
+---
+
+<Layout {...metadata}>
+  <section
+    class="relative isolate overflow-hidden bg-gradient-to-b from-blue-50 to-green-50 py-20"
+  >
+    <div class="container text-center">
+      <h1 class="mb-6 text-5xl font-bold">
+        <span class="text-google-blue">Nuestros </span>
+        <span class="text-google-red">Voluntarios</span>
+      </h1>
+
+      <p class="text-secondary mx-auto mb-12 max-w-3xl text-xl">
+        El corazón de nuestra comunidad son las personas que generosamente
+        dedican su tiempo y talento para hacer que cada evento sea especial.
+        Conoce a los voluntarios que hacen posible la magia de GDG.
+      </p>
+
+      <div class="mx-auto grid max-w-2xl grid-cols-2 gap-6 sm:grid-cols-4">
+        {
+          stats.map((s) => (
+            <div class="flex flex-col items-center">
+              <p class={`text-3xl font-bold ${s.color}`}>{s.value}</p>
+              <p class="text-secondary text-sm">{s.text}</p>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="container py-24">
+    <div class="mx-auto mb-14 max-w-lg text-center">
+      <h2 class="mb-4 text-4xl font-bold">Todos Nuestros Voluntarios</h2>
+      <p class="text-secondary text-xl">
+        Conoce a todas las personas increíbles que dedican su tiempo a nuestra
+        comunidad
+      </p>
+    </div>
+
+    <div class="mb-12 flex flex-wrap justify-center gap-2" id="filters">
+      <button
+        data-area="Todos"
+        class="text-primary hover:border-google-blue hover:text-google-blue rounded-md border border-gray-300 bg-white px-3 py-1 text-sm font-medium transition"
+      >
+        Todos
+      </button>
+      {
+        areas.map((area) => (
+          <button
+            data-area={area}
+            class="text-primary hover:border-google-blue hover:text-google-blue rounded-md border border-gray-300 bg-white px-3 py-1 text-sm font-medium transition"
+          >
+            {area}
+          </button>
+        ))
+      }
+    </div>
+
+    <div
+      id="volunteers-grid"
+      class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+    >
+      {volunteers.map((v) => <VolunteerCard volunteer={v} />)}
+    </div>
+  </section>
+
+  <section class="bg-section py-24">
+    <div class="container">
+      <div class="mx-auto mb-14 max-w-2xl text-center">
+        <h2 class="mb-4 text-3xl font-bold">Oportunidades de Voluntariado</h2>
+        <p class="text-secondary text-xl">
+          Encuentra la forma perfecta de contribuir a nuestra comunidad según
+          tus habilidades e intereses
+        </p>
+      </div>
+
+      <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {
+          opportunities.map((op) => (
+            <OpportunityCard
+              title={op.title}
+              icon={iconMapping[op.icon]}
+              color={op.color}
+              description={op.description}
+              skills={op.skills}
+              commitment={op.commitment}
+            />
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section
+    class="bg-[linear-gradient(135deg,#2563EB_0%,#EC4899_45%,#22C55E_100%)] py-24 text-center text-white"
+  >
+    <div class="container max-w-2xl">
+      <h2 class="mb-6 text-4xl font-bold">¿Quieres Ser Voluntario?</h2>
+      <p class="mx-auto mb-10 max-w-3xl text-center text-xl">
+        Únete a nuestro increíble equipo de voluntarios y ayúdanos a crear
+        experiencias memorables para la comunidad. No importa cuánto tiempo
+        tengas disponible, ¡toda ayuda es valiosa!
+      </p>
+      <a
+        href="https://forms.gle/tu-formulario"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-primary inline-flex items-center gap-2 rounded-md bg-white px-6 py-2 font-medium"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="1.5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 4.5v15m7.5-7.5h-15"></path>
+        </svg>
+        Ser voluntario
+      </a>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  const buttons = document.querySelectorAll("#filters button");
+  const cards = document.querySelectorAll("#volunteers-grid > *");
+
+  buttons.forEach((btn) =>
+    btn.addEventListener("click", () => {
+      buttons.forEach((b) => {
+        b.classList.remove(
+          "border-google-blue",
+          "bg-google-blue",
+          "text-white"
+        );
+        b.classList.add("border-gray-300", "bg-white", "text-primary");
+      });
+
+      btn.classList.remove("border-gray-300", "bg-white", "text-primary");
+      btn.classList.add("border-google-blue", "bg-google-blue", "text-white");
+
+      const area = btn.dataset.area;
+      cards.forEach((card) => {
+        card.style.display =
+          area === "Todos" || card.dataset.area === area ? "" : "none";
+      });
+    })
+  );
+
+  if (buttons.length) buttons[0].click();
+</script>

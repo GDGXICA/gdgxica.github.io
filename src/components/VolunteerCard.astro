@@ -1,0 +1,60 @@
+---
+import { Linkedin, Github, Twitter } from "@lucide/astro";
+const { volunteer } = Astro.props;
+---
+
+<div
+  class="group flex flex-col gap-4 rounded-2xl border border-gray-200 p-6 shadow-sm transition-all hover:shadow-md"
+  data-area={volunteer.area}
+>
+  <img
+    src={volunteer.avatar || "/placeholder.svg"}
+    alt={volunteer.name}
+    width={96}
+    height={96}
+    class="mx-auto h-24 w-24 rounded-full object-cover"
+    loading="lazy"
+  />
+
+  <h3 class="text-primary text-center text-lg font-semibold">
+    {volunteer.name}
+  </h3>
+
+  <p class="text-google-blue mx-auto text-sm font-medium">{volunteer.role}</p>
+
+  <span
+    class="bg-google-blue/10 text-google-blue mx-auto rounded px-2 py-0.5 text-xs font-semibold"
+  >
+    {volunteer.area}
+  </span>
+
+  <p class="text-secondary line-clamp-3 text-center text-sm">{volunteer.bio}</p>
+
+  <div class="mt-auto flex justify-center gap-3 text-gray-500">
+    {
+      volunteer.links.linkedin && (
+        <a
+          href={volunteer.links.linkedin}
+          aria-label="LinkedIn"
+          target="_blank"
+        >
+          <Linkedin size={18} class="hover:text-google-blue" />
+        </a>
+      )
+    }
+    {
+      volunteer.links.github && (
+        <a href={volunteer.links.github} aria-label="GitHub" target="_blank">
+          <Github size={18} class="hover:text-google-blue" />
+        </a>
+      )
+    }
+    {
+      volunteer.links.twitter && (
+        <a href={volunteer.links.twitter} aria-label="Twitter" target="_blank">
+          <Twitter size={18} class="hover:text-google-blue" />
+        </a>
+      )
+    }
+  </div>
+</div>
