@@ -1,0 +1,48 @@
+---
+const {
+  title,
+  icon: Icon,
+  color,
+  description,
+  skills = [],
+  commitment,
+} = Astro.props;
+---
+
+<div
+  class="flex flex-col gap-4 rounded-2xl border border-gray-200 p-6 text-center shadow-sm"
+>
+  <Icon class="mx-auto h-6 w-6" stroke-width={1.5} color={color} />
+
+  <h3 class="text-primary text-lg font-bold">{title}</h3>
+
+  <p class="text-secondary text-sm">{description}</p>
+
+  {
+    skills.length > 0 && (
+      <>
+        <strong class="text-secondary mt-2 text-xs font-bold tracking-wide uppercase">
+          Habilidades
+        </strong>
+        <ul class="flex flex-wrap justify-center gap-1 font-bold">
+          {skills.map((s) => (
+            <li class="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] leading-none">
+              {s}
+            </li>
+          ))}
+        </ul>
+      </>
+    )
+  }
+
+  {
+    commitment && (
+      <>
+        <strong class="text-secondary mt-3 text-xs font-bold tracking-wide uppercase">
+          Compromiso
+        </strong>
+        <p class="text-secondary text-sm">{commitment}</p>
+      </>
+    )
+  }
+</div>
