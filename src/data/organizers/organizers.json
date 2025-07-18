@@ -1,0 +1,54 @@
+[
+  {
+    "id": "eduardo-ormeno",
+    "name": "Eduardo Ormeño",
+    "role": "Leadership",
+    "bio": "Desarrollador Backend con más de 3 años de experiencia en el desarrollo de soluciones escalables. Microsoft MVP, Github Campus Expert",
+    "avatar": "/placeholder.svg",
+    "tags": ["Cloud", "Machine Learning", "Angular", "GCP"],
+    "links": {
+      "linkedin": "https://linkedin.com/in/eduardoormeno",
+      "twitter": "https://twitter.com/eduardoormeno",
+      "github": "https://github.com/eduardoormeno",
+      "web": "https://eduardoormeno.dev"
+    }
+  },
+  {
+    "id": "jorge-munoz",
+    "name": "Jorge Muñoz",
+    "role": "Leadership",
+    "bio": "Desarrollador Frontend con experiencia en Angular y React. Apasionado por la educación y la comunidad.",
+    "avatar": "/placeholder.svg",
+    "tags": ["Angular", "React", "Web Development"],
+    "links": {
+      "linkedin": "https://linkedin.com/in/josehernandez",
+      "twitter": "https://twitter.com/josehernandez",
+      "github": "https://github.com/josehernandez"
+    }
+  },
+  {
+    "id": "mario-gomez",
+    "name": "Mario Gómez",
+    "role": "Community Manager",
+    "bio": "Especialista en marketing digital y gestión de comunidades. Apasionada por conectar personas y crear experiencias memorables.",
+    "avatar": "/placeholder.svg",
+    "tags": ["Marketing", "Community Building"],
+    "links": {
+      "linkedin": "https://linkedin.com/in/mariagomez",
+      "twitter": "https://twitter.com/mariagomez"
+    }
+  },
+  {
+    "id": "jesus-ancasi",
+    "name": "Jesús Ancasi",
+    "role": "Developer Advocate",
+    "bio": "Desarrollador con experiencia en tecnologías de la nube y DevOps. Apasionado por compartir conocimientos y ayudar a otros a crecer.",
+    "avatar": "/placeholder.svg",
+    "tags": ["DevOps", "Cloud Computing"],
+    "links": {
+      "linkedin": "https://linkedin.com/in/luisperez",
+      "twitter": "https://twitter.com/luisperez",
+      "github": "https://github.com/luisperez"
+    }
+  }
+]
