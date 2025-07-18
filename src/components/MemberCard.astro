@@ -1,0 +1,71 @@
+---
+import { Linkedin, Github, Twitter, Globe, Calendar } from "@lucide/astro";
+import Tag from "./Tag.astro";
+
+const { member } = Astro.props;
+---
+
+<div
+  class="group flex flex-col gap-4 rounded-2xl border border-gray-200 p-6 shadow-sm transition-all hover:shadow-md"
+>
+  <img
+    src={member.avatar}
+    alt={member.name}
+    width={96}
+    height={96}
+    class="mx-auto h-32 w-32 rounded-sm"
+    loading="lazy"
+  />
+  <h3 class="text-primary text-center text-2xl font-semibold">
+    {member.name}
+  </h3>
+  <p class="text-google-blue mx-auto text-xl font-medium">{member.role}</p>
+  <p class="text-secondary line-clamp-3 text-left text-lg">{member.bio}</p>
+  <div class="text-secondary flex items-center gap-1 text-left text-lg">
+    <Calendar size={16} class="mr-1 inline" />
+    <p>Desde {member.joinedDate}</p>
+  </div>
+  <div>
+    <h4 class="text-primary text-lg font-semibold">Responsabilidades:</h4>
+    {
+      member.responsibilities.map((responsibility) => (
+        <ul class="text-secondary list-disc pl-5">
+          <li>{responsibility}</li>
+        </ul>
+      ))
+    }
+  </div>
+  <div class="flex flex-wrap justify-center gap-2">
+    {member.tags.map((tag) => <Tag label={tag} />)}
+  </div>
+  <div class="text-secondary mt-auto flex justify-center gap-3">
+    {
+      member.links.linkedin && (
+        <a href={member.links.linkedin} aria-label="LinkedIn" target="_blank">
+          <Linkedin size={24} class="hover:text-google-blue" />
+        </a>
+      )
+    }
+    {
+      member.links.twitter && (
+        <a href={member.links.twitter} aria-label="Twitter" target="_blank">
+          <Twitter size={24} class="hover:text-google-blue" />
+        </a>
+      )
+    }
+    {
+      member.links.github && (
+        <a href={member.links.github} aria-label="GitHub" target="_blank">
+          <Github size={24} class="hover:text-google-blue" />
+        </a>
+      )
+    }
+    {
+      member.links.web && (
+        <a href={member.links.web} aria-label="Website" target="_blank">
+          <Globe size={24} class="hover:text-google-blue" />
+        </a>
+      )
+    }
+  </div>
+</div>

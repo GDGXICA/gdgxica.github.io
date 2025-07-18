@@ -1,0 +1,109 @@
+---
+import Button from "@/components/Button.astro";
+import CallToActionSection from "@/components/CallToActionSection.astro";
+import HeroPage from "@/components/HeroPage.astro";
+import Stats from "@/components/Stats.astro";
+import Layout from "@/layouts/Layout.astro";
+import MemberCard from "@/components/MemberCard.astro";
+import members from "@/data/members/members.json";
+import { Users, Ticket } from "@lucide/astro";
+
+const data = {
+  stats: [
+    {
+      value: "7+",
+      text: "Organizadores Activos",
+      color: "text-google-blue",
+    },
+    {
+      value: "15+",
+      text: "Años de Experiencia",
+      color: "text-google-red",
+    },
+    {
+      value: "100+",
+      text: "Eventos Organizados",
+      color: "text-google-yellow",
+    },
+    {
+      value: "200+",
+      text: "Desarrolladores Mentoreados",
+      color: "text-google-green",
+    },
+  ],
+};
+
+const buttons = [
+  { text: "Todos", variant: "solid" },
+  { text: "Leadership", variant: "outline" },
+  { text: "Community", variant: "outline" },
+  { text: "Events", variant: "outline" },
+];
+
+const metadata = {
+  title: "Equipo - Google Developer Group Ica",
+  description: "Conoce al equipo de Google Developer Group Ica",
+  image: "",
+  url: "https://gdgica.com/equipo",
+};
+---
+
+<Layout {...metadata}>
+  <HeroPage>
+    <div class="mx-auto max-w-[768px] text-center">
+      <p
+        class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-red-500 to-green-600"
+      >
+        <Users stroke-width={1.5} size={64} color="#FFFFFF" />
+      </p>
+      <h1 class="mb-6 text-5xl font-bold">
+        <span class="text-google-blue">Nuestro</span>
+        <span class="text-google-red">Equipo</span>
+      </h1>
+      <p class="text-secondary mb-8 text-xl">
+        Conoce a las personas dedicadas que hacen posible nuestra comunidad.
+        Voluntarios apasionados que dedican su tiempo y experiencia para crear
+        un espcacio donde todos puedan aprender y crecer.
+      </p>
+      <Stats stats={data.stats} />
+    </div>
+  </HeroPage>
+  <section class="mx-auto py-10">
+    <div class="container py-10">
+      <h2 class="text-primary mb-6 text-center text-4xl font-bold">
+        Todo el Equipo
+      </h2>
+      <p class="text-secondary text-center text-xl">
+        Conoce a todos los miembros de nuestro equipo
+      </p>
+    </div>
+    <div class="mx-2 flex flex-wrap justify-center gap-4">
+      {
+        buttons.map((button) => (
+          <Button variant={button.variant} href="#" target="_blank">
+            {button.text}
+          </Button>
+        ))
+      }
+    </div>
+    <div
+      class="mx-10 my-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+    >
+      {members.map((member) => <MemberCard member={member} />)}
+    </div>
+  </section>
+  <CallToActionSection>
+    <h2 class="mb-6 text-4xl font-bold text-white">
+      ¿Quieres Unirte a Nuestro Equipo?
+    </h2>
+    <p class="mb-8 text-xl text-white">
+      Estamos siempre buscando personas apasionadas que quieran contribuir al
+      crecimiento de nuestra comunidad. Si tienes ganas de hacer la diferencia,
+      ¡nos encantaría conocerte!
+    </p>
+    <Button variant="white" href="/" target="_blank">
+      <Ticket stroke-width={1.5} size={16} />
+      Aplicar al Equipo
+    </Button>
+  </CallToActionSection>
+</Layout>
