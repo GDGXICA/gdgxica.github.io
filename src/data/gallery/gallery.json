@@ -1,0 +1,34 @@
+[
+  {
+    "src": "./placeholder.svg",
+    "alt": "DevFest Image",
+    "title": "DevFest",
+    "description": "Más de 300 desarrolladores reunidos en nuestro DevFest anual.",
+    "tag": "DevFest",
+    "type": "devfest"
+  },
+  {
+    "src": "./placeholder.svg",
+    "alt": "Workshop Image",
+    "title": "Workshop",
+    "description": "Aprende nuevas tecnologías en nuestros workshops interactivos.",
+    "tag": "Workshop",
+    "type": "workshop"
+  },
+  {
+    "src": "./placeholder.svg",
+    "alt": "Hackathon Image",
+    "title": "Hackathon",
+    "description": "Desafía tus habilidades en nuestro hackathon anual.",
+    "tag": "Hackathon",
+    "type": "hackathon"
+  },
+  {
+    "src": "./placeholder.svg",
+    "alt": "Networking Image",
+    "title": "Networking",
+    "description": "Conecta con otros profesionales en nuestros eventos de networking.",
+    "tag": "Networking",
+    "type": "networking"
+  }
+]
