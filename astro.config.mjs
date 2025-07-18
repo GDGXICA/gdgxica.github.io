@@ -7,7 +7,7 @@ import sitemap from "@astrojs/sitemap";
 
 // https://astro.build/config
 export default defineConfig({
-  site: "https://gdgica.com",
+  site: "https://gdgxica.github.io",
 
   vite: {
     plugins: [tailwindcss()],
