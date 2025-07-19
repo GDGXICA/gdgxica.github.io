@@ -1,0 +1,30 @@
+[
+  {
+    "id": "talent-access",
+    "title": "Acceso a talento",
+    "icon": "Users",
+    "color": "#2563EB",
+    "description": "Conecta directamente con desarrolladores talentosos y apasionados de la región."
+  },
+  {
+    "id": "brand-awareness",
+    "title": "Brand Awareness",
+    "icon": "Target",
+    "color": "#DC2626",
+    "description": "Aumenta la visibilidad de tu marca en la comunidad tech más activa de la región."
+  },
+  {
+    "id": "thought-leadership",
+    "title": "Thought Leadership",
+    "icon": "Zap",
+    "color": "#F59E0B",
+    "description": "Posiciona tu empresa como líder tecnológico compartiendo conocimiento y experiencia."
+  },
+  {
+    "id": "community-impact",
+    "title": "Community Impact",
+    "icon": "Heart",
+    "color": "#16A34A",
+    "description": "Contribuye al crecimiento del ecosistema tecnológico y genera impacto social positivo."
+  }
+]

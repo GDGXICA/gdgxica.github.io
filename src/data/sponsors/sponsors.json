@@ -1,0 +1,42 @@
+[
+  {
+    "id": "empresa-a",
+    "name": "Empresa A",
+    "logo": "/placeholder.svg",
+    "sector": "Educación",
+    "description": "Apoya iniciativas de capacitación y contenido educativo para la comunidad.",
+    "eventsSponsored": 12,
+    "sinceYear": 2021,
+    "website": "https://example.com"
+  },
+  {
+    "id": "empresa-b",
+    "name": "Empresa B",
+    "logo": "/placeholder.svg",
+    "sector": "Cloud",
+    "description": "Provee créditos y soporte de infraestructura para proyectos y demos.",
+    "eventsSponsored": 10,
+    "sinceYear": 2022,
+    "website": "https://example.com"
+  },
+  {
+    "id": "empresa-c",
+    "name": "Empresa C",
+    "logo": "/placeholder.svg",
+    "sector": "FinTech",
+    "description": "Ayuda a impulsar soluciones financieras innovadoras y retos de programación.",
+    "eventsSponsored": 9,
+    "sinceYear": 2023,
+    "website": "https://example.com"
+  },
+  {
+    "id": "empresa-d",
+    "name": "Empresa D",
+    "logo": "/placeholder.svg",
+    "sector": "IA / ML",
+    "description": "Fomenta el aprendizaje de inteligencia artificial y proyectos con datasets reales.",
+    "eventsSponsored": 11,
+    "sinceYear": 2022,
+    "website": "https://example.com"
+  }
+]
