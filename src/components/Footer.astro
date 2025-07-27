@@ -109,6 +109,8 @@ const data = {
                     class="text-[#9CA3AF]"
                     href={link.url}
                     aria-label={`Enlace a ${link.text}`}
+                    target={link.target}
+                    rel={link.target === "_blank" ? "noopener noreferrer" : ""}
                   >
                     {link.text}
                   </a>
