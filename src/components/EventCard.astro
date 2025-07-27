@@ -58,10 +58,13 @@ const {
               <MapPin stroke-width={1.5} size={16} color="#16A34A" />
               {location.name}
             </li>
-            <li class="flex items-center gap-3">
-              <Globe stroke-width={1.5} size={16} color="#16A34A" />
-              {isVirtual}
-            </li>
+            {isVirtual && (
+              <li class="flex items-center gap-3">
+                <Globe stroke-width={1.5} size={16} color="#16A34A" />
+                Virtual
+              </li>
+            )}
+
             <li class="flex items-center gap-3">
               <Users stroke-width={1.5} size={16} color="#EBB308" />
               {participants}/{maxParticipants} registrados
