@@ -15,7 +15,10 @@ import {
   Languages,
   Code2,
   Boxes,
+  HandshakeIcon,
 } from "@lucide/astro";
+import CallToActionSection from "@/components/CallToActionSection.astro";
+import Button from "@/components/Button.astro";
 
 const areas = [...new Set(volunteers.map((v) => v.area))].sort();
 
@@ -136,40 +139,22 @@ const metadata = {
       </div>
     </div>
   </section>
-
-  <section
-    class="bg-[linear-gradient(135deg,#2563EB_0%,#EC4899_45%,#22C55E_100%)] py-24 text-center text-white"
-  >
-    <div class="container max-w-2xl">
-      <h2 class="mb-6 text-4xl font-bold">¿Quieres Ser Voluntario?</h2>
-      <p class="mx-auto mb-10 max-w-3xl text-center text-xl">
-        Únete a nuestro increíble equipo de voluntarios y ayúdanos a crear
-        experiencias memorables para la comunidad. No importa cuánto tiempo
-        tengas disponible, ¡toda ayuda es valiosa!
-      </p>
-      <a
-        href="https://forms.gle/tu-formulario"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="text-primary inline-flex items-center gap-2 rounded-md bg-white px-6 py-2 font-medium"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-5 w-5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="1.5"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M12 4.5v15m7.5-7.5h-15"></path>
-        </svg>
-        Ser voluntario
-      </a>
-    </div>
-  </section>
+  <CallToActionSection>
+    <h2 class="mb-6 text-4xl font-bold text-white">¿Quieres Ser Voluntario?</h2>
+    <p class="mb-8 text-xl text-white">
+      Únete a nuestro increíble equipo de voluntarios y ayúdanos a crear
+      experiencias memorables para la comunidad. No importa cuánto tiempo tengas
+      disponible, ¡toda ayuda es valiosa!
+    </p>
+    <Button
+      variant="white"
+      href="https://forms.gle/tu-formulario"
+      target="_blank"
+    >
+      <HandshakeIcon />
+      Ser voluntario
+    </Button>
+  </CallToActionSection>
 </Layout>
 
 <script>

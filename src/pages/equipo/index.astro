@@ -6,7 +6,7 @@ import Stats from "@/components/Stats.astro";
 import Layout from "@/layouts/Layout.astro";
 import MemberCard from "@/components/MemberCard.astro";
 import members from "@/data/members/members.json";
-import { Users, Ticket } from "@lucide/astro";
+import { Users } from "@lucide/astro";
 
 const data = {
   stats: [
@@ -102,7 +102,7 @@ const metadata = {
       ¡nos encantaría conocerte!
     </p>
     <Button variant="white" href="/" target="_blank">
-      <Ticket stroke-width={1.5} size={16} />
+      <Users />
       Aplicar al Equipo
     </Button>
   </CallToActionSection>

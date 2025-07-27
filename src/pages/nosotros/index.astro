@@ -7,7 +7,7 @@ import Button from "@/components/Button.astro";
 import GalleryCard from "@/components/GalleryCard.astro";
 import organizers from "@/data/organizers/organizers.json";
 import gallery from "@/data/gallery/gallery.json";
-import { MapPin, Users, Calendar, Ticket } from "@lucide/astro";
+import { MapPin, Users, Calendar, User } from "@lucide/astro";
 
 const metadata = {
   title: "Nosotros - Google Developer Group Ica",
@@ -121,7 +121,7 @@ const buttons = [
       GDG. Juntos podemos crear un impacto aún mayor en el mundo del desarrollo.
     </p>
     <Button variant="white" href="/" target="_blank">
-      <Ticket stroke-width={1.5} size={16} />
+      <User />
       Únete a la Comunidad
     </Button>
   </CallToActionSection>

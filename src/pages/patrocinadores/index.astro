@@ -7,7 +7,9 @@ import featured from "@/data/sponsors/featured.json";
 import sponsors from "@/data/sponsors/sponsors.json";
 import benefits from "@/data/benefits/why-sponsor.json";
 
-import { Users, Target, Zap, Heart } from "@lucide/astro";
+import { Users, Target, Zap, Heart, BriefcaseBusiness } from "@lucide/astro";
+import CallToActionSection from "@/components/CallToActionSection.astro";
+import Button from "@/components/Button.astro";
 
 const heroStats = [
   { value: "15+", text: "Patrocinadores Activos", color: "text-google-blue" },
@@ -123,40 +125,22 @@ const metadata = {
       }
     </div>
   </section>
-
-  <section
-    class="bg-[linear-gradient(135deg,#2563EB_0%,#EC4899_45%,#22C55E_100%)] py-28 text-center text-white"
-  >
-    <div class="container max-w-4xl">
-      <h2 class="mb-8 text-4xl font-bold">
-        ¿Quieres Ser Nuestro Próximo Patrocinador?
-      </h2>
-      <p class="mx-auto mb-10 max-w-2xl text-xl">
-        Únete a las empresas líderes que apoyan el crecimiento del ecosistema
-        tecnológico. Juntos podemos formar a los desarrolladores del futuro y
-        crear un impacto duradero en la industria.
-      </p>
-      <a
-        href="https://forms.gle/tu-formulario"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="text-primary inline-flex items-center gap-2 rounded-md bg-white px-8 py-3 font-medium"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-5 w-5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="1.5"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M12 4.5v15m7.5-7.5h-15"></path>
-        </svg>
-        Quiero ser patrocinador
-      </a>
-    </div>
-  </section>
+  <CallToActionSection>
+    <h2 class="mb-6 text-4xl font-bold text-white">
+      ¿Quieres Ser Nuestro Próximo Patrocinador?
+    </h2>
+    <p class="mb-8 text-xl text-white">
+      Únete a las empresas líderes que apoyan el crecimiento del ecosistema
+      tecnológico. Juntos podemos formar a los desarrolladores del futuro y
+      crear un impacto duradero en la industria.
+    </p>
+    <Button
+      variant="white"
+      href="https://forms.gle/tu-formulario"
+      target="_blank"
+    >
+      <BriefcaseBusiness />
+      Quiero ser patrocinador
+    </Button>
+  </CallToActionSection>
 </Layout>
