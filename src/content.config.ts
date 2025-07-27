@@ -4,6 +4,7 @@ import { glob } from "astro/loaders";
 const events = defineCollection({
   loader: glob({ pattern: "**/*.json", base: "./src/data/events" }),
   schema: z.object({
+    id: z.number(),
     name: z.string(),
     image: z.string(),
     shortDescription: z.string(),

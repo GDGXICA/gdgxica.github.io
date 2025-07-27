@@ -1,4 +1,5 @@
 {
+  "id": 3,
   "name": "DevFest 2025",
   "image": "/events/devfest-2025.webp",
   "shortDescription": "descripción del evento",
@@ -21,11 +22,11 @@
     "label": "Próximo",
     "type": "upcoming"
   },
-  "isHighlight": false,
+  "isHighlight": true,
   "tags": ["cloud", "Machine Learning", "Android"],
   "speakerNames": [],
   "largeDescription": " descripción larga",
-  "registerFormLink": "",
+  "registerFormLink": "https://gdg.community.dev/events/details/google-gdg-ica-presents-devfest-ica-2025/",
   "requirements": ["requisitos 01", "requisitos 02"],
   "include": ["include 01", "include 02"],
   "technologies": ["tag 01", "tag 02"],
