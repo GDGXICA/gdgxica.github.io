@@ -5,7 +5,7 @@
     "role": "Coordinadora de Logística",
     "area": "Logística",
     "bio": "Estudiante de ingeniería industrial en la UNICA.",
-    "avatar": "/assets/avatars/maria.jpg",
+    "avatar": "/placeholder.svg",
     "links": {
       "linkedin": "https://linkedin.com/in/mariagarcia",
       "twitter": "https://twitter.com/mariagarcia"
@@ -17,7 +17,7 @@
     "role": "Mentor Técnico",
     "area": "Técnico",
     "bio": "Desarrollador backend en Go, apasionado por la nube.",
-    "avatar": "/assets/avatars/juan.jpg",
+    "avatar": "/placeholder.svg",
     "links": {
       "github": "https://github.com/juanperez",
       "linkedin": "https://linkedin.com/in/juanperez"
