@@ -19,6 +19,7 @@ import {
 } from "@lucide/astro";
 import CallToActionSection from "@/components/CallToActionSection.astro";
 import Button from "@/components/Button.astro";
+import HeroPage from "@/components/HeroPage.astro";
 
 const areas = [...new Set(volunteers.map((v) => v.area))].sort();
 
@@ -49,38 +50,34 @@ const metadata = {
 ---
 
 <Layout {...metadata}>
-  <section
-    class="relative isolate overflow-hidden bg-gradient-to-b from-blue-50 to-green-50 py-20"
-  >
-    <div class="container text-center">
-      <p
-        class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-red-500 to-green-600"
-      >
-        <HandshakeIcon stroke-width={1.5} size={64} color="#FFFFFF" />
-      </p>
-      <h1 class="mb-6 text-5xl font-bold">
-        <span class="text-google-blue">Nuestros </span>
-        <span class="text-google-red">Voluntarios</span>
-      </h1>
+  <HeroPage>
+    <p
+      class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-red-500 to-green-600"
+    >
+      <HandshakeIcon stroke-width={1.5} size={64} color="#FFFFFF" />
+    </p>
+    <h1 class="mb-6 text-5xl font-bold">
+      <span class="text-google-blue">Nuestros </span>
+      <span class="text-google-red">Voluntarios</span>
+    </h1>
 
-      <p class="text-secondary mx-auto mb-12 max-w-3xl text-xl">
-        El corazón de nuestra comunidad son las personas que generosamente
-        dedican su tiempo y talento para hacer que cada evento sea especial.
-        Conoce a los voluntarios que hacen posible la magia de GDG.
-      </p>
+    <p class="text-secondary mx-auto mb-12 max-w-3xl text-xl">
+      El corazón de nuestra comunidad son las personas que generosamente dedican
+      su tiempo y talento para hacer que cada evento sea especial. Conoce a los
+      voluntarios que hacen posible la magia de GDG.
+    </p>
 
-      <div class="mx-auto grid max-w-2xl grid-cols-2 gap-6 sm:grid-cols-4">
-        {
-          stats.map((s) => (
-            <div class="flex flex-col items-center">
-              <p class={`text-3xl font-bold ${s.color}`}>{s.value}</p>
-              <p class="text-secondary text-sm">{s.text}</p>
-            </div>
-          ))
-        }
-      </div>
+    <div class="mx-auto grid max-w-2xl grid-cols-2 gap-6 sm:grid-cols-4">
+      {
+        stats.map((s) => (
+          <div class="flex flex-col items-center">
+            <p class={`text-3xl font-bold ${s.color}`}>{s.value}</p>
+            <p class="text-secondary text-sm">{s.text}</p>
+          </div>
+        ))
+      }
     </div>
-  </section>
+  </HeroPage>
 
   <section class="container py-24">
     <div class="mx-auto mb-14 max-w-lg text-center">
