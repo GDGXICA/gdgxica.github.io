@@ -46,49 +46,49 @@ const buttons = [
 
 <Layout {...metadata}>
   <HeroPage>
-    <div class="mx-auto flex max-w-[768px] flex-col items-center text-center">
-      <img
-        src="./favicon.svg"
-        alt="Google Developer Group Ica"
-        class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl"
-      />
-      <h1 class="mb-6 text-5xl font-bold">
-        <span class="text-google-blue">Somos</span>
-        <span class="text-google-red">GDG</span>
-      </h1>
-      <p class="text-secondary mb-8 text-xl">
-        Una comunidad vibrante de desarrolladores unidos por la pasión de crear,
-        aprender y compartir conocimiento sobre las tecnologías de Google. Desde
-        2015, hemos sido el punto de encuentro para desarrolladores de todos los
-        niveles.
-      </p>
-      <div class="flex flex-col items-center gap-8 md:flex-row md:gap-4">
-        {
-          data.map((item) => (
-            <div class="flex items-center gap-2 rounded-4xl bg-[#F3F4F6] px-[15px] py-[20px] text-lg text-[#1F2937] md:py-[10px]">
-              <item.icon size={20} class="font-light" />
-              <span class="text-primary font-bold">{item.text}</span>
-            </div>
-          ))
-        }
-      </div>
+    <img
+      src="./favicon.svg"
+      alt="Google Developer Group Ica"
+      class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl"
+    />
+    <h1 class="mb-6 text-5xl font-bold">
+      <span class="text-google-blue">Somos</span>
+      <span class="text-google-red">GDG</span>
+    </h1>
+    <p class="text-secondary mb-8 text-xl">
+      Una comunidad vibrante de desarrolladores unidos por la pasión de crear,
+      aprender y compartir conocimiento sobre las tecnologías de Google. Desde
+      2015, hemos sido el punto de encuentro para desarrolladores de todos los
+      niveles.
+    </p>
+    <div class="flex flex-col items-center gap-8 md:flex-row md:gap-4">
+      {
+        data.map((item) => (
+          <div class="flex items-center gap-2 rounded-4xl bg-[#F3F4F6] px-[15px] py-[20px] text-lg text-[#1F2937] md:py-[10px]">
+            <item.icon size={20} class="font-light" />
+            <span class="text-primary font-bold">{item.text}</span>
+          </div>
+        ))
+      }
     </div>
   </HeroPage>
-  <section class="mx-auto py-10">
-    <div class="container py-10">
+  <section class="bg-section py-20">
+    <div class="container">
       <h2 class="text-primary mb-6 text-center text-4xl font-bold">
         Nuestros Organizadores
       </h2>
       <p class="text-secondary text-center text-xl">
         Conoce a todos los miembros de nuestro equipo organizador
       </p>
-    </div>
-    <div class="mx-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {organizers.map((organizer) => <OrganizerCard organizer={organizer} />)}
+      <div
+        class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+      >
+        {organizers.map((organizer) => <OrganizerCard organizer={organizer} />)}
+      </div>
     </div>
   </section>
-  <section class="mx-auto py-10">
-    <div class="container py-10">
+  <section class="py-20">
+    <div class="container">
       <h2 class="text-primary mb-6 text-center text-4xl font-bold">
         Galería de Momentos
       </h2>
@@ -96,20 +96,23 @@ const buttons = [
         Revive los mejores momentos de nuestra comunidad a través de estas
         imágenes
       </p>
-    </div>
-    <div class="mx-2 flex flex-wrap justify-center gap-4">
-      {
-        buttons.map((button) => (
-          <Button variant={button.variant} href="#" target="_blank">
-            {button.text}
-          </Button>
-        ))
-      }
-    </div>
-    <div
-      class="mx-10 my-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-    >
-      {gallery.map((image) => <GalleryCard image={image} />)}
+      <div class="mt-8 flex flex-wrap justify-center gap-4">
+        {
+          buttons.map((button) => (
+            <Button
+              variant={button.variant}
+              className="text-sm md:text-base"
+              href="#"
+              target="_blank"
+            >
+              {button.text}
+            </Button>
+          ))
+        }
+      </div>
+      <div class="my-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        {gallery.map((image) => <GalleryCard image={image} />)}
+      </div>
     </div>
   </section>
   <CallToActionSection>
