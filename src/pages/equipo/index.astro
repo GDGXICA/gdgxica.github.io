@@ -50,46 +50,44 @@ const metadata = {
 
 <Layout {...metadata}>
   <HeroPage>
-    <div class="mx-auto max-w-[768px] text-center">
-      <p
-        class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-red-500 to-green-600"
-      >
-        <Users stroke-width={1.5} size={64} color="#FFFFFF" />
-      </p>
-      <h1 class="mb-6 text-5xl font-bold">
-        <span class="text-google-blue">Nuestro</span>
-        <span class="text-google-red">Equipo</span>
-      </h1>
-      <p class="text-secondary mb-8 text-xl">
-        Conoce a las personas dedicadas que hacen posible nuestra comunidad.
-        Voluntarios apasionados que dedican su tiempo y experiencia para crear
-        un espcacio donde todos puedan aprender y crecer.
-      </p>
-      <Stats stats={data.stats} />
-    </div>
+    <p
+      class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-red-500 to-green-600"
+    >
+      <Users stroke-width={1.5} size={64} color="#FFFFFF" />
+    </p>
+    <h1 class="mb-6 text-5xl font-bold">
+      <span class="text-google-blue">Nuestro</span>
+      <span class="text-google-red">Equipo</span>
+    </h1>
+    <p class="text-secondary mb-8 text-xl">
+      Conoce a las personas dedicadas que hacen posible nuestra comunidad.
+      Voluntarios apasionados que dedican su tiempo y experiencia para crear un
+      espcacio donde todos puedan aprender y crecer.
+    </p>
+    <Stats stats={data.stats} />
   </HeroPage>
-  <section class="mx-auto py-10">
-    <div class="container py-10">
+  <section class="py-20">
+    <div class="container">
       <h2 class="text-primary mb-6 text-center text-4xl font-bold">
         Todo el Equipo
       </h2>
       <p class="text-secondary text-center text-xl">
         Conoce a todos los miembros de nuestro equipo
       </p>
-    </div>
-    <div class="mx-2 flex flex-wrap justify-center gap-4">
-      {
-        buttons.map((button) => (
-          <Button variant={button.variant} href="#" target="_blank">
-            {button.text}
-          </Button>
-        ))
-      }
-    </div>
-    <div
-      class="mx-10 my-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-    >
-      {members.map((member) => <MemberCard member={member} />)}
+      <div class="mt-8 flex flex-wrap justify-center gap-4">
+        {
+          buttons.map((button) => (
+            <Button variant={button.variant} href="#" target="_blank">
+              {button.text}
+            </Button>
+          ))
+        }
+      </div>
+      <div
+        class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+      >
+        {members.map((member) => <MemberCard member={member} />)}
+      </div>
     </div>
   </section>
   <CallToActionSection>
