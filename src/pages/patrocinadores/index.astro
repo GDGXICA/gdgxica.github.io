@@ -10,6 +10,7 @@ import benefits from "@/data/benefits/why-sponsor.json";
 import { Users, Target, Zap, Heart, BriefcaseBusiness } from "@lucide/astro";
 import CallToActionSection from "@/components/CallToActionSection.astro";
 import Button from "@/components/Button.astro";
+import HeroPage from "@/components/HeroPage.astro";
 
 const heroStats = [
   { value: "15+", text: "Patrocinadores Activos", color: "text-google-blue" },
@@ -34,36 +35,32 @@ const metadata = {
 ---
 
 <Layout {...metadata}>
-  <section
-    class="relative isolate overflow-hidden bg-gradient-to-b from-blue-50 to-green-50 py-20"
-  >
-    <div class="container text-center">
-      <p
-        class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-red-500 to-green-600"
-      >
-        <BriefcaseBusiness stroke-width={1.5} size={64} color="#FFFFFF" />
-      </p>
-      <h1 class="mb-6 text-5xl font-bold">
-        <span class="text-google-blue">Nuestros </span>
-        <span class="text-google-red">Patrocinadores</span>
-      </h1>
-      <p class="text-secondary mx-auto mb-12 max-w-3xl text-xl">
-        Agradecemos profundamente a las empresas y organizaciones que hacen
-        posible nuestra misión de democratizar el acceso al conocimiento
-        tecnológico. Su apoyo transforma vidas y construye el futuro digital.
-      </p>
-      <div class="mx-auto grid max-w-3xl grid-cols-2 gap-6 sm:grid-cols-4">
-        {
-          heroStats.map((s) => (
-            <div class="flex flex-col items-center">
-              <p class={"text-3xl font-bold " + s.color}>{s.value}</p>
-              <p class="text-secondary text-center text-sm">{s.text}</p>
-            </div>
-          ))
-        }
-      </div>
+  <HeroPage>
+    <p
+      class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-red-500 to-green-600"
+    >
+      <BriefcaseBusiness stroke-width={1.5} size={64} color="#FFFFFF" />
+    </p>
+    <h1 class="mb-6 text-5xl font-bold">
+      <span class="text-google-blue">Nuestros </span>
+      <span class="text-google-red">Patrocinadores</span>
+    </h1>
+    <p class="text-secondary mx-auto mb-12 max-w-3xl text-xl">
+      Agradecemos profundamente a las empresas y organizaciones que hacen
+      posible nuestra misión de democratizar el acceso al conocimiento
+      tecnológico. Su apoyo transforma vidas y construye el futuro digital.
+    </p>
+    <div class="mx-auto grid max-w-3xl grid-cols-2 gap-6 sm:grid-cols-4">
+      {
+        heroStats.map((s) => (
+          <div class="flex flex-col items-center">
+            <p class={"text-3xl font-bold " + s.color}>{s.value}</p>
+            <p class="text-secondary text-center text-sm">{s.text}</p>
+          </div>
+        ))
+      }
     </div>
-  </section>
+  </HeroPage>
 
   <section class="container py-24">
     <div class="mx-auto mb-14 max-w-2xl text-center">
@@ -94,7 +91,7 @@ const metadata = {
 
   <section class="container py-24">
     <div class="mx-auto mb-14 max-w-3xl text-center">
-      <h2 class="mb-4 text-3xl font-bold">¿Por Qué Patrocinar GDG?</h2>
+      <h2 class="mb-6 text-4xl font-bold">¿Por Qué Patrocinar GDG?</h2>
       <p class="text-secondary text-xl">
         Los beneficios tangibles de asociarse con la comunidad de
         desarrolladores más activa de la región
