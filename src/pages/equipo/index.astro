@@ -2,44 +2,12 @@
 import Button from "@/components/Button.astro";
 import CallToActionSection from "@/components/CallToActionSection.astro";
 import HeroPage from "@/components/HeroPage.astro";
-import Stats from "@/components/Stats.astro";
 import Layout from "@/layouts/Layout.astro";
 import MemberCard from "@/components/MemberCard.astro";
-import members from "@/data/members/members.json";
 import { Users } from "@lucide/astro";
+import members from "@/data/members/members.json";
 
-const data = {
-  stats: [
-    {
-      value: "7+",
-      text: "Organizadores Activos",
-      color: "text-google-blue",
-    },
-    {
-      value: "15+",
-      text: "Años de Experiencia",
-      color: "text-google-red",
-    },
-    {
-      value: "100+",
-      text: "Eventos Organizados",
-      color: "text-google-yellow",
-    },
-    {
-      value: "200+",
-      text: "Desarrolladores Mentoreados",
-      color: "text-google-green",
-    },
-  ],
-};
-
-const buttons = [
-  { text: "Todos", variant: "solid" },
-  { text: "Leadership", variant: "outline" },
-  { text: "Community", variant: "outline" },
-  { text: "Events", variant: "outline" },
-];
-
+// metadata
 const metadata = {
   title: "Equipo - Google Developer Group Ica",
   description: "Conoce al equipo de Google Developer Group Ica",
@@ -55,7 +23,7 @@ const metadata = {
     >
       <Users stroke-width={1.5} size={64} color="#FFFFFF" />
     </p>
-    <h1 class="mb-6 text-5xl font-bold">
+    <h1 class="mb-6 text-4xl font-bold md:text-5xl">
       <span class="text-google-blue">Nuestro</span>
       <span class="text-google-red">Equipo</span>
     </h1>
@@ -64,7 +32,27 @@ const metadata = {
       Voluntarios apasionados que dedican su tiempo y experiencia para crear un
       espcacio donde todos puedan aprender y crecer.
     </p>
-    <Stats stats={data.stats} />
+
+    <div
+      class="grid grid-cols-2 place-items-center gap-10 md:flex md:justify-between"
+    >
+      <div>
+        <p class="text-google-blue text-[2rem] font-bold">7+</p>
+        <p class="text-secondary">Organizadores Activos</p>
+      </div>
+      <div>
+        <p class="text-google-red text-[2rem] font-bold">15+</p>
+        <p class="text-secondary">Años de Experiencia</p>
+      </div>
+      <div>
+        <p class="text-google-yellow text-[2rem] font-bold">100+</p>
+        <p class="text-secondary">Eventos Organizados</p>
+      </div>
+      <div>
+        <p class="text-google-green text-[2rem] font-bold">200+</p>
+        <p class="text-secondary">Desarrolladores Mentoreados</p>
+      </div>
+    </div>
   </HeroPage>
   <section class="py-20">
     <div class="container">
@@ -74,15 +62,12 @@ const metadata = {
       <p class="text-secondary text-center text-xl">
         Conoce a todos los miembros de nuestro equipo
       </p>
-      <div class="mt-8 flex flex-wrap justify-center gap-4">
-        {
-          buttons.map((button) => (
-            <Button variant={button.variant} href="#" target="_blank">
-              {button.text}
-            </Button>
-          ))
-        }
-      </div>
+      <!-- <div class="mt-8  flex-wrap justify-center gap-4">
+        <Button variant="solid" href="#" target="_blank"> Todos </Button>
+        <Button variant="outline" href="#" target="_blank"> Leadership </Button>
+        <Button variant="outline" href="#" target="_blank"> Community </Button>
+        <Button variant="outline" href="#" target="_blank"> Events </Button>
+      </div> -->
       <div
         class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
       >
@@ -91,7 +76,7 @@ const metadata = {
     </div>
   </section>
   <CallToActionSection>
-    <h2 class="mb-6 text-4xl font-bold text-white">
+    <h2 class="mb-6 text-3xl font-bold text-white md:text-4xl">
       ¿Quieres Unirte a Nuestro Equipo?
     </h2>
     <p class="mb-8 text-xl text-white">
