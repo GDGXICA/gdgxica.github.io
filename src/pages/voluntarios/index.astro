@@ -1,11 +1,9 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import VolunteerCard from "@/components/VolunteerCard.astro";
-import OpportunityCard from "@/components/OpportunityCard.astro";
-
-import volunteers from "@/data/volunteers/volunteers.json";
-import opportunities from "@/data/opportunities/opportunities.json";
-
+import CallToActionSection from "@/components/CallToActionSection.astro";
+import Button from "@/components/Button.astro";
+import HeroPage from "@/components/HeroPage.astro";
 import {
   Camera,
   Headphones,
@@ -17,29 +15,8 @@ import {
   Boxes,
   HandshakeIcon,
 } from "@lucide/astro";
-import CallToActionSection from "@/components/CallToActionSection.astro";
-import Button from "@/components/Button.astro";
-import HeroPage from "@/components/HeroPage.astro";
-
-const areas = [...new Set(volunteers.map((v) => v.area))].sort();
-
-const stats = [
-  { value: "50+", text: "Voluntarios activos", color: "text-google-blue" },
-  { value: "1 500+", text: "Horas contribuidas", color: "text-google-red" },
-  { value: "100+", text: "Eventos apoyados", color: "text-google-yellow" },
-  { value: "9", text: "Áreas de apoyo", color: "text-google-green" },
-];
-
-const iconMapping = {
-  Camera,
-  Headphones,
-  Handshake,
-  Paintbrush,
-  Megaphone,
-  Languages,
-  Code2,
-  Boxes,
-};
+// data
+import volunteers from "@/data/volunteers/volunteers.json";
 
 const metadata = {
   title: "Voluntarios - Google Developer Group Ica",
@@ -56,7 +33,7 @@ const metadata = {
     >
       <HandshakeIcon stroke-width={1.5} size={64} color="#FFFFFF" />
     </p>
-    <h1 class="mb-6 text-5xl font-bold">
+    <h1 class="mb-6 text-4xl font-bold md:text-5xl">
       <span class="text-google-blue">Nuestros </span>
       <span class="text-google-red">Voluntarios</span>
     </h1>
@@ -67,55 +44,54 @@ const metadata = {
       voluntarios que hacen posible la magia de GDG.
     </p>
 
-    <div class="mx-auto grid max-w-2xl grid-cols-2 gap-6 sm:grid-cols-4">
-      {
-        stats.map((s) => (
-          <div class="flex flex-col items-center">
-            <p class={`text-3xl font-bold ${s.color}`}>{s.value}</p>
-            <p class="text-secondary text-sm">{s.text}</p>
-          </div>
-        ))
-      }
+    <div
+      class="grid grid-cols-2 place-items-center gap-10 md:flex md:justify-between"
+    >
+      <div>
+        <p class="text-google-blue text-[2rem] font-bold">50+</p>
+        <p class="text-secondary">Voluntarios activos</p>
+      </div>
+      <div>
+        <p class="text-google-red text-[2rem] font-bold">1500+</p>
+        <p class="text-secondary">Horas contribuidas</p>
+      </div>
+      <div>
+        <p class="text-google-yellow text-[2rem] font-bold">100+</p>
+        <p class="text-secondary">Eventos apoyados</p>
+      </div>
+      <div>
+        <p class="text-google-green text-[2rem] font-bold">9</p>
+        <p class="text-secondary">Áreas de apoyo</p>
+      </div>
     </div>
   </HeroPage>
 
-  <section class="container py-24">
-    <div class="mx-auto mb-14 max-w-lg text-center">
-      <h2 class="mb-4 text-4xl font-bold">Todos Nuestros Voluntarios</h2>
-      <p class="text-secondary text-xl">
-        Conoce a todas las personas increíbles que dedican su tiempo a nuestra
-        comunidad
-      </p>
-    </div>
+  <section class="py-20">
+    <div class="container">
+      <div class="mx-auto mb-14 max-w-lg text-center">
+        <h2 class="mb-4 text-4xl font-bold">Todos Nuestros Voluntarios</h2>
+        <p class="text-secondary text-xl">
+          Conoce a todas las personas increíbles que dedican su tiempo a nuestra
+          comunidad
+        </p>
+      </div>
 
-    <div class="mb-12 flex flex-wrap justify-center gap-2" id="filters">
-      <button
-        data-area="Todos"
-        class="text-primary hover:border-google-blue hover:text-google-blue rounded-md border border-gray-300 bg-white px-3 py-1 text-sm font-medium transition"
+      <!-- <div class="flex flex-wrap justify-center gap-2" id="filters">
+        <Button variant="solid" href="#" target="_blank"> Todos </Button>
+        <Button variant="outline" href="#" target="_blank"> Logística </Button>
+        <Button variant="outline" href="#" target="_blank"> Técnico </Button>
+      </div> -->
+
+      <div
+        id="volunteers-grid"
+        class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
       >
-        Todos
-      </button>
-      {
-        areas.map((area) => (
-          <button
-            data-area={area}
-            class="text-primary hover:border-google-blue hover:text-google-blue rounded-md border border-gray-300 bg-white px-3 py-1 text-sm font-medium transition"
-          >
-            {area}
-          </button>
-        ))
-      }
-    </div>
-
-    <div
-      id="volunteers-grid"
-      class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-    >
-      {volunteers.map((v) => <VolunteerCard volunteer={v} />)}
+        {volunteers.map((volunteer) => <VolunteerCard volunteer={volunteer} />)}
+      </div>
     </div>
   </section>
 
-  <section class="bg-section py-24">
+  <section class="bg-section py-20">
     <div class="container">
       <div class="mx-auto mb-14 max-w-2xl text-center">
         <h2 class="mb-4 text-3xl font-bold">Oportunidades de Voluntariado</h2>
@@ -126,23 +102,348 @@ const metadata = {
       </div>
 
       <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {
-          opportunities.map((op) => (
-            <OpportunityCard
-              title={op.title}
-              icon={iconMapping[op.icon]}
-              color={op.color}
-              description={op.description}
-              skills={op.skills}
-              commitment={op.commitment}
-            />
-          ))
-        }
+        <article
+          class="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 text-center"
+        >
+          <Camera class="mx-auto h-6 w-6" stroke-width={1.5} color="#A855F7" />
+
+          <h3 class="text-primary text-lg font-bold">Fotografía y Video</h3>
+
+          <p class="text-secondary text-sm">
+            Captura los mejores momentos de nuestros eventos y ayuda a crear
+            contenido visual.
+          </p>
+
+          <div>
+            <p class="text-primary mt-2 mb-[10px] font-semibold tracking-wide">
+              Habilidades
+            </p>
+            <ul
+              class="flex flex-wrap justify-center gap-1 text-xs font-semibold text-[#1F2937]"
+            >
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Fotografía
+              </li>
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Edición
+              </li>
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Creación
+              </li>
+            </ul>
+          </div>
+          <div>
+            <p
+              class="text-primary mb-[10px] text-base font-semibold tracking-wide"
+            >
+              Compromiso
+            </p>
+            <p class="text-secondary text-sm">4-6 horas por evento</p>
+          </div>
+        </article>
+
+        <article
+          class="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 text-center"
+        >
+          <Headphones
+            class="mx-auto h-6 w-6"
+            stroke-width={1.5}
+            color="#3B82F6"
+          />
+
+          <h3 class="text-primary text-lg font-bold">Soporte Técnico</h3>
+
+          <p class="text-secondary text-sm">
+            Ayuda con setup de audio/video, streaming y soporte técnico durante
+            eventos.
+          </p>
+
+          <div>
+            <p class="text-primary mt-2 mb-[10px] font-semibold tracking-wide">
+              Habilidades
+            </p>
+            <ul
+              class="flex flex-wrap justify-center gap-1 text-xs font-semibold text-[#1F2937]"
+            >
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Conocimiento AV
+              </li>
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Paciencia
+              </li>
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Resolución de problemas
+              </li>
+            </ul>
+          </div>
+          <div>
+            <p
+              class="text-primary mb-[10px] text-base font-semibold tracking-wide"
+            >
+              Compromiso
+            </p>
+            <p class="text-secondary text-sm">4-6 horas por evento</p>
+          </div>
+        </article>
+
+        <article
+          class="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 text-center"
+        >
+          <Handshake
+            class="mx-auto h-6 w-6"
+            stroke-width={1.5}
+            color="#10B981"
+          />
+
+          <h3 class="text-primary text-lg font-bold">Atención a Asistentes</h3>
+
+          <p class="text-secondary text-sm">
+            Da la bienvenida, gestiona registro y ayuda a los asistentes durante
+            eventos.
+          </p>
+
+          <div>
+            <p class="text-primary mt-2 mb-[10px] font-semibold tracking-wide">
+              Habilidades
+            </p>
+            <ul
+              class="flex flex-wrap justify-center gap-1 text-xs font-semibold text-[#1F2937]"
+            >
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Comunicación
+              </li>
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Organización
+              </li>
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Amabilidad
+              </li>
+            </ul>
+          </div>
+          <div>
+            <p
+              class="text-primary mb-[10px] text-base font-semibold tracking-wide"
+            >
+              Compromiso
+            </p>
+            <p class="text-secondary text-sm">4-6 horas por evento</p>
+          </div>
+        </article>
+
+        <article
+          class="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 text-center"
+        >
+          <Paintbrush
+            class="mx-auto h-6 w-6"
+            stroke-width={1.5}
+            color="#EF4444"
+          />
+
+          <h3 class="text-primary text-lg font-bold">Diseño Gráfico</h3>
+
+          <p class="text-secondary text-sm">
+            Crea materiales visuales, posters y contenido para redes sociales.
+          </p>
+
+          <div>
+            <p class="text-primary mt-2 mb-[10px] font-semibold tracking-wide">
+              Habilidades
+            </p>
+            <ul
+              class="flex flex-wrap justify-center gap-1 text-xs font-semibold text-[#1F2937]"
+            >
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Comunicación
+              </li>
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Organización
+              </li>
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Amabilidad
+              </li>
+            </ul>
+          </div>
+          <div>
+            <p
+              class="text-primary mb-[10px] text-base font-semibold tracking-wide"
+            >
+              Compromiso
+            </p>
+            <p class="text-secondary text-sm">4-6 horas por evento</p>
+          </div>
+        </article>
+
+        <article
+          class="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 text-center"
+        >
+          <Megaphone
+            class="mx-auto h-6 w-6"
+            stroke-width={1.5}
+            color="#F97316"
+          />
+
+          <h3 class="text-primary text-lg font-bold">Redes Sociales</h3>
+
+          <p class="text-secondary text-sm">
+            Ayuda a gestionar redes sociales y crear contenido para promocionar
+            eventos.
+          </p>
+
+          <div>
+            <p class="text-primary mt-2 mb-[10px] font-semibold tracking-wide">
+              Habilidades
+            </p>
+            <ul
+              class="flex flex-wrap justify-center gap-1 text-xs font-semibold text-[#1F2937]"
+            >
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Comunicación
+              </li>
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Organización
+              </li>
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Amabilidad
+              </li>
+            </ul>
+          </div>
+          <div>
+            <p
+              class="text-primary mb-[10px] text-base font-semibold tracking-wide"
+            >
+              Compromiso
+            </p>
+            <p class="text-secondary text-sm">4-6 horas por evento</p>
+          </div>
+        </article>
+
+        <article
+          class="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 text-center"
+        >
+          <Languages
+            class="mx-auto h-6 w-6"
+            stroke-width={1.5}
+            color="#3B82F6"
+          />
+
+          <h3 class="text-primary text-lg font-bold">Traducción y Contenido</h3>
+
+          <p class="text-secondary text-sm">
+            Traduce materiales técnicos y ayuda a crear contenido educativo..
+          </p>
+
+          <div>
+            <p class="text-primary mt-2 mb-[10px] font-semibold tracking-wide">
+              Habilidades
+            </p>
+            <ul
+              class="flex flex-wrap justify-center gap-1 text-xs font-semibold text-[#1F2937]"
+            >
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Comunicación
+              </li>
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Organización
+              </li>
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Amabilidad
+              </li>
+            </ul>
+          </div>
+          <div>
+            <p
+              class="text-primary mb-[10px] text-base font-semibold tracking-wide"
+            >
+              Compromiso
+            </p>
+            <p class="text-secondary text-sm">4-6 horas por evento</p>
+          </div>
+        </article>
+
+        <article
+          class="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 text-center"
+        >
+          <Code2 class="mx-auto h-6 w-6" stroke-width={1.5} color="#EF4444" />
+
+          <h3 class="text-primary text-lg font-bold">Mentoring Técnico</h3>
+
+          <p class="text-secondary text-sm">
+            Mentora a desarrolladores junior durante workshops y code labs.
+          </p>
+
+          <div>
+            <p class="text-primary mt-2 mb-[10px] font-semibold tracking-wide">
+              Habilidades
+            </p>
+            <ul
+              class="flex flex-wrap justify-center gap-1 text-xs font-semibold text-[#1F2937]"
+            >
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Comunicación
+              </li>
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Organización
+              </li>
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Amabilidad
+              </li>
+            </ul>
+          </div>
+          <div>
+            <p
+              class="text-primary mb-[10px] text-base font-semibold tracking-wide"
+            >
+              Compromiso
+            </p>
+            <p class="text-secondary text-sm">4-6 horas por evento</p>
+          </div>
+        </article>
+
+        <article
+          class="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 text-center"
+        >
+          <Boxes class="mx-auto h-6 w-6" stroke-width={1.5} color="#F59E0B" />
+
+          <h3 class="text-primary text-lg font-bold">Logística General</h3>
+
+          <p class="text-secondary text-sm">
+            Ayuda con tareas generales de organización y logística de eventos.
+          </p>
+
+          <div>
+            <p class="text-primary mt-2 mb-[10px] font-semibold tracking-wide">
+              Habilidades
+            </p>
+            <ul
+              class="flex flex-wrap justify-center gap-1 text-xs font-semibold text-[#1F2937]"
+            >
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Comunicación
+              </li>
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Organización
+              </li>
+              <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">
+                Amabilidad
+              </li>
+            </ul>
+          </div>
+          <div>
+            <p
+              class="text-primary mb-[10px] text-base font-semibold tracking-wide"
+            >
+              Compromiso
+            </p>
+            <p class="text-secondary text-sm">4-6 horas por evento</p>
+          </div>
+        </article>
       </div>
     </div>
   </section>
   <CallToActionSection>
-    <h2 class="mb-6 text-4xl font-bold text-white">¿Quieres Ser Voluntario?</h2>
+    <h2 class="mb-6 text-3xl font-bold text-white md:text-4xl">
+      ¿Quieres Ser Voluntario?
+    </h2>
     <p class="mb-8 text-xl text-white">
       Únete a nuestro increíble equipo de voluntarios y ayúdanos a crear
       experiencias memorables para la comunidad. No importa cuánto tiempo tengas
@@ -158,32 +459,3 @@ const metadata = {
     </Button>
   </CallToActionSection>
 </Layout>
-
-<script>
-  const buttons = document.querySelectorAll("#filters button");
-  const cards = document.querySelectorAll("#volunteers-grid > *");
-
-  buttons.forEach((btn) =>
-    btn.addEventListener("click", () => {
-      buttons.forEach((b) => {
-        b.classList.remove(
-          "border-google-blue",
-          "bg-google-blue",
-          "text-white"
-        );
-        b.classList.add("border-gray-300", "bg-white", "text-primary");
-      });
-
-      btn.classList.remove("border-gray-300", "bg-white", "text-primary");
-      btn.classList.add("border-google-blue", "bg-google-blue", "text-white");
-
-      const area = btn.dataset.area;
-      cards.forEach((card) => {
-        card.style.display =
-          area === "Todos" || card.dataset.area === area ? "" : "none";
-      });
-    })
-  );
-
-  if (buttons.length) buttons[0].click();
-</script>

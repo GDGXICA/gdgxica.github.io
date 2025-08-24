@@ -5,43 +5,18 @@ import CallToActionSection from "@/components/CallToActionSection.astro";
 import OrganizerCard from "@/components/OrganizerCard.astro";
 import Button from "@/components/Button.astro";
 import GalleryCard from "@/components/GalleryCard.astro";
+import { MapPin, Users, Calendar, User } from "@lucide/astro";
+// data
 import organizers from "@/data/organizers/organizers.json";
 import gallery from "@/data/gallery/gallery.json";
-import { MapPin, Users, Calendar, User } from "@lucide/astro";
 
+// metadata
 const metadata = {
   title: "Nosotros - Google Developer Group Ica",
   bio: "Somos Google Developer Group Ica",
   image: "",
   url: "https://gdgica.com/nosotros",
 };
-
-const data = [
-  {
-    icon: MapPin,
-    text: "Ciudad de Ica, Perú",
-  },
-  {
-    icon: Users,
-    text: "1000+ Miembros",
-  },
-  {
-    icon: Calendar,
-    text: "12 Años Activos",
-  },
-];
-
-const buttons = [
-  { text: "Todos", variant: "solid" },
-  { text: "DevFest", variant: "outline" },
-  { text: "WorkShop", variant: "outline" },
-  { text: "Hackaton", variant: "outline" },
-  { text: "Networking", variant: "outline" },
-  { text: "Study Jam", variant: "outline" },
-  { text: "I/O Extended", variant: "outline" },
-  { text: "Meetup", variant: "outline" },
-  { text: "CodeLab", variant: "outline" },
-];
 ---
 
 <Layout {...metadata}>
@@ -51,7 +26,7 @@ const buttons = [
       alt="Google Developer Group Ica"
       class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl"
     />
-    <h1 class="mb-6 text-5xl font-bold">
+    <h1 class="mb-6 text-4xl font-bold md:text-5xl">
       <span class="text-google-blue">Somos</span>
       <span class="text-google-red">GDG</span>
     </h1>
@@ -61,15 +36,27 @@ const buttons = [
       2015, hemos sido el punto de encuentro para desarrolladores de todos los
       niveles.
     </p>
-    <div class="flex flex-col items-center gap-8 md:flex-row md:gap-4">
-      {
-        data.map((item) => (
-          <div class="flex items-center gap-2 rounded-4xl bg-[#F3F4F6] px-[15px] py-[20px] text-lg text-[#1F2937] md:py-[10px]">
-            <item.icon size={20} class="font-light" />
-            <span class="text-primary font-bold">{item.text}</span>
-          </div>
-        ))
-      }
+    <div
+      class="flex flex-col items-center justify-center gap-8 md:flex-row md:gap-4"
+    >
+      <div
+        class="flex items-center gap-2 rounded-4xl bg-[#F3F4F6] px-[15px] py-[20px] text-lg text-[#1F2937] md:py-[10px]"
+      >
+        <MapPin size={20} class="font-light" />
+        <span class="text-primary font-bold">Ciudad de Ica, Perú</span>
+      </div>
+      <div
+        class="flex items-center gap-2 rounded-4xl bg-[#F3F4F6] px-[15px] py-[20px] text-lg text-[#1F2937] md:py-[10px]"
+      >
+        <Users size={20} class="font-light" />
+        <span class="text-primary font-bold">1000+ Miembros</span>
+      </div>
+      <div
+        class="flex items-center gap-2 rounded-4xl bg-[#F3F4F6] px-[15px] py-[20px] text-lg text-[#1F2937] md:py-[10px]"
+      >
+        <Calendar size={20} class="font-light" />
+        <span class="text-primary font-bold">12 Años Activos</span>
+      </div>
     </div>
   </HeroPage>
   <section class="bg-section py-20">
@@ -96,27 +83,87 @@ const buttons = [
         Revive los mejores momentos de nuestra comunidad a través de estas
         imágenes
       </p>
-      <div class="mt-8 flex flex-wrap justify-center gap-4">
-        {
-          buttons.map((button) => (
-            <Button
-              variant={button.variant}
-              className="text-sm md:text-base"
-              href="#"
-              target="_blank"
-            >
-              {button.text}
-            </Button>
-          ))
-        }
-      </div>
+      <!-- <div class="mt-8 flex flex-wrap justify-center gap-4">
+        <Button
+          variant="solid"
+          className="text-sm md:text-base"
+          href="#"
+          target="_blank"
+        >
+          Todos
+        </Button>
+        <Button
+          variant="outline"
+          className="text-sm md:text-base"
+          href="#"
+          target="_blank"
+        >
+          DevFest
+        </Button>
+        <Button
+          variant="outline"
+          className="text-sm md:text-base"
+          href="#"
+          target="_blank"
+        >
+          WorkShop
+        </Button>
+        <Button
+          variant="outline"
+          className="text-sm md:text-base"
+          href="#"
+          target="_blank"
+        >
+          Hackaton
+        </Button>
+        <Button
+          variant="outline"
+          className="text-sm md:text-base"
+          href="#"
+          target="_blank"
+        >
+          Networking
+        </Button>
+        <Button
+          variant="outline"
+          className="text-sm md:text-base"
+          href="#"
+          target="_blank"
+        >
+          Study Jam
+        </Button>
+        <Button
+          variant="outline"
+          className="text-sm md:text-base"
+          href="#"
+          target="_blank"
+        >
+          I/O Extended
+        </Button>
+        <Button
+          variant="outline"
+          className="text-sm md:text-base"
+          href="#"
+          target="_blank"
+        >
+          Meetup
+        </Button>
+        <Button
+          variant="outline"
+          className="text-sm md:text-base"
+          href="#"
+          target="_blank"
+        >
+          CodeLab
+        </Button>
+      </div> -->
       <div class="my-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
         {gallery.map((image) => <GalleryCard image={image} />)}
       </div>
     </div>
   </section>
   <CallToActionSection>
-    <h2 class="mb-6 text-4xl font-bold text-white">
+    <h2 class="mb-6 text-3xl font-bold text-white md:text-4xl">
       ¿Quieres Ser Parte de Nuestra Historia?
     </h2>
     <p class="mb-8 text-xl text-white">

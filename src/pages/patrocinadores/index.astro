@@ -1,29 +1,12 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import SponsorCard from "@/components/SponsorCard.astro";
-import BenefitCard from "@/components/BenefitCard.astro";
-
-import featured from "@/data/sponsors/featured.json";
-import sponsors from "@/data/sponsors/sponsors.json";
-import benefits from "@/data/benefits/why-sponsor.json";
-
 import { Users, Target, Zap, Heart, BriefcaseBusiness } from "@lucide/astro";
 import CallToActionSection from "@/components/CallToActionSection.astro";
 import Button from "@/components/Button.astro";
 import HeroPage from "@/components/HeroPage.astro";
 
-const heroStats = [
-  { value: "15+", text: "Patrocinadores Activos", color: "text-google-blue" },
-  { value: "$50k", text: "Apoyo Anual Total", color: "text-google-red" },
-  { value: "100+", text: "Eventos Patrocinados", color: "text-google-yellow" },
-  {
-    value: "5000+",
-    text: "Desarrolladores Alcanzados",
-    color: "text-google-green",
-  },
-];
-
-const benefitIconMap = { Users, Target, Zap, Heart };
+import sponsors from "@/data/sponsors/sponsors.json";
 
 const metadata = {
   title: "Patrocinadores - Google Developer Group Ica",
@@ -41,7 +24,7 @@ const metadata = {
     >
       <BriefcaseBusiness stroke-width={1.5} size={64} color="#FFFFFF" />
     </p>
-    <h1 class="mb-6 text-5xl font-bold">
+    <h1 class="mb-6 text-4xl font-bold md:text-5xl">
       <span class="text-google-blue">Nuestros </span>
       <span class="text-google-red">Patrocinadores</span>
     </h1>
@@ -50,68 +33,128 @@ const metadata = {
       posible nuestra misión de democratizar el acceso al conocimiento
       tecnológico. Su apoyo transforma vidas y construye el futuro digital.
     </p>
-    <div class="mx-auto grid max-w-3xl grid-cols-2 gap-6 sm:grid-cols-4">
-      {
-        heroStats.map((s) => (
-          <div class="flex flex-col items-center">
-            <p class={"text-3xl font-bold " + s.color}>{s.value}</p>
-            <p class="text-secondary text-center text-sm">{s.text}</p>
-          </div>
-        ))
-      }
+
+    <div
+      class="grid grid-cols-2 place-items-center gap-10 md:flex md:justify-between"
+    >
+      <div>
+        <p class="text-google-blue text-[2rem] font-bold">15+</p>
+        <p class="text-secondary">Patrocinadores Activos</p>
+      </div>
+      <div>
+        <p class="text-google-red text-[2rem] font-bold">$50k</p>
+        <p class="text-secondary">Apoyo Anual Total</p>
+      </div>
+      <div>
+        <p class="text-google-yellow text-[2rem] font-bold">100+</p>
+        <p class="text-secondary">Eventos Patrocinados</p>
+      </div>
+      <div>
+        <p class="text-google-green text-[2rem] font-bold">5000+</p>
+        <p class="text-secondary">Desarrolladores Alcanzados</p>
+      </div>
     </div>
   </HeroPage>
 
-  <section class="container py-24">
-    <div class="mx-auto mb-14 max-w-2xl text-center">
-      <h2 class="mb-4 text-3xl font-bold">Patrocinadores Principales</h2>
-      <p class="text-secondary text-xl">
-        Nuestros socios estratégicos que impulsan la innovación y el crecimiento
-        de la comunidad
-      </p>
-    </div>
-    <div class="mx-auto grid max-w-4xl grid-cols-1 gap-8 md:grid-cols-2">
-      {featured.map((f) => <SponsorCard {...f} />)}
+  <section class="py-20">
+    <div class="container">
+      <div class="mx-auto max-w-2xl text-center">
+        <h2 class="mb-4 text-3xl font-bold">Patrocinadores Principales</h2>
+        <p class="text-secondary text-xl">
+          Nuestros socios estratégicos que impulsan la innovación y el
+          crecimiento de la comunidad
+        </p>
+      </div>
+      <div
+        class="mx-auto mt-12 grid max-w-4xl grid-cols-1 gap-8 md:grid-cols-2"
+      >
+        {
+          sponsors
+            .filter((sponsor) => sponsor.featured)
+            .map((sponsor) => <SponsorCard {...sponsor} />)
+        }
+      </div>
     </div>
   </section>
 
-  <section class="bg-section py-24">
+  <section class="bg-section py-20">
     <div class="container">
-      <div class="mx-auto mb-14 max-w-2xl text-center">
+      <div class="mx-auto max-w-2xl text-center">
         <h2 class="mb-4 text-3xl font-bold">Todos Nuestros Patrocinadores</h2>
         <p class="text-secondary text-xl">
           Cada empresa que nos apoya es fundamental para nuestro éxito
         </p>
       </div>
-      <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {sponsors.map((s) => <SponsorCard {...s} />)}
+      <div
+        class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+      >
+        {
+          sponsors
+            .filter((sponsor) => !sponsor.featured)
+            .map((sponsor) => <SponsorCard {...sponsor} />)
+        }
       </div>
     </div>
   </section>
 
-  <section class="container py-24">
-    <div class="mx-auto mb-14 max-w-3xl text-center">
-      <h2 class="mb-6 text-4xl font-bold">¿Por Qué Patrocinar GDG?</h2>
-      <p class="text-secondary text-xl">
-        Los beneficios tangibles de asociarse con la comunidad de
-        desarrolladores más activa de la región
-      </p>
-    </div>
-    <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-      {
-        benefits.map((b) => (
-          <BenefitCard
-            title={b.title}
-            description={b.description}
-            icon={benefitIconMap[b.icon]}
-            color={b.color}
-          />
-        ))
-      }
+  <section class="py-20">
+    <div class="container">
+      <div class="mx-auto mb-14 max-w-[523px] text-center">
+        <h2 class="mb-6 text-4xl font-bold">¿Por Qué Patrocinar GDG?</h2>
+        <p class="text-secondary text-xl">
+          Los beneficios tangibles de asociarse con la comunidad de
+          desarrolladores más activa de la región
+        </p>
+      </div>
+      <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <!-- const benefitIconMap = { Users, Target, Zap, Heart }; -->
+        <article
+          class="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-200 p-6 text-center"
+        >
+          <Users stroke-width={1.5} class="h-8 w-8" color="#2563EB" />
+          <h3 class="text-primary text-2xl font-semibold">Acceso a talento</h3>
+          <p class="text-secondary text-sm">
+            Conecta directamente con desarrolladores talentosos y apasionados de
+            la región.
+          </p>
+        </article>
+        <article
+          class="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-200 p-6 text-center"
+        >
+          <Target stroke-width={1.5} class="h-8 w-8" color="#DC2626" />
+          <h3 class="text-primary text-2xl font-semibold">Brand Awareness</h3>
+          <p class="text-secondary text-sm">
+            Aumenta la visibilidad de tu marca en la comunidad tech más activa
+            de la región.
+          </p>
+        </article>
+        <article
+          class="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-200 p-6 text-center"
+        >
+          <Zap stroke-width={1.5} class="h-8 w-8" color="#F59E0B" />
+          <h3 class="text-primary text-2xl font-semibold">
+            Thought Leadership
+          </h3>
+          <p class="text-secondary text-sm">
+            Posiciona tu empresa como líder tecnológico compartiendo
+            conocimiento y experiencia.
+          </p>
+        </article>
+        <article
+          class="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-200 p-6 text-center"
+        >
+          <Heart stroke-width={1.5} class="h-8 w-8" color="#16A34A" />
+          <h3 class="text-primary text-2xl font-semibold">Community Impact</h3>
+          <p class="text-secondary text-sm">
+            Contribuye al crecimiento del ecosistema tecnológico y genera
+            impacto social positivo.
+          </p>
+        </article>
+      </div>
     </div>
   </section>
   <CallToActionSection>
-    <h2 class="mb-6 text-4xl font-bold text-white">
+    <h2 class="mb-6 text-3xl font-bold text-white md:text-4xl">
       ¿Quieres Ser Nuestro Próximo Patrocinador?
     </h2>
     <p class="mb-8 text-xl text-white">

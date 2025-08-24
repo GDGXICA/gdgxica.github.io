@@ -3,37 +3,12 @@ import Button from "@/components/Button.astro";
 import CallToActionSection from "@/components/CallToActionSection.astro";
 import EventCard from "@/components/EventCard.astro";
 import HeroPage from "@/components/HeroPage.astro";
-import Stats from "@/components/Stats.astro";
 import Layout from "@/layouts/Layout.astro";
 import { Calendar } from "@lucide/astro";
 import { getCollection } from "astro:content";
+// data
 const allEvents = await getCollection("events");
 const highLightEvent = allEvents.find((event) => event.data.isHighlight);
-
-const data = {
-  stats: [
-    {
-      value: "1000+",
-      text: "Miembros activos",
-      color: "text-google-blue",
-    },
-    {
-      value: "50+",
-      text: "Eventos",
-      color: "text-google-red",
-    },
-    {
-      value: "25+",
-      text: "Expertos speakers",
-      color: "text-google-yellow",
-    },
-    {
-      value: "10+",
-      text: "Años activos",
-      color: "text-google-green",
-    },
-  ],
-};
 
 const metadata = {
   title: "Eventos - Google Developer Group Ica",
@@ -51,7 +26,7 @@ const metadata = {
       >
         <Calendar stroke-width={1.5} size={64} color="#FFFFFF" />
       </p>
-      <h1 class="mb-6 text-5xl font-bold">
+      <h1 class="mb-6 text-4xl font-bold md:text-5xl">
         <span class="text-google-blue">Nuestros</span>
         <span class="text-google-red">Eventos</span>
       </h1>
@@ -61,7 +36,27 @@ const metadata = {
         2019, hemos sido el punto de encuentro para desarrolladores de todos los
         niveles.
       </p>
-      <Stats stats={data.stats} />
+
+      <div
+        class="grid grid-cols-2 place-items-center gap-10 md:flex md:justify-between"
+      >
+        <div>
+          <p class="text-google-blue text-[2rem] font-bold">1000+</p>
+          <p class="text-secondary">Miembros activos</p>
+        </div>
+        <div>
+          <p class="text-google-red text-[2rem] font-bold">50+</p>
+          <p class="text-secondary">Eventos</p>
+        </div>
+        <div>
+          <p class="text-google-yellow text-[2rem] font-bold">25+</p>
+          <p class="text-secondary">Expertos speakers</p>
+        </div>
+        <div>
+          <p class="text-google-green text-[2rem] font-bold">10+</p>
+          <p class="text-secondary">Años activos</p>
+        </div>
+      </div>
       <p class="mt-[65px] mb-8 text-2xl font-bold">Próximo Evento Destacado</p>
     </div>
     <div class="mx-auto max-w-[1152px]">
@@ -92,7 +87,7 @@ const metadata = {
     </div>
   </section>
   <CallToActionSection>
-    <h2 class="mb-6 text-4xl font-bold text-white">
+    <h2 class="mb-6 text-3xl font-bold text-white md:text-4xl">
       ¿Tienes una idea para un evento?
     </h2>
     <p class="mb-8 text-xl text-white">
@@ -100,7 +95,7 @@ const metadata = {
       colabora en la organización de nuestros próximos eventos.
     </p>
     <Button variant="white" href="/" target="_blank">
-      <Calendar stroke-width={1.5} size={16} />
+      <Calendar />
       Proponer Evento
     </Button>
   </CallToActionSection>
