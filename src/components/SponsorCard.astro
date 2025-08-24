@@ -20,7 +20,7 @@ const { name, logo, sector, description, eventsSponsored, sinceYear, website } =
   <div class="text-center">
     <h3 class="text-primary mb-1 text-lg font-semibold">{name}</h3>
     <p
-      class="text-google-blue mb-3 text-xs font-medium tracking-wide uppercase"
+      class="text-google-blue mb-3 text-sm font-medium tracking-wide uppercase"
     >
       {sector}
     </p>
@@ -33,12 +33,14 @@ const { name, logo, sector, description, eventsSponsored, sinceYear, website } =
     class="mt-auto flex items-center justify-between gap-4 text-center text-xs"
   >
     <div class="flex flex-col">
-      <span class="text-google-blue font-semibold">{eventsSponsored}</span>
-      <span class="text-secondary">Eventos</span>
+      <span class="text-google-blue text-sm font-semibold"
+        >{eventsSponsored}</span
+      >
+      <span class="text-secondary text-sm">Eventos</span>
     </div>
     <div class="flex flex-col">
-      <span class="text-google-green font-semibold">{sinceYear}</span>
-      <span class="text-secondary">Desde</span>
+      <span class="text-google-green text-sm font-semibold">{sinceYear}</span>
+      <span class="text-secondary text-sm">Desde</span>
     </div>
   </div>
 
