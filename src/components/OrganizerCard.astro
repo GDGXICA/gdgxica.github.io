@@ -6,7 +6,7 @@ const { organizer } = Astro.props;
 ---
 
 <div
-  class="group flex flex-col gap-4 rounded-2xl border border-gray-200 p-6 shadow-sm transition-all hover:shadow-md"
+  class="group flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 transition-all hover:shadow-md"
 >
   <img
     src={organizer.avatar}
@@ -19,8 +19,8 @@ const { organizer } = Astro.props;
   <h3 class="text-primary text-center text-2xl font-semibold">
     {organizer.name}
   </h3>
-  <p class="text-google-blue mx-auto text-xl font-medium">{organizer.role}</p>
-  <p class="text-secondary line-clamp-3 text-center text-lg">{organizer.bio}</p>
+  <p class="text-google-blue mx-auto text-sm font-medium">{organizer.role}</p>
+  <p class="text-secondary line-clamp-3 text-center text-sm">{organizer.bio}</p>
   <div class="flex flex-wrap justify-center gap-2">
     {organizer.tags.map((tag) => <Tag label={tag} />)}
   </div>

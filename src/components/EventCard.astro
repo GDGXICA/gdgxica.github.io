@@ -24,7 +24,7 @@ const {
 
 {
   isHorizontal ? (
-    <article class="border-gray-custom relative rounded-lg border shadow-sm md:flex">
+    <article class="border-gray-custom relative overflow-hidden rounded-lg border bg-white shadow-sm md:flex">
       <div class="md:basis-1/2">
         <img
           src={image || "/placeholder.svg"}
@@ -34,7 +34,7 @@ const {
           alt={`Foto del evento de ${name}`}
         />
       </div>
-      <div class="basis-1/2 bg-white">
+      <div class="basis-1/2">
         <div class="p-6">
           <div class="mb-4 flex items-center justify-between">
             <div class="flex items-center gap-2">
@@ -43,8 +43,8 @@ const {
             </div>
             <Tag label="Destacado" type="devfest" isHighLight={isHighlight} />
           </div>
-          <p class="text-primary mb-1 text-2xl font-bold">{name}</p>
-          <p class="text-secondary mb-6">{shortDescription}</p>
+          <p class="text-primary mb-1 text-start text-2xl font-bold">{name}</p>
+          <p class="text-secondary mb-6 text-start">{shortDescription}</p>
           <ul class="text-secondary mb-4 flex flex-col gap-3">
             <li class="flex items-center gap-3">
               <Calendar stroke-width={1.5} size={16} color="#2463EB" />
@@ -58,10 +58,13 @@ const {
               <MapPin stroke-width={1.5} size={16} color="#16A34A" />
               {location.name}
             </li>
-            <li class="flex items-center gap-3">
-              <Globe stroke-width={1.5} size={16} color="#16A34A" />
-              {isVirtual}
-            </li>
+            {isVirtual && (
+              <li class="flex items-center gap-3">
+                <Globe stroke-width={1.5} size={16} color="#16A34A" />
+                Virtual
+              </li>
+            )}
+
             <li class="flex items-center gap-3">
               <Users stroke-width={1.5} size={16} color="#EBB308" />
               {participants}/{maxParticipants} registrados
@@ -87,7 +90,7 @@ const {
       </div>
     </article>
   ) : (
-    <article class="border-gray-custom relative rounded-lg border shadow-sm">
+    <article class="border-gray-custom relative rounded-lg border bg-white">
       <img
         src={image ? image : "/placeholder.svg"}
         class="aspect-video h-[192px] w-full rounded-t-lg object-cover"

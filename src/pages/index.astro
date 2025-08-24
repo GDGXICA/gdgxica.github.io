@@ -2,6 +2,10 @@
 import Layout from "@/layouts/Layout.astro";
 import CallToActionSection from "@/components/CallToActionSection.astro";
 import Button from "@/components/Button.astro";
+import Marquee from "@/components/Marquee.astro";
+import FeatureCard from "@/components/FeatureCard.astro";
+import EventCard from "@/components/EventCard.astro";
+import { getCollection } from "astro:content";
 import {
   Users,
   ArrowRight,
@@ -10,67 +14,8 @@ import {
   HeartHandshake,
   Sprout,
 } from "@lucide/astro";
-import Marquee from "@/components/Marquee.astro";
-import Stats from "@/components/Stats.astro";
-import FeatureCard from "@/components/FeatureCard.astro";
-import EventCard from "@/components/EventCard.astro";
-import { getCollection } from "astro:content";
-const allEvents = await getCollection("events");
 
-const data = {
-  carouselImages: [
-    {
-      url: "/carousel/item-01.webp",
-      alt: "",
-    },
-    {
-      url: "/carousel/item-02.webp",
-      alt: "",
-    },
-    {
-      url: "/carousel/item-03.webp",
-      alt: "",
-    },
-    {
-      url: "/carousel/item-04.webp",
-      alt: "",
-    },
-    {
-      url: "/carousel/item-05.webp",
-      alt: "",
-    },
-    {
-      url: "/carousel/item-06.webp",
-      alt: "",
-    },
-    {
-      url: "/carousel/item-07.webp",
-      alt: "",
-    },
-  ],
-  stats: [
-    {
-      value: "1000+",
-      text: "Miembros activos",
-      color: "text-google-blue",
-    },
-    {
-      value: "50+",
-      text: "Eventos",
-      color: "text-google-red",
-    },
-    {
-      value: "25+",
-      text: "Expertos speakers",
-      color: "text-google-yellow",
-    },
-    {
-      value: "10+",
-      text: "Años activos",
-      color: "text-google-green",
-    },
-  ],
-};
+const allEvents = await getCollection("events");
 
 const metadata = {
   title: "GDG ICA - Google Developer Group Ica",
@@ -106,14 +51,33 @@ const metadata = {
           </div>
         </div>
         <div class="md:basis-1/2">
-          <Marquee images={data.carouselImages} />
+          <Marquee />
         </div>
       </div>
     </div>
   </section>
-  <section class="bg-section py-16">
+  <section class="bg-section py-20">
     <div class="container">
-      <Stats stats={data.stats} />
+      <div
+        class="grid grid-cols-2 place-items-center gap-10 md:flex md:justify-between"
+      >
+        <div>
+          <p class="text-google-blue text-[2rem] font-bold">1000+</p>
+          <p class="text-secondary">Miembros activos</p>
+        </div>
+        <div>
+          <p class="text-google-red text-[2rem] font-bold">50+</p>
+          <p class="text-secondary">Eventos</p>
+        </div>
+        <div>
+          <p class="text-google-yellow text-[2rem] font-bold">25+</p>
+          <p class="text-secondary">Expertos speakers</p>
+        </div>
+        <div>
+          <p class="text-google-green text-[2rem] font-bold">10+</p>
+          <p class="text-secondary">Años activos</p>
+        </div>
+      </div>
     </div>
   </section>
   <section class="py-10 md:py-20">
@@ -185,15 +149,15 @@ const metadata = {
       </div>
       <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3">
         {
-          allEvents.map((event) => (
-            <EventCard slug={event.id} {...event.data} />
-          ))
+          allEvents
+            .sort((a, b) => b.data.id - a.data.id)
+            .map((event) => <EventCard slug={event.id} {...event.data} />)
         }
       </div>
     </div>
   </section>
   <CallToActionSection>
-    <h2 class="mb-6 text-4xl font-bold text-white">
+    <h2 class="mb-6 text-3xl font-bold text-white md:text-4xl">
       ¿Listo para unirte a nuestra comunidad?
     </h2>
     <p class="mb-8 text-xl text-white">

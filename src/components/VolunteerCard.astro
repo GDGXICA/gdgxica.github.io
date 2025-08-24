@@ -4,7 +4,7 @@ const { volunteer } = Astro.props;
 ---
 
 <div
-  class="group flex flex-col gap-4 rounded-2xl border border-gray-200 p-6 shadow-sm transition-all hover:shadow-md"
+  class="group flex flex-col justify-center gap-4 rounded-lg border border-gray-200 p-6 transition-all hover:shadow-md"
   data-area={volunteer.area}
 >
   <img
@@ -16,17 +16,21 @@ const { volunteer } = Astro.props;
     loading="lazy"
   />
 
-  <h3 class="text-primary text-center text-lg font-semibold">
-    {volunteer.name}
-  </h3>
+  <div class="text-center">
+    <h3 class="text-primary text-center text-lg font-semibold">
+      {volunteer.name}
+    </h3>
 
-  <p class="text-google-blue mx-auto text-sm font-medium">{volunteer.role}</p>
+    <p class="text-google-blue mx-auto text-sm font-medium">{volunteer.role}</p>
+  </div>
 
-  <span
-    class="bg-google-blue/10 text-google-blue mx-auto rounded px-2 py-0.5 text-xs font-semibold"
-  >
-    {volunteer.area}
-  </span>
+  <p class="text-center">
+    <span
+      class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px] text-xs font-semibold text-[#1F2937]"
+    >
+      {volunteer.area}
+    </span>
+  </p>
 
   <p class="text-secondary line-clamp-3 text-center text-sm">{volunteer.bio}</p>
 
@@ -38,21 +42,21 @@ const { volunteer } = Astro.props;
           aria-label="LinkedIn"
           target="_blank"
         >
-          <Linkedin size={18} class="hover:text-google-blue" />
+          <Linkedin size={16} class="hover:text-google-blue" />
         </a>
       )
     }
     {
       volunteer.links.github && (
         <a href={volunteer.links.github} aria-label="GitHub" target="_blank">
-          <Github size={18} class="hover:text-google-blue" />
+          <Github size={16} class="hover:text-google-blue" />
         </a>
       )
     }
     {
       volunteer.links.twitter && (
         <a href={volunteer.links.twitter} aria-label="Twitter" target="_blank">
-          <Twitter size={18} class="hover:text-google-blue" />
+          <Twitter size={16} class="hover:text-google-blue" />
         </a>
       )
     }
