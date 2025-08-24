@@ -1,5 +1,27 @@
 [
   {
+    "id": "google",
+    "name": "Google",
+    "logo": "/sponsors/google.png",
+    "sector": "Tecnología",
+    "description": "Nuestro patrocinador principal y la empresa detrás de las tecnologías que celebramos. Google proporciona recursos, speakers y acceso a las últimas innovaciones.",
+    "eventsSponsored": 25,
+    "sinceYear": 2019,
+    "website": "https://www.google.com",
+    "featured": true
+  },
+  {
+    "id": "github",
+    "name": "GitHub",
+    "logo": "/sponsors/github.svg",
+    "sector": "Colaboración Dev",
+    "description": "Plataforma líder de colaboración y open source que potencia nuestros workshops y contribuciones comunitarias.",
+    "eventsSponsored": 18,
+    "sinceYear": 2020,
+    "website": "https://github.com",
+    "featured": true
+  },
+  {
     "id": "empresa-a",
     "name": "Empresa A",
     "logo": "/placeholder.svg",
@@ -7,7 +29,8 @@
     "description": "Apoya iniciativas de capacitación y contenido educativo para la comunidad.",
     "eventsSponsored": 12,
     "sinceYear": 2021,
-    "website": "https://example.com"
+    "website": "https://example.com",
+    "featured": false
   },
   {
     "id": "empresa-b",
@@ -17,7 +40,8 @@
     "description": "Provee créditos y soporte de infraestructura para proyectos y demos.",
     "eventsSponsored": 10,
     "sinceYear": 2022,
-    "website": "https://example.com"
+    "website": "https://example.com",
+    "featured": false
   },
   {
     "id": "empresa-c",
@@ -27,7 +51,8 @@
     "description": "Ayuda a impulsar soluciones financieras innovadoras y retos de programación.",
     "eventsSponsored": 9,
     "sinceYear": 2023,
-    "website": "https://example.com"
+    "website": "https://example.com",
+    "featured": false
   },
   {
     "id": "empresa-d",
@@ -37,6 +62,7 @@
     "description": "Fomenta el aprendizaje de inteligencia artificial y proyectos con datasets reales.",
     "eventsSponsored": 11,
     "sinceYear": 2022,
-    "website": "https://example.com"
+    "website": "https://example.com",
+    "featured": false
   }
 ]

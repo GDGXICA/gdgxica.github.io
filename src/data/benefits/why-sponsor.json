@@ -1,12 +1,5 @@
 [
   {
-    "id": "talent-access",
-    "title": "Acceso a talento",
-    "icon": "Users",
-    "color": "#2563EB",
-    "description": "Conecta directamente con desarrolladores talentosos y apasionados de la región."
-  },
-  {
     "id": "brand-awareness",
     "title": "Brand Awareness",
     "icon": "Target",
