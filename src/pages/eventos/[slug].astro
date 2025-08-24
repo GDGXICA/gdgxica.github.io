@@ -6,6 +6,7 @@ import FeatureCard from "@/components/FeatureCard.astro";
 import Tag from "@/components/Tag.astro";
 import Layout from "@/layouts/Layout.astro";
 import ScheduleCard from "@/components/ScheduleCard.astro";
+import SpeakerCard from "@/components/SpeakerCard.astro";
 import {
   Ticket,
   Share2,
@@ -21,7 +22,7 @@ import {
   NotebookText,
   Store,
 } from "@lucide/astro";
-import SpeakerCard from "@/components/SpeakerCard.astro";
+import SharedButton from "@/components/react/SharedButton";
 
 export async function getStaticPaths() {
   const events = await getCollection("events");
@@ -83,9 +84,7 @@ const metadata = {
           >
             <Ticket size={16} /> Registrarse Gratis
           </Button>
-          <Button variant="white" href="/"
-            ><Share2 size={16} /> Compartir Evento
-          </Button>
+          <SharedButton client:only="react" title={event.data.name} />
         </div>
       </div>
     </div>
