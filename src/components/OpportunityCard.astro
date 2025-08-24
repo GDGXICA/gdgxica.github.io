@@ -10,7 +10,7 @@ const {
 ---
 
 <div
-  class="flex flex-col gap-4 rounded-2xl border border-gray-200 p-6 text-center shadow-sm"
+  class="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 text-center"
 >
   <Icon class="mx-auto h-6 w-6" stroke-width={1.5} color={color} />
 
@@ -20,29 +20,29 @@ const {
 
   {
     skills.length > 0 && (
-      <>
-        <strong class="text-secondary mt-2 text-xs font-bold tracking-wide uppercase">
+      <div>
+        <p class="text-primary mt-2 mb-[10px] text-base font-semibold tracking-wide">
           Habilidades
-        </strong>
-        <ul class="flex flex-wrap justify-center gap-1 font-bold">
+        </p>
+        <ul class="flex flex-wrap justify-center gap-1">
           {skills.map((s) => (
-            <li class="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] leading-none">
+            <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px] text-xs font-semibold text-[#1F2937]">
               {s}
             </li>
           ))}
         </ul>
-      </>
+      </div>
     )
   }
 
   {
     commitment && (
-      <>
-        <strong class="text-secondary mt-3 text-xs font-bold tracking-wide uppercase">
+      <div>
+        <p class="text-primary mb-[10px] text-base font-semibold tracking-wide">
           Compromiso
-        </strong>
+        </p>
         <p class="text-secondary text-sm">{commitment}</p>
-      </>
+      </div>
     )
   }
 </div>
