@@ -1,154 +1,71 @@
 [
   {
-    "id": "nombre-miembro",
-    "name": "Nombre del miembro",
-    "role": "Rol del Miembro",
-    "bio": "Desarrollador Backend con más de 3 años de experiencia en el desarrollo de soluciones escalables. Microsoft MVP, Github Campus Expert",
-    "joinedDate": "Enero 2019",
+    "id": 1,
+    "name": "David Licla",
+    "role": "Technology",
+    "bio": "Frontend Engineer",
+    "joinedDate": "Noviembre 2023",
     "responsibilities": [
-      "Dirección estrátegica de la comunidad",
-      "Coordinación con Google"
+      "Desarrollar el sitio web",
+      "Colaborar en eventos",
+      "Gestión de speakers"
     ],
-    "avatar": "/placeholder.svg",
-    "tags": ["Cloud", "Machine Learning", "Angular", "GCP"],
+    "avatar": "/team/david-licla.webp",
+    "tags": ["Next.js", "a11y", "i18n", "Web Performance", "TypeScript"],
     "links": {
-      "linkedin": "https://linkedin.com/in/eduardoormeno",
-      "twitter": "https://twitter.com/eduardoormeno",
-      "github": "https://github.com/eduardoormeno",
-      "web": "https://eduardoormeno.dev"
+      "linkedin": "https://www.linkedin.com/in/davidmariolc/",
+      "twitter": "https://x.com/DavidMarioLC",
+      "github": "https://github.com/DavidMarioLC",
+      "web": "https://portafolio-davidmariolc.vercel.app/"
     }
   },
   {
-    "id": "nombre-miembro",
-    "name": "Nombre del miembro",
-    "role": "Rol del Miembro",
-    "bio": "Desarrollador Backend con más de 3 años de experiencia en el desarrollo de soluciones escalables. Microsoft MVP, Github Campus Expert",
-    "joinedDate": "Enero 2019",
-    "responsibilities": [
-      "Dirección estrátegica de la comunidad",
-      "Coordinación con Google"
-    ],
-    "avatar": "/placeholder.svg",
-    "tags": ["Cloud", "Machine Learning", "Angular", "GCP"],
+    "id": 2,
+    "name": "Miguel Vivar",
+    "role": "Technology",
+    "bio": "FullStack Developer",
+    "joinedDate": "Noviembre 2023",
+    "responsibilities": ["Desarrollar el sitio web", "Colaborar en eventos"],
+    "avatar": "/team/miguel-vivar.webp",
+    "tags": ["Next.js", "TypeScript", "SQL", "Node.js"],
     "links": {
-      "linkedin": "https://linkedin.com/in/eduardoormeno",
-      "twitter": "https://twitter.com/eduardoormeno",
-      "github": "https://github.com/eduardoormeno",
-      "web": "https://eduardoormeno.dev"
+      "linkedin": "https://www.linkedin.com/in/miguel-vivar-farfan/",
+      "github": "https://github.com/MiguelVivar",
+      "web": "https://www.miguelvivar.engineer/"
     }
   },
   {
-    "id": "nombre-miembro",
-    "name": "Nombre del miembro",
-    "role": "Rol del Miembro",
-    "bio": "Desarrollador Backend con más de 3 años de experiencia en el desarrollo de soluciones escalables. Microsoft MVP, Github Campus Expert",
-    "joinedDate": "Enero 2019",
-    "responsibilities": [
-      "Dirección estrátegica de la comunidad",
-      "Coordinación con Google"
-    ],
-    "avatar": "/placeholder.svg",
-    "tags": ["Cloud", "Machine Learning", "Angular", "GCP"],
+    "id": 3,
+    "name": "Jeremy Fernandez",
+    "role": "Technology",
+    "bio": "Flutter Developer",
+    "joinedDate": "Noviembre 2023",
+    "responsibilities": ["Desarrollar el sitio web", "Colaborar en eventos"],
+    "avatar": "/team/jeremy-fernandez.webp",
+    "tags": ["PostgreSQL", "Graphql", "Node JS", "Linux"],
     "links": {
-      "linkedin": "https://linkedin.com/in/eduardoormeno",
-      "twitter": "https://twitter.com/eduardoormeno",
-      "github": "https://github.com/eduardoormeno",
-      "web": "https://eduardoormeno.dev"
+      "linkedin": "https://www.linkedin.com/in/jeremy-fernandez-704ab9237/",
+      "github": "https://github.com/JeffCodeEasy",
+      "web": "https://jeremyfernandez.netlify.app/"
     }
   },
   {
-    "id": "nombre-miembro",
-    "name": "Nombre del miembro",
-    "role": "Rol del Miembro",
-    "bio": "Desarrollador Backend con más de 3 años de experiencia en el desarrollo de soluciones escalables. Microsoft MVP, Github Campus Expert",
-    "joinedDate": "Enero 2019",
-    "responsibilities": [
-      "Dirección estrátegica de la comunidad",
-      "Coordinación con Google"
+    "id": 4,
+    "name": "Nikcol Uribe",
+    "role": "Logística",
+    "bio": "QA Lead",
+    "joinedDate": "Noviembre 2023",
+    "responsibilities": ["Organizar dinámicas", "Colaborar en eventos"],
+    "avatar": "/team/nikol-uribe.webp",
+    "tags": [
+      "Selenium",
+      "Java",
+      "Postman",
+      "Cucumber",
+      "Automatizacion de pruebas"
     ],
-    "avatar": "/placeholder.svg",
-    "tags": ["Cloud", "Machine Learning", "Angular", "GCP"],
     "links": {
-      "linkedin": "https://linkedin.com/in/eduardoormeno",
-      "twitter": "https://twitter.com/eduardoormeno",
-      "github": "https://github.com/eduardoormeno",
-      "web": "https://eduardoormeno.dev"
-    }
-  },
-  {
-    "id": "nombre-miembro",
-    "name": "Nombre del miembro",
-    "role": "Rol del Miembro",
-    "bio": "Desarrollador Backend con más de 3 años de experiencia en el desarrollo de soluciones escalables. Microsoft MVP, Github Campus Expert",
-    "joinedDate": "Enero 2019",
-    "responsibilities": [
-      "Dirección estrátegica de la comunidad",
-      "Coordinación con Google"
-    ],
-    "avatar": "/placeholder.svg",
-    "tags": ["Cloud", "Machine Learning", "Angular", "GCP"],
-    "links": {
-      "linkedin": "https://linkedin.com/in/eduardoormeno",
-      "twitter": "https://twitter.com/eduardoormeno",
-      "github": "https://github.com/eduardoormeno",
-      "web": "https://eduardoormeno.dev"
-    }
-  },
-  {
-    "id": "nombre-miembro",
-    "name": "Nombre del miembro",
-    "role": "Rol del Miembro",
-    "bio": "Desarrollador Backend con más de 3 años de experiencia en el desarrollo de soluciones escalables. Microsoft MVP, Github Campus Expert",
-    "joinedDate": "Enero 2019",
-    "responsibilities": [
-      "Dirección estrátegica de la comunidad",
-      "Coordinación con Google"
-    ],
-    "avatar": "/placeholder.svg",
-    "tags": ["Cloud", "Machine Learning", "Angular", "GCP"],
-    "links": {
-      "linkedin": "https://linkedin.com/in/eduardoormeno",
-      "twitter": "https://twitter.com/eduardoormeno",
-      "github": "https://github.com/eduardoormeno",
-      "web": "https://eduardoormeno.dev"
-    }
-  },
-  {
-    "id": "nombre-miembro",
-    "name": "Nombre del miembro",
-    "role": "Rol del Miembro",
-    "bio": "Desarrollador Backend con más de 3 años de experiencia en el desarrollo de soluciones escalables. Microsoft MVP, Github Campus Expert",
-    "joinedDate": "Enero 2019",
-    "responsibilities": [
-      "Dirección estrátegica de la comunidad",
-      "Coordinación con Google"
-    ],
-    "avatar": "/placeholder.svg",
-    "tags": ["Cloud", "Machine Learning", "Angular", "GCP"],
-    "links": {
-      "linkedin": "https://linkedin.com/in/eduardoormeno",
-      "twitter": "https://twitter.com/eduardoormeno",
-      "github": "https://github.com/eduardoormeno",
-      "web": "https://eduardoormeno.dev"
-    }
-  },
-  {
-    "id": "nombre-miembro",
-    "name": "Nombre del miembro",
-    "role": "Rol del Miembro",
-    "bio": "Desarrollador Backend con más de 3 años de experiencia en el desarrollo de soluciones escalables. Microsoft MVP, Github Campus Expert",
-    "joinedDate": "Enero 2019",
-    "responsibilities": [
-      "Dirección estrátegica de la comunidad",
-      "Coordinación con Google"
-    ],
-    "avatar": "/placeholder.svg",
-    "tags": ["Cloud", "Machine Learning", "Angular", "GCP"],
-    "links": {
-      "linkedin": "https://linkedin.com/in/eduardoormeno",
-      "twitter": "https://twitter.com/eduardoormeno",
-      "github": "https://github.com/eduardoormeno",
-      "web": "https://eduardoormeno.dev"
+      "linkedin": "https://www.linkedin.com/in/nikcol-uribe-huamani-324568289/"
     }
   }
 ]

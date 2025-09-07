@@ -1,8 +1,8 @@
 [
   {
-    "id": "google",
+    "id": 1,
     "name": "Google",
-    "logo": "/sponsors/google.png",
+    "logo": "/sponsors/google.svg",
     "sector": "Tecnología",
     "description": "Nuestro patrocinador principal y la empresa detrás de las tecnologías que celebramos. Google proporciona recursos, speakers y acceso a las últimas innovaciones.",
     "eventsSponsored": 25,
@@ -11,7 +11,7 @@
     "featured": true
   },
   {
-    "id": "github",
+    "id": 2,
     "name": "GitHub",
     "logo": "/sponsors/github.svg",
     "sector": "Colaboración Dev",
@@ -22,47 +22,102 @@
     "featured": true
   },
   {
-    "id": "empresa-a",
-    "name": "Empresa A",
-    "logo": "/placeholder.svg",
-    "sector": "Educación",
-    "description": "Apoya iniciativas de capacitación y contenido educativo para la comunidad.",
-    "eventsSponsored": 12,
-    "sinceYear": 2021,
-    "website": "https://example.com",
-    "featured": false
-  },
-  {
-    "id": "empresa-b",
-    "name": "Empresa B",
-    "logo": "/placeholder.svg",
-    "sector": "Cloud",
-    "description": "Provee créditos y soporte de infraestructura para proyectos y demos.",
-    "eventsSponsored": 10,
-    "sinceYear": 2022,
-    "website": "https://example.com",
-    "featured": false
-  },
-  {
-    "id": "empresa-c",
-    "name": "Empresa C",
-    "logo": "/placeholder.svg",
-    "sector": "FinTech",
-    "description": "Ayuda a impulsar soluciones financieras innovadoras y retos de programación.",
-    "eventsSponsored": 9,
+    "id": 3,
+    "name": "Cámara de comercio de ica",
+    "logo": "/sponsors/camaraica.webp",
+    "sector": "Comercio, industria y turismo",
+    "description": "Asociación Civil que busca contribuir a la competitividad regional a través de un fortalecido gremio empresarial.",
+    "eventsSponsored": 3,
     "sinceYear": 2023,
-    "website": "https://example.com",
+    "website": "https://camaraica.org.pe/",
     "featured": false
   },
   {
-    "id": "empresa-d",
-    "name": "Empresa D",
-    "logo": "/placeholder.svg",
-    "sector": "IA / ML",
-    "description": "Fomenta el aprendizaje de inteligencia artificial y proyectos con datasets reales.",
-    "eventsSponsored": 11,
-    "sinceYear": 2022,
-    "website": "https://example.com",
+    "id": 4,
+    "name": "Hub Tecológica",
+    "logo": "/sponsors/hubtecnologica.webp",
+    "sector": "Emprendimiento",
+    "description": "Un espacio de trabajo e innovación diseñado para reunir a emprendedores e impulsar la aceleración de las startups y emprendimientos tecnológicos en la región de Ica.",
+    "eventsSponsored": 3,
+    "sinceYear": 2023,
+    "website": "https://www.facebook.com/HubTecnologica",
+    "featured": false
+  },
+  {
+    "id": 5,
+    "name": "Systematic",
+    "logo": "/sponsors/systematic.webp",
+    "sector": "Educación",
+    "description": "Corporación Educativa líder en servicios de capacitación y desarrollo de habilidades en diversas áreas, incluyendo tecnología, negocios, liderazgo y desarrollo personal.",
+    "eventsSponsored": 3,
+    "sinceYear": 2023,
+    "website": "https://www.facebook.com/esystematic",
+    "featured": false
+  },
+  {
+    "id": 6,
+    "name": "CIETA",
+    "logo": "/sponsors/cieta.webp",
+    "sector": "Educación",
+    "description": "Dedicados a formar profesionales de calidad con los mejores programas de aprendizaje.",
+    "eventsSponsored": 3,
+    "sinceYear": 2023,
+    "website": "https://www.facebook.com/CIETAPERU",
+    "featured": false
+  },
+  {
+    "id": 7,
+    "name": "NTTDATA",
+    "logo": "/sponsors/nttdata.webp",
+    "sector": "Software",
+    "description": "Consultora multinacional que ofrece soluciones de negocio, estrategia, transformación digital, desarrollo y mantenimiento de aplicaciones tecnológicas y outsourcing",
+    "eventsSponsored": 1,
+    "sinceYear": 2024,
+    "website": "https://pe.nttdata.com/",
+    "featured": false
+  },
+  {
+    "id": 8,
+    "name": "JetBrains",
+    "logo": "/sponsors/jetbrains.svg",
+    "sector": "Software",
+    "description": "Principales IDE multiplataforma para desarrolladores . NET y de juegos que buscan aumentar la productividad y agilizar su proceso de desarrollo",
+    "eventsSponsored": 1,
+    "sinceYear": 2024,
+    "website": "https://www.jetbrains.com/es-es/",
+    "featured": false
+  },
+  {
+    "id": 9,
+    "name": "ETP - Escuelas Técnicas del Perú",
+    "logo": "/sponsors/etp.webp",
+    "sector": "Educación",
+    "description": "Programas educativos que desarrollan habilidades y destrezas para el mundo laboral, abarcando desde la formación técnica de nivel secundario y superior hasta la formación profesional para trabajadores.",
+    "eventsSponsored": 3,
+    "sinceYear": 2023,
+    "website": "https://www.facebook.com/etp.ica/",
+    "featured": false
+  },
+  {
+    "id": 9,
+    "name": "Zegel",
+    "logo": "/sponsors/zegel.webp",
+    "sector": "Educación",
+    "description": "Zegel es una escuela de negocios en Perú, antes conocida como Zegel IPAE, que ofrece carreras de pregrado en negocios y tecnología, así como programas de posgrado y diplomaturas",
+    "eventsSponsored": 1,
+    "sinceYear": 2024,
+    "website": "https://www.zegel.edu.pe/",
+    "featured": false
+  },
+  {
+    "id": 9,
+    "name": "Tejas y Chocotejas Don Juan",
+    "logo": "/sponsors/chocotejas-don-juan.webp",
+    "sector": "Alimentos",
+    "description": "Empresa dedicada a la producción de tejas, chocotejas y diversos dulces artesanales de la región. ",
+    "eventsSponsored": 1,
+    "sinceYear": 2025,
+    "website": "https://www.facebook.com/deliciasdonjuan.ica",
     "featured": false
   }
 ]

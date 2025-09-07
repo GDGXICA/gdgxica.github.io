@@ -4,11 +4,12 @@ import HeroPage from "@/components/HeroPage.astro";
 import CallToActionSection from "@/components/CallToActionSection.astro";
 import OrganizerCard from "@/components/OrganizerCard.astro";
 import Button from "@/components/Button.astro";
-import GalleryCard from "@/components/GalleryCard.astro";
 import { MapPin, Users, Calendar, User } from "@lucide/astro";
 // data
 import organizers from "@/data/organizers/organizers.json";
 import gallery from "@/data/gallery/gallery.json";
+
+import { Gallery } from "@/components/react/Gallery";
 
 // metadata
 const metadata = {
@@ -157,9 +158,7 @@ const metadata = {
           CodeLab
         </Button>
       </div> -->
-      <div class="my-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-        {gallery.map((image) => <GalleryCard image={image} />)}
-      </div>
+      <Gallery client:only="react" gallery={gallery} />
     </div>
   </section>
   <CallToActionSection>

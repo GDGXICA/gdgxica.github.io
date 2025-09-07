@@ -1,31 +1,13 @@
 ---
-import { Camera } from "@lucide/astro";
-import Tag from "./Tag.astro";
-
 const { image } = Astro.props;
 ---
 
-<div class="group relative inset-0 overflow-hidden rounded-lg">
+<figure data-fancybox="gallery" data-src={image.src} data-caption={image.src}>
   <img
     src={image.src}
+    class="mb-4 h-auto w-full rounded-lg transition hover:scale-98 hover:cursor-pointer"
+    width="200"
+    height="150"
     alt={image.alt}
-    class="h-auto w-full transition-transform duration-300 group-hover:scale-105"
-    loading="lazy"
   />
-
-  <div class="absolute top-3 left-3 z-10">
-    <Tag label={image.tag} type={image.type} />
-  </div>
-
-  <div
-    class="bg-primary absolute inset-0 flex flex-col items-center justify-center p-4 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-65"
-  >
-    <Camera class="mb-2" />
-    <h3 class="mb-2 text-center text-2xl font-bold">
-      {image.title}
-    </h3>
-    <p class="text-center text-sm opacity-90">
-      {image.description}
-    </p>
-  </div>
-</div>
+</figure>
