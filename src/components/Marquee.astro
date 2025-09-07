@@ -1,31 +1,91 @@
 ---
-const images = [
+const col01 = [
   {
-    url: "/carousel/item-01.webp",
+    url: "/carousel/01.webp",
     alt: "",
   },
   {
-    url: "/carousel/item-02.webp",
+    url: "/carousel/02.webp",
     alt: "",
   },
   {
-    url: "/carousel/item-03.webp",
+    url: "/carousel/03.webp",
     alt: "",
   },
   {
-    url: "/carousel/item-04.webp",
+    url: "/carousel/04.webp",
     alt: "",
   },
   {
-    url: "/carousel/item-05.webp",
+    url: "/carousel/05.webp",
     alt: "",
   },
   {
-    url: "/carousel/item-06.webp",
+    url: "/carousel/06.webp",
     alt: "",
   },
   {
-    url: "/carousel/item-07.webp",
+    url: "/carousel/07.webp",
+    alt: "",
+  },
+];
+const col02 = [
+  {
+    url: "/carousel/08.webp",
+    alt: "",
+  },
+  {
+    url: "/carousel/09.webp",
+    alt: "",
+  },
+  {
+    url: "/carousel/10.webp",
+    alt: "",
+  },
+  {
+    url: "/carousel/11.webp",
+    alt: "",
+  },
+  {
+    url: "/carousel/12.webp",
+    alt: "",
+  },
+  {
+    url: "/carousel/13.webp",
+    alt: "",
+  },
+  {
+    url: "/carousel/14.webp",
+    alt: "",
+  },
+];
+const col03 = [
+  {
+    url: "/carousel/15.webp",
+    alt: "",
+  },
+  {
+    url: "/carousel/16.webp",
+    alt: "",
+  },
+  {
+    url: "/carousel/01.webp",
+    alt: "",
+  },
+  {
+    url: "/carousel/02.webp",
+    alt: "",
+  },
+  {
+    url: "/carousel/10.webp",
+    alt: "",
+  },
+  {
+    url: "/carousel/11.webp",
+    alt: "",
+  },
+  {
+    url: "/carousel/07.webp",
     alt: "",
   },
 ];
@@ -80,7 +140,7 @@ const images = [
     border-radius: 0.5rem;
     aspect-ratio: 1;
     object-fit: cover;
-    /* width: calc(var(--size) / 1.5); */
+    width: calc(var(--size) / 1.5);
   }
 
   @keyframes scroll-y {
@@ -106,21 +166,31 @@ const images = [
 </style>
 
 <article class="marquee-root">
+  <!-- col01 -->
   <div class="marquee">
     <div class="marquee__group">
-      {images.map((image) => <img src={image.url} alt={image.alt} />)}
+      {col01.map((image) => <img src={image.url} alt={image.alt} />)}
     </div>
     <div aria-hidden="true" class="marquee__group">
-      {images.map((image) => <img src={image.url} alt={image.alt} />)}
+      {col01.reverse().map((image) => <img src={image.url} alt={image.alt} />)}
     </div>
   </div>
-
+  <!-- col02 -->
   <div class="marquee marquee--reverse">
     <div class="marquee__group">
-      {images.reverse().map((image) => <img src={image.url} alt={image.alt} />)}
+      {col02.reverse().map((image) => <img src={image.url} alt={image.alt} />)}
     </div>
     <div aria-hidden="true" class="marquee__group">
-      {images.reverse().map((image) => <img src={image.url} alt={image.alt} />)}
+      {col02.map((image) => <img src={image.url} alt={image.alt} />)}
+    </div>
+  </div>
+  <!-- col03 -->
+  <div class="marquee">
+    <div class="marquee__group">
+      {col03.map((image) => <img src={image.url} alt={image.alt} />)}
+    </div>
+    <div aria-hidden="true" class="marquee__group">
+      {col03.reverse().map((image) => <img src={image.url} alt={image.alt} />)}
     </div>
   </div>
 </article>
