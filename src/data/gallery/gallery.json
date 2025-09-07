@@ -1,6 +1,6 @@
 [
   {
-    "src": "./placeholder.svg",
+    "src": "/gallery/01.webp",
     "alt": "DevFest Image",
     "title": "DevFest",
     "description": "Más de 300 desarrolladores reunidos en nuestro DevFest anual.",
@@ -8,7 +8,7 @@
     "type": "devfest"
   },
   {
-    "src": "./placeholder.svg",
+    "src": "/gallery/08.webp",
     "alt": "Workshop Image",
     "title": "Workshop",
     "description": "Aprende nuevas tecnologías en nuestros workshops interactivos.",
@@ -16,19 +16,63 @@
     "type": "workshop"
   },
   {
-    "src": "./placeholder.svg",
+    "src": "/gallery/07.webp",
+    "alt": "Workshop Image",
+    "title": "Workshop",
+    "description": "Aprende nuevas tecnologías en nuestros workshops interactivos.",
+    "tag": "Workshop",
+    "type": "workshop"
+  },
+  {
+    "src": "/gallery/05.webp",
+    "alt": "Networking Image",
+    "title": "Networking",
+    "description": "Conecta con otros profesionales en nuestros eventos de networking.",
+    "tag": "Networking",
+    "type": "networking"
+  },
+
+  {
+    "src": "/gallery/03.webp",
     "alt": "Hackathon Image",
     "title": "Hackathon",
     "description": "Desafía tus habilidades en nuestro hackathon anual.",
     "tag": "Hackathon",
     "type": "hackathon"
   },
+
   {
-    "src": "./placeholder.svg",
+    "src": "/gallery/02.webp",
     "alt": "Networking Image",
     "title": "Networking",
     "description": "Conecta con otros profesionales en nuestros eventos de networking.",
     "tag": "Networking",
     "type": "networking"
+  },
+
+  {
+    "src": "/gallery/06.webp",
+    "alt": "Workshop Image",
+    "title": "Workshop",
+    "description": "Aprende nuevas tecnologías en nuestros workshops interactivos.",
+    "tag": "Workshop",
+    "type": "workshop"
+  },
+
+  {
+    "src": "/gallery/09.webp",
+    "alt": "Workshop Image",
+    "title": "Workshop",
+    "description": "Aprende nuevas tecnologías en nuestros workshops interactivos.",
+    "tag": "Workshop",
+    "type": "workshop"
+  },
+  {
+    "src": "/gallery/10.webp",
+    "alt": "Workshop Image",
+    "title": "Workshop",
+    "description": "Aprende nuevas tecnologías en nuestros workshops interactivos.",
+    "tag": "Workshop",
+    "type": "workshop"
   }
 ]

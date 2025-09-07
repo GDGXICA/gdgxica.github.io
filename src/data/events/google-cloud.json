@@ -2,7 +2,7 @@
   "id": 2,
   "name": "Google Cloud",
   "image": "/events/google-cloud.webp",
-  "shortDescription": "descripción del evento",
+  "shortDescription": "Introducción a Google Cloud Platform",
   "date": "sábado, 21 de junio de 2025",
   "time": "09:00 AM - 01:00 PM",
   "location": {
@@ -42,7 +42,7 @@
       "time": "08:00 AM - 09:00 AM",
       "title": "Registro de asistentes",
       "name": "Fiorella Ariás",
-      "image": "/team/fiorella-arias.webp",
+      "image": "/placeholder.svg",
       "role": "Organizadora",
       "type": "event"
     },
@@ -51,7 +51,7 @@
       "time": "09:00 AM - 09:15 PM",
       "title": "Inicio del evento",
       "name": "Eduardo Ormeño",
-      "image": "/team/eduardo-ormeno.jpeg",
+      "image": "/team/eduardo-ormeno.webp",
       "role": "Organizador",
       "type": "event"
     },
@@ -96,7 +96,7 @@
       "time": "11:30 AM - 12:00 PM",
       "title": "Dinámica",
       "name": "Pablo Ramos",
-      "image": "/team/pablo-ramos.jpeg",
+      "image": "/team/pablo-ramos-tito.webp",
       "role": "Organizador",
       "type": "event"
     },
@@ -114,7 +114,7 @@
       "time": "01:00 AM - 01:15 PM",
       "title": "Cierre del evento",
       "name": "Eduardo Ormeño",
-      "image": "/team/eduardo-ormeno.jpeg",
+      "image": "/team/eduardo-ormeno.webp",
       "role": "Organizador",
       "type": "event"
     },
@@ -140,86 +140,9 @@
       "youtube": "",
       "twitter": "",
       "github": ""
-    },
-    {
-      "id": 1,
-      "image": "/speakers/tony-trujillo.webp",
-      "name": "Tony Trujillo",
-      "role": "Data Architect",
-      "description": "Arquitecto de soluciones cloud con Google Cloud Platform (GCP)",
-      "linkedin": "link",
-      "web": "",
-      "youtube": "",
-      "twitter": "",
-      "github": ""
-    },
-    {
-      "id": 1,
-      "image": "/speakers/tony-trujillo.webp",
-      "name": "Tony Trujillo",
-      "role": "Data Architect",
-      "description": "Arquitecto de soluciones cloud con Google Cloud Platform (GCP)",
-      "linkedin": "link",
-      "web": "",
-      "youtube": "",
-      "twitter": "",
-      "github": ""
-    },
-    {
-      "id": 1,
-      "image": "/speakers/tony-trujillo.webp",
-      "name": "Tony Trujillo",
-      "role": "Data Architect",
-      "description": "Arquitecto de soluciones cloud con Google Cloud Platform (GCP)",
-      "linkedin": "link",
-      "web": "",
-      "youtube": "",
-      "twitter": "",
-      "github": ""
-    },
-    {
-      "id": 1,
-      "image": "/speakers/tony-trujillo.webp",
-      "name": "Tony Trujillo",
-      "role": "Data Architect",
-      "description": "Arquitecto de soluciones cloud con Google Cloud Platform (GCP)",
-      "linkedin": "link",
-      "web": "",
-      "youtube": "",
-      "twitter": "",
-      "github": ""
-    },
-    {
-      "id": 1,
-      "image": "/speakers/tony-trujillo.webp",
-      "name": "Tony Trujillo",
-      "role": "Data Architect",
-      "description": "Arquitecto de soluciones cloud con Google Cloud Platform (GCP)",
-      "linkedin": "link",
-      "web": "",
-      "youtube": "",
-      "twitter": "",
-      "github": ""
-    },
-    {
-      "id": 1,
-      "image": "/speakers/tony-trujillo.webp",
-      "name": "Tony Trujillo",
-      "role": "Data Architect",
-      "description": "Arquitecto de soluciones cloud con Google Cloud Platform (GCP)",
-      "linkedin": "link",
-      "web": "",
-      "youtube": "",
-      "twitter": "",
-      "github": ""
     }
   ],
   "sponsors": [
-    {
-      "id": 1,
-      "image": "/sponsors/google.png",
-      "alt": "Google"
-    },
     {
       "id": 2,
       "image": "/sponsors/github.svg",
@@ -227,7 +150,7 @@
     },
     {
       "id": 3,
-      "image": "/sponsors/chocotejas-don-juan.jpg",
+      "image": "/sponsors/chocotejas-don-juan.webp",
       "alt": "Chocotejas Don Juan"
     },
     {

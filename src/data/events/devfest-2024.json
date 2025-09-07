@@ -36,7 +36,7 @@
       "time": "08:30 AM - 09:30 AM",
       "title": "Registro de asistentes",
       "name": "Fiorella Ariás",
-      "image": "/team/fiorella-arias.webp",
+      "image": "/placeholder.svg",
       "role": "GDG Ica",
       "type": "event"
     },
@@ -45,7 +45,7 @@
       "time": "09:30 AM - 09:40 AM",
       "title": "Inauguración DevFest Ica",
       "name": "Eduardo Ormeño",
-      "image": "/team/eduardo-ormeno.jpeg",
+      "image": "/team/eduardo-ormeno.webp",
       "role": "GDG Ica",
       "type": "event"
     },
@@ -189,7 +189,7 @@
       "time": "06:00 PM - 06:25 PM",
       "title": "Cierre del evento",
       "name": "Eduardo Ormeño",
-      "image": "/team/eduardo-ormeno.jpeg",
+      "image": "/team/eduardo-ormeno.webp",
       "role": "GDG Ica",
       "type": "event"
     },
@@ -220,7 +220,7 @@
   "sponsors": [
     {
       "id": 1,
-      "image": "/sponsors/google.png",
+      "image": "/sponsors/google.svg",
       "alt": "Google"
     },
     {
