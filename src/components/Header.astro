@@ -18,12 +18,18 @@ const data = {
     },
     {
       id: 2,
+      text: "Equipo",
+      url: "/equipo",
+      target: "_self",
+    },
+    {
+      id: 3,
       text: "Eventos",
       url: "/eventos",
       target: "_self",
     },
     {
-      id: 2,
+      id: 4,
       text: "Patrocinadores",
       url: "/patrocinadores",
       target: "_self",
@@ -61,7 +67,7 @@ const data = {
       <nav
         id="navigation"
         aria-label="Navegación principal"
-        class="fixed inset-0 top-[77px] flex grow translate-full flex-col justify-start gap-6 bg-white px-4 py-10 md:gap-0 lg:static lg:translate-0 lg:flex-row lg:items-center lg:justify-between lg:py-0"
+        class="fixed inset-0 top-[77px] z-10 flex grow translate-x-full flex-col justify-start gap-6 bg-white px-4 py-10 transition-all md:gap-0 lg:static lg:translate-0 lg:flex-row lg:items-center lg:justify-between lg:py-0"
       >
         <ul class="flex flex-col gap-6 lg:flex-row">
           {
@@ -70,7 +76,7 @@ const data = {
                 <a
                   href={link.url}
                   target={link.target}
-                  class="text-secondary text-lg font-medium"
+                  class="text-secondary text-base font-medium"
                   aria-label={`Enlace a ${link.text}`}
                 >
                   {link.text}
@@ -102,3 +108,29 @@ const data = {
     </div>
   </div>
 </header>
+<script is:inline>
+  function initMenu() {
+    const menuButton = document.querySelector("#hamburgerButton");
+    const menuNavigation = document.querySelector("#navigation");
+
+    if (!menuButton || !menuNavigation) return;
+
+    // Toggle menú
+    menuButton.onclick = () => {
+      menuNavigation.classList.toggle("translate-x-full");
+    };
+
+    // Cerrar menú al hacer click en un link
+    menuNavigation.querySelectorAll("a").forEach((link) => {
+      link.onclick = () => {
+        menuNavigation.classList.add("translate-x-full");
+      };
+    });
+  }
+
+  // Ejecutar al cargar
+  initMenu();
+
+  // Ejecutar después de cada transición de página
+  document.addEventListener("astro:after-swap", initMenu);
+</script>
