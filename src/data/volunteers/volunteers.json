@@ -1,6 +1,6 @@
 [
   {
-    "id": "maria-garcia",
+    "id": 1,
     "name": "María García",
     "role": "Coordinadora de Logística",
     "area": "Logística",
@@ -12,7 +12,7 @@
     }
   },
   {
-    "id": "juan-perez",
+    "id": 2,
     "name": "Juan Pérez",
     "role": "Mentor Técnico",
     "area": "Técnico",

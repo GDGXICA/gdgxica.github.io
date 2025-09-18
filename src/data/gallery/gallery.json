@@ -1,5 +1,6 @@
 [
   {
+    "id": 1,
     "src": "/gallery/01.webp",
     "alt": "DevFest Image",
     "title": "DevFest",
@@ -8,6 +9,7 @@
     "type": "devfest"
   },
   {
+    "id": 2,
     "src": "/gallery/08.webp",
     "alt": "Workshop Image",
     "title": "Workshop",
@@ -16,6 +18,7 @@
     "type": "workshop"
   },
   {
+    "id": 3,
     "src": "/gallery/07.webp",
     "alt": "Workshop Image",
     "title": "Workshop",
@@ -24,6 +27,7 @@
     "type": "workshop"
   },
   {
+    "id": 4,
     "src": "/gallery/05.webp",
     "alt": "Networking Image",
     "title": "Networking",
@@ -31,8 +35,8 @@
     "tag": "Networking",
     "type": "networking"
   },
-
   {
+    "id": 5,
     "src": "/gallery/03.webp",
     "alt": "Hackathon Image",
     "title": "Hackathon",
@@ -40,8 +44,8 @@
     "tag": "Hackathon",
     "type": "hackathon"
   },
-
   {
+    "id": 6,
     "src": "/gallery/02.webp",
     "alt": "Networking Image",
     "title": "Networking",
@@ -49,8 +53,8 @@
     "tag": "Networking",
     "type": "networking"
   },
-
   {
+    "id": 7,
     "src": "/gallery/06.webp",
     "alt": "Workshop Image",
     "title": "Workshop",
@@ -58,8 +62,8 @@
     "tag": "Workshop",
     "type": "workshop"
   },
-
   {
+    "id": 8,
     "src": "/gallery/09.webp",
     "alt": "Workshop Image",
     "title": "Workshop",
@@ -68,6 +72,7 @@
     "type": "workshop"
   },
   {
+    "id": 9,
     "src": "/gallery/10.webp",
     "alt": "Workshop Image",
     "title": "Workshop",

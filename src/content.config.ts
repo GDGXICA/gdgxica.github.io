@@ -1,5 +1,5 @@
 import { defineCollection, z } from "astro:content";
-import { glob } from "astro/loaders";
+import { file, glob } from "astro/loaders";
 
 const events = defineCollection({
   loader: glob({ pattern: "**/*.json", base: "./src/data/events" }),
@@ -77,4 +77,102 @@ const events = defineCollection({
     ),
   }),
 });
-export const collections = { events };
+
+const gallery = defineCollection({
+  loader: file("src/data/gallery/gallery.json"),
+  schema: z.object({
+    id: z.number(),
+    src: z.string(),
+    alt: z.string(),
+    title: z.string(),
+    description: z.string(),
+    tag: z.string(),
+    type: z.enum([
+      "devfest",
+      "io",
+      "studyjam",
+      "wtm",
+      "meetup",
+      "hackaton",
+      "workshop",
+      "networking",
+      "hackathon",
+    ]),
+  }),
+});
+
+const members = defineCollection({
+  loader: file("src/data/members/members.json"),
+  schema: z.object({
+    id: z.number(),
+    name: z.string(),
+    role: z.string(),
+    bio: z.string(),
+    joinedDate: z.string(),
+    responsibilities: z.array(z.string()),
+    avatar: z.string(),
+    tags: z.array(z.string()),
+    links: z.object({
+      linkedin: z.string().optional(),
+      twitter: z.string().optional(),
+      github: z.string().optional(),
+      web: z.string().optional(),
+    }),
+  }),
+});
+
+const organizers = defineCollection({
+  loader: file("src/data/organizers/organizers.json"),
+  schema: z.object({
+    id: z.number(),
+    name: z.string(),
+    role: z.string(),
+    bio: z.string(),
+    avatar: z.string(),
+    tags: z.array(z.string()),
+    links: z.object({
+      linkedin: z.string().optional(),
+      github: z.string().optional(),
+      web: z.string().optional(),
+    }),
+  }),
+});
+
+const sponsors = defineCollection({
+  loader: file("src/data/sponsors/sponsors.json"),
+  schema: z.object({
+    id: z.number(),
+    name: z.string(),
+    logo: z.string(),
+    sector: z.string(),
+    description: z.string(),
+    eventsSponsored: z.number(),
+    sinceYear: z.number(),
+    website: z.string(),
+    featured: z.boolean(),
+  }),
+});
+
+const volunteers = defineCollection({
+  loader: file("src/data/volunteers/volunteers.json"),
+  schema: z.object({
+    id: z.number(),
+    name: z.string(),
+    role: z.string(),
+    area: z.string(),
+    bio: z.string(),
+    avatar: z.string(),
+    links: z.object({
+      linkedin: z.string().optional(),
+      twitter: z.string().optional(),
+    }),
+  }),
+});
+export const collections = {
+  events,
+  gallery,
+  members,
+  organizers,
+  sponsors,
+  volunteers,
+};
