@@ -4,15 +4,15 @@
   "image": "/events/devfest-2025.webp",
   "shortDescription": "El festival más grande de técnología de la región",
   "date": "sábado, 29 de noviembre de 2025",
-  "time": "09:00 AM - 06:00 PM",
+  "time": "09:00 AM - 01:00 PM",
   "location": {
-    "name": "UTP - Sede Ica",
+    "name": "Zegel Ica",
     "direction": "Zegel - Sede Ica, Av Cutervo cutervo",
-    "googleMapEmbed": "",
-    "googleMapLink": "google map link"
+    "googleMapEmbed": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3870.3886542543445!2d-75.75138862436116!3d-14.052633586172684!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x9110e2b9c9c7b7d5%3A0x4b8e8a7c5d2f3a1b!2sZegel%20IPAE%20-%20Sede%20Ica!5e0!3m2!1ses!2spe!4v1697123456789!5m2!1ses!2spe",
+    "googleMapLink": "https://maps.app.goo.gl/ZegelIcaSede"
   },
   "isVirtual": false,
-  "participants": 387,
+  "participants": 117,
   "maxParticipants": 500,
   "category": {
     "label": "DevFest",
@@ -24,13 +24,241 @@
   },
   "isHighlight": true,
   "tags": ["cloud", "Machine Learning", "Android"],
-  "speakerNames": [],
-  "largeDescription": " descripción larga",
+  "speakerNames": [
+    "Michael Sontheimer",
+    "Aldo Malaver",
+    "Gerardo Germán Cayo Morales",
+    "Giancarlos Enrique Sandoval Tume",
+    "Wilma Paca Patzi",
+    "Sigmund Mandel"
+  ],
+  "largeDescription": "¡DevFest Ica 2025 llega el 29 de noviembre! Únete al festival de tecnología más grande de la región. Explora las últimas tendencias en IA, Android, Angular, Cloud Computing, Machine Learning y mucho más. Conecta con desarrolladores, aprende de expertos y descubre cómo la tecnología está transformando el mundo. ¡Una experiencia imperdible para la comunidad tech de Ica!",
   "registerFormLink": "https://gdg.community.dev/events/details/google-gdg-ica-presents-devfest-ica-2025/",
-  "requirements": ["requisitos 01", "requisitos 02"],
-  "include": ["include 01", "include 02"],
-  "technologies": ["tag 01", "tag 02"],
-  "schedule": [],
-  "speakers": [],
-  "sponsors": []
+  "requirements": [
+    "Estar registrado al evento a través del formulario oficial",
+    "Tener conocimientos básicos en programación o tecnología",
+    "Ganas de aprender y conectar con la comunidad tech"
+  ],
+  "include": [
+    "Coffee breaks y refrigerios",
+    "Swag oficial de Google y GitHub",
+    "Acceso a todas las charlas de speakers internacionales",
+    "Networking con la comunidad tech más grande de la región",
+    "Acceso a recursos exclusivos y material de las presentaciones",
+    "Oportunidades de colaboración con empresas patrocinadoras"
+  ],
+  "technologies": [
+    "AI",
+    "Android",
+    "Angular",
+    "Career Development",
+    "Certification Prep",
+    "Cloud",
+    "Data",
+    "Firebase",
+    "Flutter",
+    "Gemini",
+    "Google Assistant",
+    "Machine Learning",
+    "Vertex AI",
+    "Web"
+  ],
+  "schedule": [
+    {
+      "id": 1,
+      "time": "08:30 AM - 09:00 AM",
+      "title": "Registro de asistentes",
+      "name": "Equipo GDG Ica",
+      "image": "/gdg-logo.png",
+      "role": "Organizadores",
+      "type": "event"
+    },
+    {
+      "id": 2,
+      "time": "09:00 AM - 09:15 AM",
+      "title": "Inauguración DevFest Ica 2025",
+      "name": "Eduardo Ormeño",
+      "image": "/team/eduardo-ormeno.webp",
+      "role": "GDG Ica Organizer",
+      "type": "event"
+    },
+    {
+      "id": 3,
+      "time": "09:15 AM - 09:45 AM",
+      "title": "Arquitectura de Datos... ¿Cómo iniciar?",
+      "name": "Gerardo Germán Cayo Morales",
+      "image": "/speakers/german-cayo.webp",
+      "role": "Data Engineer Senior en Indra",
+      "type": "event"
+    },
+    {
+      "id": 4,
+      "time": "09:45 AM - 10:15 AM",
+      "title": "Tips to improve the testing",
+      "name": "Wilma Paca Patzi",
+      "image": "/speakers/wilma-paca.webp",
+      "role": "Ingeniero de Calidad de Software",
+      "type": "event"
+    },
+    {
+      "id": 5,
+      "time": "10:15 AM - 10:30 AM",
+      "title": "Coffee Break & Networking",
+      "name": "",
+      "image": "",
+      "role": "",
+      "type": "break"
+    },
+    {
+      "id": 6,
+      "time": "10:30 AM - 11:00 AM",
+      "title": "Superpoderes para desarrolladores: Flutter, Firebase y GitHub Copilot Agents",
+      "name": "Giancarlos Enrique Sandoval Tume",
+      "image": "/speakers/giancarlos-sandoval.webp",
+      "role": "Flutter Developer & GitHub Expert",
+      "type": "event"
+    },
+    {
+      "id": 7,
+      "time": "11:00 AM - 11:30 AM",
+      "title": "Innovaciones en Tecnología de la Salud",
+      "name": "Michael Sontheimer",
+      "image": "/speakers/michael-sontheimer.webp",
+      "role": "Clinica Schubel - USA",
+      "type": "event"
+    },
+    {
+      "id": 8,
+      "time": "11:30 AM - 12:00 PM",
+      "title": "Arquitectura Bancaria Moderna: Desafíos y Soluciones",
+      "name": "Aldo Malaver",
+      "image": "/speakers/aldo-malaver.webp",
+      "role": "Sr. Architect of Bank",
+      "type": "event"
+    },
+    {
+      "id": 9,
+      "time": "12:00 PM - 12:45 PM",
+      "title": "Taller: Crea tu app sin saber programar - Vibe Coding",
+      "name": "Sigmund Mandel",
+      "image": "/speakers/sigmund-mandel.webp",
+      "role": "Google Developer Expert",
+      "type": "event"
+    },
+    {
+      "id": 10,
+      "time": "12:45 PM - 01:00 PM",
+      "title": "Cierre del evento y entrega de reconocimientos",
+      "name": "Eduardo Ormeño",
+      "image": "/team/eduardo-ormeno.webp",
+      "role": "GDG Ica Organizer",
+      "type": "event"
+    }
+  ],
+  "speakers": [
+    {
+      "id": 1,
+      "image": "/speakers/michael-sontheimer.webp",
+      "name": "Michael Sontheimer",
+      "role": "Clinica Schubel",
+      "description": "Especialista internacional en tecnologías de la salud",
+      "linkedin": "",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    },
+    {
+      "id": 2,
+      "image": "/speakers/aldo-malaver.webp",
+      "name": "Aldo Malaver",
+      "role": "Sr. Architect of Bank",
+      "description": "Arquitecto Senior con amplia experiencia en soluciones bancarias y tecnologías financieras",
+      "linkedin": "",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    },
+    {
+      "id": 3,
+      "image": "/speakers/german-cayo.webp",
+      "name": "Gerardo Germán Cayo Morales",
+      "role": "Data Engineer Senior en Indra - Microsoft Certified Trainer",
+      "description": "Experto en arquitectura de datos con certificación Microsoft, especializado en soluciones empresariales",
+      "linkedin": "",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    },
+    {
+      "id": 4,
+      "image": "/speakers/giancarlos-sandoval.webp",
+      "name": "Giancarlos Enrique Sandoval Tume",
+      "role": "Flutter Developer & GitHub Expert",
+      "description": "Especialista en Flutter, Firebase y GitHub Copilot, enfocado en desarrollo móvil moderno",
+      "linkedin": "",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    },
+    {
+      "id": 5,
+      "image": "/speakers/wilma-paca.webp",
+      "name": "Wilma Paca Patzi",
+      "role": "Ingeniero de Calidad de Software",
+      "description": "Experta en testing y calidad de software, con enfoque en mejores prácticas de QA",
+      "linkedin": "",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    },
+    {
+      "id": 6,
+      "image": "/speakers/sigmund-mandel.webp",
+      "name": "Sigmund Mandel",
+      "role": "Google Developer Expert",
+      "description": "Google Developer Expert especializado en desarrollo sin código y tecnologías innovadoras",
+      "linkedin": "",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    }
+  ],
+  "sponsors": [
+    {
+      "id": 1,
+      "image": "/sponsors/google.svg",
+      "alt": "Google"
+    },
+    {
+      "id": 2,
+      "image": "/sponsors/github.svg",
+      "alt": "GitHub"
+    },
+    {
+      "id": 5,
+      "image": "/sponsors/zegel.webp",
+      "alt": "Zegel"
+    },
+    {
+      "id": 12,
+      "image": "/sponsors/collie-valley.webp",
+      "alt": "Collie Valley"
+    },
+    {
+      "id": 13,
+      "image": "/sponsors/cupque.webp",
+      "alt": "Cupque"
+    },
+    {
+      "id": 14,
+      "image": "/sponsors/qumir.webp",
+      "alt": "Qumir"
+    }
+  ]
 }
