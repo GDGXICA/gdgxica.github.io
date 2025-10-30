@@ -84,7 +84,17 @@ const metadata = {
           >
             <Ticket size={16} /> Registrarse Gratis
           </Button>
-          <SharedButton client:only="react" title={event.data.name} />
+          <SharedButton
+            client:only="react"
+            title={event.data.name}
+            eventDate={event.data.date}
+            eventTime={event.data.time}
+            eventLocation={event.data.location.name}
+            eventDescription={event.data.shortDescription}
+            eventType="DevFest"
+            eventHashtags='["DevFest2025", "GDGIca", "TechEvent", "GoogleDeveloper"]'
+            eventOrganization="Google Developer Group Ica"
+          />
         </div>
       </div>
     </div>
@@ -179,15 +189,17 @@ const metadata = {
             <h2 class="text-primary mb-6 text-2xl font-semibold">Sponsors</h2>
             {
               event.data.sponsors.length > 0 ? (
-                <div class="grid grid-cols-2 gap-8 sm:grid-cols-3 md:grid-cols-5">
+                <div class="grid grid-cols-2 gap-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                   {event.data.sponsors.map((sponsor) => (
-                    <Image
-                      src={sponsor.image || "/placeholder.svg"}
-                      width={120}
-                      height={120}
-                      class="aspect-square"
-                      alt={`Logo de ${sponsor.alt}`}
-                    />
+                    <div class="flex items-center justify-center rounded-lg border border-gray-100 bg-white p-4 shadow-sm transition-shadow duration-200 hover:shadow-md">
+                      <Image
+                        src={sponsor.image || "/placeholder.svg"}
+                        width={100}
+                        height={100}
+                        class="h-16 w-auto max-w-[100px] object-contain sm:h-20 md:h-24"
+                        alt={`Logo de ${sponsor.alt}`}
+                      />
+                    </div>
                   ))}
                 </div>
               ) : (

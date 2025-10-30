@@ -1,0 +1,14 @@
+{
+  "hosting": [
+    {
+      "site": "gdgica",
+      "public": "dist",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+    },
+    {
+      "site": "appgdgica",
+      "public": "dist",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+    }
+  ]
+}

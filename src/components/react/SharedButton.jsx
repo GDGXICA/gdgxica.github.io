@@ -1,8 +1,144 @@
 import * as Popover from "@radix-ui/react-popover";
+import { useState } from "react";
 
-export default function SharedButton({ title }) {
+// Función para generar mensajes personalizados según la red social y evento
+function generateShareMessage(eventData, platform = "default") {
+  const {
+    title,
+    date,
+    time,
+    location,
+    description,
+    type = "evento",
+    hashtags = ["GDGIca", "TechEvent"],
+    organization = "GDG Ica",
+  } = eventData;
+
+  // Generar hashtags dinámicos
+  const hashtagString = hashtags
+    .map((tag) => `#${tag.replace(/\s+/g, "")}`)
+    .join(" ");
+
+  const messages = {
+    whatsapp: `🚀 ¡No te pierdas ${title}!
+
+📅 ${date}
+🕐 ${time}
+📍 ${location}
+🎯 ${description}
+
+¡Regístrate gratis y únete a la comunidad tech de ${organization}!
+🔥 ${hashtagString}`,
+
+    twitter: `🚀 ¡${title} está llegando!
+
+📅 ${date} ${time}
+📍 ${location}
+
+${description}
+
+¡Regístrate gratis! 🎫
+${hashtagString}`,
+
+    linkedin: `🚀 Te invito a ${title}
+
+Un ${type} imperdible para la comunidad tecnológica:
+
+📅 Fecha: ${date}
+🕐 Hora: ${time}
+📍 Ubicación: ${location}
+
+${description}
+
+¡Nos vemos ahí! Registro gratuito disponible.
+Organiza: ${organization}
+
+${hashtagString}`,
+
+    facebook: `🎉 ¡${title} se acerca!
+
+📅 ${date}
+🕐 ${time}  
+📍 ${location}
+
+${description}
+
+¡Regístrate gratis y únete a nosotros!
+Organiza: ${organization}`,
+
+    default: `🚀 ${title}
+
+📅 ${date} - ${time}
+📍 ${location}
+${description}
+
+¡Regístrate gratis!`,
+  };
+
+  return messages[platform] || messages.default;
+}
+
+export default function SharedButton({
+  title,
+  eventDate,
+  eventTime,
+  eventLocation,
+  eventDescription,
+  eventType = "evento",
+  eventHashtags = "[]",
+  eventOrganization = "GDG Ica",
+}) {
+  const [copySuccess, setCopySuccess] = useState(false);
+
   const shareUrl = encodeURIComponent(window.location.href);
-  const shareTitle = encodeURIComponent(`${title} \n` || "Mira este evento!");
+
+  // Parsear hashtags si es un string JSON
+  let parsedHashtags = [];
+  try {
+    parsedHashtags =
+      typeof eventHashtags === "string"
+        ? JSON.parse(eventHashtags)
+        : eventHashtags;
+  } catch (error) {
+    parsedHashtags = ["TechEvent"];
+  }
+
+  // Datos del evento para generar mensajes
+  const eventData = {
+    title: title || "Evento increíble",
+    date: eventDate || "Próximamente",
+    time: eventTime || "Por definir",
+    location: eventLocation || "Ubicación por confirmar",
+    description: eventDescription || "Un evento que no te puedes perder",
+    type: eventType,
+    hashtags: parsedHashtags.length > 0 ? parsedHashtags : ["TechEvent"],
+    organization: eventOrganization,
+  };
+
+  // Generar mensajes específicos para cada plataforma
+  const whatsappMessage = encodeURIComponent(
+    generateShareMessage(eventData, "whatsapp")
+  );
+  const twitterMessage = encodeURIComponent(
+    generateShareMessage(eventData, "twitter")
+  );
+  const linkedinMessage = encodeURIComponent(
+    generateShareMessage(eventData, "linkedin")
+  );
+  const facebookMessage = encodeURIComponent(
+    generateShareMessage(eventData, "facebook")
+  );
+
+  // Función para copiar enlace
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error("Error al copiar:", err);
+    }
+  };
 
   return (
     <Popover.Root>
@@ -42,11 +178,12 @@ export default function SharedButton({ title }) {
               Compartir en:
             </p>
             {/* Twitter */}
-            <div className="flex gap-2">
+            <div className="mb-3 grid grid-cols-4 gap-2">
               <a
-                href={`https://x.com/intent/tweet?url=${shareUrl}&text=${shareTitle}`}
+                href={`https://x.com/intent/tweet?url=${shareUrl}&text=${twitterMessage}`}
                 target="_blank"
-                className="inline-flex h-11 w-11 items-center gap-2 rounded-md bg-black px-3 py-3 text-center text-white"
+                className="inline-flex h-11 w-11 items-center gap-2 rounded-md bg-black px-3 py-3 text-center text-white transition-colors hover:bg-gray-800"
+                title="Compartir en X (Twitter)"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -64,9 +201,10 @@ export default function SharedButton({ title }) {
 
               {/* Facebook */}
               <a
-                href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`}
+                href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}&quote=${facebookMessage}`}
                 target="_blank"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-blue-700 px-3 py-3 text-center text-white hover:bg-blue-800"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-blue-700 px-3 py-3 text-center text-white transition-colors hover:bg-blue-800"
+                title="Compartir en Facebook"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -97,9 +235,10 @@ export default function SharedButton({ title }) {
 
               {/* WhatsApp */}
               <a
-                href={`https://api.whatsapp.com/send?text=${shareTitle}%20${shareUrl}`}
+                href={`https://api.whatsapp.com/send?text=${whatsappMessage}%0A%0A${shareUrl}`}
                 target="_blank"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-green-500 px-3 py-3 text-center text-white hover:bg-green-600"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-green-500 px-3 py-3 text-center text-white transition-colors hover:bg-green-600"
+                title="Compartir en WhatsApp"
               >
                 <svg
                   viewBox="0 0 256 259"
@@ -120,9 +259,10 @@ export default function SharedButton({ title }) {
               </a>
               {/* linkedin */}
               <a
-                href={`https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}`}
+                href={`https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}&summary=${linkedinMessage}`}
                 target="_blank"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-[#e4f1f8] px-3 py-3 text-center text-white"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-blue-600 px-3 py-3 text-center text-white transition-colors hover:bg-blue-700"
+                title="Compartir en LinkedIn"
               >
                 <svg
                   width="24"
@@ -137,6 +277,57 @@ export default function SharedButton({ title }) {
                   />
                 </svg>
               </a>
+            </div>
+
+            {/* Botón copiar enlace */}
+            <div className="border-t border-gray-200 pt-3">
+              <button
+                onClick={copyToClipboard}
+                className={`inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-colors ${
+                  copySuccess
+                    ? "border border-green-200 bg-green-50 text-green-700"
+                    : "border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
+                }`}
+                title="Copiar enlace del evento"
+              >
+                {copySuccess ? (
+                  <>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <polyline points="20,6 9,17 4,12"></polyline>
+                    </svg>
+                    ¡Copiado!
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <rect
+                        width="14"
+                        height="14"
+                        x="8"
+                        y="8"
+                        rx="2"
+                        ry="2"
+                      ></rect>
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                    </svg>
+                    Copiar enlace
+                  </>
+                )}
+              </button>
             </div>
           </div>
           <Popover.Close

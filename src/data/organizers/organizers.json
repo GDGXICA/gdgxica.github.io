@@ -5,7 +5,7 @@
     "role": "Leadership",
     "bio": "FullStack Developer, Microsoft MVP, GitHub Campus Expert",
     "avatar": "/team/eduardo-ormeno.webp",
-    "tags": ["Cloud", "GCP", "Angular", "NestJS"],
+    "tags": ["Nest", "Python", "Typescript", "GCP"],
     "links": {
       "linkedin": "https://www.linkedin.com/in/jose-orme%C3%B1o/",
       "github": "https://github.com/eduardoorm",
@@ -14,20 +14,28 @@
   },
   {
     "id": 2,
-    "name": "Luis Lara",
+    "name": "Luis Uculmana",
     "role": "Speakers",
     "bio": "Software Engineer",
     "avatar": "/team/luis-uculmana.webp",
-    "tags": ["GCP", "Firebase", "Angular", "SQL"],
+    "tags": [
+      "Cloud",
+      "Devops",
+      "AI",
+      "Data Management",
+      "Software architecture",
+      "FullStack Cross-Platform"
+    ],
     "links": {
-      "linkedin": "https://www.linkedin.com/in/ithecode/"
+      "linkedin": "https://www.linkedin.com/in/ithecode/",
+      "github": "https://github.com/iTheCode"
     }
   },
   {
     "id": 3,
     "name": "Pablo Ramos",
     "role": "Sponsors",
-    "bio": "Systems Engineer, Data Analyst",
+    "bio": "Data Analyst, Industrial Drone Pilot, IT Support",
     "avatar": "/team/pablo-ramos-tito.webp",
     "tags": ["SQL", "Power BI", "Python", "Excel"],
     "links": {
@@ -38,7 +46,7 @@
     "id": 4,
     "name": "Ronaldo Alvarez",
     "role": "Community Manager",
-    "bio": "Systems Engineer, UX/UI Designer, Graphic Designer",
+    "bio": "UX/UI Designer, Graphic Designer",
     "avatar": "/team/ronaldo-alvarez-uchuya.webp",
     "tags": ["Adobe", "GCP", "UI", "UX"],
     "links": {
@@ -49,9 +57,9 @@
     "id": 5,
     "name": "Alvaro Peña",
     "role": "Desarrollo",
-    "bio": "Systems Engineer, Backend Developer",
+    "bio": "Backend Developer",
     "avatar": "/team/alvaro-pena.webp",
-    "tags": ["GCP", "TypeScript", "Python", "Go", "AWS"],
+    "tags": ["Cloud", "Python", "Go", "Backend", "Kubernetes"],
     "links": {
       "linkedin": "https://www.linkedin.com/in/aalvarop-pe/",
       "github": "https://github.com/aalvaropc",
@@ -62,7 +70,7 @@
     "id": 6,
     "name": "Geremy Hernandez",
     "role": "Logística",
-    "bio": "Systems Engineer, Data Analyst",
+    "bio": "Data Analyst",
     "avatar": "/team/geremy-hernandez-pena.webp",
     "tags": ["SQL", "Power BI", "R", "Excel"],
     "links": {
@@ -73,7 +81,7 @@
     "id": 7,
     "name": "Ausubel Velásquez",
     "role": "Speakers",
-    "bio": "Systems Engineer, Data Analyst",
+    "bio": "Data Analyst",
     "avatar": "/team/ausubel-velasquez.webp",
     "tags": ["SQL", "Python", "Power BI", "ETL"],
     "links": {

@@ -16,6 +16,16 @@ import {
 } from "@lucide/astro";
 
 const allEvents = await getCollection("events");
+const upcomingEvents = allEvents
+  .filter((event) => event.data.status.type === "upcoming")
+  .sort((a, b) => b.data.id - a.data.id);
+
+const gridClasses =
+  upcomingEvents.length === 1
+    ? "flex justify-center"
+    : upcomingEvents.length === 2
+      ? "grid grid-cols-1 gap-8 sm:grid-cols-2 justify-center"
+      : "grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3";
 
 const metadata = {
   title: "GDG ICA - Google Developer Group Ica",
@@ -43,7 +53,11 @@ const metadata = {
             habilidades al siguiente nivel.
           </p>
           <div class="flex flex-col gap-4 lg:flex-row">
-            <Button variant="solid" href="/" target="_blank">
+            <Button
+              variant="solid"
+              href="https://gdg.community.dev/gdg-ica/"
+              target="_blank"
+            >
               Unete a GDG hoy
               <ArrowRight stroke-width={1.5} />
             </Button>
@@ -74,7 +88,7 @@ const metadata = {
           <p class="text-secondary">Expertos speakers</p>
         </div>
         <div>
-          <p class="text-google-green text-[2rem] font-bold">10+</p>
+          <p class="text-google-green text-[2rem] font-bold">10</p>
           <p class="text-secondary">Años activos</p>
         </div>
       </div>
@@ -147,11 +161,11 @@ const metadata = {
           No te pierdas nuestros emocionantes próximos eventos
         </p>
       </div>
-      <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3">
+      <div class={gridClasses}>
         {
-          allEvents
-            .sort((a, b) => b.data.id - a.data.id)
-            .map((event) => <EventCard slug={event.id} {...event.data} />)
+          upcomingEvents.map((event) => (
+            <EventCard slug={event.id} {...event.data} />
+          ))
         }
       </div>
     </div>
@@ -164,7 +178,11 @@ const metadata = {
       Conéctese con desarrolladores, aprenda nuevas tecnologías y construyan
       proyectos increíbles juntos.
     </p>
-    <Button variant="white" href="/" target="_blank">
+    <Button
+      variant="white"
+      href="https://gdg.community.dev/gdg-ica/"
+      target="_blank"
+    >
       <Users />
       Unete a GDG hoy
     </Button>
