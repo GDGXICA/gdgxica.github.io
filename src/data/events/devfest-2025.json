@@ -12,8 +12,8 @@
     "googleMapLink": "https://maps.app.goo.gl/ZegelIcaSede"
   },
   "isVirtual": false,
-  "participants": 117,
-  "maxParticipants": 500,
+  "participants": 198,
+  "maxParticipants": 300,
   "category": {
     "label": "DevFest",
     "type": "devfest"
@@ -30,7 +30,8 @@
     "Gerardo Germán Cayo Morales",
     "Giancarlos Enrique Sandoval Tume",
     "Wilma Paca Patzi",
-    "Sigmund Mandel"
+    "Sigmund Mandel",
+    "William Penagos"
   ],
   "largeDescription": "¡DevFest Ica 2025 llega el 29 de noviembre! Únete al festival de tecnología más grande de la región. Explora las últimas tendencias en IA, Android, Angular, Cloud Computing, Machine Learning y mucho más. Conecta con desarrolladores, aprende de expertos y descubre cómo la tecnología está transformando el mundo. ¡Una experiencia imperdible para la comunidad tech de Ica!",
   "registerFormLink": "https://gdg.community.dev/events/details/google-gdg-ica-presents-devfest-ica-2025/",
@@ -121,6 +122,15 @@
     {
       "id": 7,
       "time": "11:00 AM - 11:30 AM",
+      "title": "De Desarrollo Local a Google Cloud: Estrategias para escalar aplicaciones",
+      "name": "William Penagos",
+      "image": "/speakers/william-penagos.webp",
+      "role": "GDG Cali Leader & FullStack Developer",
+      "type": "event"
+    },
+    {
+      "id": 8,
+      "time": "11:30 AM - 12:00 PM",
       "title": "Innovaciones en Tecnología de la Salud",
       "name": "Michael Sontheimer",
       "image": "/speakers/michael-sontheimer.webp",
@@ -128,8 +138,8 @@
       "type": "event"
     },
     {
-      "id": 8,
-      "time": "11:30 AM - 12:00 PM",
+      "id": 9,
+      "time": "12:00 PM - 12:30 PM",
       "title": "Arquitectura Bancaria Moderna: Desafíos y Soluciones",
       "name": "Aldo Malaver",
       "image": "/speakers/aldo-malaver.webp",
@@ -137,8 +147,8 @@
       "type": "event"
     },
     {
-      "id": 9,
-      "time": "12:00 PM - 12:45 PM",
+      "id": 10,
+      "time": "12:30 PM - 01:15 PM",
       "title": "Taller: Crea tu app sin saber programar - Vibe Coding",
       "name": "Sigmund Mandel",
       "image": "/speakers/sigmund-mandel.webp",
@@ -146,9 +156,9 @@
       "type": "event"
     },
     {
-      "id": 10,
-      "time": "12:45 PM - 01:00 PM",
-      "title": "Cierre del evento y entrega de reconocimientos",
+      "id": 11,
+      "time": "01:15 PM - 01:30 PM",
+      "title": "Cierre del evento y agradecimientos",
       "name": "Eduardo Ormeño",
       "image": "/team/eduardo-ormeno.webp",
       "role": "GDG Ica Organizer",
@@ -223,6 +233,18 @@
       "role": "Google Developer Expert",
       "description": "Google Developer Expert especializado en desarrollo sin código y tecnologías innovadoras",
       "linkedin": "",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    },
+    {
+      "id": 7,
+      "image": "/speakers/william-penagos.webp",
+      "name": "William Penagos",
+      "role": "GDG Cali Leader & FullStack Developer",
+      "description": "Líder del GDG Cali especializado en desarrollo FullStack y tecnologías Google Cloud",
+      "linkedin": "https://www.linkedin.com/in/william-penagos/",
       "web": "",
       "youtube": "",
       "twitter": "",
