@@ -29,6 +29,7 @@ const { member } = Astro.props;
     <h4 class="text-primary mb-2 text-sm font-semibold">Responsabilidades:</h4>
     <ul class="text-secondary flex list-disc flex-col gap-2 pl-5 text-xs">
       {
+        // @ts-expect-error: responsibility items have implicit any type
         member.responsibilities.map((responsibility) => (
           <li>{responsibility}</li>
         ))
@@ -36,6 +37,7 @@ const { member } = Astro.props;
     </ul>
   </div>
   <div class="flex flex-wrap justify-center gap-2">
+    {/* @ts-expect-error: tag items have implicit any type */}
     {member.tags.map((tag) => <Tag label={tag} />)}
   </div>
   <div class="text-secondary mt-4 flex justify-center gap-3">
