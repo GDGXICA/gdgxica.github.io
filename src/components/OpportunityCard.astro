@@ -25,6 +25,7 @@ const {
           Habilidades
         </p>
         <ul class="flex flex-wrap justify-center gap-1">
+          {/* @ts-expect-error: skill items have implicit any type */}
           {skills.map((s) => (
             <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px] text-xs font-semibold text-[#1F2937]">
               {s}

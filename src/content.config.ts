@@ -43,17 +43,48 @@ const events = defineCollection({
     requirements: z.array(z.string()),
     include: z.array(z.string()),
     technologies: z.array(z.string()),
-    schedule: z.array(
+    tracks: z
+      .array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          color: z.string(),
+          description: z.string(),
+        })
+      )
+      .optional(),
+    schedule: z.union([
+      z.array(
+        z.object({
+          id: z.number(),
+          time: z.string(),
+          title: z.string(),
+          name: z.string(),
+          image: z.string(),
+          role: z.string(),
+          type: z.string(),
+        })
+      ),
       z.object({
-        id: z.number(),
-        time: z.string(),
-        title: z.string(),
-        name: z.string(),
-        image: z.string(),
-        role: z.string(),
-        type: z.enum(["event", "break"]),
-      })
-    ),
+        trackSessions: z.record(
+          z.string(),
+          z.array(
+            z.object({
+              id: z.number(),
+              title: z.string(),
+              name: z.string(),
+              image: z.string(),
+              role: z.string(),
+              type: z.string(),
+              startTime: z.string(),
+              endTime: z.string(),
+              duration: z.string(),
+              isKeynote: z.boolean().optional(),
+            })
+          )
+        ),
+      }),
+    ]),
     speakers: z.array(
       z.object({
         id: z.number(),

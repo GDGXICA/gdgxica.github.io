@@ -6,6 +6,7 @@ import FeatureCard from "@/components/FeatureCard.astro";
 import Tag from "@/components/Tag.astro";
 import Layout from "@/layouts/Layout.astro";
 import ScheduleCard from "@/components/ScheduleCard.astro";
+import MultiTrackSchedule from "@/components/MultiTrackSchedule.astro";
 import TrackTabSchedule from "@/components/TrackTabSchedule.astro";
 import SpeakerCard from "@/components/SpeakerCard.astro";
 import {
@@ -153,14 +154,22 @@ const metadata = {
             </div>
             {
               event.data.schedule ? (
-                event.data.tracks &&
-                !Array.isArray(event.data.schedule) &&
-                "trackSessions" in event.data.schedule ? (
-                  <TrackTabSchedule
-                    schedule={event.data.schedule}
-                    tracks={event.data.tracks}
-                  />
+                event.data.tracks ? (
+                  // New independent track schedule format with tabs
+                  event.data.schedule.trackSessions ? (
+                    <TrackTabSchedule
+                      schedule={event.data.schedule}
+                      tracks={event.data.tracks}
+                    />
+                  ) : (
+                    // Legacy multi-track format
+                    <MultiTrackSchedule
+                      schedule={event.data.schedule}
+                      tracks={event.data.tracks}
+                    />
+                  )
                 ) : (
+                  // Single track format
                   <div class="flex flex-col gap-4">
                     {Array.isArray(event.data.schedule) &&
                       event.data.schedule.map((item) => (

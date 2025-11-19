@@ -1,0 +1,141 @@
+---
+const { tracks } = Astro.props;
+const trackList = tracks || [];
+---
+
+<div class="track-selector mb-6">
+  <div class="block lg:hidden">
+    <label
+      for="mobile-track-select"
+      class="mb-2 block text-sm font-medium text-gray-700"
+    >
+      Seleccionar track:
+    </label>
+    <div class="relative">
+      <select
+        id="mobile-track-select"
+        class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 py-3 pr-8 text-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+      >
+        <option value="all">Todos los tracks</option>
+        {/* @ts-expect-error: track items have implicit any type */}
+        {
+          trackList.length > 0 &&
+            trackList.map((track) => (
+              <option value={track.id}>{track.name}</option>
+            ))
+        }
+      </select>
+      <div
+        class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2"
+      >
+        <svg
+          class="h-5 w-5 text-gray-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 9l-7 7-7-7"></path>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="hidden lg:block">
+    <div class="flex flex-wrap gap-3">
+      <button
+        data-track="all"
+        class="track-filter-btn rounded-full border border-blue-500 bg-blue-500 px-4 py-2 text-white transition-all duration-200"
+      >
+        Todos
+      </button>
+
+      {/* @ts-expect-error: track items have implicit any type */}
+      {
+        trackList.map((track) => (
+          <button
+            data-track={track.id}
+            class="track-filter-btn rounded-full border border-gray-300 bg-white px-4 py-2 text-gray-700 transition-all duration-200 hover:border-gray-400"
+            style={`--track-color: ${track.color}`}
+          >
+            <div class="flex items-center gap-2">
+              <div
+                class="h-3 w-3 rounded-full"
+                style={`background-color: ${track.color}`}
+              />
+              <span>{track.name}</span>
+            </div>
+          </button>
+        ))
+      }
+    </div>
+  </div>
+</div>
+
+<style>
+  .track-filter-btn.active {
+    background-color: var(--track-color, #3b82f6);
+    color: white;
+    border-color: var(--track-color, #3b82f6);
+  }
+
+  .track-filter-btn.active:hover {
+    background-color: var(--track-color, #2563eb);
+    border-color: var(--track-color, #2563eb);
+  }
+</style>
+
+<script>
+  function filterSchedule(trackId: string): void {
+    const scheduleItems = document.querySelectorAll("[data-track]");
+    const filterButtons = document.querySelectorAll(".track-filter-btn");
+
+    filterButtons.forEach((btn) => {
+      const button = btn as HTMLElement;
+      if (button.dataset.track === trackId) {
+        btn.classList.add("active");
+        btn.classList.remove("bg-white", "text-gray-700", "border-gray-300");
+        btn.classList.add("text-white");
+      } else {
+        btn.classList.remove("active");
+        btn.classList.remove("text-white");
+        btn.classList.add("bg-white", "text-gray-700", "border-gray-300");
+      }
+    });
+
+    scheduleItems.forEach((item) => {
+      const element = item as HTMLElement;
+      if (trackId === "all" || element.dataset.trackId === trackId) {
+        element.style.display = "";
+      } else {
+        element.style.display = "none";
+      }
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const filterButtons = document.querySelectorAll(".track-filter-btn");
+    filterButtons.forEach((button) => {
+      button.addEventListener("click", function () {
+        const element = this as HTMLElement;
+        const trackId = element.dataset.track || "all";
+        filterSchedule(trackId);
+      });
+    });
+
+    const mobileSelect = document.getElementById("mobile-track-select");
+    if (mobileSelect) {
+      mobileSelect.addEventListener("change", function () {
+        const selectElement = this as HTMLSelectElement;
+        filterSchedule(selectElement.value);
+      });
+    }
+  });
+
+  (
+    window as unknown as { filterSchedule: (trackId: string) => void }
+  ).filterSchedule = filterSchedule;
+</script>

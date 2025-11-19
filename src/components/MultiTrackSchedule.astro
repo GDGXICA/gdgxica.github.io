@@ -1,0 +1,199 @@
+---
+import {
+  Coffee,
+  Users,
+  Code,
+  MessageCircle,
+  Presentation,
+  Clock,
+} from "@lucide/astro";
+import ScheduleCard from "./ScheduleCard.astro";
+
+const { schedule, tracks } = Astro.props;
+const timeSlots = schedule || [];
+const trackList = tracks || [];
+---
+
+<div class="space-y-8">
+  <div
+    class="rounded-lg border border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50 p-4"
+  >
+    <div class="flex flex-wrap gap-4">
+      {
+        trackList.map((track) => (
+          <div class="flex items-center gap-2 rounded-full border bg-white px-3 py-2 shadow-sm">
+            <div
+              class="h-3 w-3 rounded-full"
+              style={`background-color: ${track.color}`}
+            />
+            <span class="text-sm font-medium text-gray-700">{track.name}</span>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+
+  {
+    timeSlots.map((timeSlot, index) => {
+      const { time, sessions, type } = timeSlot;
+      const slotSessions = sessions || [];
+
+      return (
+        <div class="relative">
+          {index < timeSlots.length - 1 && (
+            <div class="absolute top-16 left-6 z-0 h-full w-0.5 bg-gray-200" />
+          )}
+
+          <div class="relative z-10 rounded-xl border border-gray-100 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md">
+            <div class="rounded-t-xl bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 text-white">
+              <div class="flex items-center gap-3">
+                <div class="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+                  <div class="h-2 w-2 rounded-full bg-white" />
+                </div>
+                <div>
+                  <h3 class="text-lg font-semibold">{time}</h3>
+                  <p class="text-sm text-blue-100">
+                    {type === "global"
+                      ? "Actividad general"
+                      : type === "single"
+                        ? "Sesión única"
+                        : "Sesiones paralelas"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-6">
+              {type === "global" ? (
+                <div class="space-y-4">
+                  {slotSessions.map((session) => (
+                    <ScheduleCard {...session} time={time} />
+                  ))}
+                </div>
+              ) : type === "single" ? (
+                <div class="space-y-4">
+                  {slotSessions.map((session) => (
+                    <ScheduleCard {...session} time={time} />
+                  ))}
+                </div>
+              ) : (
+                <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {trackList.map((track) => {
+                    const {
+                      id: trackId,
+                      color: trackColor,
+                      name: trackName,
+                    } = track;
+                    const sessionForTrack = slotSessions.find((session) => {
+                      const { trackId: sessionTrackId } = session;
+                      return sessionTrackId === trackId;
+                    });
+
+                    return (
+                      <div
+                        class="relative min-h-[160px] rounded-lg border-2 p-5 transition-all duration-200 hover:shadow-md"
+                        style={`border-color: ${trackColor}30; background: linear-gradient(135deg, ${trackColor}05 0%, ${trackColor}02 100%)`}
+                      >
+                        <div class="mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
+                          <div
+                            class="h-4 w-4 rounded-full shadow-sm"
+                            style={`background-color: ${trackColor}`}
+                          />
+                          <span class="text-sm font-semibold text-gray-700">
+                            {trackName}
+                          </span>
+                        </div>
+
+                        {sessionForTrack ? (
+                          <div class="space-y-3">
+                            <div class="flex items-center gap-2 text-gray-600">
+                              <Clock class="h-4 w-4" />
+                              <span class="text-sm font-medium">{time}</span>
+                            </div>
+
+                            <div class="space-y-3">
+                              <div class="flex items-start gap-2">
+                                <div class="mt-1">
+                                  {sessionForTrack.type === "break" && (
+                                    <Coffee class="h-4 w-4 text-gray-500" />
+                                  )}
+                                  {sessionForTrack.type === "workshop" && (
+                                    <Code class="h-4 w-4 text-gray-500" />
+                                  )}
+                                  {sessionForTrack.type === "networking" && (
+                                    <Users class="h-4 w-4 text-gray-500" />
+                                  )}
+                                  {sessionForTrack.type === "discussion" && (
+                                    <MessageCircle class="h-4 w-4 text-gray-500" />
+                                  )}
+                                  {(!sessionForTrack.type ||
+                                    sessionForTrack.type ===
+                                      "presentation") && (
+                                    <Presentation class="h-4 w-4 text-gray-500" />
+                                  )}
+                                </div>
+                                <div>
+                                  <h4 class="text-sm leading-tight font-semibold text-gray-900">
+                                    {sessionForTrack.title}
+                                  </h4>
+                                  <p class="mt-1 text-xs text-gray-600">
+                                    {sessionForTrack.type === "workshop" &&
+                                      "Taller"}
+                                    {sessionForTrack.type === "networking" &&
+                                      "Networking"}
+                                    {sessionForTrack.type === "discussion" &&
+                                      "Mesa Redonda"}
+                                    {sessionForTrack.type === "break" &&
+                                      "Descanso"}
+                                    {(!sessionForTrack.type ||
+                                      sessionForTrack.type ===
+                                        "presentation") &&
+                                      "Presentación"}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {sessionForTrack.speaker && (
+                                <div class="flex items-center gap-2 text-gray-700">
+                                  <div class="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200">
+                                    <span class="text-xs font-medium">
+                                      {sessionForTrack.speaker
+                                        .charAt(0)
+                                        .toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <span class="text-sm">
+                                    {sessionForTrack.speaker}
+                                  </span>
+                                </div>
+                              )}
+
+                              {sessionForTrack.duration && (
+                                <div class="text-xs text-gray-500">
+                                  Duración: {sessionForTrack.duration} min
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div class="flex h-20 items-center justify-center text-gray-400">
+                            <div class="text-center">
+                              <div class="mx-auto mb-2 h-8 w-8 opacity-50">
+                                <Presentation class="h-full w-full" />
+                              </div>
+                              <p class="text-sm">Sin sesión programada</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    })
+  }
+</div>

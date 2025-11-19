@@ -20,13 +20,11 @@ Consulta los términos completos en el archivo [LICENSE.md](LICENSE.md).
 - [Astro 5](https://astro.build)
 - [TailwindCSS 4](https://tailwindcss.com)
 
-
 ## ⚠️ Requerimientos
 
 - Git
 - Node 22.15.0
 - PNPM 10.11.0
-
 
 ## 🔧 Instalación
 
