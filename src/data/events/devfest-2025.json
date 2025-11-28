@@ -12,7 +12,7 @@
     "googleMapLink": "https://maps.app.goo.gl/ZegelIcaSede"
   },
   "isVirtual": false,
-  "participants": 264,
+  "participants": 300,
   "maxParticipants": 350,
   "category": {
     "label": "DevFest",
@@ -30,7 +30,7 @@
     "Giancarlos Sandoval",
     "Wilma Paca Patzi",
     "Sigmund Mandel",
-    "William Penagos"
+    "Luis Uculmana"
   ],
   "largeDescription": "¡DevFest Ica 2025 llega el 29 de noviembre! Únete al festival de tecnología más grande de la región. Explora las últimas tendencias en IA, Android, Angular, Cloud Computing, Machine Learning y mucho más. Conecta con desarrolladores, aprende de expertos y descubre cómo la tecnología está transformando el mundo. ¡Una experiencia imperdible para la comunidad tech de Ica!",
   "registerFormLink": "https://gdg.community.dev/events/details/google-gdg-ica-presents-devfest-ica-2025/",
@@ -236,10 +236,10 @@
         },
         {
           "id": 3,
-          "title": "Automatiza sin programar: crea, conecta y simplifica",
-          "name": "William Penagos",
-          "image": "/speakers/william-penagos.webp",
-          "role": "GDG Cali Leader & FullStack Developer",
+          "title": "Agentes IA + ADK en python",
+          "name": "Luis Uculmana",
+          "image": "/team/luis-uculmana.webp",
+          "role": "GDG Ica Leader",
           "type": "workshop",
           "startTime": "10:00 AM",
           "endTime": "10:30 AM",
@@ -261,7 +261,7 @@
           "title": "Construyendo agentes inteligentes con Google Cloud",
           "name": "Eduardo Ormeño",
           "image": "/team/eduardo-ormeno.webp",
-          "role": "Developers",
+          "role": "FullStack Developer & Github Campus Expert",
           "type": "workshop",
           "startTime": "11:00 AM",
           "endTime": "11:30 AM",
@@ -356,11 +356,11 @@
     },
     {
       "id": 7,
-      "image": "/speakers/william-penagos.webp",
-      "name": "William Penagos",
-      "role": "GDG Cali Leader & FullStack Developer",
-      "description": "Líder del GDG Cali especializado en desarrollo FullStack y tecnologías Google Cloud",
-      "linkedin": "https://www.linkedin.com/in/william-penagos/",
+      "image": "/team/luis-uculmana.webp",
+      "name": "Luis Uculmana",
+      "role": "GDG Ica Leader",
+      "description": "Líder del GDG Ica especializado en desarrollo FullStack y tecnologías Google Cloud",
+      "linkedin": "",
       "web": "",
       "youtube": "",
       "twitter": "",
