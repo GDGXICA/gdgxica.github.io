@@ -19,8 +19,8 @@
     "type": "devfest"
   },
   "status": {
-    "label": "Próximo",
-    "type": "upcoming"
+    "label": "Finalizado",
+    "type": "completed"
   },
   "isHighlight": true,
   "tags": ["cloud", "Machine Learning", "Android"],
