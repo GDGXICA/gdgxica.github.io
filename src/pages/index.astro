@@ -13,6 +13,7 @@ import {
   Lightbulb,
   HeartHandshake,
   Sprout,
+  Calendar,
 } from "@lucide/astro";
 
 const allEvents = await getCollection("events");
@@ -161,13 +162,79 @@ const metadata = {
           No te pierdas nuestros emocionantes próximos eventos
         </p>
       </div>
-      <div class={gridClasses}>
-        {
-          upcomingEvents.map((event) => (
-            <EventCard slug={event.id} {...event.data} />
-          ))
-        }
-      </div>
+      {
+        upcomingEvents.length > 0 ? (
+          <div class={gridClasses}>
+            {upcomingEvents.map((event) => (
+              <EventCard slug={event.id} {...event.data} />
+            ))}
+          </div>
+        ) : (
+          <div class="flex justify-center">
+            <article class="border-gray-custom relative max-w-md rounded-lg border bg-white">
+              <div class="relative h-[192px] w-full overflow-hidden rounded-t-lg bg-gradient-to-br from-blue-50 via-purple-50 to-red-50">
+                <div class="absolute inset-0 flex items-center justify-center">
+                  <div class="text-center">
+                    <div class="mb-3 inline-flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-lg">
+                      <Calendar
+                        stroke-width={1.5}
+                        size={40}
+                        class="text-google-blue"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="absolute top-4 left-6">
+                <div class="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1">
+                  <span class="relative flex h-2 w-2">
+                    <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
+                    <span class="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
+                  </span>
+                  <span class="text-sm font-medium text-blue-700">
+                    Próximamente
+                  </span>
+                </div>
+              </div>
+              <div class="p-6">
+                <p class="text-primary mb-1 text-2xl font-bold">
+                  Nuevos eventos muy pronto
+                </p>
+                <p class="text-secondary mb-6">
+                  Estamos preparando experiencias increíbles para la comunidad
+                </p>
+                <ul class="text-secondary mb-4 flex flex-col gap-3">
+                  <li class="flex items-center gap-3">
+                    <Lightbulb stroke-width={1.5} size={16} color="#2463EB" />
+                    Workshops y charlas técnicas
+                  </li>
+                  <li class="flex items-center gap-3">
+                    <UsersRound stroke-width={1.5} size={16} color="#EF4444" />
+                    Networking con la comunidad
+                  </li>
+                  <li class="flex items-center gap-3">
+                    <Sprout stroke-width={1.5} size={16} color="#16A34A" />
+                    Aprendizaje y crecimiento
+                  </li>
+                </ul>
+                <p class="grid gap-2">
+                  <Button
+                    variant="solid"
+                    href="https://gdg.community.dev/gdg-ica/"
+                    target="_blank"
+                  >
+                    <Users stroke-width={1.5} />
+                    Únete a la comunidad
+                  </Button>
+                  <Button variant="outline" href="/eventos">
+                    Ver eventos pasados
+                  </Button>
+                </p>
+              </div>
+            </article>
+          </div>
+        )
+      }
     </div>
   </section>
   <CallToActionSection>
