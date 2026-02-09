@@ -2,7 +2,7 @@
   "id": 2,
   "name": "Google Cloud",
   "image": "/events/google-cloud.webp",
-  "shortDescription": "Introducción a Google Cloud Platform",
+  "shortDescription": "Introducción a GCP: computación, datos, IA y ML en la nube de Google",
   "date": "sábado, 21 de junio de 2025",
   "time": "09:00 AM - 01:00 PM",
   "location": {
@@ -23,7 +23,15 @@
     "type": "completed"
   },
   "isHighlight": false,
-  "tags": ["Cloud", "GCP", "Google Cloud"],
+  "tags": [
+    "Cloud",
+    "GCP",
+    "Google Cloud",
+    "Career Development",
+    "Data",
+    "IA",
+    "Machine Learning"
+  ],
   "speakerNames": [],
   "largeDescription": "¡Únete a nosotros en este evento exclusivo de Google Cloud y descubre cómo las herramientas y servicios de la nube pueden transformar el desarrollo, la infraestructura y la innovación en tu organización! A lo largo de esta sesión, exploraremos las soluciones clave que ofrece Google Cloud Platform (GCP), desde computación escalable y almacenamiento inteligente hasta herramientas de análisis de datos, inteligencia artificial y machine learning.",
   "registerFormLink": "",

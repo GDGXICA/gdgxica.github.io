@@ -23,7 +23,17 @@
     "type": "completed"
   },
   "isHighlight": false,
-  "tags": ["cloud", "Machine Learning", "Android"],
+  "tags": [
+    "Cloud",
+    "Machine Learning",
+    "Career Development",
+    "Data",
+    "Firebase",
+    "Flutter",
+    "Gemini",
+    "IA",
+    "Web"
+  ],
   "speakerNames": [],
   "largeDescription": "¡DEVFEST ICA llega el 23 de noviembre! sumérgete en el mundo de la tecnología. Disfruta de charlas inspiradoras y aprendizaje de vanguardia",
   "registerFormLink": "/",
