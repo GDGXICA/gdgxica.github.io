@@ -1,0 +1,92 @@
+{
+  "id": 2,
+  "name": "Conectando Talento Tech",
+  "image": "/events/connecting-tech-talent-2026.webp",
+  "shortDescription": "Networking, aprendizaje y tendencias sobre Google tools, software e IA",
+  "date": "sábado, 28 de marzo de 2026",
+  "time": "09:00 AM - 01:30 PM",
+  "location": {
+    "name": "Universidad Tecnológica Del Perú (UTP) - Sede Ica",
+    "direction": "Universidad Tecnológica Del Perú S/N Avenida Ayabaca Ica, 11001",
+    "googleMapEmbed": "https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d15480.380891818344!2d-75.736261!3d-14.071554!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x9110e3db5c16ca7d%3A0x14a969e069453071!2sUniversidad%20Tecnol%C3%B3gica%20Del%20Per%C3%BA!5e0!3m2!1ses-419!2sus!4v1770608632760!5m2!1ses-419!2sus",
+    "googleMapLink": "https://maps.app.goo.gl/GUd4wJh42tNoY7nC7"
+  },
+  "isVirtual": false,
+  "participants": 24,
+  "maxParticipants": 50,
+  "category": {
+    "label": "Meetup",
+    "type": "meetup"
+  },
+  "status": {
+    "label": "Próximo",
+    "type": "upcoming"
+  },
+  "isHighlight": false,
+  "tags": [
+    "Cloud",
+    "GCP",
+    "Google Cloud",
+    "IA",
+    "Angular",
+    "Career Development",
+    "Comunity Building",
+    "Networking",
+    "Web",
+    "Get Certified"
+  ],
+  "speakerNames": [],
+  "largeDescription": "Conectando Talento Tech es un evento presencial que reúne a la comunidad tecnológica para aprender, compartir y hacer networking, conectando talento local con expertos de la industria y explorando tendencias, herramientas de Google, desarrollo de software e inteligencia artificial en un ambiente dinámico y colaborativo.",
+  "registerFormLink": "",
+  "requirements": ["Registrarse", "Ser puntuales"],
+  "include": [
+    "Laboratorio moderno",
+    "Swag oficial de Google y GitHub",
+    "Coffe breaks"
+  ],
+  "technologies": ["Cloud", "GCP", "Google Cloud", "IA", "Web"],
+  "schedule": [],
+  "speakers": [
+    {
+      "id": 1,
+      "image": "/speakers/aaron-guerrero.webp",
+      "name": "Aaron Guerrero",
+      "role": "Data Scientist | Google Cloud Developer Expert",
+      "description": "",
+      "linkedin": "https://www.linkedin.com/in/aaronthewarrior/",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    },
+    {
+      "id": 2,
+      "image": "/speakers/nicolas-lecaros.webp",
+      "name": "Nicolás Lecaros",
+      "role": "Arquitecto Cloud y de Datos | Google Cloud Developer Expert",
+      "description": "",
+      "linkedin": "https://www.linkedin.com/in/nicolaslecaros/",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    }
+  ],
+  "sponsors": [
+    {
+      "id": 2,
+      "image": "/sponsors/github.svg",
+      "alt": "Github"
+    },
+    {
+      "id": 3,
+      "image": "/sponsors/google.svg",
+      "alt": "Google"
+    },
+    {
+      "id": 4,
+      "image": "/sponsors/utp.webp",
+      "alt": "UTP"
+    }
+  ]
+}
