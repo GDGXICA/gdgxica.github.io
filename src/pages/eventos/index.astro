@@ -102,15 +102,27 @@ const metadata = {
           <p class="text-secondary">Años activos</p>
         </div>
       </div>
-      <p class="mt-[65px] mb-8 text-2xl font-bold">Próximo Evento Destacado</p>
+      {
+        highLightEvent && (
+          <>
+            <p class="mt-[65px] mb-8 text-2xl font-bold">
+              Próximo Evento Destacado
+            </p>
+          </>
+        )
+      }
     </div>
-    <div class="mx-auto max-w-[1152px]">
-      <EventCard
-        isHorizontal={true}
-        slug={highLightEvent?.id}
-        {...highLightEvent?.data}
-      />
-    </div>
+    {
+      highLightEvent && (
+        <div class="mx-auto max-w-[1152px]">
+          <EventCard
+            isHorizontal={true}
+            slug={highLightEvent?.id}
+            {...highLightEvent?.data}
+          />
+        </div>
+      )
+    }
   </HeroPage>
   <section class="py-20">
     <div class="container">

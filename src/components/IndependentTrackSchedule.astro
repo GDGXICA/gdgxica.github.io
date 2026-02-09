@@ -1,0 +1,197 @@
+---
+import {
+  Coffee,
+  Users,
+  Code,
+  MessageCircle,
+  Presentation,
+  Clock,
+} from "@lucide/astro";
+
+const { schedule, tracks } = Astro.props;
+
+function getSessionIcon(type) {
+  switch (type) {
+    case "break":
+      return Coffee;
+    case "workshop":
+      return Code;
+    case "networking":
+      return Users;
+    case "discussion":
+      return MessageCircle;
+    default:
+      return Presentation;
+  }
+}
+
+function getSessionTypeLabel(type) {
+  switch (type) {
+    case "workshop":
+      return "Taller";
+    case "networking":
+      return "Networking";
+    case "discussion":
+      return "Mesa Redonda";
+    case "break":
+      return "Descanso";
+    default:
+      return "Charla";
+  }
+}
+---
+
+<div class="space-y-6">
+  <div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
+    {
+      tracks.map((track) => {
+        const trackSessions = schedule.trackSessions[track.id] || [];
+
+        return (
+          <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+            {/* Track Header */}
+            <div
+              class="px-6 py-4 font-semibold text-white"
+              style={`background: linear-gradient(135deg, ${track.color} 0%, ${track.color}dd 100%)`}
+            >
+              <div class="flex items-center gap-3">
+                <div class="h-4 w-4 rounded-full bg-white opacity-90" />
+                <div>
+                  <h3 class="text-lg font-bold">{track.name}</h3>
+                  <p class="text-sm opacity-90">{track.description}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Track Sessions Timeline */}
+            <div class="p-6">
+              {trackSessions.length > 0 ? (
+                <div class="space-y-4">
+                  {trackSessions.map((session, index) => (
+                    <div class="relative">
+                      {/* Timeline connector */}
+                      {index < trackSessions.length - 1 && (
+                        <div
+                          class="absolute top-8 left-4 h-full w-0.5 opacity-30"
+                          style={`background-color: ${track.color}`}
+                        />
+                      )}
+
+                      {/* Session Card */}
+                      <div class="relative">
+                        {/* Time indicator */}
+                        <div class="flex items-start gap-3">
+                          <div class="min-w-0 flex-shrink-0 text-center">
+                            <div
+                              class="relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-white shadow-sm"
+                              style={`background-color: ${track.color}`}
+                            >
+                              {(() => {
+                                const IconComponent = getSessionIcon(
+                                  session.type
+                                );
+                                return IconComponent ? (
+                                  <IconComponent size={14} color="white" />
+                                ) : null;
+                              })()}
+                            </div>
+                            <div class="mt-1.5">
+                              <p class="text-xs leading-tight font-medium text-gray-600">
+                                {session.startTime}
+                              </p>
+                              <p class="text-xs leading-tight text-gray-500">
+                                {session.endTime}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Session content */}
+                          <div class="min-w-0 flex-1 pb-6">
+                            <div
+                              class="rounded-lg border-l-4 bg-gray-50 p-4"
+                              style={`border-left-color: ${track.color}`}
+                            >
+                              <h4 class="mb-2 leading-tight font-semibold text-gray-900">
+                                {session.title}
+                              </h4>
+
+                              <div class="mb-3 flex flex-wrap gap-2">
+                                <span
+                                  class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium text-white"
+                                  style={`background-color: ${track.color}`}
+                                >
+                                  {getSessionTypeLabel(session.type)}
+                                </span>
+
+                                {session.duration && (
+                                  <span class="inline-flex items-center rounded-full bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700">
+                                    <Clock size={12} class="mr-1" />
+                                    {session.duration}
+                                  </span>
+                                )}
+
+                                {session.isKeynote && (
+                                  <span class="inline-flex items-center rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800">
+                                    Keynote
+                                  </span>
+                                )}
+                              </div>
+
+                              {session.name && (
+                                <div class="flex items-center gap-3 border-t border-gray-200 pt-3">
+                                  <img
+                                    src={session.image || "/placeholder.svg"}
+                                    alt={`Foto de ${session.name}`}
+                                    class="h-8 w-8 rounded-full border-2 border-white object-cover shadow-sm"
+                                  />
+                                  <div>
+                                    <p class="text-sm font-medium text-gray-800">
+                                      {session.name}
+                                    </p>
+                                    <p class="text-xs text-gray-600">
+                                      {session.role}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div class="py-12 text-center text-gray-400">
+                  <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+                    <div
+                      class="h-6 w-6 rounded-full"
+                      style={`background-color: ${track.color}30`}
+                    />
+                  </div>
+                  <p class="text-sm italic">No hay actividades programadas</p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })
+    }
+  </div>
+</div>
+
+<style>
+  /* Responsive adjustments */
+  @media (max-width: 1024px) {
+    .grid-cols-1.lg\:grid-cols-3 {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+  }
+
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .grid-cols-1.lg\:grid-cols-3 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>

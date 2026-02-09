@@ -22,7 +22,7 @@ const { organizer } = Astro.props;
   <p class="text-google-blue mx-auto text-sm font-medium">{organizer.role}</p>
   <p class="text-secondary line-clamp-3 text-center text-sm">{organizer.bio}</p>
   <div class="flex flex-wrap justify-center gap-2">
-    {organizer.tags.map((tag) => <Tag label={tag} />)}
+    {organizer.tags.map((tag: string) => <Tag label={tag} />)}
   </div>
   <div class="text-secondary mt-auto flex justify-center gap-3">
     {

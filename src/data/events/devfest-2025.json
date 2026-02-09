@@ -4,7 +4,7 @@
   "image": "/events/devfest-2025.webp",
   "shortDescription": "El festival más grande de tecnología de la región con IA, Cloud, ML, Android y más",
   "date": "sábado, 29 de noviembre de 2025",
-  "time": "09:00 AM - 01:00 PM",
+  "time": "08:00 AM - 01:30 PM",
   "location": {
     "name": "Zegel Ica",
     "direction": "Zegel - Sede Ica, Av Cutervo cutervo",
@@ -12,15 +12,15 @@
     "googleMapLink": "https://maps.app.goo.gl/ZegelIcaSede"
   },
   "isVirtual": false,
-  "participants": 198,
-  "maxParticipants": 300,
+  "participants": 300,
+  "maxParticipants": 350,
   "category": {
     "label": "DevFest",
     "type": "devfest"
   },
   "status": {
-    "label": "Próximo",
-    "type": "upcoming"
+    "label": "Finalizado",
+    "type": "completed"
   },
   "isHighlight": true,
   "tags": [
@@ -40,11 +40,10 @@
   "speakerNames": [
     "Michael Sontheimer",
     "Aldo Malaver",
-    "Gerardo Germán Cayo Morales",
-    "Giancarlos Enrique Sandoval Tume",
+    "Giancarlos Sandoval",
     "Wilma Paca Patzi",
     "Sigmund Mandel",
-    "William Penagos"
+    "Luis Uculmana"
   ],
   "largeDescription": "¡DevFest Ica 2025 llega el 29 de noviembre! Únete al festival de tecnología más grande de la región. Explora las últimas tendencias en IA, Android, Angular, Cloud Computing, Machine Learning y mucho más. Conecta con desarrolladores, aprende de expertos y descubre cómo la tecnología está transformando el mundo. ¡Una experiencia imperdible para la comunidad tech de Ica!",
   "registerFormLink": "https://gdg.community.dev/events/details/google-gdg-ica-presents-devfest-ica-2025/",
@@ -77,107 +76,224 @@
     "Vertex AI",
     "Web"
   ],
-  "schedule": [
+  "tracks": [
     {
-      "id": 1,
-      "time": "08:30 AM - 09:00 AM",
-      "title": "Registro de asistentes",
-      "name": "Equipo GDG Ica",
-      "image": "/gdg-logo.png",
-      "role": "Organizadores",
-      "type": "event"
+      "id": "main",
+      "name": "Auditorio Principal",
+      "color": "#1976D2",
+      "description": "Charlas magistrales y keynotes"
     },
     {
-      "id": 2,
-      "time": "09:00 AM - 09:15 AM",
-      "title": "Inauguración DevFest Ica 2025",
-      "name": "Eduardo Ormeño",
-      "image": "/team/eduardo-ormeno.webp",
-      "role": "GDG Ica Organizer",
-      "type": "event"
+      "id": "workshop1",
+      "name": "Sala de Workshops 1",
+      "color": "#388E3C",
+      "description": "Talleres prácticos y hands-on"
     },
     {
-      "id": 3,
-      "time": "09:15 AM - 09:45 AM",
-      "title": "Arquitectura de Datos... ¿Cómo iniciar?",
-      "name": "Gerardo Germán Cayo Morales",
-      "image": "/speakers/german-cayo.webp",
-      "role": "Data Engineer Senior en Indra",
-      "type": "event"
-    },
-    {
-      "id": 4,
-      "time": "09:45 AM - 10:15 AM",
-      "title": "Tips to improve the testing",
-      "name": "Wilma Paca Patzi",
-      "image": "/speakers/wilma-paca.webp",
-      "role": "Ingeniero de Calidad de Software",
-      "type": "event"
-    },
-    {
-      "id": 5,
-      "time": "10:15 AM - 10:30 AM",
-      "title": "Coffee Break & Networking",
-      "name": "",
-      "image": "",
-      "role": "",
-      "type": "break"
-    },
-    {
-      "id": 6,
-      "time": "10:30 AM - 11:00 AM",
-      "title": "Superpoderes para desarrolladores: Flutter, Firebase y GitHub Copilot Agents",
-      "name": "Giancarlos Enrique Sandoval Tume",
-      "image": "/speakers/giancarlos-sandoval.webp",
-      "role": "Flutter Developer & GitHub Expert",
-      "type": "event"
-    },
-    {
-      "id": 7,
-      "time": "11:00 AM - 11:30 AM",
-      "title": "De Desarrollo Local a Google Cloud: Estrategias para escalar aplicaciones",
-      "name": "William Penagos",
-      "image": "/speakers/william-penagos.webp",
-      "role": "GDG Cali Leader & FullStack Developer",
-      "type": "event"
-    },
-    {
-      "id": 8,
-      "time": "11:30 AM - 12:00 PM",
-      "title": "Innovaciones en Tecnología de la Salud",
-      "name": "Michael Sontheimer",
-      "image": "/speakers/michael-sontheimer.webp",
-      "role": "Clinica Schubel - USA",
-      "type": "event"
-    },
-    {
-      "id": 9,
-      "time": "12:00 PM - 12:30 PM",
-      "title": "Arquitectura Bancaria Moderna: Desafíos y Soluciones",
-      "name": "Aldo Malaver",
-      "image": "/speakers/aldo-malaver.webp",
-      "role": "Sr. Architect of Bank",
-      "type": "event"
-    },
-    {
-      "id": 10,
-      "time": "12:30 PM - 01:15 PM",
-      "title": "Taller: Crea tu app sin saber programar - Vibe Coding",
-      "name": "Sigmund Mandel",
-      "image": "/speakers/sigmund-mandel.webp",
-      "role": "Google Developer Expert",
-      "type": "event"
-    },
-    {
-      "id": 11,
-      "time": "01:15 PM - 01:30 PM",
-      "title": "Cierre del evento y agradecimientos",
-      "name": "Eduardo Ormeño",
-      "image": "/team/eduardo-ormeno.webp",
-      "role": "GDG Ica Organizer",
-      "type": "event"
+      "id": "workshop2",
+      "name": "Sala de Workshops 2",
+      "color": "#F57C00",
+      "description": "Espacio de networking y actividades interactivas"
     }
   ],
+  "schedule": {
+    "trackSessions": {
+      "main": [
+        {
+          "id": 1,
+          "title": "Registro de asistentes",
+          "name": "Comunidad GDG",
+          "image": "/gdg-logo.png",
+          "role": "Networking",
+          "type": "networking",
+          "startTime": "08:00 AM",
+          "endTime": "09:00 AM",
+          "duration": "1h"
+        },
+        {
+          "id": 2,
+          "title": "Tips to improve the testing",
+          "name": "Wilma Paca Patzi",
+          "image": "/speakers/wilma-paca.webp",
+          "role": "Staff Quality Engineer of Software at Jalasoft",
+          "type": "event",
+          "startTime": "09:00 AM",
+          "endTime": "09:30 AM",
+          "duration": "30m"
+        },
+        {
+          "id": 3,
+          "title": "Arquitectura composable en banca y pagos",
+          "name": "Aldo Malaver",
+          "image": "/speakers/aldo-malaver.webp",
+          "role": "Sr. Architect at Bank",
+          "type": "event",
+          "startTime": "09:30 AM",
+          "endTime": "10:00 AM",
+          "duration": "30m"
+        },
+        {
+          "id": 4,
+          "title": "Más allá del código: cómo liderar proyectos ágiles en el mundo real",
+          "name": "Josselyn Hinostroza",
+          "image": "/speakers/josselyn-hinostroza.webp",
+          "role": "Project Manager at Telefonica",
+          "type": "event",
+          "startTime": "10:00 AM",
+          "endTime": "10:30 AM",
+          "duration": "30m"
+        },
+        {
+          "id": 5,
+          "title": "Coffee Break & Networking",
+          "name": "Comunidad GDG",
+          "image": "/gdg-logo.png",
+          "role": "Networking",
+          "type": "networking",
+          "startTime": "10:30 AM",
+          "endTime": "11:45 AM",
+          "duration": "1h 15m"
+        },
+        {
+          "id": 6,
+          "title": "Cómo la tecnología y la ciencia pueden contribuir al bienestar y la salud integral",
+          "name": "Michael Sontheimer",
+          "image": "/speakers/michael-sontheimer.webp",
+          "role": "Clinica Schubel",
+          "type": "event",
+          "startTime": "11:45 AM",
+          "endTime": "12:15 PM",
+          "duration": "30m"
+        },
+        {
+          "id": 7,
+          "title": "La convergencia del talento, la inteligencia artificial y el trabajo remoto",
+          "name": "Daniel Carbajal",
+          "image": "/speakers/daniel-carbajal.webp",
+          "role": "Senior Software Engineer at PowerFlex",
+          "type": "event",
+          "startTime": "12:15 PM",
+          "endTime": "12:45 PM",
+          "duration": "30m"
+        },
+        {
+          "id": 8,
+          "title": "Innovación y startups en la era de la IA",
+          "name": "Sigmund Mandel",
+          "image": "/speakers/sigmund-mandel.webp",
+          "role": "Google Developer Expert",
+          "type": "event",
+          "startTime": "12:45 PM",
+          "endTime": "01:15 PM",
+          "duration": "30m",
+          "isKeynote": false
+        },
+        {
+          "id": 9,
+          "title": "Cierre del devfest y agradecimientos",
+          "name": "Comunidad GDG",
+          "image": "/gdg-logo.png",
+          "role": "Networking",
+          "type": "networking",
+          "startTime": "01:15 PM",
+          "endTime": "01:30 PM",
+          "duration": "15m"
+        }
+      ],
+      "workshop1": [
+        {
+          "id": 1,
+          "title": "Taller de Vibe Coding con herramientas de Google",
+          "name": "Sigmund Mandel",
+          "image": "/speakers/sigmund-mandel.webp",
+          "role": "Google Developer Expert",
+          "type": "workshop",
+          "startTime": "09:00 AM",
+          "endTime": "11:30 AM",
+          "duration": "2h 30m"
+        },
+        {
+          "id": 2,
+          "title": "Coffee Break & Networking",
+          "name": "Comunidad GDG",
+          "image": "/gdg-logo.png",
+          "role": "Networking",
+          "type": "networking",
+          "startTime": "11:30 AM",
+          "endTime": "11:45 AM",
+          "duration": "15m"
+        }
+      ],
+      "workshop2": [
+        {
+          "id": 1,
+          "title": "Introducción con Spring Webflux y Blockchain",
+          "name": "Jose Hurtado",
+          "image": "/speakers/jose-hurtado.webp",
+          "role": "FullStack Developer",
+          "type": "workshop",
+          "startTime": "09:00 AM",
+          "endTime": "09:30 AM",
+          "duration": "30m"
+        },
+        {
+          "id": 2,
+          "title": "El futuro del desarrollo: MCP y Github como aliados de la IA",
+          "name": "David Contreras",
+          "image": "/speakers/david-contreras.webp",
+          "role": "Github Campus Expert",
+          "type": "workshop",
+          "startTime": "09:30 AM",
+          "endTime": "10:00 AM",
+          "duration": "30m"
+        },
+        {
+          "id": 3,
+          "title": "Agentes IA + ADK en python",
+          "name": "Luis Uculmana",
+          "image": "/team/luis-uculmana.webp",
+          "role": "GDG Ica Leader",
+          "type": "workshop",
+          "startTime": "10:00 AM",
+          "endTime": "10:30 AM",
+          "duration": "30m"
+        },
+        {
+          "id": 4,
+          "title": "Superpoderes para desarrolladores: Flutter, Firebase y Github Copilot Agents",
+          "name": "Giancarlos Sandoval",
+          "image": "/speakers/giancarlos-sandoval.webp",
+          "role": "Flutter Developer & GitHub Expert",
+          "type": "workshop",
+          "startTime": "10:30 AM",
+          "endTime": "11:00 AM",
+          "duration": "30m"
+        },
+        {
+          "id": 5,
+          "title": "Construyendo agentes inteligentes con Google Cloud",
+          "name": "Eduardo Ormeño",
+          "image": "/team/eduardo-ormeno.webp",
+          "role": "FullStack Developer & Github Campus Expert",
+          "type": "workshop",
+          "startTime": "11:00 AM",
+          "endTime": "11:30 AM",
+          "duration": "30m"
+        },
+        {
+          "id": 6,
+          "title": "Coffee Break & Networking",
+          "name": "Comunidad GDG",
+          "image": "/gdg-logo.png",
+          "role": "Networking",
+          "type": "networking",
+          "startTime": "11:30 AM",
+          "endTime": "11:45 AM",
+          "duration": "15m"
+        }
+      ]
+    }
+  },
   "speakers": [
     {
       "id": 1,
@@ -195,7 +311,7 @@
       "id": 2,
       "image": "/speakers/aldo-malaver.webp",
       "name": "Aldo Malaver",
-      "role": "Sr. Architect of Bank",
+      "role": "Sr. Architect at Bank",
       "description": "Arquitecto Senior con amplia experiencia en soluciones bancarias y tecnologías financieras",
       "linkedin": "",
       "web": "",
@@ -205,10 +321,10 @@
     },
     {
       "id": 3,
-      "image": "/speakers/german-cayo.webp",
-      "name": "Gerardo Germán Cayo Morales",
-      "role": "Data Engineer Senior en Indra - Microsoft Certified Trainer",
-      "description": "Experto en arquitectura de datos con certificación Microsoft, especializado en soluciones empresariales",
+      "image": "/speakers/josselyn-hinostroza.webp",
+      "name": "Josselyn Hinostroza",
+      "role": "Project Manager at Telefonica",
+      "description": "Project Manager especializada en metodologías ágiles y gestión de proyectos tecnológicos",
       "linkedin": "",
       "web": "",
       "youtube": "",
@@ -218,7 +334,7 @@
     {
       "id": 4,
       "image": "/speakers/giancarlos-sandoval.webp",
-      "name": "Giancarlos Enrique Sandoval Tume",
+      "name": "Giancarlos Sandoval",
       "role": "Flutter Developer & GitHub Expert",
       "description": "Especialista en Flutter, Firebase y GitHub Copilot, enfocado en desarrollo móvil moderno",
       "linkedin": "",
@@ -231,7 +347,7 @@
       "id": 5,
       "image": "/speakers/wilma-paca.webp",
       "name": "Wilma Paca Patzi",
-      "role": "Ingeniero de Calidad de Software",
+      "role": "Staff Quality Engineer of Software at Jalasoft",
       "description": "Experta en testing y calidad de software, con enfoque en mejores prácticas de QA",
       "linkedin": "",
       "web": "",
@@ -253,11 +369,59 @@
     },
     {
       "id": 7,
-      "image": "/speakers/william-penagos.webp",
-      "name": "William Penagos",
-      "role": "GDG Cali Leader & FullStack Developer",
-      "description": "Líder del GDG Cali especializado en desarrollo FullStack y tecnologías Google Cloud",
-      "linkedin": "https://www.linkedin.com/in/william-penagos/",
+      "image": "/team/luis-uculmana.webp",
+      "name": "Luis Uculmana",
+      "role": "GDG Ica Leader",
+      "description": "Líder del GDG Ica especializado en desarrollo FullStack y tecnologías Google Cloud",
+      "linkedin": "",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    },
+    {
+      "id": 8,
+      "image": "/speakers/daniel-carbajal.webp",
+      "name": "Daniel Carbajal",
+      "role": "Senior Software Engineer at PowerFlex",
+      "description": "Ingeniero Full Stack con experiencia en IA y Cloud",
+      "linkedin": "",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    },
+    {
+      "id": 9,
+      "image": "/speakers/david-contreras.webp",
+      "name": "David Contreras",
+      "role": "Github Campus Expert",
+      "description": "Desarrollador de software con experiencia en herramientas de IA y desarrollo colaborativo",
+      "linkedin": "",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    },
+    {
+      "id": 10,
+      "image": "/speakers/jose-hurtado.webp",
+      "name": "Jose Hurtado",
+      "role": "FullStack Developer",
+      "description": "FullStack Developer con experiencia en Spring Webflux y Blockchain",
+      "linkedin": "",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    },
+    {
+      "id": 11,
+      "image": "/team/eduardo-ormeno.webp",
+      "name": "Eduardo Ormeño",
+      "role": "FullStack Developer & Github Campus Expert",
+      "description": "Desarrollador FullStack y experto en GitHub Campus con enfoque en soluciones innovadoras",
+      "linkedin": "",
       "web": "",
       "youtube": "",
       "twitter": "",
