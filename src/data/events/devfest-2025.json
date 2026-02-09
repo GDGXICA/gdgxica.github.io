@@ -2,7 +2,7 @@
   "id": 3,
   "name": "DevFest 2025",
   "image": "/events/devfest-2025.webp",
-  "shortDescription": "El festival más grande de técnología de la región",
+  "shortDescription": "El festival más grande de tecnología de la región con IA, Cloud, ML, Android y más",
   "date": "sábado, 29 de noviembre de 2025",
   "time": "08:00 AM - 01:30 PM",
   "location": {
@@ -23,7 +23,20 @@
     "type": "completed"
   },
   "isHighlight": true,
-  "tags": ["cloud", "Machine Learning", "Android"],
+  "tags": [
+    "Cloud",
+    "Machine Learning",
+    "Android",
+    "Career Development",
+    "Certification Prep",
+    "Data",
+    "Firebase",
+    "Flutter",
+    "Gemini",
+    "Google Assistant",
+    "IA",
+    "Web"
+  ],
   "speakerNames": [
     "Michael Sontheimer",
     "Aldo Malaver",

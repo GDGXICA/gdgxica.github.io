@@ -90,7 +90,9 @@ const metadata = {
             title={event.data.name}
             eventDate={event.data.date}
             eventTime={event.data.time}
-            eventLocation={event.data.location.name}
+            eventLocation={event.data.isVirtual
+              ? "Evento Virtual"
+              : event.data.location.name}
             eventDescription={event.data.shortDescription}
             eventType="DevFest"
             eventHashtags='["DevFest2025", "GDGIca", "TechEvent", "GoogleDeveloper"]'
@@ -117,8 +119,12 @@ const metadata = {
         </FeatureCard>
         <FeatureCard className="text-center">
           <Building stroke-width={1.5} color="#16A34A" class="mx-auto mb-3" />
-          <strong class="text-primary mb-2 font-semibold">Ubicación</strong>
-          <p class="text-secondary">{event.data.location.name}</p>
+          <strong class="text-primary mb-2 font-semibold">
+            {event.data.isVirtual ? "Modalidad" : "Ubicación"}
+          </strong>
+          <p class="text-secondary">
+            {event.data.isVirtual ? "Virtual" : event.data.location.name}
+          </p>
         </FeatureCard>
         <FeatureCard className="text-center">
           <Users stroke-width={1.5} color="#EBB308" class="mx-auto mb-3" />
@@ -290,42 +296,75 @@ const metadata = {
             </ul>
           </div>
           <!-- ubication -->
-          <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-            <h2 class="text-primary mb-6 text-2xl font-semibold">Ubicación</h2>
-            <p class="text-primary font-semibold">{event.data.location.name}</p>
-            <p class="text-secondary mb-3 text-sm">
-              {event.data.location.direction}
-            </p>
-            <!-- is false -->
-            {
-              event.data.location.googleMapEmbed ? (
-                <iframe
-                  src={event.data.location.googleMapEmbed}
-                  width="600"
-                  height="450"
-                  style="border:0;"
-                  allowfullscreen=""
-                  loading="lazy"
-                  referrerpolicy="no-referrer-when-downgrade"
-                  class="h-60 w-full"
-                />
-              ) : (
-                <div class="flex h-32 items-center justify-center gap-2 rounded-lg bg-gray-100">
-                  <MapPinned size={16} color="#4b5563" />
-                  <span class="text-secondary">Mapa interactivo</span>
+          {
+            !event.data.isVirtual && (
+              <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
+                <h2 class="text-primary mb-6 text-2xl font-semibold">
+                  Ubicación
+                </h2>
+                <p class="text-primary font-semibold">
+                  {event.data.location.name}
+                </p>
+                <p class="text-secondary mb-3 text-sm">
+                  {event.data.location.direction}
+                </p>
+                {event.data.location.googleMapEmbed ? (
+                  <iframe
+                    src={event.data.location.googleMapEmbed}
+                    width="600"
+                    height="450"
+                    style="border:0;"
+                    allowfullscreen=""
+                    loading="lazy"
+                    referrerpolicy="no-referrer-when-downgrade"
+                    class="h-60 w-full"
+                  />
+                ) : (
+                  <div class="flex h-32 items-center justify-center gap-2 rounded-lg bg-gray-100">
+                    <MapPinned size={16} color="#4b5563" />
+                    <span class="text-secondary">Mapa interactivo</span>
+                  </div>
+                )}
+                <p class="mt-3 grid">
+                  <Button
+                    variant="outline"
+                    target="_blank"
+                    href={event.data.location.googleMapLink}
+                  >
+                    <ExternalLink />
+                    Ver en Google Maps
+                  </Button>
+                </p>
+              </div>
+            )
+          }
+          {
+            event.data.isVirtual && (
+              <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
+                <h2 class="text-primary mb-6 text-2xl font-semibold">
+                  Modalidad
+                </h2>
+                <div class="flex flex-col items-center justify-center gap-4 text-center">
+                  <div class="rounded-full bg-blue-50 p-4">
+                    <ExternalLink
+                      size={32}
+                      color="#2463EB"
+                      stroke-width={1.5}
+                    />
+                  </div>
+                  <div>
+                    <p class="text-primary mb-2 text-lg font-semibold">
+                      Evento Virtual
+                    </p>
+                    <p class="text-secondary text-sm">
+                      Este evento se realizará de manera virtual. El enlace de
+                      acceso se enviará a tu correo después del registro.
+                    </p>
+                  </div>
                 </div>
-              )
-            }
-
-            <p class="mt-3 grid">
-              <Button
-                variant="outline"
-                target="_blank"
-                href={event.data.location.googleMapLink}
-                ><ExternalLink />Ver en Google Maps</Button
-              >
-            </p>
-          </div>
+              </div>
+            )
+          }
         </div>
       </div>
     </div>

@@ -25,3 +25,7 @@ pnpm-debug.log*
 
 # Firebase cache
 .firebase/
+
+# Windows Zone.Identifier files
+*:Zone.Identifier
+*.Identifier

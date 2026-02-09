@@ -1,0 +1,96 @@
+{
+  "id": 2,
+  "name": "Evitando \"Aplicaciones Frankenstein\" generadas por AI Coding usando SDD y Antigravity",
+  "image": "/events/w-avoiding-frankenstein-apps-2026.webp",
+  "shortDescription": "Taller virtual de IA y Vibe Coding con Antigravity para crear software sostenible",
+  "date": "sábado, 21 de febrero de 2026",
+  "time": "02:00 PM - 04:00 PM",
+  "location": {
+    "name": "",
+    "direction": "",
+    "googleMapEmbed": "",
+    "googleMapLink": ""
+  },
+  "isVirtual": true,
+  "participants": 36,
+  "maxParticipants": 100,
+  "category": {
+    "label": "Workshop",
+    "type": "wtm"
+  },
+  "status": {
+    "label": "Próximo",
+    "type": "upcoming"
+  },
+  "isHighlight": false,
+  "tags": ["AI", "Gemini", "Antigravity", "Web", "Cloud", "Google Cloud"],
+  "speakerNames": [],
+  "largeDescription": "La IA ha permitido acelerar el desarrollo de aplicaciones, logrando una mayor productividad en esta área y facilitando la creación masiva de aplicaciones pequeñas y componentes de software dentro de un sistema mayor. Sin embargo, si no se dirige correctamente, puede generar código difícil de mantener, complejo de analizar, arduo de testear y con una alta deuda técnica. Es por ello que resurgen con más fuerza que nunca prácticas como DDD (Domain-Driven Design) o SDD (Software Design Document). Estos enfoques de desarrollo permiten que las herramientas de AI Coding tengan menos desvíos y alucinaciones, logrando construir software sostenible. En esta charla abordaremos estos enfoques de forma práctica, utilizando herramientas de IA como Antigravity para crear software robusto y mantenible.",
+  "registerFormLink": "",
+  "requirements": ["Registrarse", "Ser puntuales"],
+  "include": [
+    "Certificado digital de participación",
+    "Material del workshop y presentaciones descargables",
+    "Acceso a repositorio con código de ejemplo",
+    "Sesión interactiva de preguntas y respuestas"
+  ],
+  "technologies": [
+    "AI",
+    "Gemini",
+    "Antigravity",
+    "Web",
+    "Cloud",
+    "Google Cloud"
+  ],
+  "schedule": [
+    {
+      "id": 2,
+      "time": "02:00 PM - 2:15 PM",
+      "title": "Inicio del evento",
+      "name": "Eduardo Ormeño",
+      "image": "/team/eduardo-ormeno.webp",
+      "role": "Organizador",
+      "type": "event"
+    },
+    {
+      "id": 3,
+      "time": "02:15 PM - 04:00 PM",
+      "title": "Evitando \"Aplicaciones Frankenstein\" generadas por AI Coding usando SDD y Antigravity",
+      "name": "Juan Guillermo Gómez Torres",
+      "image": "/speakers/juan-gomez.webp",
+      "role": "Software Architect | Google Developer Expert in Firebase, GCP & AI",
+      "type": "event"
+    }
+  ],
+  "speakers": [
+    {
+      "id": 1,
+      "image": "/speakers/juan-gomez.webp",
+      "name": "Juan Guillermo Gómez Torres",
+      "role": "Software Architect | Google Developer Expert in Firebase, GCP & AI",
+      "description": "",
+      "linkedin": "link",
+      "web": "",
+      "youtube": "",
+      "twitter": "",
+      "github": ""
+    }
+  ],
+  "sponsors": [
+    {
+      "id": 2,
+      "image": "/sponsors/github.svg",
+      "alt": "Github"
+    },
+    {
+      "id": 3,
+      "image": "/sponsors/google.svg",
+      "alt": "Google"
+    },
+    {
+      "id": 4,
+      "image": "/sponsors/utp.webp",
+      "alt": "UTP"
+    }
+  ]
+}
