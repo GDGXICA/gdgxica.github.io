@@ -26,7 +26,7 @@
   "tags": ["AI", "Gemini", "Antigravity", "Web", "Cloud", "Google Cloud"],
   "speakerNames": [],
   "largeDescription": "La IA ha permitido acelerar el desarrollo de aplicaciones, logrando una mayor productividad en esta área y facilitando la creación masiva de aplicaciones pequeñas y componentes de software dentro de un sistema mayor. Sin embargo, si no se dirige correctamente, puede generar código difícil de mantener, complejo de analizar, arduo de testear y con una alta deuda técnica. Es por ello que resurgen con más fuerza que nunca prácticas como DDD (Domain-Driven Design) o SDD (Software Design Document). Estos enfoques de desarrollo permiten que las herramientas de AI Coding tengan menos desvíos y alucinaciones, logrando construir software sostenible. En esta charla abordaremos estos enfoques de forma práctica, utilizando herramientas de IA como Antigravity para crear software robusto y mantenible.",
-  "registerFormLink": "",
+  "registerFormLink": "https://gdg.community.dev/events/details/google-gdg-ica-presents-taller-virtual-evitando-aplicaciones-frankenstein-generadas-por-ai-coding-usando-sdd-y-antigravity/",
   "requirements": ["Registrarse", "Ser puntuales"],
   "include": [
     "Certificado digital de participación",
