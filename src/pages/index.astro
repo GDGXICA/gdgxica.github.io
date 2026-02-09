@@ -15,10 +15,40 @@ import {
   Sprout,
 } from "@lucide/astro";
 
+const parseSpanishDate = (dateStr: string) => {
+  const months: { [key: string]: number } = {
+    enero: 0,
+    febrero: 1,
+    marzo: 2,
+    abril: 3,
+    mayo: 4,
+    junio: 5,
+    julio: 6,
+    agosto: 7,
+    septiembre: 8,
+    octubre: 9,
+    noviembre: 10,
+    diciembre: 11,
+  };
+
+  const match = dateStr.match(/(\d+) de (\w+) de (\d+)/);
+  if (match) {
+    const day = parseInt(match[1]);
+    const month = months[match[2].toLowerCase()];
+    const year = parseInt(match[3]);
+    return new Date(year, month, day);
+  }
+  return new Date(0);
+};
+
 const allEvents = await getCollection("events");
 const upcomingEvents = allEvents
   .filter((event) => event.data.status.type === "upcoming")
-  .sort((a, b) => b.data.id - a.data.id);
+  .sort((a, b) => {
+    const dateA = parseSpanishDate(a.data.date);
+    const dateB = parseSpanishDate(b.data.date);
+    return dateA.getTime() - dateB.getTime();
+  });
 
 const gridClasses =
   upcomingEvents.length === 1
