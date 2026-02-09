@@ -37,7 +37,7 @@
   ],
   "speakerNames": [],
   "largeDescription": "Conectando Talento Tech es un evento presencial que reúne a la comunidad tecnológica para aprender, compartir y hacer networking, conectando talento local con expertos de la industria y explorando tendencias, herramientas de Google, desarrollo de software e inteligencia artificial en un ambiente dinámico y colaborativo.",
-  "registerFormLink": "",
+  "registerFormLink": "https://gdg.community.dev/events/details/google-gdg-ica-presents-gdg-ica-2026-conectando-talento-tech/",
   "requirements": ["Registrarse", "Ser puntuales"],
   "include": [
     "Laboratorio moderno",
