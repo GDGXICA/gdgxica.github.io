@@ -54,17 +54,17 @@ const {
               <Clock stroke-width={1.5} size={16} color="#EF4444" />
               {time}
             </li>
-            <li class="flex items-center gap-3">
-              <MapPin stroke-width={1.5} size={16} color="#16A34A" />
-              {location.name}
-            </li>
-            {isVirtual && (
+            {isVirtual ? (
               <li class="flex items-center gap-3">
                 <Globe stroke-width={1.5} size={16} color="#16A34A" />
-                Virtual
+                Evento Virtual
+              </li>
+            ) : (
+              <li class="flex items-center gap-3">
+                <MapPin stroke-width={1.5} size={16} color="#16A34A" />
+                {location.name}
               </li>
             )}
-
             <li class="flex items-center gap-3">
               <Users stroke-width={1.5} size={16} color="#EBB308" />
               {participants}/{maxParticipants} registrados
@@ -90,7 +90,7 @@ const {
       </div>
     </article>
   ) : (
-    <article class="border-gray-custom relative rounded-lg border bg-white">
+    <article class="border-gray-custom relative flex h-full flex-col rounded-lg border bg-white">
       <img
         src={image ? image : "/placeholder.svg"}
         class="aspect-video h-[192px] w-full rounded-t-lg object-cover"
@@ -105,9 +105,9 @@ const {
       <div class="absolute top-4 right-6">
         {isHighlight && <Tag label="Destacado" isHighLight={true} />}
       </div>
-      <div class="p-6">
+      <div class="flex flex-1 flex-col p-6">
         <p class="text-primary mb-1 text-2xl font-bold">{name}</p>
-        <p class="text-secondary mb-6">{shortDescription}</p>
+        <p class="text-secondary mb-6 line-clamp-2">{shortDescription}</p>
         <ul class="text-secondary mb-4 flex flex-col gap-3">
           <li class="flex items-center gap-3">
             <Calendar stroke-width={1.5} size={16} color="#2463EB" />
@@ -117,24 +117,24 @@ const {
             <Clock stroke-width={1.5} size={16} color="#EF4444" />
             {time}
           </li>
-          <li class="flex items-center gap-3">
-            <MapPin stroke-width={1.5} size={16} color="#16A34A" />
-            {location.name}
-          </li>
-          {isVirtual && (
+          {isVirtual ? (
             <li class="flex items-center gap-3">
               <Globe stroke-width={1.5} size={16} color="#16A34A" />
-              Virtual
+              Evento Virtual
+            </li>
+          ) : (
+            <li class="flex items-center gap-3">
+              <MapPin stroke-width={1.5} size={16} color="#16A34A" />
+              {location.name}
             </li>
           )}
-
           <li class="flex items-center gap-3">
             <Users stroke-width={1.5} size={16} color="#EBB308" />
             {participants}/{maxParticipants} registrados
           </li>
         </ul>
         {tags.length > 0 && (
-          <ul class="mb-4 flex flex-wrap gap-1">
+          <ul class="mb-4 flex min-h-[32px] flex-wrap gap-1">
             {tags.map((tag: string) => (
               <li>
                 <Tag label={tag} />
@@ -143,7 +143,7 @@ const {
           </ul>
         )}
 
-        <p class="grid">
+        <p class="mt-auto grid">
           <Button variant="solid" href={`/eventos/${slug}`}>
             <Ticket stroke-width={1.5} />
             Ver Detalles
