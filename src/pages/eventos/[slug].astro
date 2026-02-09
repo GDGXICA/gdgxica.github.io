@@ -158,7 +158,10 @@ const metadata = {
               <h2 class="text-primary mb-2 text-2xl font-semibold">Agenda</h2>
             </div>
             {
-              event.data.schedule ? (
+              event.data.schedule &&
+              (Array.isArray(event.data.schedule)
+                ? event.data.schedule.length > 0
+                : true) ? (
                 event.data.tracks &&
                 !Array.isArray(event.data.schedule) &&
                 "trackSessions" in event.data.schedule ? (
