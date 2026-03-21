@@ -84,11 +84,11 @@ const events = defineCollection({
         name: z.string(),
         role: z.string(),
         description: z.string(),
-        linkedin: z.string(),
-        web: z.string(),
-        youtube: z.string(),
-        twitter: z.string(),
-        github: z.string(),
+        linkedin: z.string().optional(),
+        web: z.string().optional(),
+        youtube: z.string().optional(),
+        twitter: z.string().optional(),
+        github: z.string().optional(),
       })
     ),
     sponsors: z.array(
