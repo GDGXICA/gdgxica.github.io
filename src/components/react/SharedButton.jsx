@@ -135,8 +135,8 @@ export default function SharedButton({
       await navigator.clipboard.writeText(window.location.href);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
-    } catch (err) {
-      console.error("Error al copiar:", err);
+    } catch {
+      // clipboard write failed — UI state remains unchanged, no action needed
     }
   };
 
