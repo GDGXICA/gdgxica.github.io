@@ -1,6 +1,15 @@
 import { getCollection } from "astro:content";
 
 export async function GET() {
-  const allEvents = await getCollection("sponsors");
-  return new Response(JSON.stringify(allEvents));
+  try {
+    const items = await getCollection("sponsors");
+    return new Response(JSON.stringify(items), {
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch {
+    return new Response(JSON.stringify({ error: "Failed to load data" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 }
