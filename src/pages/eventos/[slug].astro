@@ -39,6 +39,12 @@ const metadata = {
   image: "",
   url: `https://gdgica.com/eventos/${event.id}`,
 };
+
+const schedule = event.data.schedule;
+const isArraySchedule = Array.isArray(schedule);
+const isTrackSchedule =
+  !isArraySchedule && "trackSessions" in (schedule as object);
+const hasSchedule = isArraySchedule ? (schedule as unknown[]).length > 0 : true;
 ---
 
 <Layout {...metadata}>
@@ -158,23 +164,44 @@ const metadata = {
               <h2 class="text-primary mb-2 text-2xl font-semibold">Agenda</h2>
             </div>
             {
-              event.data.schedule &&
-              (Array.isArray(event.data.schedule)
-                ? event.data.schedule.length > 0
-                : true) ? (
-                event.data.tracks &&
-                !Array.isArray(event.data.schedule) &&
-                "trackSessions" in event.data.schedule ? (
+              hasSchedule ? (
+                isTrackSchedule ? (
                   <TrackTabSchedule
-                    schedule={event.data.schedule}
-                    tracks={event.data.tracks}
+                    schedule={
+                      schedule as {
+                        trackSessions: Record<
+                          string,
+                          {
+                            id: number;
+                            title: string;
+                            name: string;
+                            image: string;
+                            role: string;
+                            type: string;
+                            startTime: string;
+                            endTime: string;
+                            duration: string;
+                            isKeynote?: boolean;
+                          }[]
+                        >;
+                      }
+                    }
+                    tracks={event.data.tracks!}
                   />
                 ) : (
                   <div class="flex flex-col gap-4">
-                    {Array.isArray(event.data.schedule) &&
-                      event.data.schedule.map((item) => (
-                        <ScheduleCard {...item} />
-                      ))}
+                    {isArraySchedule &&
+                      (
+                        schedule as {
+                          id: number;
+                          time: string;
+                          title: string;
+                          name: string;
+                          image: string;
+                          role: string;
+                          type: string;
+                        }[]
+                      ).map((item) => <ScheduleCard {...item} />)}
                   </div>
                 )
               ) : (
