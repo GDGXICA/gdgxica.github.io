@@ -182,6 +182,7 @@ export default function SharedButton({
               <a
                 href={`https://x.com/intent/tweet?url=${shareUrl}&text=${twitterMessage}`}
                 target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex h-11 w-11 items-center gap-2 rounded-md bg-black px-3 py-3 text-center text-white transition-colors hover:bg-gray-800"
                 title="Compartir en X (Twitter)"
               >
@@ -203,6 +204,7 @@ export default function SharedButton({
               <a
                 href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}&quote=${facebookMessage}`}
                 target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-blue-700 px-3 py-3 text-center text-white transition-colors hover:bg-blue-800"
                 title="Compartir en Facebook"
               >
@@ -237,6 +239,7 @@ export default function SharedButton({
               <a
                 href={`https://api.whatsapp.com/send?text=${whatsappMessage}%0A%0A${shareUrl}`}
                 target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-green-500 px-3 py-3 text-center text-white transition-colors hover:bg-green-600"
                 title="Compartir en WhatsApp"
               >
@@ -261,6 +264,7 @@ export default function SharedButton({
               <a
                 href={`https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}&summary=${linkedinMessage}`}
                 target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-blue-600 px-3 py-3 text-center text-white transition-colors hover:bg-blue-700"
                 title="Compartir en LinkedIn"
               >
