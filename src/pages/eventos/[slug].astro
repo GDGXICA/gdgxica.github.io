@@ -94,8 +94,8 @@ const metadata = {
               ? "Evento Virtual"
               : event.data.location.name}
             eventDescription={event.data.shortDescription}
-            eventType="DevFest"
-            eventHashtags='["DevFest2025", "GDGIca", "TechEvent", "GoogleDeveloper"]'
+            eventType={event.data.category.label}
+            eventHashtags={JSON.stringify(event.data.tags)}
             eventOrganization="Google Developer Group Ica"
           />
         </div>
