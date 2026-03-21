@@ -25,31 +25,51 @@ const {
     <h3 class="text-primary font-bold">{name}</h3>
     <p class="text-google-blue mb-2 text-sm">{role}</p>
     <ul class="mb-2 flex gap-2">
-      <li>
-        <a href={linkedin} target="_blank" rel="noopener noreferrer"
-          ><Linkedin size={16} color="#71717a" /></a
-        >
-      </li>
-      <li>
-        <a href={twitter} target="_blank" rel="noopener noreferrer"
-          ><Twitter size={16} color="#71717a" /></a
-        >
-      </li>
-      <li>
-        <a href={github} target="_blank" rel="noopener noreferrer"
-          ><Github size={16} color="#71717a" /></a
-        >
-      </li>
-      <li>
-        <a href={youtube} target="_blank" rel="noopener noreferrer"
-          ><Youtube size={16} color="#71717a" /></a
-        >
-      </li>
-      <li>
-        <a href={web} target="_blank" rel="noopener noreferrer"
-          ><Globe size={16} color="#71717a" /></a
-        >
-      </li>
+      {
+        linkedin?.startsWith("http") && (
+          <li>
+            <a href={linkedin} target="_blank" rel="noopener noreferrer">
+              <Linkedin size={16} color="#71717a" />
+            </a>
+          </li>
+        )
+      }
+      {
+        twitter?.startsWith("http") && (
+          <li>
+            <a href={twitter} target="_blank" rel="noopener noreferrer">
+              <Twitter size={16} color="#71717a" />
+            </a>
+          </li>
+        )
+      }
+      {
+        github?.startsWith("http") && (
+          <li>
+            <a href={github} target="_blank" rel="noopener noreferrer">
+              <Github size={16} color="#71717a" />
+            </a>
+          </li>
+        )
+      }
+      {
+        youtube?.startsWith("http") && (
+          <li>
+            <a href={youtube} target="_blank" rel="noopener noreferrer">
+              <Youtube size={16} color="#71717a" />
+            </a>
+          </li>
+        )
+      }
+      {
+        web?.startsWith("http") && (
+          <li>
+            <a href={web} target="_blank" rel="noopener noreferrer">
+              <Globe size={16} color="#71717a" />
+            </a>
+          </li>
+        )
+      }
     </ul>
     <p class="text-secondary">
       {description}
