@@ -4,7 +4,15 @@ import Header from "@/components/Header.astro";
 import Footer from "@/components/Footer.astro";
 import { ClientRouter } from "astro:transitions";
 
-const { title, description, image, url } = Astro.props;
+interface Props {
+  title: string;
+  description: string;
+  image?: string;
+  url: string;
+  schema?: object | object[];
+}
+
+const { title, description, image, url, schema } = Astro.props;
 ---
 
 <!doctype html>
@@ -31,6 +39,11 @@ const { title, description, image, url } = Astro.props;
     <meta name="twitter:description" content={description} />
     {image && <meta name="twitter:image" content={image} />}
     <link rel="canonical" href={url} />
+    {
+      schema && (
+        <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+      )
+    }
     <ClientRouter />
   </head>
   <body>

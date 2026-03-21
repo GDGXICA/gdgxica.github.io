@@ -24,6 +24,7 @@ import {
   Store,
 } from "@lucide/astro";
 import SharedButton from "@/components/react/SharedButton";
+import { parseSpanishDate } from "@/utils/parseSpanishDate";
 
 export async function getStaticPaths() {
   const events = await getCollection("events");
@@ -33,11 +34,97 @@ export async function getStaticPaths() {
   }));
 }
 const { event } = Astro.props;
+
+function buildEventSchema(data: typeof event.data, slug: string) {
+  const parsedDate = parseSpanishDate(data.date);
+  const year = parsedDate.getFullYear();
+  const month = String(parsedDate.getMonth() + 1).padStart(2, "0");
+  const day = String(parsedDate.getDate()).padStart(2, "0");
+  const dateBase = `${year}-${month}-${day}`;
+
+  const parseTime = (t: string): string => {
+    const match = t.trim().match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!match) return "00:00:00";
+    let hours = parseInt(match[1]);
+    const minutes = match[2];
+    const ampm = match[3].toUpperCase();
+    if (ampm === "PM" && hours < 12) hours += 12;
+    if (ampm === "AM" && hours === 12) hours = 0;
+    return `${String(hours).padStart(2, "0")}:${minutes}:00`;
+  };
+
+  const timeParts = data.time.split(" - ");
+  const startDate = `${dateBase}T${parseTime(timeParts[0])}-05:00`;
+  const endDate = `${dateBase}T${parseTime(timeParts[1] ?? timeParts[0])}-05:00`;
+
+  const location = data.isVirtual
+    ? {
+        "@type": "VirtualLocation",
+        url: `https://gdgica.com/eventos/${slug}`,
+      }
+    : {
+        "@type": "Place",
+        name: data.location.name,
+        address: {
+          "@type": "PostalAddress",
+          streetAddress: data.location.direction,
+          addressLocality: "Ica",
+          addressCountry: "PE",
+        },
+      };
+
+  const eventAttendanceMode = data.isVirtual
+    ? "https://schema.org/OnlineEventAttendanceMode"
+    : "https://schema.org/OfflineEventAttendanceMode";
+
+  const schema: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: data.name,
+    description: data.shortDescription,
+    startDate,
+    endDate,
+    eventStatus: "https://schema.org/EventScheduled",
+    eventAttendanceMode,
+    location,
+    url: `https://gdgica.com/eventos/${slug}`,
+    organizer: {
+      "@type": "Organization",
+      name: "Google Developer Group ICA",
+      url: "https://gdgica.com",
+    },
+  };
+
+  if (data.image) {
+    schema.image = `https://gdgica.com${data.image}`;
+  }
+
+  if (data.registerFormLink) {
+    schema.offers = {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "PEN",
+      availability: "https://schema.org/InStock",
+      url: data.registerFormLink,
+    };
+  }
+
+  if (data.speakers?.length > 0) {
+    schema.performer = data.speakers.map((s: { name: string }) => ({
+      "@type": "Person",
+      name: s.name,
+    }));
+  }
+
+  return schema;
+}
+
 const metadata = {
   title: `${event.data.name}`,
   description: `${event.data.shortDescription}`,
-  image: "",
+  image: event.data.image ? `https://gdgica.com${event.data.image}` : "",
   url: `https://gdgica.com/eventos/${event.id}`,
+  schema: buildEventSchema(event.data, event.id),
 };
 
 const schedule = event.data.schedule;
