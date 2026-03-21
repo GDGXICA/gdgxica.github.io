@@ -1,26 +1,6 @@
 [
   {
     "id": 1,
-    "name": "David Licla",
-    "role": "Technology",
-    "bio": "Frontend Engineer",
-    "joinedDate": "Noviembre 2023",
-    "responsibilities": [
-      "Desarrollar el sitio web",
-      "Colaborar en eventos",
-      "Gestión de speakers"
-    ],
-    "avatar": "/team/david-licla.webp",
-    "tags": ["Next.js", "a11y", "i18n", "Web Performance", "TypeScript"],
-    "links": {
-      "linkedin": "https://www.linkedin.com/in/davidmariolc/",
-      "twitter": "https://x.com/DavidMarioLC",
-      "github": "https://github.com/DavidMarioLC",
-      "web": "https://portafolio-davidmariolc.vercel.app/"
-    }
-  },
-  {
-    "id": 2,
     "name": "Miguel Vivar",
     "role": "Technology",
     "bio": "FullStack Developer",
