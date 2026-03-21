@@ -21,7 +21,7 @@ const events = defineCollection({
     maxParticipants: z.number(),
     category: z.object({
       label: z.string(),
-      type: z.enum(["devfest", "io", "studyjam", "wtm", "meetup", ""]),
+      type: z.enum(["devfest", "io", "studyjam", "wtm", "meetup"]),
     }),
     status: z.object({
       label: z.string(),
