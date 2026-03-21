@@ -145,7 +145,7 @@ export default function SharedButton({
       <Popover.Trigger asChild>
         <button
           className="text-primary inline-flex items-center justify-center gap-[10px] rounded-md border border-white bg-white px-8 py-[10px] font-medium"
-          aria-label="Update dimensions"
+          aria-label="Compartir evento"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
