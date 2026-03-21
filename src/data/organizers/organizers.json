@@ -79,13 +79,16 @@
   },
   {
     "id": 7,
-    "name": "Ausubel Velásquez",
-    "role": "Speakers",
-    "bio": "Data Analyst",
-    "avatar": "/team/ausubel-velasquez.webp",
-    "tags": ["SQL", "Python", "Power BI", "ETL"],
+    "name": "David Licla",
+    "role": "Technology",
+    "bio": "Frontend Engineer",
+    "avatar": "/team/david-licla.webp",
+    "tags": ["Next.js", "a11y", "i18n", "Web Performance", "TypeScript"],
     "links": {
-      "linkedin": "https://www.linkedin.com/in/ausubelvelasquez/"
+      "linkedin": "https://www.linkedin.com/in/davidmariolc/",
+      "twitter": "https://x.com/DavidMarioLC",
+      "github": "https://github.com/DavidMarioLC",
+      "web": "https://portafolio-davidmariolc.vercel.app/"
     }
   }
 ]
