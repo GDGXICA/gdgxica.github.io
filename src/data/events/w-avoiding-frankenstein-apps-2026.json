@@ -19,8 +19,8 @@
     "type": "wtm"
   },
   "status": {
-    "label": "Próximo",
-    "type": "upcoming"
+    "label": "Finalizado",
+    "type": "completed"
   },
   "isHighlight": false,
   "tags": ["AI", "Gemini", "Antigravity", "Web", "Cloud", "Google Cloud"],
