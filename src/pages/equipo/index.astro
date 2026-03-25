@@ -69,9 +69,7 @@ const metadata = {
         <Button variant="outline" href="#" target="_blank"> Community </Button>
         <Button variant="outline" href="#" target="_blank"> Events </Button>
       </div> -->
-      <div
-        class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-      >
+      <div class="mt-12 flex flex-wrap justify-center gap-8">
         {members.map((member) => <MemberCard member={member} />)}
       </div>
     </div>
