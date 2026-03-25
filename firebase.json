@@ -3,12 +3,88 @@
     {
       "site": "gdgica",
       "public": "dist",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "headers": [
+        {
+          "source": "/_astro/**",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ]
+        },
+        {
+          "source": "**/*.@(webp|png|jpg|jpeg|gif|svg|ico)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=604800, stale-while-revalidate=86400"
+            }
+          ]
+        },
+        {
+          "source": "**/*.@(js|css)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ]
+        },
+        {
+          "source": "**/*.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=3600, stale-while-revalidate=86400"
+            }
+          ]
+        }
+      ]
     },
     {
       "site": "appgdgica",
       "public": "dist",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "headers": [
+        {
+          "source": "/_astro/**",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ]
+        },
+        {
+          "source": "**/*.@(webp|png|jpg|jpeg|gif|svg|ico)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=604800, stale-while-revalidate=86400"
+            }
+          ]
+        },
+        {
+          "source": "**/*.@(js|css)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ]
+        },
+        {
+          "source": "**/*.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=3600, stale-while-revalidate=86400"
+            }
+          ]
+        }
+      ]
     }
   ]
 }
