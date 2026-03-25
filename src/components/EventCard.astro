@@ -32,6 +32,8 @@ const {
           width={385}
           height={192}
           alt={`Foto del evento de ${name}`}
+          loading="lazy"
+          decoding="async"
         />
       </div>
       <div class="basis-1/2">
@@ -97,6 +99,8 @@ const {
         width={385}
         height={192}
         alt={`Imagen del evento ${name}`}
+        loading="lazy"
+        decoding="async"
       />
       <div class="absolute top-4 left-6 flex gap-2">
         {category && <Tag label={category.label} type={category.type} />}

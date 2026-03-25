@@ -23,7 +23,6 @@
     "@types/react-dom": "^19.1.7",
     "astro": "^5.10.1",
     "clsx": "^2.1.1",
-    "motion": "^12.23.12",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "tailwind-merge": "^3.3.1",

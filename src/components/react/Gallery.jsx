@@ -1,16 +1,22 @@
 import { useState, useEffect } from "react";
 
-import { Fancybox } from "@fancyapps/ui/dist/fancybox/";
-import "@fancyapps/ui/dist/fancybox/fancybox.css";
-
 function useFancybox(options) {
   const [root, setRoot] = useState(null);
 
   useEffect(() => {
-    if (root) {
-      Fancybox.bind(root, "[data-fancybox]", options);
-      return () => Fancybox.unbind(root);
+    let cleanup;
+    async function init() {
+      const { Fancybox } = await import("@fancyapps/ui/dist/fancybox/");
+      await import("@fancyapps/ui/dist/fancybox/fancybox.css");
+      if (root) {
+        Fancybox.bind(root, "[data-fancybox]", options);
+        cleanup = () => Fancybox.unbind(root);
+      }
     }
+    if (root) {
+      init();
+    }
+    return () => cleanup?.();
   }, [root, options]);
 
   return [setRoot];

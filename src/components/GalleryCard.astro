@@ -9,5 +9,7 @@ const { image } = Astro.props;
     width="200"
     height="150"
     alt={image.alt}
+    loading="lazy"
+    decoding="async"
   />
 </figure>

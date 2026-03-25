@@ -1,5 +1,5 @@
 import * as Popover from "@radix-ui/react-popover";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // Función para generar mensajes personalizados según la red social y evento
 function generateShareMessage(eventData, platform = "default") {
@@ -89,8 +89,11 @@ export default function SharedButton({
   eventOrganization = "GDG Ica",
 }) {
   const [copySuccess, setCopySuccess] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
 
-  const shareUrl = encodeURIComponent(window.location.href);
+  useEffect(() => {
+    setShareUrl(encodeURIComponent(window.location.href));
+  }, []);
 
   // Parsear hashtags si es un string JSON
   let parsedHashtags = [];

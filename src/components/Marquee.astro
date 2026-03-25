@@ -169,28 +169,100 @@ const col03 = [
   <!-- col01 -->
   <div class="marquee">
     <div class="marquee__group">
-      {col01.map((image) => <img src={image.url} alt={image.alt} />)}
+      {
+        col01.map((image) => (
+          <img
+            src={image.url}
+            alt={image.alt}
+            width={400}
+            height={400}
+            loading="lazy"
+            decoding="async"
+          />
+        ))
+      }
     </div>
     <div aria-hidden="true" class="marquee__group">
-      {col01.reverse().map((image) => <img src={image.url} alt={image.alt} />)}
+      {
+        col01
+          .reverse()
+          .map((image) => (
+            <img
+              src={image.url}
+              alt={image.alt}
+              width={400}
+              height={400}
+              loading="lazy"
+              decoding="async"
+            />
+          ))
+      }
     </div>
   </div>
   <!-- col02 -->
   <div class="marquee marquee--reverse">
     <div class="marquee__group">
-      {col02.reverse().map((image) => <img src={image.url} alt={image.alt} />)}
+      {
+        col02
+          .reverse()
+          .map((image) => (
+            <img
+              src={image.url}
+              alt={image.alt}
+              width={400}
+              height={400}
+              loading="lazy"
+              decoding="async"
+            />
+          ))
+      }
     </div>
     <div aria-hidden="true" class="marquee__group">
-      {col02.map((image) => <img src={image.url} alt={image.alt} />)}
+      {
+        col02.map((image) => (
+          <img
+            src={image.url}
+            alt={image.alt}
+            width={400}
+            height={400}
+            loading="lazy"
+            decoding="async"
+          />
+        ))
+      }
     </div>
   </div>
   <!-- col03 -->
   <div class="marquee">
     <div class="marquee__group">
-      {col03.map((image) => <img src={image.url} alt={image.alt} />)}
+      {
+        col03.map((image) => (
+          <img
+            src={image.url}
+            alt={image.alt}
+            width={400}
+            height={400}
+            loading="lazy"
+            decoding="async"
+          />
+        ))
+      }
     </div>
     <div aria-hidden="true" class="marquee__group">
-      {col03.reverse().map((image) => <img src={image.url} alt={image.alt} />)}
+      {
+        col03
+          .reverse()
+          .map((image) => (
+            <img
+              src={image.url}
+              alt={image.alt}
+              width={400}
+              height={400}
+              loading="lazy"
+              decoding="async"
+            />
+          ))
+      }
     </div>
   </div>
 </article>
