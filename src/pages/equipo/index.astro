@@ -6,9 +6,13 @@ import Layout from "@/layouts/Layout.astro";
 import MemberCard from "@/components/MemberCard.astro";
 import { Users } from "@lucide/astro";
 import { getCollection } from "astro:content";
+import { fetchStats, fetchLinks } from "@/loaders/transform-site-config";
+import StatsBar from "@/components/StatsBar.astro";
 
 const membersCollection = await getCollection("members");
 const members = membersCollection.map((entry) => entry.data);
+const stats = await fetchStats();
+const links = await fetchLinks();
 
 // metadata
 const metadata = {
@@ -37,26 +41,30 @@ const metadata = {
       espacio donde todos puedan aprender y crecer.
     </p>
 
-    <div
-      class="grid grid-cols-2 place-items-center gap-10 md:flex md:justify-between"
-    >
-      <div>
-        <p class="text-google-blue text-[2rem] font-bold">7</p>
-        <p class="text-secondary">Organizadores Activos</p>
-      </div>
-      <div>
-        <p class="text-google-red text-[2rem] font-bold">10</p>
-        <p class="text-secondary">Años de Experiencia</p>
-      </div>
-      <div>
-        <p class="text-google-yellow text-[2rem] font-bold">50+</p>
-        <p class="text-secondary">Eventos Organizados</p>
-      </div>
-      <div>
-        <p class="text-google-green text-[2rem] font-bold">200+</p>
-        <p class="text-secondary">Desarrolladores Mentoreados</p>
-      </div>
-    </div>
+    <StatsBar
+      stats={[
+        {
+          value: `${stats.totalOrganizers}`,
+          label: "Organizadores Activos",
+          color: "blue",
+        },
+        {
+          value: `${stats.yearsActive}`,
+          label: "Años de Experiencia",
+          color: "red",
+        },
+        {
+          value: `${stats.totalEvents}+`,
+          label: "Eventos Organizados",
+          color: "yellow",
+        },
+        {
+          value: `${stats.developersMentored}+`,
+          label: "Desarrolladores Mentoreados",
+          color: "green",
+        },
+      ]}
+    />
   </HeroPage>
   <section class="py-20">
     <div class="container">
@@ -86,11 +94,7 @@ const metadata = {
       crecimiento de nuestra comunidad. Si tienes ganas de hacer la diferencia,
       ¡nos encantaría conocerte!
     </p>
-    <Button
-      variant="white"
-      href="https://forms.gle/AHbkg4KqVjMBd1Ez7"
-      target="_blank"
-    >
+    <Button variant="white" href={links.forms.joinTeam} target="_blank">
       <Users />
       Aplicar al Equipo
     </Button>
