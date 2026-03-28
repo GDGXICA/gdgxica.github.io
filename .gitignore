@@ -16,12 +16,18 @@ pnpm-debug.log*
 # environment variables
 .env
 .env.production
+.env.local
+.env.*.local
 
 # macOS-specific files
 .DS_Store
 
-# jetbrains setting folder
+# editor settings (local/personal)
 .idea/
+.vscode/
+
+# Claude Code local settings
+.claude/
 
 # Firebase cache
 .firebase/

@@ -16,7 +16,10 @@ import {
   HandshakeIcon,
 } from "@lucide/astro";
 // data
-import volunteers from "@/data/volunteers/volunteers.json";
+import { getCollection } from "astro:content";
+
+const volunteersCollection = await getCollection("volunteers");
+const volunteers = volunteersCollection.map((entry) => entry.data);
 
 const metadata = {
   title: "Voluntarios - Google Developer Group Ica",

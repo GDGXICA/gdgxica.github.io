@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  repository_dispatch:
+    types: [data-updated]
 
 jobs:
   build-and-deploy:

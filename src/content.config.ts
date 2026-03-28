@@ -1,10 +1,13 @@
 import { defineCollection, z } from "astro:content";
-import { file, glob } from "astro/loaders";
+import { loadEvents } from "./loaders/transform-events";
+import { loadOrganizers, loadMembers } from "./loaders/transform-team";
+import { loadSponsors } from "./loaders/transform-sponsors";
+import { loadGallery } from "./loaders/transform-gallery";
+import { loadVolunteers } from "./loaders/transform-volunteers";
 
 const events = defineCollection({
-  loader: glob({ pattern: "**/*.json", base: "./src/data/events" }),
+  loader: loadEvents,
   schema: z.object({
-    id: z.number(),
     name: z.string(),
     image: z.string(),
     shortDescription: z.string(),
@@ -102,9 +105,8 @@ const events = defineCollection({
 });
 
 const gallery = defineCollection({
-  loader: file("src/data/gallery/gallery.json"),
+  loader: loadGallery,
   schema: z.object({
-    id: z.number(),
     src: z.string(),
     alt: z.string(),
     title: z.string(),
@@ -124,9 +126,8 @@ const gallery = defineCollection({
 });
 
 const members = defineCollection({
-  loader: file("src/data/members/members.json"),
+  loader: loadMembers,
   schema: z.object({
-    id: z.number(),
     name: z.string(),
     role: z.string(),
     bio: z.string(),
@@ -144,9 +145,8 @@ const members = defineCollection({
 });
 
 const organizers = defineCollection({
-  loader: file("src/data/organizers/organizers.json"),
+  loader: loadOrganizers,
   schema: z.object({
-    id: z.number(),
     name: z.string(),
     role: z.string(),
     bio: z.string(),
@@ -161,9 +161,8 @@ const organizers = defineCollection({
 });
 
 const sponsors = defineCollection({
-  loader: file("src/data/sponsors/sponsors.json"),
+  loader: loadSponsors,
   schema: z.object({
-    id: z.number(),
     name: z.string(),
     logo: z.string(),
     sector: z.string(),
@@ -176,9 +175,8 @@ const sponsors = defineCollection({
 });
 
 const volunteers = defineCollection({
-  loader: file("src/data/volunteers/volunteers.json"),
+  loader: loadVolunteers,
   schema: z.object({
-    id: z.number(),
     name: z.string(),
     role: z.string(),
     area: z.string(),
@@ -190,6 +188,7 @@ const volunteers = defineCollection({
     }),
   }),
 });
+
 export const collections = {
   events,
   gallery,
