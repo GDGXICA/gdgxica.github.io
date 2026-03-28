@@ -7,6 +7,8 @@ import FeatureCard from "@/components/FeatureCard.astro";
 import EventCard from "@/components/EventCard.astro";
 import { getCollection } from "astro:content";
 import { parseSpanishDate } from "@/utils/parseSpanishDate";
+import { fetchStats, fetchLinks } from "@/loaders/transform-site-config";
+import StatsBar from "@/components/StatsBar.astro";
 import {
   Users,
   ArrowRight,
@@ -32,6 +34,9 @@ const gridClasses =
     : upcomingEvents.length === 2
       ? "grid grid-cols-1 gap-8 sm:grid-cols-2 justify-center"
       : "grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3";
+
+const stats = await fetchStats();
+const links = await fetchLinks();
 
 const metadata = {
   title: "GDG ICA - Google Developer Group Ica",
@@ -79,11 +84,7 @@ const metadata = {
             habilidades al siguiente nivel.
           </p>
           <div class="flex flex-col gap-4 lg:flex-row">
-            <Button
-              variant="solid"
-              href="https://gdg.community.dev/gdg-ica/"
-              target="_blank"
-            >
+            <Button variant="solid" href={links.community} target="_blank">
               Unete a GDG hoy
               <ArrowRight stroke-width={1.5} />
             </Button>
@@ -98,26 +99,26 @@ const metadata = {
   </section>
   <section class="bg-section py-20">
     <div class="container">
-      <div
-        class="grid grid-cols-2 place-items-center gap-10 md:flex md:justify-between"
-      >
-        <div>
-          <p class="text-google-blue text-[2rem] font-bold">1000+</p>
-          <p class="text-secondary">Miembros activos</p>
-        </div>
-        <div>
-          <p class="text-google-red text-[2rem] font-bold">50+</p>
-          <p class="text-secondary">Eventos</p>
-        </div>
-        <div>
-          <p class="text-google-yellow text-[2rem] font-bold">25+</p>
-          <p class="text-secondary">Expertos speakers</p>
-        </div>
-        <div>
-          <p class="text-google-green text-[2rem] font-bold">10</p>
-          <p class="text-secondary">Años activos</p>
-        </div>
-      </div>
+      <StatsBar
+        stats={[
+          {
+            value: `${stats.totalMembers}+`,
+            label: "Miembros activos",
+            color: "blue",
+          },
+          { value: `${stats.totalEvents}+`, label: "Eventos", color: "red" },
+          {
+            value: `${stats.totalSpeakers}+`,
+            label: "Expertos speakers",
+            color: "yellow",
+          },
+          {
+            value: `${stats.yearsActive}`,
+            label: "Años activos",
+            color: "green",
+          },
+        ]}
+      />
     </div>
   </section>
   <section class="py-10 md:py-20">
@@ -245,7 +246,7 @@ const metadata = {
                 <div class="grid gap-2">
                   <Button
                     variant="solid"
-                    href="https://gdg.community.dev/gdg-ica/"
+                    href={links.community}
                     target="_blank"
                   >
                     <Users stroke-width={1.5} />
@@ -270,11 +271,7 @@ const metadata = {
       Conéctese con desarrolladores, aprenda nuevas tecnologías y construyan
       proyectos increíbles juntos.
     </p>
-    <Button
-      variant="white"
-      href="https://gdg.community.dev/gdg-ica/"
-      target="_blank"
-    >
+    <Button variant="white" href={links.community} target="_blank">
       <Users />
       Unete a GDG hoy
     </Button>

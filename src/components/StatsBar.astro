@@ -1,0 +1,35 @@
+---
+interface StatItem {
+  value: string;
+  label: string;
+  color: "blue" | "red" | "yellow" | "green";
+}
+
+interface Props {
+  stats: StatItem[];
+}
+
+const { stats } = Astro.props;
+
+const colorMap: Record<string, string> = {
+  blue: "text-google-blue",
+  red: "text-google-red",
+  yellow: "text-google-yellow",
+  green: "text-google-green",
+};
+---
+
+<div
+  class="grid grid-cols-2 place-items-center gap-10 md:flex md:justify-between"
+>
+  {
+    stats.map((stat) => (
+      <div>
+        <p class={`${colorMap[stat.color]} text-[2rem] font-bold`}>
+          {stat.value}
+        </p>
+        <p class="text-secondary">{stat.label}</p>
+      </div>
+    ))
+  }
+</div>

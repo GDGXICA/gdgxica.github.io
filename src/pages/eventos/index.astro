@@ -6,6 +6,8 @@ import HeroPage from "@/components/HeroPage.astro";
 import Layout from "@/layouts/Layout.astro";
 import { Calendar } from "@lucide/astro";
 import { getCollection } from "astro:content";
+import { fetchStats, fetchLinks } from "@/loaders/transform-site-config";
+import StatsBar from "@/components/StatsBar.astro";
 
 const parseSpanishDate = (dateStr: string) => {
   const months: { [key: string]: number } = {
@@ -55,6 +57,9 @@ const allEvents = [...upcomingEvents, ...pastEvents];
 
 const highLightEvent = upcomingEvents.find((event) => event.data.isHighlight);
 
+const stats = await fetchStats();
+const links = await fetchLinks();
+
 const metadata = {
   title: "Eventos - Google Developer Group Ica",
   description:
@@ -83,26 +88,26 @@ const metadata = {
         niveles.
       </p>
 
-      <div
-        class="grid grid-cols-2 place-items-center gap-10 md:flex md:justify-between"
-      >
-        <div>
-          <p class="text-google-blue text-[2rem] font-bold">1000+</p>
-          <p class="text-secondary">Miembros activos</p>
-        </div>
-        <div>
-          <p class="text-google-red text-[2rem] font-bold">50+</p>
-          <p class="text-secondary">Eventos</p>
-        </div>
-        <div>
-          <p class="text-google-yellow text-[2rem] font-bold">25+</p>
-          <p class="text-secondary">Expertos speakers</p>
-        </div>
-        <div>
-          <p class="text-google-green text-[2rem] font-bold">10+</p>
-          <p class="text-secondary">Años activos</p>
-        </div>
-      </div>
+      <StatsBar
+        stats={[
+          {
+            value: `${stats.totalMembers}+`,
+            label: "Miembros activos",
+            color: "blue",
+          },
+          { value: `${stats.totalEvents}+`, label: "Eventos", color: "red" },
+          {
+            value: `${stats.totalSpeakers}+`,
+            label: "Expertos speakers",
+            color: "yellow",
+          },
+          {
+            value: `${stats.yearsActive}+`,
+            label: "Años activos",
+            color: "green",
+          },
+        ]}
+      />
       {
         highLightEvent && (
           <>
@@ -152,11 +157,7 @@ const metadata = {
       Ayúdanos a crear eventos increíbles. Propón un tema, sugiere un speaker o
       colabora en la organización de nuestros próximos eventos.
     </p>
-    <Button
-      variant="white"
-      href="https://forms.gle/zs2xk6z9zZatNp9YA"
-      target="_blank"
-    >
+    <Button variant="white" href={links.forms.proposeEvent} target="_blank">
       <Calendar />
       Proponer Evento
     </Button>

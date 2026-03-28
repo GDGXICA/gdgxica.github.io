@@ -7,9 +7,13 @@ import Button from "@/components/Button.astro";
 import HeroPage from "@/components/HeroPage.astro";
 
 import { getCollection } from "astro:content";
+import { fetchStats, fetchLinks } from "@/loaders/transform-site-config";
+import StatsBar from "@/components/StatsBar.astro";
 
 const sponsorsCollection = await getCollection("sponsors");
 const sponsors = sponsorsCollection.map((entry) => entry.data);
+const stats = await fetchStats();
+const links = await fetchLinks();
 
 const metadata = {
   title: "Patrocinadores - Google Developer Group Ica",
@@ -37,26 +41,30 @@ const metadata = {
       tecnológico. Su apoyo transforma vidas y construye el futuro digital.
     </p>
 
-    <div
-      class="grid grid-cols-2 place-items-center gap-10 md:flex md:justify-between"
-    >
-      <div>
-        <p class="text-google-blue text-[2rem] font-bold">15+</p>
-        <p class="text-secondary">Patrocinadores Activos</p>
-      </div>
-      <div>
-        <p class="text-google-red text-[2rem] font-bold">$50k</p>
-        <p class="text-secondary">Apoyo Anual Total</p>
-      </div>
-      <div>
-        <p class="text-google-yellow text-[2rem] font-bold">100+</p>
-        <p class="text-secondary">Eventos Patrocinados</p>
-      </div>
-      <div>
-        <p class="text-google-green text-[2rem] font-bold">5000+</p>
-        <p class="text-secondary">Desarrolladores Alcanzados</p>
-      </div>
-    </div>
+    <StatsBar
+      stats={[
+        {
+          value: `${stats.totalSponsors}+`,
+          label: "Patrocinadores Activos",
+          color: "blue",
+        },
+        {
+          value: stats.annualSupport,
+          label: "Apoyo Anual Total",
+          color: "red",
+        },
+        {
+          value: `${stats.sponsoredEvents}+`,
+          label: "Eventos Patrocinados",
+          color: "yellow",
+        },
+        {
+          value: `${stats.developersReached}+`,
+          label: "Desarrolladores Alcanzados",
+          color: "green",
+        },
+      ]}
+    />
   </HeroPage>
 
   <section class="py-20">
@@ -165,11 +173,7 @@ const metadata = {
       tecnológico. Juntos podemos formar a los desarrolladores del futuro y
       crear un impacto duradero en la industria.
     </p>
-    <Button
-      variant="white"
-      href="https://forms.gle/EDCifZXFw8eLmedy8"
-      target="_blank"
-    >
+    <Button variant="white" href={links.forms.sponsor} target="_blank">
       <BriefcaseBusiness />
       Quiero ser patrocinador
     </Button>

@@ -1,0 +1,72 @@
+---
+import {
+  Camera,
+  Headphones,
+  Handshake,
+  Paintbrush,
+  Megaphone,
+  Languages,
+  Code2,
+  Boxes,
+} from "@lucide/astro";
+
+interface Props {
+  title: string;
+  description: string;
+  icon: string;
+  iconColor: string;
+  skills: string[];
+  commitment: string;
+}
+
+const { title, description, icon, iconColor, skills, commitment } = Astro.props;
+
+const ICON_MAP: Record<string, typeof Camera> = {
+  camera: Camera,
+  headphones: Headphones,
+  handshake: Handshake,
+  paintbrush: Paintbrush,
+  megaphone: Megaphone,
+  languages: Languages,
+  "code-2": Code2,
+  boxes: Boxes,
+};
+
+const IconComponent = ICON_MAP[icon];
+---
+
+<article
+  class="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 text-center"
+>
+  {
+    IconComponent && (
+      <IconComponent
+        class="mx-auto h-6 w-6"
+        stroke-width={1.5}
+        color={iconColor}
+      />
+    )
+  }
+  <h3 class="text-primary text-lg font-bold">{title}</h3>
+  <p class="text-secondary text-sm">{description}</p>
+  <div>
+    <p class="text-primary mt-2 mb-[10px] font-semibold tracking-wide">
+      Habilidades
+    </p>
+    <ul
+      class="flex flex-wrap justify-center gap-1 text-xs font-semibold text-[#1F2937]"
+    >
+      {
+        skills.map((skill) => (
+          <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">{skill}</li>
+        ))
+      }
+    </ul>
+  </div>
+  <div>
+    <p class="text-primary mb-[10px] text-base font-semibold tracking-wide">
+      Compromiso
+    </p>
+    <p class="text-secondary text-sm">{commitment}</p>
+  </div>
+</article>

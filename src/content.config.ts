@@ -4,6 +4,7 @@ import { loadOrganizers, loadMembers } from "./loaders/transform-team";
 import { loadSponsors } from "./loaders/transform-sponsors";
 import { loadGallery } from "./loaders/transform-gallery";
 import { loadVolunteers } from "./loaders/transform-volunteers";
+import { loadVolunteerRoles } from "./loaders/transform-volunteer-roles";
 
 const events = defineCollection({
   loader: loadEvents,
@@ -189,6 +190,18 @@ const volunteers = defineCollection({
   }),
 });
 
+const volunteerRoles = defineCollection({
+  loader: loadVolunteerRoles,
+  schema: z.object({
+    title: z.string(),
+    description: z.string(),
+    icon: z.string(),
+    iconColor: z.string(),
+    skills: z.array(z.string()),
+    commitment: z.string(),
+  }),
+});
+
 export const collections = {
   events,
   gallery,
@@ -196,4 +209,5 @@ export const collections = {
   organizers,
   sponsors,
   volunteers,
+  volunteerRoles,
 };

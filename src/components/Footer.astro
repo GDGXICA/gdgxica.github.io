@@ -1,4 +1,7 @@
 ---
+import { fetchLinks } from "@/loaders/transform-site-config";
+
+const siteLinks = await fetchLinks();
 const year = new Date().getFullYear();
 const data = {
   logo: "/logo.png",
@@ -48,19 +51,19 @@ const data = {
         {
           id: 1,
           text: "Linkedin",
-          url: "https://www.linkedin.com/company/gdg-ica",
+          url: siteLinks.social.linkedin,
           target: "_blank",
         },
         {
           id: 2,
           text: "Facebook",
-          url: "https://www.facebook.com/gdgica",
+          url: siteLinks.social.facebook,
           target: "_blank",
         },
         {
           id: 3,
           text: "Instagram",
-          url: "https://www.instagram.com/gdgica/",
+          url: siteLinks.social.instagram,
           target: "_blank",
         },
       ],

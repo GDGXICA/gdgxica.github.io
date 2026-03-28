@@ -7,11 +7,14 @@ import Button from "@/components/Button.astro";
 import { MapPin, Users, Calendar, User } from "@lucide/astro";
 // data
 import { getCollection } from "astro:content";
+import { fetchStats, fetchLinks } from "@/loaders/transform-site-config";
 
 const organizersCollection = await getCollection("organizers");
 const organizers = organizersCollection.map((entry) => entry.data);
 const galleryCollection = await getCollection("gallery");
 const gallery = galleryCollection.map((entry) => entry.data);
+const stats = await fetchStats();
+const links = await fetchLinks();
 
 import { Gallery } from "@/components/react/Gallery";
 
@@ -55,13 +58,17 @@ const metadata = {
         class="flex items-center gap-2 rounded-4xl bg-[#F3F4F6] px-[15px] py-[20px] text-lg text-[#1F2937] md:py-[10px]"
       >
         <Users size={20} class="font-light" />
-        <span class="text-primary font-bold">1000+ Miembros</span>
+        <span class="text-primary font-bold"
+          >{stats.totalMembers}+ Miembros</span
+        >
       </div>
       <div
         class="flex items-center gap-2 rounded-4xl bg-[#F3F4F6] px-[15px] py-[20px] text-lg text-[#1F2937] md:py-[10px]"
       >
         <Calendar size={20} class="font-light" />
-        <span class="text-primary font-bold">10 Años Activos</span>
+        <span class="text-primary font-bold"
+          >{stats.yearsActive} Años Activos</span
+        >
       </div>
     </div>
   </HeroPage>
@@ -174,11 +181,7 @@ const metadata = {
       Únete a nuestra comunidad y ayúdanos a escribir el siguiente capítulo de
       GDG. Juntos podemos crear un impacto aún mayor en el mundo del desarrollo.
     </p>
-    <Button
-      variant="white"
-      href="https://docs.google.com/forms/d/1PsmZeCg9ru2-iS1d5RdrgiFpunyWkemoK2962YMxJZw/viewform?edit_requested=true"
-      target="_blank"
-    >
+    <Button variant="white" href={links.forms.joinCommunity} target="_blank">
       <User />
       Únete a la Comunidad
     </Button>
