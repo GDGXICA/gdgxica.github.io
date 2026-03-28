@@ -6,8 +6,12 @@ import OrganizerCard from "@/components/OrganizerCard.astro";
 import Button from "@/components/Button.astro";
 import { MapPin, Users, Calendar, User } from "@lucide/astro";
 // data
-import organizers from "@/data/organizers/organizers.json";
-import gallery from "@/data/gallery/gallery.json";
+import { getCollection } from "astro:content";
+
+const organizersCollection = await getCollection("organizers");
+const organizers = organizersCollection.map((entry) => entry.data);
+const galleryCollection = await getCollection("gallery");
+const gallery = galleryCollection.map((entry) => entry.data);
 
 import { Gallery } from "@/components/react/Gallery";
 

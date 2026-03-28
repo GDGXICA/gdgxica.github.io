@@ -5,7 +5,10 @@ import HeroPage from "@/components/HeroPage.astro";
 import Layout from "@/layouts/Layout.astro";
 import MemberCard from "@/components/MemberCard.astro";
 import { Users } from "@lucide/astro";
-import members from "@/data/members/members.json";
+import { getCollection } from "astro:content";
+
+const membersCollection = await getCollection("members");
+const members = membersCollection.map((entry) => entry.data);
 
 // metadata
 const metadata = {
