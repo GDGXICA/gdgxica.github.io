@@ -135,14 +135,16 @@ const hasSchedule = isArraySchedule ? (schedule as unknown[]).length > 0 : true;
 ---
 
 <Layout {...metadata}>
-  <section class="relative py-20">
+  <section
+    class="relative flex min-h-[24rem] items-end py-12 md:min-h-[28rem] md:py-16"
+  >
     <span class="absolute inset-0 z-[1] bg-black/50"></span>
     <Image
       src={event.data.image || "/placeholder.svg"}
       alt={`Foto de evento ${event.data.name}`}
       class="absolute inset-0 h-full w-full object-cover object-center"
-      width={1200}
-      height={600}
+      width={1920}
+      height={1080}
     />
     <div class="relative z-[2] container">
       <div class="max-w-[768px]">

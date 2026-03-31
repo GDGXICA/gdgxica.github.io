@@ -25,10 +25,10 @@ const {
 {
   isHorizontal ? (
     <article class="border-gray-custom relative overflow-hidden rounded-lg border bg-white shadow-sm md:flex">
-      <div class="md:basis-1/2">
+      <div class="bg-gray-100 md:basis-1/2">
         <img
           src={image || "/placeholder.svg"}
-          class="h- aspect-video h-full w-full rounded-t-lg object-cover md:rounded-none md:rounded-tl-lg md:rounded-bl-lg"
+          class="h-full w-full rounded-t-lg object-contain md:rounded-none md:rounded-tl-lg md:rounded-bl-lg"
           width={385}
           height={192}
           alt={`Foto del evento de ${name}`}
