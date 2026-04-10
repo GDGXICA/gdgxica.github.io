@@ -38,7 +38,7 @@ All content is sourced from the external repo [`GDGXICA/gdg-ica-data`](https://g
 ### Component Pattern
 
 - **`.astro` components** — Used for all static/SSR content (no JS sent to browser). Located in `src/components/`.
-- **`.jsx` React components** — Only for client-side interactivity (`src/components/react/`). Currently: `Gallery.jsx` (Fancybox lightbox) and `SharedButton.jsx`.
+- **`.jsx/.tsx` React components** — Only for client-side interactivity (`src/components/react/`). Public: `Gallery.jsx`, `SharedButton.jsx`. Admin panel: `src/components/react/admin/`.
 - **Path alias:** `@/` maps to `src/`
 
 ### Key Design Details
@@ -48,9 +48,32 @@ All content is sourced from the external repo [`GDGXICA/gdg-ica-data`](https://g
 - Event slugs are derived from JSON filenames (e.g., `devfest-2025.json` → `/eventos/devfest-2025`)
 - Images stored in `public/` subdirectories (`events/`, `speakers/`, `sponsors/`, `team/`, `gallery/`) — referenced as absolute paths
 
+### Admin Panel
+
+Protected admin UI at `/admin/*` using React islands (`client:load`). Firebase Auth (Google Sign-In) with role-based access (admin/organizer/member).
+
+**Architecture:** Static HTML shells + React islands → Cloud Functions API (`/api/*` via Hosting rewrite) → GitHub API writes to `gdg-ica-data` → triggers site rebuild.
+
+**Cloud Functions** (`functions/`):
+
+- Express API with auth middleware (token verification + role checking)
+- GitHub service for reading/writing files in `gdg-ica-data`
+- Handlers: auth, events, team, speakers, sponsors, stats, users, rebuild
+- Audit logging on all write operations to Firestore
+
+**Firebase client** (`src/lib/`):
+
+- `firebase.ts` — SDK init for project `appgdgica`
+- `auth.ts` — Google Sign-In, token management
+- `api.ts` — fetch wrapper with automatic ID token
+
+**Admin pages:** `/admin` (dashboard), `/admin/eventos`, `/admin/equipo`, `/admin/speakers`, `/admin/sponsors`, `/admin/stats`, `/admin/usuarios`
+
+**Firestore collections:** `users` (roles), `audit_log` (write history)
+
 ### Deployment
 
-GitHub Actions (`.github/workflows/deploy.yml`) builds on push to `main` and deploys to Firebase Hosting using `FIREBASE_TOKEN` secret. Also triggers on `repository_dispatch` (`data-updated` event) so pushes to `gdg-ica-data` can trigger a site rebuild.
+GitHub Actions (`.github/workflows/deploy.yml`) builds on push to `main` and deploys to Firebase Hosting + Cloud Functions + Firestore rules using `FIREBASE_TOKEN` secret. Also triggers on `repository_dispatch` (`data-updated` event) so pushes to `gdg-ica-data` can trigger a site rebuild.
 
 ## Contribution Rules
 
