@@ -16,7 +16,7 @@ interface Props {
 }
 
 function AdminContent({ page, currentPath }: Props) {
-  const { user, loading, isOrganizer } = useAuth();
+  const { user, role, loading, isOrganizer, signOut } = useAuth();
 
   if (loading) {
     return (
@@ -42,12 +42,23 @@ function AdminContent({ page, currentPath }: Props) {
             Solo organizadores y administradores pueden acceder al panel de
             administracion.
           </p>
-          <a
-            href="/"
-            className="mt-6 inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            Volver al sitio
-          </a>
+          <p className="mt-2 text-sm text-gray-400">
+            Sesion: {user.email} (rol: {role})
+          </p>
+          <div className="mt-6 flex justify-center gap-3">
+            <button
+              onClick={signOut}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Cerrar sesion
+            </button>
+            <a
+              href="/"
+              className="inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              Volver al sitio
+            </a>
+          </div>
         </div>
       </div>
     );
