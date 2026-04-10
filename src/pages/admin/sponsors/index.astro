@@ -1,0 +1,8 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { AdminApp } from "@/components/react/admin/AdminApp";
+---
+
+<AdminLayout title="Sponsors">
+  <AdminApp client:load page="sponsors" currentPath="/admin/sponsors" />
+</AdminLayout>

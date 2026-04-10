@@ -6,6 +6,9 @@ import { EventList } from "./events/EventList";
 import { EventForm } from "./events/EventForm";
 import { TeamList } from "./team/TeamList";
 import { SpeakerList } from "./speakers/SpeakerList";
+import { SponsorList } from "./sponsors/SponsorList";
+import { StatsEditor } from "./stats/StatsEditor";
+import { UserDirectory } from "./users/UserDirectory";
 
 interface Props {
   page: string;
@@ -62,6 +65,12 @@ function AdminContent({ page, currentPath }: Props) {
         return <TeamList />;
       case "speakers":
         return <SpeakerList />;
+      case "sponsors":
+        return <SponsorList />;
+      case "stats":
+        return <StatsEditor />;
+      case "users":
+        return <UserDirectory />;
       default:
         return <p className="text-gray-500">Pagina en construccion</p>;
     }
