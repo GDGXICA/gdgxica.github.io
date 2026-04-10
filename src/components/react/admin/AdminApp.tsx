@@ -2,6 +2,8 @@ import { AuthProvider, useAuth } from "./AuthProvider";
 import { LoginScreen } from "./LoginScreen";
 import { AdminShell } from "./AdminShell";
 import { Dashboard } from "./Dashboard";
+import { EventList } from "./events/EventList";
+import { EventForm } from "./events/EventForm";
 
 interface Props {
   page: string;
@@ -51,13 +53,9 @@ function AdminContent({ page, currentPath }: Props) {
       case "dashboard":
         return <Dashboard />;
       case "events":
-        return (
-          <p className="text-gray-500">Gestion de eventos (proximamente)</p>
-        );
+        return <EventList />;
       case "event-form":
-        return (
-          <p className="text-gray-500">Formulario de evento (proximamente)</p>
-        );
+        return <EventForm />;
       default:
         return <p className="text-gray-500">Pagina en construccion</p>;
     }
