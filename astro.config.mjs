@@ -18,7 +18,7 @@ export default defineConfig({
   integrations: [
     sitemap(),
     react({
-      include: ["**/react/*"],
+      include: ["**/react/**"],
     }),
   ],
 });

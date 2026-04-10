@@ -1,0 +1,8 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { AdminApp } from "@/components/react/admin/AdminApp";
+---
+
+<AdminLayout title="Login">
+  <AdminApp client:load page="login" currentPath="/admin/login" />
+</AdminLayout>

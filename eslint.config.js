@@ -18,6 +18,7 @@ export default defineConfig([
       "package-lock.json",
       "yarn.lock",
       "pnpm-lock.yaml",
+      "functions/",
     ],
   },
   js.configs.recommended,
