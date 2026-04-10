@@ -31,6 +31,11 @@ pnpm-debug.log*
 
 # Firebase cache
 .firebase/
+firebase-debug.log*
+
+# Cloud Functions build output
+functions/lib/
+functions/node_modules/
 
 # Windows Zone.Identifier files
 *:Zone.Identifier
