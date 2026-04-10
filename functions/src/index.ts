@@ -58,4 +58,7 @@ app.patch("/api/users/:uid/role", requireRole("admin"), users.updateRole);
 // Rebuild
 app.post("/api/rebuild", requireRole("admin"), triggerRebuild);
 
-export const api = onRequest({ secrets: [GITHUB_TOKEN] }, app);
+export const api = onRequest(
+  { secrets: [GITHUB_TOKEN], invoker: "public" },
+  app
+);
