@@ -44,4 +44,4 @@ jobs:
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
-          firebase deploy --only "hosting:gdgica,functions,firestore:rules"
+          firebase deploy --only "hosting:gdgica,functions,firestore:rules" --force
