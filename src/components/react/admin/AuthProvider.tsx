@@ -41,9 +41,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
-        await api.register();
-        const userRole = await getUserRole(firebaseUser.uid);
-        setRole(userRole);
+        try {
+          const res = await api.register();
+          if (res.success && res.data) {
+            const userData = res.data as { role?: string };
+            setRole(userData.role || "member");
+          } else {
+            const userRole = await getUserRole(firebaseUser.uid);
+            setRole(userRole || "member");
+          }
+        } catch {
+          setRole("member");
+        }
       } else {
         setRole(null);
       }
