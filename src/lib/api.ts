@@ -43,6 +43,20 @@ export const api = {
     request("PUT", `/events/${id}`, data),
   deleteEvent: (id: string) => request("DELETE", `/events/${id}`),
 
+  // Team
+  listTeam: () => request("GET", "/team"),
+  addTeamMember: (data: unknown) => request("POST", "/team", data),
+  updateTeamMember: (id: string, data: unknown) =>
+    request("PUT", `/team/${id}`, data),
+  deleteTeamMember: (id: string) => request("DELETE", `/team/${id}`),
+
+  // Speakers
+  listSpeakers: () => request("GET", "/speakers"),
+  addSpeaker: (data: unknown) => request("POST", "/speakers", data),
+  updateSpeaker: (id: string, data: unknown) =>
+    request("PUT", `/speakers/${id}`, data),
+  deleteSpeaker: (id: string) => request("DELETE", `/speakers/${id}`),
+
   // Users
   listUsers: () => request("GET", "/users"),
   updateUserRole: (uid: string, role: string) =>
