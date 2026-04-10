@@ -4,6 +4,8 @@ import { AdminShell } from "./AdminShell";
 import { Dashboard } from "./Dashboard";
 import { EventList } from "./events/EventList";
 import { EventForm } from "./events/EventForm";
+import { TeamList } from "./team/TeamList";
+import { SpeakerList } from "./speakers/SpeakerList";
 
 interface Props {
   page: string;
@@ -56,6 +58,10 @@ function AdminContent({ page, currentPath }: Props) {
         return <EventList />;
       case "event-form":
         return <EventForm />;
+      case "team":
+        return <TeamList />;
+      case "speakers":
+        return <SpeakerList />;
       default:
         return <p className="text-gray-500">Pagina en construccion</p>;
     }

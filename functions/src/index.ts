@@ -6,6 +6,8 @@ import { GITHUB_TOKEN } from "./config";
 import { requireRole, requireAuth } from "./middleware/auth";
 import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
+import * as team from "./handlers/team";
+import * as speakers from "./handlers/speakers";
 import * as users from "./handlers/users";
 import { triggerRebuild } from "./handlers/rebuild";
 
@@ -24,6 +26,18 @@ app.get("/api/events/:id", requireRole("organizer"), events.getEvent);
 app.post("/api/events", requireRole("organizer"), events.createEvent);
 app.put("/api/events/:id", requireRole("organizer"), events.updateEvent);
 app.delete("/api/events/:id", requireRole("admin"), events.deleteEvent);
+
+// Team
+app.get("/api/team", requireRole("organizer"), team.listTeam);
+app.post("/api/team", requireRole("admin"), team.addTeamMember);
+app.put("/api/team/:id", requireRole("admin"), team.updateTeamMember);
+app.delete("/api/team/:id", requireRole("admin"), team.deleteTeamMember);
+
+// Speakers
+app.get("/api/speakers", requireRole("organizer"), speakers.listSpeakers);
+app.post("/api/speakers", requireRole("organizer"), speakers.addSpeaker);
+app.put("/api/speakers/:id", requireRole("organizer"), speakers.updateSpeaker);
+app.delete("/api/speakers/:id", requireRole("admin"), speakers.deleteSpeaker);
 
 // Users
 app.get("/api/users", requireRole("admin"), users.listUsers);
