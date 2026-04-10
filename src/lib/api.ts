@@ -57,6 +57,18 @@ export const api = {
     request("PUT", `/speakers/${id}`, data),
   deleteSpeaker: (id: string) => request("DELETE", `/speakers/${id}`),
 
+  // Sponsors
+  listSponsors: () => request("GET", "/sponsors"),
+  addSponsor: (data: unknown) => request("POST", "/sponsors", data),
+  updateSponsor: (id: string, data: unknown) =>
+    request("PUT", `/sponsors/${encodeURIComponent(id)}`, data),
+  deleteSponsor: (id: string) =>
+    request("DELETE", `/sponsors/${encodeURIComponent(id)}`),
+
+  // Stats
+  getStats: () => request("GET", "/stats"),
+  updateStats: (data: unknown) => request("PUT", "/stats", data),
+
   // Users
   listUsers: () => request("GET", "/users"),
   updateUserRole: (uid: string, role: string) =>

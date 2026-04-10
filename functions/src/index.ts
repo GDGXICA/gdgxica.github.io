@@ -8,6 +8,8 @@ import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
 import * as team from "./handlers/team";
 import * as speakers from "./handlers/speakers";
+import * as sponsors from "./handlers/sponsors";
+import * as stats from "./handlers/stats";
 import * as users from "./handlers/users";
 import { triggerRebuild } from "./handlers/rebuild";
 
@@ -38,6 +40,16 @@ app.get("/api/speakers", requireRole("organizer"), speakers.listSpeakers);
 app.post("/api/speakers", requireRole("organizer"), speakers.addSpeaker);
 app.put("/api/speakers/:id", requireRole("organizer"), speakers.updateSpeaker);
 app.delete("/api/speakers/:id", requireRole("admin"), speakers.deleteSpeaker);
+
+// Sponsors
+app.get("/api/sponsors", requireRole("admin"), sponsors.listSponsors);
+app.post("/api/sponsors", requireRole("admin"), sponsors.addSponsor);
+app.put("/api/sponsors/:id", requireRole("admin"), sponsors.updateSponsor);
+app.delete("/api/sponsors/:id", requireRole("admin"), sponsors.deleteSponsor);
+
+// Stats
+app.get("/api/stats", requireRole("organizer"), stats.getStats);
+app.put("/api/stats", requireRole("admin"), stats.updateStats);
 
 // Users
 app.get("/api/users", requireRole("admin"), users.listUsers);
