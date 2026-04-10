@@ -42,15 +42,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(firebaseUser);
       if (firebaseUser) {
         try {
-          const res = await api.register();
-          if (res.success && res.data) {
-            const userData = res.data as { role?: string };
-            setRole(userData.role || "member");
+          // Try reading role from Firestore directly (allowed by rules for own doc)
+          const userRole = await getUserRole(firebaseUser.uid);
+          if (userRole) {
+            setRole(userRole);
           } else {
-            const userRole = await getUserRole(firebaseUser.uid);
-            setRole(userRole || "member");
+            // First login: register via API, then read role
+            await api.register();
+            const newRole = await getUserRole(firebaseUser.uid);
+            setRole(newRole || "member");
           }
         } catch {
+          // API might be down, fallback to member
           setRole("member");
         }
       } else {
