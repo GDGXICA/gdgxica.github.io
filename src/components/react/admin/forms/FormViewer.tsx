@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 const URL_PATTERN = /https?:\/\/[^\s]+/g;
 
 function CellValue({ value }: { value: string }) {
@@ -12,7 +12,7 @@ function CellValue({ value }: { value: string }) {
   if (urls) {
     const parts = value.split(URL_PATTERN);
     return (
-      <span>
+      <span className="break-words">
         {parts.map((part, i) => (
           <span key={i}>
             {part}
@@ -21,13 +21,9 @@ function CellValue({ value }: { value: string }) {
                 href={urls[i]}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 underline hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                className="inline-flex items-center gap-1 rounded bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
               >
-                {urls[i].includes("drive.google.com")
-                  ? "Ver archivo"
-                  : urls[i].length > 50
-                    ? urls[i].slice(0, 50) + "..."
-                    : urls[i]}
+                {urls[i].includes("drive.google.com") ? "Ver archivo" : "Link"}
               </a>
             )}
           </span>
@@ -36,7 +32,46 @@ function CellValue({ value }: { value: string }) {
     );
   }
 
-  return <span>{value}</span>;
+  return <span className="break-words">{value}</span>;
+}
+
+interface RowDetailProps {
+  headers: string[];
+  row: string[];
+  index: number;
+  onClose: () => void;
+}
+
+function RowDetail({ headers, row, index, onClose }: RowDetailProps) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white shadow-2xl dark:bg-gray-800">
+        <div className="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="font-semibold text-gray-900 dark:text-white">
+            Respuesta #{index + 1}
+          </h3>
+          <button
+            onClick={onClose}
+            className="rounded-lg px-3 py-1 text-sm text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+          >
+            Cerrar
+          </button>
+        </div>
+        <div className="divide-y divide-gray-100 px-6 dark:divide-gray-700">
+          {headers.map((h, ci) => (
+            <div key={ci} className="py-3">
+              <p className="mb-1 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                {h}
+              </p>
+              <div className="text-sm text-gray-900 dark:text-gray-200">
+                <CellValue value={row[ci] || ""} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function FormViewer() {
@@ -46,6 +81,8 @@ export function FormViewer() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [selectedRow, setSelectedRow] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
 
   const formId =
     typeof window !== "undefined"
@@ -85,6 +122,14 @@ export function FormViewer() {
     setPage(1);
   }, [search]);
 
+  const previewCols = useMemo(() => {
+    const skip = ["marca temporal", "timestamp", "fecha"];
+    return headers
+      .map((h, i) => ({ header: h, index: i }))
+      .filter((col) => !skip.some((s) => col.header.toLowerCase().includes(s)))
+      .slice(0, 4);
+  }, [headers]);
+
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -111,6 +156,15 @@ export function FormViewer() {
 
   return (
     <div>
+      {selectedRow !== null && (
+        <RowDetail
+          headers={headers}
+          row={filtered[selectedRow]}
+          index={selectedRow}
+          onClose={() => setSelectedRow(null)}
+        />
+      )}
+
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <a
@@ -124,76 +178,110 @@ export function FormViewer() {
             {filtered.length} respuesta{filtered.length !== 1 && "s"}
           </span>
         </div>
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar en respuestas..."
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none sm:w-64 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-        />
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar..."
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none sm:w-56 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+          />
+          <div className="hidden rounded-lg border border-gray-300 md:flex dark:border-gray-600">
+            <button
+              onClick={() => setViewMode("cards")}
+              className={`rounded-l-lg px-3 py-2 text-xs ${viewMode === "cards" ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-700"}`}
+            >
+              Cards
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className={`rounded-r-lg px-3 py-2 text-xs ${viewMode === "table" ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-700"}`}
+            >
+              Tabla
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Desktop table */}
-      <div className="hidden overflow-x-auto rounded-lg border border-gray-200 bg-white md:block dark:border-gray-700 dark:bg-gray-800">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-900">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                #
-              </th>
-              {headers.map((h, i) => (
-                <th
-                  key={i}
-                  className="max-w-xs px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
-                >
-                  {h}
+      {viewMode === "cards" && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {paginated.map((row, ri) => {
+            const globalIndex = (page - 1) * PAGE_SIZE + ri;
+            return (
+              <button
+                key={ri}
+                onClick={() => setSelectedRow(globalIndex)}
+                className="rounded-xl border border-gray-200 bg-white p-4 text-left transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600"
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                    #{globalIndex + 1}
+                  </span>
+                  <span className="text-xs text-blue-600 dark:text-blue-400">
+                    Ver detalle
+                  </span>
+                </div>
+                {previewCols.map((col) => (
+                  <div key={col.index} className="mb-1.5">
+                    <p className="text-[10px] font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">
+                      {col.header}
+                    </p>
+                    <p className="truncate text-sm text-gray-900 dark:text-gray-200">
+                      {row[col.index] || "-"}
+                    </p>
+                  </div>
+                ))}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {viewMode === "table" && (
+        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900">
+              <tr>
+                <th className="sticky left-0 bg-gray-50 px-3 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:bg-gray-900 dark:text-gray-400">
+                  #
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-            {paginated.map((row, ri) => (
-              <tr key={ri} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td className="px-4 py-3 text-xs text-gray-400 dark:text-gray-500">
-                  {(page - 1) * PAGE_SIZE + ri + 1}
-                </td>
-                {headers.map((_, ci) => (
-                  <td
-                    key={ci}
-                    className="max-w-xs truncate px-4 py-3 text-sm text-gray-700 dark:text-gray-300"
+                {headers.map((h, i) => (
+                  <th
+                    key={i}
+                    className="px-3 py-3 text-left text-xs font-medium tracking-wider whitespace-nowrap text-gray-500 uppercase dark:text-gray-400"
                   >
-                    <CellValue value={row[ci] || ""} />
-                  </td>
+                    {h}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile cards */}
-      <div className="space-y-3 md:hidden">
-        {paginated.map((row, ri) => (
-          <div
-            key={ri}
-            className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
-          >
-            <p className="mb-2 text-xs text-gray-400 dark:text-gray-500">
-              #{(page - 1) * PAGE_SIZE + ri + 1}
-            </p>
-            {headers.map((h, ci) => (
-              <div key={ci} className="mb-2">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                  {h}
-                </p>
-                <p className="text-sm text-gray-900 dark:text-gray-200">
-                  <CellValue value={row[ci] || ""} />
-                </p>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              {paginated.map((row, ri) => {
+                const globalIndex = (page - 1) * PAGE_SIZE + ri;
+                return (
+                  <tr
+                    key={ri}
+                    onClick={() => setSelectedRow(globalIndex)}
+                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    <td className="sticky left-0 bg-white px-3 py-3 text-xs text-gray-400 dark:bg-gray-800 dark:text-gray-500">
+                      {globalIndex + 1}
+                    </td>
+                    {headers.map((_, ci) => (
+                      <td
+                        key={ci}
+                        className="max-w-[200px] truncate px-3 py-3 text-sm text-gray-700 dark:text-gray-300"
+                      >
+                        <CellValue value={row[ci] || ""} />
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {paginated.length === 0 && (
         <p className="py-12 text-center text-gray-500 dark:text-gray-400">
@@ -201,7 +289,6 @@ export function FormViewer() {
         </p>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-6 flex items-center justify-between">
           <p className="text-sm text-gray-500 dark:text-gray-400">
