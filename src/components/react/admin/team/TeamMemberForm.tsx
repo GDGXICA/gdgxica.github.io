@@ -54,23 +54,23 @@ export function TeamMemberForm({ member, onSave, onCancel }: Props) {
   }
 
   const inputClass =
-    "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+    "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400";
 
   return (
     <div className="mx-auto max-w-2xl">
       <button
         onClick={onCancel}
-        className="mb-4 text-sm text-gray-500 hover:text-gray-700"
+        className="mb-4 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
       >
         ← Volver a equipo
       </button>
 
-      <h2 className="mb-6 text-xl font-bold text-gray-900">
+      <h2 className="mb-6 text-xl font-bold text-gray-900 dark:text-white">
         {isNew ? "Agregar miembro" : `Editar: ${member?.name}`}
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField label="ID (slug)" required>
               <input
@@ -134,8 +134,10 @@ export function TeamMemberForm({ member, onSave, onCancel }: Props) {
           </div>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-gray-900">Redes sociales</h3>
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">
+            Redes sociales
+          </h3>
           <div className="grid gap-4 sm:grid-cols-2">
             {["linkedin", "github", "twitter", "web"].map((key) => (
               <FormField key={key} label={key}>
@@ -150,8 +152,10 @@ export function TeamMemberForm({ member, onSave, onCancel }: Props) {
           </div>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-gray-900">Tags</h3>
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">
+            Tags
+          </h3>
           <div className="flex gap-2">
             <input
               type="text"
@@ -177,7 +181,7 @@ export function TeamMemberForm({ member, onSave, onCancel }: Props) {
             {(form.tags || []).map((tag, i) => (
               <span
                 key={i}
-                className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800"
+                className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
               >
                 {tag}
                 <button
@@ -188,7 +192,7 @@ export function TeamMemberForm({ member, onSave, onCancel }: Props) {
                       (form.tags || []).filter((_, idx) => idx !== i)
                     )
                   }
-                  className="text-blue-600 hover:text-blue-800"
+                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                 >
                   ×
                 </button>
@@ -201,7 +205,7 @@ export function TeamMemberForm({ member, onSave, onCancel }: Props) {
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
           >
             Cancelar
           </button>

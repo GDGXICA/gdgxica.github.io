@@ -101,14 +101,14 @@ export function SponsorList() {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
         {error}
       </div>
     );
   }
 
   const inputClass =
-    "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+    "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400";
 
   if (form) {
     return (
@@ -118,15 +118,15 @@ export function SponsorList() {
             setEditing(null);
             setCreating(false);
           }}
-          className="mb-4 text-sm text-gray-500 hover:text-gray-700"
+          className="mb-4 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
         >
           ← Volver a sponsors
         </button>
-        <h2 className="mb-6 text-xl font-bold text-gray-900">
+        <h2 className="mb-6 text-xl font-bold text-gray-900 dark:text-white">
           {creating ? "Agregar sponsor" : `Editar: ${form.name}`}
         </h2>
         <form onSubmit={handleSave} className="space-y-6">
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField label="Nombre" required>
                 <input
@@ -171,7 +171,7 @@ export function SponsorList() {
                   className={inputClass}
                 />
               </FormField>
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex items-center gap-2 text-sm dark:text-gray-300">
                 <input
                   type="checkbox"
                   checked={form.featured}
@@ -189,7 +189,7 @@ export function SponsorList() {
                 setEditing(null);
                 setCreating(false);
               }}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               Cancelar
             </button>
@@ -216,7 +216,9 @@ export function SponsorList() {
         />
       )}
       <div className="mb-6 flex items-center justify-between">
-        <p className="text-sm text-gray-500">{sponsors.length} sponsors</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {sponsors.length} sponsors
+        </p>
         <button
           onClick={() => {
             setCreating(true);
@@ -227,36 +229,41 @@ export function SponsorList() {
           + Agregar sponsor
         </button>
       </div>
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
                 Sponsor
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
                 Sector
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
                 Estado
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">
+              <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
                 Acciones
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
             {sponsors.map((sponsor) => (
-              <tr key={sponsor.name} className="hover:bg-gray-50">
+              <tr
+                key={sponsor.name}
+                className="hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
                 <td className="px-6 py-4">
-                  <p className="font-medium text-gray-900">{sponsor.name}</p>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {sponsor.name}
+                  </p>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-500">
+                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {sponsor.sector}
                 </td>
                 <td className="px-6 py-4">
                   {sponsor.featured && (
-                    <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">
+                    <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
                       Destacado
                     </span>
                   )}
@@ -265,14 +272,14 @@ export function SponsorList() {
                   <div className="flex justify-end gap-2">
                     <button
                       onClick={() => setEditing(sponsor)}
-                      className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50"
+                      className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
                     >
                       Editar
                     </button>
                     <button
                       onClick={() => handleDelete(sponsor.name)}
                       disabled={deleting === sponsor.name}
-                      className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
                     >
                       {deleting === sponsor.name ? "..." : "Eliminar"}
                     </button>

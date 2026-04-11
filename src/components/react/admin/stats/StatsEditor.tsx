@@ -83,7 +83,7 @@ export function StatsEditor() {
   }
 
   const inputClass =
-    "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+    "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400";
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -95,13 +95,13 @@ export function StatsEditor() {
         />
       )}
 
-      <p className="mb-6 text-sm text-gray-500">
+      <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
         Estos valores se muestran en las paginas publicas del sitio. Ultima
         actualizacion: {new Date(stats.updated_at).toLocaleDateString("es-PE")}
       </p>
 
       <form onSubmit={handleSave} className="space-y-6">
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
           <div className="grid gap-4 sm:grid-cols-3">
             {FIELDS.map(({ key, label, type }) => (
               <FormField key={key} label={label}>
