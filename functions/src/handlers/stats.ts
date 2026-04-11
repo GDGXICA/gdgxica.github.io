@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
 import { AuthenticatedRequest } from "../middleware/auth";
+import { safeError } from "../middleware/validate";
 import { GitHubService } from "../services/github";
 import { GITHUB_TOKEN } from "../config";
 
@@ -11,7 +12,7 @@ export async function getStats(_req: Request, res: Response) {
       await github.getFileContent<Record<string, unknown>>("about/stats.json");
     res.json({ success: true, data });
   } catch (err) {
-    res.status(500).json({ success: false, error: (err as Error).message });
+    res.status(500).json({ success: false, error: safeError(err) });
   }
 }
 
@@ -49,6 +50,6 @@ export async function updateStats(req: Request, res: Response) {
 
     res.json({ success: true, data: updated });
   } catch (err) {
-    res.status(500).json({ success: false, error: (err as Error).message });
+    res.status(500).json({ success: false, error: safeError(err) });
   }
 }

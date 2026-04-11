@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
 import { AuthenticatedRequest } from "../middleware/auth";
+import { safeError, validateUrl } from "../middleware/validate";
 import { GitHubService } from "../services/github";
 import { GITHUB_TOKEN } from "../config";
 
@@ -49,7 +50,7 @@ export async function listEvents(_req: Request, res: Response) {
       await github.getFileContent<EventIndexEntry[]>("events/index.json");
     res.json({ success: true, data });
   } catch (err) {
-    res.status(500).json({ success: false, error: (err as Error).message });
+    res.status(500).json({ success: false, error: safeError(err) });
   }
 }
 
@@ -61,7 +62,7 @@ export async function getEvent(req: Request, res: Response) {
     );
     res.json({ success: true, data });
   } catch (err) {
-    res.status(500).json({ success: false, error: (err as Error).message });
+    res.status(500).json({ success: false, error: safeError(err) });
   }
 }
 
@@ -69,12 +70,20 @@ export async function createEvent(req: Request, res: Response) {
   try {
     const event = req.body;
     if (!event.id || !event.title || !event.date) {
-      res
-        .status(400)
-        .json({
-          success: false,
-          error: "Missing required fields: id, title, date",
-        });
+      res.status(400).json({
+        success: false,
+        error: "Missing required fields: id, title, date",
+      });
+      return;
+    }
+
+    const urlFields = [
+      event.image_url,
+      event.venue_map_url,
+      event.registration_url,
+    ];
+    if (urlFields.some((url: string) => url && !validateUrl(url))) {
+      res.status(400).json({ success: false, error: "Invalid URL format" });
       return;
     }
 
@@ -117,7 +126,7 @@ export async function createEvent(req: Request, res: Response) {
 
     res.status(201).json({ success: true, data: { id: event.id } });
   } catch (err) {
-    res.status(500).json({ success: false, error: (err as Error).message });
+    res.status(500).json({ success: false, error: safeError(err) });
   }
 }
 
@@ -170,7 +179,7 @@ export async function updateEvent(req: Request, res: Response) {
 
     res.json({ success: true, data: { id: eventId } });
   } catch (err) {
-    res.status(500).json({ success: false, error: (err as Error).message });
+    res.status(500).json({ success: false, error: safeError(err) });
   }
 }
 
@@ -214,6 +223,6 @@ export async function deleteEvent(req: Request, res: Response) {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ success: false, error: (err as Error).message });
+    res.status(500).json({ success: false, error: safeError(err) });
   }
 }

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
 import { AuthenticatedRequest } from "../middleware/auth";
+import { safeError } from "../middleware/validate";
 import { GitHubService } from "../services/github";
 import { GITHUB_TOKEN } from "../config";
 
@@ -24,7 +25,7 @@ export async function listSpeakers(_req: Request, res: Response) {
     );
     res.json({ success: true, data });
   } catch (err) {
-    res.status(500).json({ success: false, error: (err as Error).message });
+    res.status(500).json({ success: false, error: safeError(err) });
   }
 }
 
@@ -76,7 +77,7 @@ export async function addSpeaker(req: Request, res: Response) {
 
     res.status(201).json({ success: true, data: { id: speaker.id } });
   } catch (err) {
-    res.status(500).json({ success: false, error: (err as Error).message });
+    res.status(500).json({ success: false, error: safeError(err) });
   }
 }
 
@@ -126,7 +127,7 @@ export async function updateSpeaker(req: Request, res: Response) {
 
     res.json({ success: true, data: { id: speakerId } });
   } catch (err) {
-    res.status(500).json({ success: false, error: (err as Error).message });
+    res.status(500).json({ success: false, error: safeError(err) });
   }
 }
 
@@ -171,6 +172,6 @@ export async function deleteSpeaker(req: Request, res: Response) {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ success: false, error: (err as Error).message });
+    res.status(500).json({ success: false, error: safeError(err) });
   }
 }

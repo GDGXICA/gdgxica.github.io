@@ -16,7 +16,9 @@ export default defineConfig({
   },
 
   integrations: [
-    sitemap(),
+    sitemap({
+      filter: (page) => !page.includes("/admin"),
+    }),
     react({
       include: ["**/react/**"],
     }),
