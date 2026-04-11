@@ -35,7 +35,7 @@ export function AdminShell({ currentPage, children }: Props) {
   const visibleItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
       <aside className="hidden w-64 border-r border-gray-200 bg-white lg:block dark:border-gray-700 dark:bg-gray-800">
         <div className="flex h-16 items-center gap-3 border-b border-gray-200 px-6 dark:border-gray-700">
           <img src="/gdg-logo.png" alt="GDG ICA" className="h-8 w-8" />
@@ -83,7 +83,7 @@ export function AdminShell({ currentPage, children }: Props) {
         </div>
       </aside>
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6 dark:border-gray-700 dark:bg-gray-800">
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
             {currentPage === "/admin"
@@ -120,9 +120,7 @@ export function AdminShell({ currentPage, children }: Props) {
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-6">
-          {children}
-        </main>
+        <main className="min-w-0 flex-1 overflow-auto p-6">{children}</main>
       </div>
     </div>
   );
