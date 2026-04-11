@@ -13,6 +13,7 @@ interface ExternalTeamMember {
     twitter?: string;
   };
   type: "organizer" | "member";
+  is_active?: boolean;
   tags?: string[];
   joined_date?: string;
   responsibilities?: string[];
@@ -21,7 +22,7 @@ interface ExternalTeamMember {
 export async function loadOrganizers() {
   const team = await fetchGdgData<ExternalTeamMember[]>("about/team.json");
   return team
-    .filter((m) => m.type === "organizer")
+    .filter((m) => m.type === "organizer" && m.is_active !== false)
     .map((m) => ({
       id: m.id,
       name: m.name,
@@ -40,7 +41,7 @@ export async function loadOrganizers() {
 export async function loadMembers() {
   const team = await fetchGdgData<ExternalTeamMember[]>("about/team.json");
   return team
-    .filter((m) => m.type === "member")
+    .filter((m) => m.type === "member" && m.is_active !== false)
     .map((m) => ({
       id: m.id,
       name: m.name,
