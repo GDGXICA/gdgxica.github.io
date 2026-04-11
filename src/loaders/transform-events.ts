@@ -165,7 +165,15 @@ function transformEvent(
 
 function buildSchedule(event: ExternalEvent) {
   if (event.track_sessions) {
-    return { trackSessions: event.track_sessions };
+    const trackSessions: Record<string, (typeof event.track_sessions)[string]> =
+      {};
+    for (const [track, sessions] of Object.entries(event.track_sessions)) {
+      trackSessions[track] = sessions.map((s) => ({
+        ...s,
+        image: stripDomain(s.image),
+      }));
+    }
+    return { trackSessions };
   }
 
   if (event.agenda && event.agenda.length > 0) {
@@ -174,7 +182,7 @@ function buildSchedule(event: ExternalEvent) {
       time: item.time,
       title: item.title,
       name: item.speaker || "",
-      image: item.image || "/placeholder.svg",
+      image: stripDomain(item.image),
       role: item.role || "",
       type: item.type || "event",
     }));
