@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
 import { AuthenticatedRequest } from "../middleware/auth";
+import { safeError } from "../middleware/validate";
 import { Role } from "../types/users";
 
 const VALID_ROLES: Role[] = ["admin", "organizer", "member"];
@@ -16,7 +17,7 @@ export async function listUsers(_req: Request, res: Response) {
     const users = snapshot.docs.map((doc) => doc.data());
     res.json({ success: true, data: users });
   } catch (err) {
-    res.status(500).json({ success: false, error: (err as Error).message });
+    res.status(500).json({ success: false, error: safeError(err) });
   }
 }
 
@@ -27,12 +28,10 @@ export async function updateRole(req: Request, res: Response) {
     const performer = (req as AuthenticatedRequest).user;
 
     if (!VALID_ROLES.includes(role)) {
-      res
-        .status(400)
-        .json({
-          success: false,
-          error: `Invalid role. Must be: ${VALID_ROLES.join(", ")}`,
-        });
+      res.status(400).json({
+        success: false,
+        error: `Invalid role. Must be: ${VALID_ROLES.join(", ")}`,
+      });
       return;
     }
 
@@ -67,6 +66,6 @@ export async function updateRole(req: Request, res: Response) {
 
     res.json({ success: true, data: { uid, role } });
   } catch (err) {
-    res.status(500).json({ success: false, error: (err as Error).message });
+    res.status(500).json({ success: false, error: safeError(err) });
   }
 }

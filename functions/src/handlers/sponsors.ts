@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
 import { AuthenticatedRequest } from "../middleware/auth";
+import { safeError } from "../middleware/validate";
 import { GitHubService } from "../services/github";
 import { GITHUB_TOKEN } from "../config";
 
@@ -24,7 +25,7 @@ export async function listSponsors(_req: Request, res: Response) {
     );
     res.json({ success: true, data });
   } catch (err) {
-    res.status(500).json({ success: false, error: (err as Error).message });
+    res.status(500).json({ success: false, error: safeError(err) });
   }
 }
 
@@ -69,7 +70,7 @@ export async function addSponsor(req: Request, res: Response) {
 
     res.status(201).json({ success: true, data: { name: sponsor.name } });
   } catch (err) {
-    res.status(500).json({ success: false, error: (err as Error).message });
+    res.status(500).json({ success: false, error: safeError(err) });
   }
 }
 
@@ -117,7 +118,7 @@ export async function updateSponsor(req: Request, res: Response) {
 
     res.json({ success: true, data: { name: updates.name } });
   } catch (err) {
-    res.status(500).json({ success: false, error: (err as Error).message });
+    res.status(500).json({ success: false, error: safeError(err) });
   }
 }
 
@@ -157,6 +158,6 @@ export async function deleteSponsor(req: Request, res: Response) {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ success: false, error: (err as Error).message });
+    res.status(500).json({ success: false, error: safeError(err) });
   }
 }

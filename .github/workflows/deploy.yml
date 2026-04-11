@@ -38,7 +38,7 @@ jobs:
         run: cd functions && npm run build
 
       - name: Install Firebase CLI
-        run: pnpm add -g firebase-tools
+        run: pnpm add -g firebase-tools@15.14.0
 
       - name: Deploy to Firebase
         env:
