@@ -28,6 +28,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Fetch content images
+        run: |
+          git clone --depth 1 https://github.com/GDGXICA/gdg-ica-data.git /tmp/gdg-data
+          cp -r /tmp/gdg-data/images/* public/
+
       - name: Build project
         run: pnpm run build
 
