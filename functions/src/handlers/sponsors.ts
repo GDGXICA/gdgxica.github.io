@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
 import { AuthenticatedRequest } from "../middleware/auth";
-import { safeError } from "../middleware/validate";
+import { safeError, validateUrl } from "../middleware/validate";
 import { GitHubService } from "../services/github";
 import { GITHUB_TOKEN } from "../config";
 
@@ -36,6 +36,11 @@ export async function addSponsor(req: Request, res: Response) {
       res
         .status(400)
         .json({ success: false, error: "Missing required field: name" });
+      return;
+    }
+
+    if (!validateUrl(sponsor.logo_url) || !validateUrl(sponsor.url)) {
+      res.status(400).json({ success: false, error: "Invalid URL format" });
       return;
     }
 
@@ -76,18 +81,21 @@ export async function addSponsor(req: Request, res: Response) {
 
 export async function updateSponsor(req: Request, res: Response) {
   try {
-    const sponsorId = req.params.id as string;
+    const sponsorId = decodeURIComponent(req.params.id as string);
     const updates = req.body as Sponsor;
     const github = new GitHubService(GITHUB_TOKEN.value());
     const user = (req as AuthenticatedRequest).user;
+
+    if (!validateUrl(updates.logo_url) || !validateUrl(updates.url)) {
+      res.status(400).json({ success: false, error: "Invalid URL format" });
+      return;
+    }
 
     const { data: partners, sha } = await github.getFileContent<Sponsor[]>(
       "about/partners.json"
     );
 
-    const index = partners.findIndex(
-      (p) => p.name === decodeURIComponent(sponsorId)
-    );
+    const index = partners.findIndex((p) => p.name === sponsorId);
     if (index === -1) {
       res.status(404).json({ success: false, error: "Sponsor not found" });
       return;
