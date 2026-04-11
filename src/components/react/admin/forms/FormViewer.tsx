@@ -238,17 +238,17 @@ export function FormViewer() {
       )}
 
       {viewMode === "table" && (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+        <div className="max-h-[calc(100vh-280px)] overflow-auto rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="sticky left-0 bg-gray-50 px-3 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:bg-gray-900 dark:text-gray-400">
+                <th className="sticky top-0 left-0 z-20 bg-gray-50 px-3 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:bg-gray-900 dark:text-gray-400">
                   #
                 </th>
                 {headers.map((h, i) => (
                   <th
                     key={i}
-                    className="px-3 py-3 text-left text-xs font-medium tracking-wider whitespace-nowrap text-gray-500 uppercase dark:text-gray-400"
+                    className="sticky top-0 z-10 bg-gray-50 px-3 py-3 text-left text-xs font-medium tracking-wider whitespace-nowrap text-gray-500 uppercase dark:bg-gray-900 dark:text-gray-400"
                   >
                     {h}
                   </th>
@@ -264,7 +264,7 @@ export function FormViewer() {
                     onClick={() => setSelectedRow(globalIndex)}
                     className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
-                    <td className="sticky left-0 bg-white px-3 py-3 text-xs text-gray-400 dark:bg-gray-800 dark:text-gray-500">
+                    <td className="sticky left-0 z-10 bg-white px-3 py-3 text-xs text-gray-400 dark:bg-gray-800 dark:text-gray-500">
                       {globalIndex + 1}
                     </td>
                     {headers.map((_, ci) => (
