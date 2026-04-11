@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { toImagePath } from "@/lib/image";
 import { Toast } from "../ui/Toast";
 import { TeamMemberForm } from "./TeamMemberForm";
 
@@ -156,7 +157,7 @@ export function TeamList() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <img
-                          src={member.photo_url || "/placeholder.svg"}
+                          src={toImagePath(member.photo_url)}
                           alt=""
                           className="h-8 w-8 rounded-full object-cover"
                         />
