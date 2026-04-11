@@ -37,6 +37,14 @@ firebase-debug.log*
 functions/lib/
 functions/node_modules/
 
+# Content images (copied from gdg-ica-data during build)
+public/speakers/
+public/events/
+public/team/
+public/sponsors/
+public/gallery/
+public/carousel/
+
 # Windows Zone.Identifier files
 *:Zone.Identifier
 *.Identifier
