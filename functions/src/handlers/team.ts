@@ -53,9 +53,9 @@ export async function addTeamMember(req: Request, res: Response) {
       sha
     );
 
-    await github.triggerRebuild();
+    github.triggerRebuild().catch(() => {});
 
-    await admin
+    admin
       .firestore()
       .collection("audit_log")
       .add({
@@ -97,9 +97,9 @@ export async function updateTeamMember(req: Request, res: Response) {
       sha
     );
 
-    await github.triggerRebuild();
+    github.triggerRebuild().catch(() => {});
 
-    await admin
+    admin
       .firestore()
       .collection("audit_log")
       .add({
@@ -139,9 +139,9 @@ export async function deleteTeamMember(req: Request, res: Response) {
       sha
     );
 
-    await github.triggerRebuild();
+    github.triggerRebuild().catch(() => {});
 
-    await admin.firestore().collection("audit_log").add({
+    admin.firestore().collection("audit_log").add({
       action: "team.delete",
       performedBy: user.uid,
       targetId: memberId,

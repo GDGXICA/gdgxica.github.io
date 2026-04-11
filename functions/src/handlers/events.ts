@@ -109,10 +109,10 @@ export async function createEvent(req: Request, res: Response) {
     );
 
     // Trigger rebuild
-    await github.triggerRebuild();
+    github.triggerRebuild().catch(() => {});
 
     // Audit log
-    await admin
+    admin
       .firestore()
       .collection("audit_log")
       .add({
@@ -163,9 +163,9 @@ export async function updateEvent(req: Request, res: Response) {
       indexSha
     );
 
-    await github.triggerRebuild();
+    github.triggerRebuild().catch(() => {});
 
-    await admin
+    admin
       .firestore()
       .collection("audit_log")
       .add({
@@ -210,9 +210,9 @@ export async function deleteEvent(req: Request, res: Response) {
       indexSha
     );
 
-    await github.triggerRebuild();
+    github.triggerRebuild().catch(() => {});
 
-    await admin.firestore().collection("audit_log").add({
+    admin.firestore().collection("audit_log").add({
       action: "event.delete",
       performedBy: user.uid,
       targetId: eventId,

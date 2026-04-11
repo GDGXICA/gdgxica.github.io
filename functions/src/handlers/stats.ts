@@ -37,9 +37,9 @@ export async function updateStats(req: Request, res: Response) {
       sha
     );
 
-    await github.triggerRebuild();
+    github.triggerRebuild().catch(() => {});
 
-    await admin.firestore().collection("audit_log").add({
+    admin.firestore().collection("audit_log").add({
       action: "stats.update",
       performedBy: user.uid,
       targetId: "stats",
