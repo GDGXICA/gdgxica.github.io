@@ -41,6 +41,26 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
+export function DevAuthProvider({ children }: { children: React.ReactNode }) {
+  const mockValue: AuthContextType = {
+    user: {
+      displayName: "Dev Preview",
+      email: "dev@preview.local",
+      photoURL: "",
+    } as AuthContextType["user"],
+    role: "admin",
+    loading: false,
+    signIn: async () => {},
+    signOut: async () => {},
+    isOrganizer: true,
+    isAdmin: true,
+  };
+
+  return (
+    <AuthContext.Provider value={mockValue}>{children}</AuthContext.Provider>
+  );
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string | null>(null);

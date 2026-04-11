@@ -1,5 +1,6 @@
-import { AuthProvider, useAuth } from "./AuthProvider";
+import { AuthProvider, DevAuthProvider, useAuth } from "./AuthProvider";
 import { LoginScreen } from "./LoginScreen";
+import { isDevPreview } from "@/lib/api";
 import { AdminShell } from "./AdminShell";
 import { Dashboard } from "./Dashboard";
 import { EventList } from "./events/EventList";
@@ -100,7 +101,57 @@ function AdminContent({ page, currentPath }: Props) {
   return <AdminShell currentPage={currentPath}>{pageContent()}</AdminShell>;
 }
 
+function DevContent({ page, currentPath }: Props) {
+  const pageContent = () => {
+    switch (page) {
+      case "dashboard":
+        return <Dashboard />;
+      case "events":
+        return <EventList />;
+      case "event-form":
+        return <EventForm />;
+      case "team":
+        return <TeamList />;
+      case "speakers":
+        return <SpeakerList />;
+      case "sponsors":
+        return <SponsorList />;
+      case "stats":
+        return <StatsEditor />;
+      case "users":
+        return <UserDirectory />;
+      case "forms":
+        return <FormRegistry />;
+      case "form-viewer":
+        return <FormViewer />;
+      default:
+        return (
+          <p className="text-gray-500 dark:text-gray-400">
+            Pagina en construccion
+          </p>
+        );
+    }
+  };
+
+  return (
+    <AdminShell currentPage={currentPath}>
+      <div className="mb-4 rounded-lg border border-yellow-300 bg-yellow-50 px-4 py-2 text-sm text-yellow-800 dark:border-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400">
+        PREVIEW MODE — datos de ejemplo, sin auth
+      </div>
+      {pageContent()}
+    </AdminShell>
+  );
+}
+
 export function AdminApp({ page, currentPath }: Props) {
+  if (isDevPreview) {
+    return (
+      <DevAuthProvider>
+        <DevContent page={page} currentPath={currentPath} />
+      </DevAuthProvider>
+    );
+  }
+
   return (
     <AuthProvider>
       <AdminContent page={page} currentPath={currentPath} />
