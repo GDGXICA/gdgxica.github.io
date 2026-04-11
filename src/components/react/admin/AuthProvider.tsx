@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 import type { User } from "firebase/auth";
 import {
   signIn as firebaseSignIn,
@@ -7,6 +13,9 @@ import {
   getUserRole,
 } from "@/lib/auth";
 import { api } from "@/lib/api";
+
+const SESSION_KEY = "admin_session_start";
+const SESSION_DURATION = 12 * 60 * 60 * 1000; // 12 hours
 
 interface AuthContextType {
   user: User | null;
@@ -39,24 +48,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(async (firebaseUser) => {
-      setUser(firebaseUser);
       if (firebaseUser) {
+        // Check session expiry
+        const sessionStart = localStorage.getItem(SESSION_KEY);
+        if (
+          sessionStart &&
+          Date.now() - parseInt(sessionStart) > SESSION_DURATION
+        ) {
+          localStorage.removeItem(SESSION_KEY);
+          await firebaseSignOut();
+          setUser(null);
+          setRole(null);
+          setLoading(false);
+          return;
+        }
+
+        // Set session start if not set (e.g. page reload with valid session)
+        if (!sessionStart) {
+          localStorage.setItem(SESSION_KEY, Date.now().toString());
+        }
+
+        setUser(firebaseUser);
         try {
-          // Try reading role from Firestore directly (allowed by rules for own doc)
           const userRole = await getUserRole(firebaseUser.uid);
           if (userRole) {
             setRole(userRole);
           } else {
-            // First login: register via API, then read role
             await api.register();
             const newRole = await getUserRole(firebaseUser.uid);
             setRole(newRole || "member");
           }
         } catch {
-          // API might be down, fallback to member
           setRole("member");
         }
       } else {
+        setUser(null);
         setRole(null);
       }
       setLoading(false);
@@ -64,13 +90,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const signIn = async () => {
-    await firebaseSignIn();
-  };
-
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
+    localStorage.removeItem(SESSION_KEY);
     await firebaseSignOut();
     setRole(null);
+  }, []);
+
+  const signIn = async () => {
+    await firebaseSignIn();
+    localStorage.setItem(SESSION_KEY, Date.now().toString());
   };
 
   const isOrganizer = role === "organizer" || role === "admin";
