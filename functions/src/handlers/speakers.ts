@@ -61,9 +61,9 @@ export async function addSpeaker(req: Request, res: Response) {
       sha
     );
 
-    await github.triggerRebuild();
+    github.triggerRebuild().catch(() => {});
 
-    await admin
+    admin
       .firestore()
       .collection("audit_log")
       .add({
@@ -111,9 +111,9 @@ export async function updateSpeaker(req: Request, res: Response) {
       indexSha
     );
 
-    await github.triggerRebuild();
+    github.triggerRebuild().catch(() => {});
 
-    await admin
+    admin
       .firestore()
       .collection("audit_log")
       .add({
@@ -159,9 +159,9 @@ export async function deleteSpeaker(req: Request, res: Response) {
       indexSha
     );
 
-    await github.triggerRebuild();
+    github.triggerRebuild().catch(() => {});
 
-    await admin.firestore().collection("audit_log").add({
+    admin.firestore().collection("audit_log").add({
       action: "speaker.delete",
       performedBy: user.uid,
       targetId: speakerId,

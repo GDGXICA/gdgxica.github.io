@@ -59,9 +59,9 @@ export async function addSponsor(req: Request, res: Response) {
       sha
     );
 
-    await github.triggerRebuild();
+    github.triggerRebuild().catch(() => {});
 
-    await admin
+    admin
       .firestore()
       .collection("audit_log")
       .add({
@@ -110,9 +110,9 @@ export async function updateSponsor(req: Request, res: Response) {
       sha
     );
 
-    await github.triggerRebuild();
+    github.triggerRebuild().catch(() => {});
 
-    await admin
+    admin
       .firestore()
       .collection("audit_log")
       .add({
@@ -153,9 +153,9 @@ export async function deleteSponsor(req: Request, res: Response) {
       sha
     );
 
-    await github.triggerRebuild();
+    github.triggerRebuild().catch(() => {});
 
-    await admin.firestore().collection("audit_log").add({
+    admin.firestore().collection("audit_log").add({
       action: "sponsor.delete",
       performedBy: user.uid,
       targetId: sponsorId,
