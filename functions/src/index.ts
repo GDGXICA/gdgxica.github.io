@@ -13,6 +13,7 @@ import * as speakers from "./handlers/speakers";
 import * as sponsors from "./handlers/sponsors";
 import * as stats from "./handlers/stats";
 import * as users from "./handlers/users";
+import * as forms from "./handlers/forms";
 import { triggerRebuild } from "./handlers/rebuild";
 
 admin.initializeApp();
@@ -102,6 +103,18 @@ app.put("/api/stats", requireRole("admin"), stats.updateStats);
 // Users
 app.get("/api/users", requireRole("admin"), users.listUsers);
 app.patch("/api/users/:uid/role", requireRole("admin"), vuid, users.updateRole);
+
+// Forms
+app.get("/api/forms", requireRole("organizer"), forms.listForms);
+app.post("/api/forms", requireRole("admin"), forms.addForm);
+app.put("/api/forms/:id", requireRole("admin"), vid, forms.updateForm);
+app.delete("/api/forms/:id", requireRole("admin"), vid, forms.deleteForm);
+app.get(
+  "/api/forms/:id/responses",
+  requireRole("organizer"),
+  vid,
+  forms.getFormResponses
+);
 
 // Rebuild
 app.post("/api/rebuild", requireRole("admin"), triggerRebuild);

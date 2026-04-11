@@ -1,0 +1,8 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { AdminApp } from "@/components/react/admin/AdminApp";
+---
+
+<AdminLayout title="Formularios">
+  <AdminApp client:load page="forms" currentPath="/admin/forms" />
+</AdminLayout>

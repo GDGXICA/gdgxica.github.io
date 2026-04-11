@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { label: "Sponsors", href: "/admin/sponsors", icon: "🤝", adminOnly: true },
   { label: "Usuarios", href: "/admin/usuarios", icon: "👤", adminOnly: true },
   { label: "Stats", href: "/admin/stats", icon: "📈", adminOnly: true },
+  { label: "Formularios", href: "/admin/forms", icon: "📋" },
 ];
 
 interface Props {
