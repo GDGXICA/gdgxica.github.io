@@ -39,7 +39,14 @@ interface ExternalEvent {
     color: string;
     description: string;
   }[];
-  agenda: { time: string; title: string; speaker: string }[];
+  agenda: {
+    time: string;
+    title: string;
+    speaker: string;
+    image?: string;
+    role?: string;
+    type?: string;
+  }[];
   track_sessions?: Record<
     string,
     {
@@ -167,9 +174,9 @@ function buildSchedule(event: ExternalEvent) {
       time: item.time,
       title: item.title,
       name: item.speaker || "",
-      image: "/placeholder.svg",
-      role: "",
-      type: "event",
+      image: item.image || "/placeholder.svg",
+      role: item.role || "",
+      type: item.type || "event",
     }));
   }
 
