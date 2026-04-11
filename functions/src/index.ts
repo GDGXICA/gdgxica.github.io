@@ -25,6 +25,7 @@ const ALLOWED_ORIGINS = [
 ];
 
 const app = express();
+app.set("trust proxy", true);
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -43,6 +44,7 @@ app.use(
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false, xForwardedForHeader: false },
     message: { success: false, error: "Too many requests, try again later" },
   })
 );
