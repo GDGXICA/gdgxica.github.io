@@ -1,6 +1,10 @@
 import { getIdToken } from "./auth";
+import { mockApi } from "./mock-api";
 
 const API_BASE = "/api";
+
+export const isDevPreview =
+  typeof window !== "undefined" && window.location.hostname === "localhost";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -31,7 +35,7 @@ async function request<T>(
   return res.json();
 }
 
-export const api = {
+const realApi = {
   // Auth
   register: () => request("POST", "/auth/register"),
 
@@ -85,3 +89,6 @@ export const api = {
   // Rebuild
   triggerRebuild: () => request("POST", "/rebuild"),
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const api: typeof realApi = isDevPreview ? (mockApi as any) : realApi;
