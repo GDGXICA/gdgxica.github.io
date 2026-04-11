@@ -35,7 +35,12 @@ export function requireRole(minimumRole: Role) {
         return;
       }
 
-      const user = userDoc.data() as UserDocument;
+      const userData = userDoc.data();
+      if (!userData?.role || !(userData.role in ROLE_HIERARCHY)) {
+        res.status(403).json({ success: false, error: "Invalid user data" });
+        return;
+      }
+      const user = userData as UserDocument;
 
       if (ROLE_HIERARCHY[user.role] < ROLE_HIERARCHY[minimumRole]) {
         res

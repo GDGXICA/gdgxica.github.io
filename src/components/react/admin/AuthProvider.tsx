@@ -51,9 +51,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (firebaseUser) {
         // Check session expiry
         const sessionStart = localStorage.getItem(SESSION_KEY);
+        const startTime = sessionStart ? parseInt(sessionStart, 10) : 0;
         if (
-          sessionStart &&
-          Date.now() - parseInt(sessionStart) > SESSION_DURATION
+          !Number.isFinite(startTime) ||
+          startTime <= 0 ||
+          Date.now() - startTime > SESSION_DURATION
         ) {
           localStorage.removeItem(SESSION_KEY);
           await firebaseSignOut();

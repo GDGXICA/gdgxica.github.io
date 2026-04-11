@@ -1,18 +1,12 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { AuthenticatedRequest } from "../middleware/auth";
 
 export async function register(req: Request, res: Response) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
-    res.status(401).json({ success: false, error: "No token provided" });
-    return;
-  }
-
   try {
-    const token = authHeader.split("Bearer ")[1];
-    const decoded = await admin.auth().verifyIdToken(token);
+    const { user } = req as AuthenticatedRequest;
     const db = admin.firestore();
-    const userRef = db.collection("users").doc(decoded.uid);
+    const userRef = db.collection("users").doc(user.uid);
     const userDoc = await userRef.get();
 
     if (userDoc.exists) {
@@ -24,10 +18,10 @@ export async function register(req: Request, res: Response) {
     }
 
     const newUser = {
-      uid: decoded.uid,
-      email: decoded.email || "",
-      displayName: decoded.name || "",
-      photoURL: decoded.picture || "",
+      uid: user.uid,
+      email: user.email || "",
+      displayName: user.displayName || "",
+      photoURL: user.photoURL || "",
       role: "member",
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       lastLoginAt: admin.firestore.FieldValue.serverTimestamp(),

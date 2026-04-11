@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 
-const SAFE_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
+const SAFE_ID_PATTERN = /^[a-zA-Z0-9_-]{1,100}$/;
 
 export function validateParamId(paramName: string) {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -14,9 +14,12 @@ export function validateParamId(paramName: string) {
 }
 
 export function safeError(err: unknown): string {
-  const message = err instanceof Error ? err.message : "Unknown error";
-  // eslint-disable-next-line no-console
-  console.error("API Error:", message);
+  if (err instanceof Error) {
+    // Strip URLs and paths from log to avoid leaking repo structure
+    const sanitized = err.message.replace(/https?:\/\/[^\s]+/g, "[URL]");
+    // eslint-disable-next-line no-console
+    console.error("API Error:", sanitized);
+  }
   return "An internal error occurred";
 }
 
