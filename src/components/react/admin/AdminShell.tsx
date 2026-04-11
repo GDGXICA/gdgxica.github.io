@@ -120,7 +120,7 @@ export function AdminShell({ currentPage, children }: Props) {
           </div>
         </header>
 
-        <main className="flex-1 p-6">{children}</main>
+        <main className="min-w-0 flex-1 overflow-hidden p-6">{children}</main>
       </div>
     </div>
   );
