@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { toImagePath } from "@/lib/image";
 import { Toast } from "../ui/Toast";
@@ -28,6 +28,8 @@ const EMPTY_SPEAKER: Speaker = {
   talk_ids: [],
 };
 
+const PAGE_SIZE = 10;
+
 export function SpeakerList() {
   const [speakers, setSpeakers] = useState<Speaker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,12 +43,33 @@ export function SpeakerList() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [topicInput, setTopicInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
 
   const form = editing || (creating ? EMPTY_SPEAKER : null);
 
   useEffect(() => {
     loadSpeakers();
   }, []);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return speakers;
+    const q = search.toLowerCase();
+    return speakers.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.company.toLowerCase().includes(q) ||
+        s.role.toLowerCase().includes(q) ||
+        s.topics.some((t) => t.toLowerCase().includes(q))
+    );
+  }, [speakers, search]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
 
   async function loadSpeakers() {
     setLoading(true);
@@ -292,20 +315,32 @@ export function SpeakerList() {
         />
       )}
 
-      <div className="mb-6 flex items-center justify-between">
-        <p className="text-sm text-gray-500">{speakers.length} speakers</p>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar speaker..."
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none sm:w-64"
+          />
+          <span className="shrink-0 text-sm text-gray-500">
+            {filtered.length} speaker{filtered.length !== 1 && "s"}
+          </span>
+        </div>
         <button
           onClick={() => {
             setCreating(true);
             setEditing({ ...EMPTY_SPEAKER });
           }}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
           + Agregar speaker
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+      {/* Desktop table */}
+      <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white md:block">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -324,14 +359,15 @@ export function SpeakerList() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {speakers.map((speaker) => (
+            {paginated.map((speaker) => (
               <tr key={speaker.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <img
                       src={toImagePath(speaker.photo_url)}
                       alt=""
-                      className="h-8 w-8 rounded-full object-cover"
+                      loading="lazy"
+                      className="h-8 w-8 rounded-full bg-gray-100 object-cover"
                     />
                     <div>
                       <p className="font-medium text-gray-900">
@@ -382,10 +418,110 @@ export function SpeakerList() {
             ))}
           </tbody>
         </table>
-        {speakers.length === 0 && (
-          <p className="py-8 text-center text-gray-500">No hay speakers.</p>
-        )}
       </div>
+
+      {/* Mobile cards */}
+      <div className="space-y-3 md:hidden">
+        {paginated.map((speaker) => (
+          <div
+            key={speaker.id}
+            className="rounded-lg border border-gray-200 bg-white p-4"
+          >
+            <div className="flex items-start gap-3">
+              <img
+                src={toImagePath(speaker.photo_url)}
+                alt=""
+                loading="lazy"
+                className="h-10 w-10 shrink-0 rounded-full bg-gray-100 object-cover"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-gray-900">{speaker.name}</p>
+                <p className="text-sm text-gray-500">{speaker.role}</p>
+                {speaker.company && (
+                  <p className="text-sm text-gray-400">{speaker.company}</p>
+                )}
+                {speaker.topics.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {speaker.topics.slice(0, 3).map((t, i) => (
+                      <span
+                        key={i}
+                        className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                    {speaker.topics.length > 3 && (
+                      <span className="text-xs text-gray-400">
+                        +{speaker.topics.length - 3}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="mt-3 flex justify-end gap-2 border-t border-gray-100 pt-3">
+              <button
+                onClick={() => setEditing(speaker)}
+                className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50"
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => handleDelete(speaker.id)}
+                disabled={deleting === speaker.id}
+                className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+              >
+                {deleting === speaker.id ? "..." : "Eliminar"}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {paginated.length === 0 && (
+        <p className="py-8 text-center text-gray-500">
+          {search ? "Sin resultados" : "No hay speakers."}
+        </p>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-between">
+          <p className="text-sm text-gray-500">
+            Mostrando {(page - 1) * PAGE_SIZE + 1}-
+            {Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length}
+          </p>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-40"
+            >
+              Anterior
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`rounded-lg px-3 py-1.5 text-sm ${
+                  p === page
+                    ? "bg-blue-600 text-white"
+                    : "border border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-40"
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
