@@ -132,14 +132,14 @@ export function SpeakerList() {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
         {error}
       </div>
     );
   }
 
   const inputClass =
-    "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+    "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400";
 
   if (form) {
     return (
@@ -149,15 +149,15 @@ export function SpeakerList() {
             setEditing(null);
             setCreating(false);
           }}
-          className="mb-4 text-sm text-gray-500 hover:text-gray-700"
+          className="mb-4 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
         >
           ← Volver a speakers
         </button>
-        <h2 className="mb-6 text-xl font-bold text-gray-900">
+        <h2 className="mb-6 text-xl font-bold text-gray-900 dark:text-white">
           {creating ? "Agregar speaker" : `Editar: ${form.name}`}
         </h2>
         <form onSubmit={handleSave} className="space-y-6">
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField label="ID (slug)" required>
                 <input
@@ -216,8 +216,10 @@ export function SpeakerList() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
-            <h3 className="mb-4 font-semibold text-gray-900">Topics</h3>
+          <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+            <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">
+              Topics
+            </h3>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -240,7 +242,7 @@ export function SpeakerList() {
               {form.topics.map((topic, i) => (
                 <span
                   key={i}
-                  className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800"
+                  className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
                 >
                   {topic}
                   <button
@@ -251,7 +253,7 @@ export function SpeakerList() {
                         form.topics.filter((_, idx) => idx !== i)
                       )
                     }
-                    className="text-blue-600 hover:text-blue-800"
+                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                   >
                     ×
                   </button>
@@ -260,8 +262,10 @@ export function SpeakerList() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
-            <h3 className="mb-4 font-semibold text-gray-900">Redes sociales</h3>
+          <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+            <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">
+              Redes sociales
+            </h3>
             <div className="grid gap-4 sm:grid-cols-2">
               {["linkedin", "github", "twitter", "web"].map((key) => (
                 <FormField key={key} label={key}>
@@ -288,7 +292,7 @@ export function SpeakerList() {
                 setEditing(null);
                 setCreating(false);
               }}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               Cancelar
             </button>
@@ -322,9 +326,9 @@ export function SpeakerList() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar speaker..."
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none sm:w-64"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none sm:w-64 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
           />
-          <span className="shrink-0 text-sm text-gray-500">
+          <span className="shrink-0 text-sm text-gray-500 dark:text-gray-400">
             {filtered.length} speaker{filtered.length !== 1 && "s"}
           </span>
         </div>
@@ -340,44 +344,49 @@ export function SpeakerList() {
       </div>
 
       {/* Desktop table */}
-      <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white md:block">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white md:block dark:border-gray-700 dark:bg-gray-800">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
                 Speaker
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
                 Empresa
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
                 Topics
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">
+              <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
                 Acciones
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
             {paginated.map((speaker) => (
-              <tr key={speaker.id} className="hover:bg-gray-50">
+              <tr
+                key={speaker.id}
+                className="hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <img
                       src={toImagePath(speaker.photo_url)}
                       alt=""
                       loading="lazy"
-                      className="h-8 w-8 rounded-full bg-gray-100 object-cover"
+                      className="h-8 w-8 rounded-full bg-gray-100 object-cover dark:bg-gray-700"
                     />
                     <div>
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-gray-900 dark:text-white">
                         {speaker.name}
                       </p>
-                      <p className="text-xs text-gray-500">{speaker.role}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {speaker.role}
+                      </p>
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-500">
+                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {speaker.company}
                 </td>
                 <td className="px-6 py-4">
@@ -385,13 +394,13 @@ export function SpeakerList() {
                     {speaker.topics.slice(0, 3).map((t, i) => (
                       <span
                         key={i}
-                        className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
+                        className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-400"
                       >
                         {t}
                       </span>
                     ))}
                     {speaker.topics.length > 3 && (
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-gray-400 dark:text-gray-500">
                         +{speaker.topics.length - 3}
                       </span>
                     )}
@@ -401,14 +410,14 @@ export function SpeakerList() {
                   <div className="flex justify-end gap-2">
                     <button
                       onClick={() => setEditing(speaker)}
-                      className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50"
+                      className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
                     >
                       Editar
                     </button>
                     <button
                       onClick={() => handleDelete(speaker.id)}
                       disabled={deleting === speaker.id}
-                      className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
                     >
                       {deleting === speaker.id ? "..." : "Eliminar"}
                     </button>
@@ -425,33 +434,39 @@ export function SpeakerList() {
         {paginated.map((speaker) => (
           <div
             key={speaker.id}
-            className="rounded-lg border border-gray-200 bg-white p-4"
+            className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
           >
             <div className="flex items-start gap-3">
               <img
                 src={toImagePath(speaker.photo_url)}
                 alt=""
                 loading="lazy"
-                className="h-10 w-10 shrink-0 rounded-full bg-gray-100 object-cover"
+                className="h-10 w-10 shrink-0 rounded-full bg-gray-100 object-cover dark:bg-gray-700"
               />
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-gray-900">{speaker.name}</p>
-                <p className="text-sm text-gray-500">{speaker.role}</p>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {speaker.name}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {speaker.role}
+                </p>
                 {speaker.company && (
-                  <p className="text-sm text-gray-400">{speaker.company}</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500">
+                    {speaker.company}
+                  </p>
                 )}
                 {speaker.topics.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
                     {speaker.topics.slice(0, 3).map((t, i) => (
                       <span
                         key={i}
-                        className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
+                        className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-400"
                       >
                         {t}
                       </span>
                     ))}
                     {speaker.topics.length > 3 && (
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-gray-400 dark:text-gray-500">
                         +{speaker.topics.length - 3}
                       </span>
                     )}
@@ -459,17 +474,17 @@ export function SpeakerList() {
                 )}
               </div>
             </div>
-            <div className="mt-3 flex justify-end gap-2 border-t border-gray-100 pt-3">
+            <div className="mt-3 flex justify-end gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
               <button
                 onClick={() => setEditing(speaker)}
-                className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50"
+                className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
               >
                 Editar
               </button>
               <button
                 onClick={() => handleDelete(speaker.id)}
                 disabled={deleting === speaker.id}
-                className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+                className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
               >
                 {deleting === speaker.id ? "..." : "Eliminar"}
               </button>
@@ -479,7 +494,7 @@ export function SpeakerList() {
       </div>
 
       {paginated.length === 0 && (
-        <p className="py-8 text-center text-gray-500">
+        <p className="py-8 text-center text-gray-500 dark:text-gray-400">
           {search ? "Sin resultados" : "No hay speakers."}
         </p>
       )}
@@ -487,7 +502,7 @@ export function SpeakerList() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-6 flex items-center justify-between">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Mostrando {(page - 1) * PAGE_SIZE + 1}-
             {Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length}
           </p>
@@ -495,7 +510,7 @@ export function SpeakerList() {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-40"
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-40 dark:border-gray-600 dark:text-gray-300"
             >
               Anterior
             </button>
@@ -506,7 +521,7 @@ export function SpeakerList() {
                 className={`rounded-lg px-3 py-1.5 text-sm ${
                   p === page
                     ? "bg-blue-600 text-white"
-                    : "border border-gray-300 hover:bg-gray-50"
+                    : "border border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                 }`}
               >
                 {p}
@@ -515,7 +530,7 @@ export function SpeakerList() {
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-40"
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-40 dark:border-gray-600 dark:text-gray-300"
             >
               Siguiente
             </button>

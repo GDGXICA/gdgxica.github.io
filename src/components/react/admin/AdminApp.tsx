@@ -32,23 +32,23 @@ function AdminContent({ page, currentPath }: Props) {
 
   if (!isOrganizer) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="max-w-md rounded-xl bg-white p-8 text-center shadow-lg">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-md rounded-xl bg-white p-8 text-center shadow-lg dark:bg-gray-800">
           <p className="text-4xl">🔒</p>
-          <h1 className="mt-4 text-xl font-bold text-gray-900">
+          <h1 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">
             Acceso restringido
           </h1>
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
             Solo organizadores y administradores pueden acceder al panel de
             administracion.
           </p>
-          <p className="mt-2 text-sm text-gray-400">
+          <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">
             Sesion: {user.email} (rol: {role})
           </p>
           <div className="mt-6 flex justify-center gap-3">
             <button
               onClick={signOut}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               Cerrar sesion
             </button>
@@ -83,7 +83,11 @@ function AdminContent({ page, currentPath }: Props) {
       case "users":
         return <UserDirectory />;
       default:
-        return <p className="text-gray-500">Pagina en construccion</p>;
+        return (
+          <p className="text-gray-500 dark:text-gray-400">
+            Pagina en construccion
+          </p>
+        );
     }
   };
 

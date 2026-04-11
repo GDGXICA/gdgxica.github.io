@@ -155,7 +155,7 @@ export function EventForm() {
   }
 
   const inputClass =
-    "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+    "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400";
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -170,15 +170,15 @@ export function EventForm() {
       <div className="mb-6 flex items-center gap-4">
         <a
           href="/admin/eventos"
-          className="text-sm text-gray-500 hover:text-gray-700"
+          className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
         >
           ← Volver a eventos
         </a>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-gray-900">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">
             Informacion basica
           </h3>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -226,8 +226,10 @@ export function EventForm() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-gray-900">Fecha y lugar</h3>
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">
+            Fecha y lugar
+          </h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField label="Fecha y hora" required>
               <input
@@ -279,7 +281,7 @@ export function EventForm() {
               />
             </FormField>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex items-center gap-2 text-sm dark:text-gray-300">
                 <input
                   type="checkbox"
                   checked={form.is_virtual}
@@ -288,7 +290,7 @@ export function EventForm() {
                 />
                 Virtual
               </label>
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex items-center gap-2 text-sm dark:text-gray-300">
                 <input
                   type="checkbox"
                   checked={form.is_highlight}
@@ -303,8 +305,10 @@ export function EventForm() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-gray-900">Detalles</h3>
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">
+            Detalles
+          </h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField label="Categoria">
               <select
@@ -367,8 +371,10 @@ export function EventForm() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-gray-900">Topics</h3>
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">
+            Topics
+          </h3>
           <div className="flex gap-2">
             <input
               type="text"
@@ -389,13 +395,13 @@ export function EventForm() {
             {form.topics.map((topic, i) => (
               <span
                 key={i}
-                className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800"
+                className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
               >
                 {topic}
                 <button
                   type="button"
                   onClick={() => removeFromList("topics", i)}
-                  className="text-blue-600 hover:text-blue-800"
+                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                 >
                   ×
                 </button>
@@ -404,8 +410,10 @@ export function EventForm() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-gray-900">Requisitos</h3>
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">
+            Requisitos
+          </h3>
           <div className="flex gap-2">
             <input
               type="text"
@@ -426,13 +434,13 @@ export function EventForm() {
             {form.requirements.map((req, i) => (
               <li
                 key={i}
-                className="flex items-center justify-between rounded bg-gray-50 px-3 py-1 text-sm"
+                className="flex items-center justify-between rounded bg-gray-50 px-3 py-1 text-sm dark:bg-gray-900"
               >
                 {req}
                 <button
                   type="button"
                   onClick={() => removeFromList("requirements", i)}
-                  className="text-red-500 hover:text-red-700"
+                  className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                 >
                   ×
                 </button>
@@ -441,8 +449,10 @@ export function EventForm() {
           </ul>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <h3 className="mb-4 font-semibold text-gray-900">Incluye</h3>
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">
+            Incluye
+          </h3>
           <div className="flex gap-2">
             <input
               type="text"
@@ -463,13 +473,13 @@ export function EventForm() {
             {form.includes.map((item, i) => (
               <li
                 key={i}
-                className="flex items-center justify-between rounded bg-gray-50 px-3 py-1 text-sm"
+                className="flex items-center justify-between rounded bg-gray-50 px-3 py-1 text-sm dark:bg-gray-900"
               >
                 {item}
                 <button
                   type="button"
                   onClick={() => removeFromList("includes", i)}
-                  className="text-red-500 hover:text-red-700"
+                  className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                 >
                   ×
                 </button>
@@ -481,7 +491,7 @@ export function EventForm() {
         <div className="flex justify-end gap-3">
           <a
             href="/admin/eventos"
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
           >
             Cancelar
           </a>

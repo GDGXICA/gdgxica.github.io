@@ -5,31 +5,31 @@ export function LoginScreen() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center dark:bg-gray-900">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg dark:bg-gray-800">
         <div className="mb-8 text-center">
           <img
             src="/gdg-logo.png"
             alt="GDG ICA"
             className="mx-auto mb-4 h-16 w-16"
           />
-          <h1 className="text-2xl font-bold text-gray-900">
-            Panel de Administración
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Panel de Administracion
           </h1>
-          <p className="mt-2 text-gray-600">
-            Inicia sesión para gestionar el contenido de GDG ICA
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
+            Inicia sesion para gestionar el contenido de GDG ICA
           </p>
         </div>
         <button
           onClick={signIn}
-          className="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+          className="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24">
             <path
@@ -49,9 +49,9 @@ export function LoginScreen() {
               fill="#EA4335"
             />
           </svg>
-          Iniciar sesión con Google
+          Iniciar sesion con Google
         </button>
-        <p className="mt-6 text-center text-sm text-gray-500">
+        <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
           Solo organizadores y administradores pueden acceder
         </p>
       </div>
