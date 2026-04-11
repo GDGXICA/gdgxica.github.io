@@ -9,6 +9,8 @@ import { SpeakerList } from "./speakers/SpeakerList";
 import { SponsorList } from "./sponsors/SponsorList";
 import { StatsEditor } from "./stats/StatsEditor";
 import { UserDirectory } from "./users/UserDirectory";
+import { FormRegistry } from "./forms/FormRegistry";
+import { FormViewer } from "./forms/FormViewer";
 
 interface Props {
   page: string;
@@ -82,6 +84,10 @@ function AdminContent({ page, currentPath }: Props) {
         return <StatsEditor />;
       case "users":
         return <UserDirectory />;
+      case "forms":
+        return <FormRegistry />;
+      case "form-viewer":
+        return <FormViewer />;
       default:
         return (
           <p className="text-gray-500 dark:text-gray-400">

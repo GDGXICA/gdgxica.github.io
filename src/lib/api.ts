@@ -74,6 +74,14 @@ export const api = {
   updateUserRole: (uid: string, role: string) =>
     request("PATCH", `/users/${uid}/role`, { role }),
 
+  // Forms
+  listForms: () => request("GET", "/forms"),
+  addForm: (data: unknown) => request("POST", "/forms", data),
+  updateForm: (id: string, data: unknown) =>
+    request("PUT", `/forms/${id}`, data),
+  deleteForm: (id: string) => request("DELETE", `/forms/${id}`),
+  getFormResponses: (id: string) => request("GET", `/forms/${id}/responses`),
+
   // Rebuild
   triggerRebuild: () => request("POST", "/rebuild"),
 };
