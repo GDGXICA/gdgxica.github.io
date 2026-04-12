@@ -32,3 +32,20 @@ export function validateUrl(url: string | undefined | null): boolean {
     return false;
   }
 }
+
+// Google Maps embed URLs are rendered as iframe src on the public site,
+// so we restrict them to the known-safe origin to rule out data: / javascript:
+// and open-redirect-like embeds on attacker-controlled origins.
+const ALLOWED_MAP_EMBED_HOSTS = new Set(["www.google.com", "maps.google.com"]);
+
+export function validateMapEmbedUrl(url: string | undefined | null): boolean {
+  if (!url) return true;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return false;
+    if (!ALLOWED_MAP_EMBED_HOSTS.has(parsed.hostname)) return false;
+    return parsed.pathname.startsWith("/maps/");
+  } catch {
+    return false;
+  }
+}
