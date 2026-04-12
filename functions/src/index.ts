@@ -6,6 +6,13 @@ import rateLimit from "express-rate-limit";
 import { GITHUB_TOKEN } from "./config";
 import { requireRole, requireAuth } from "./middleware/auth";
 import { validateParamId } from "./middleware/validate";
+import { validateBody } from "./middleware/validateBody";
+import {
+  eventSchema,
+  speakerSchema,
+  sponsorSchema,
+  teamMemberSchema,
+} from "./schemas";
 import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
 import * as team from "./handlers/team";
@@ -26,7 +33,10 @@ const ALLOWED_ORIGINS = [
 ];
 
 const app = express();
-app.set("trust proxy", true);
+// Firebase Hosting + Cloud Functions sits behind exactly one Google
+// Frontend hop, so trust a single proxy. Setting `true` would let
+// callers spoof X-Forwarded-For and bypass IP-based rate limiting.
+app.set("trust proxy", 1);
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -39,16 +49,36 @@ app.use(
   })
 );
 app.use(express.json({ limit: "1mb" }));
+
+// Outer perimeter limit: large window, generous cap. Protects against
+// raw IP floods that haven't yet been authenticated.
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100,
+    max: 300,
     standardHeaders: true,
     legacyHeaders: false,
-    validate: { trustProxy: false, xForwardedForHeader: false },
     message: { success: false, error: "Too many requests, try again later" },
   })
 );
+
+// Per-user mutation limit: applies after auth, keys by Firebase UID so
+// abusive admins/organizers can't spam writes (and exhaust the GitHub
+// API quota for the data repo) by rotating IPs.
+const writeLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const uid = (req as { user?: { uid?: string } }).user?.uid;
+    return uid ? `u:${uid}` : `ip:${req.ip ?? "unknown"}`;
+  },
+  message: {
+    success: false,
+    error: "Too many write requests, slow down",
+  },
+});
 
 const vid = validateParamId("id");
 const vuid = validateParamId("uid");
@@ -59,56 +89,135 @@ app.post("/api/auth/register", requireAuth(), register);
 // Events
 app.get("/api/events", requireRole("organizer"), events.listEvents);
 app.get("/api/events/:id", requireRole("organizer"), vid, events.getEvent);
-app.post("/api/events", requireRole("organizer"), events.createEvent);
-app.put("/api/events/:id", requireRole("organizer"), vid, events.updateEvent);
-app.delete("/api/events/:id", requireRole("admin"), vid, events.deleteEvent);
+app.post(
+  "/api/events",
+  requireRole("organizer"),
+  writeLimiter,
+  validateBody(eventSchema),
+  events.createEvent
+);
+app.put(
+  "/api/events/:id",
+  requireRole("organizer"),
+  vid,
+  writeLimiter,
+  validateBody(eventSchema),
+  events.updateEvent
+);
+app.delete(
+  "/api/events/:id",
+  requireRole("admin"),
+  vid,
+  writeLimiter,
+  events.deleteEvent
+);
 
 // Team
 app.get("/api/team", requireRole("organizer"), team.listTeam);
-app.post("/api/team", requireRole("admin"), team.addTeamMember);
-app.put("/api/team/:id", requireRole("admin"), vid, team.updateTeamMember);
-app.delete("/api/team/:id", requireRole("admin"), vid, team.deleteTeamMember);
+app.post(
+  "/api/team",
+  requireRole("admin"),
+  writeLimiter,
+  validateBody(teamMemberSchema),
+  team.addTeamMember
+);
+app.put(
+  "/api/team/:id",
+  requireRole("admin"),
+  vid,
+  writeLimiter,
+  validateBody(teamMemberSchema),
+  team.updateTeamMember
+);
+app.delete(
+  "/api/team/:id",
+  requireRole("admin"),
+  vid,
+  writeLimiter,
+  team.deleteTeamMember
+);
 
 // Speakers
 app.get("/api/speakers", requireRole("organizer"), speakers.listSpeakers);
-app.post("/api/speakers", requireRole("organizer"), speakers.addSpeaker);
+app.post(
+  "/api/speakers",
+  requireRole("organizer"),
+  writeLimiter,
+  validateBody(speakerSchema),
+  speakers.addSpeaker
+);
 app.put(
   "/api/speakers/:id",
   requireRole("organizer"),
   vid,
+  writeLimiter,
+  validateBody(speakerSchema),
   speakers.updateSpeaker
 );
 app.delete(
   "/api/speakers/:id",
   requireRole("admin"),
   vid,
+  writeLimiter,
   speakers.deleteSpeaker
 );
 
 // Sponsors
 app.get("/api/sponsors", requireRole("admin"), sponsors.listSponsors);
-app.post("/api/sponsors", requireRole("admin"), sponsors.addSponsor);
-app.put("/api/sponsors/:id", requireRole("admin"), vid, sponsors.updateSponsor);
+app.post(
+  "/api/sponsors",
+  requireRole("admin"),
+  writeLimiter,
+  validateBody(sponsorSchema),
+  sponsors.addSponsor
+);
+app.put(
+  "/api/sponsors/:id",
+  requireRole("admin"),
+  vid,
+  writeLimiter,
+  validateBody(sponsorSchema),
+  sponsors.updateSponsor
+);
 app.delete(
   "/api/sponsors/:id",
   requireRole("admin"),
   vid,
+  writeLimiter,
   sponsors.deleteSponsor
 );
 
 // Stats
 app.get("/api/stats", requireRole("organizer"), stats.getStats);
-app.put("/api/stats", requireRole("admin"), stats.updateStats);
+app.put("/api/stats", requireRole("admin"), writeLimiter, stats.updateStats);
 
 // Users
 app.get("/api/users", requireRole("admin"), users.listUsers);
-app.patch("/api/users/:uid/role", requireRole("admin"), vuid, users.updateRole);
+app.patch(
+  "/api/users/:uid/role",
+  requireRole("admin"),
+  vuid,
+  writeLimiter,
+  users.updateRole
+);
 
 // Forms
 app.get("/api/forms", requireRole("organizer"), forms.listForms);
-app.post("/api/forms", requireRole("admin"), forms.addForm);
-app.put("/api/forms/:id", requireRole("admin"), vid, forms.updateForm);
-app.delete("/api/forms/:id", requireRole("admin"), vid, forms.deleteForm);
+app.post("/api/forms", requireRole("admin"), writeLimiter, forms.addForm);
+app.put(
+  "/api/forms/:id",
+  requireRole("admin"),
+  vid,
+  writeLimiter,
+  forms.updateForm
+);
+app.delete(
+  "/api/forms/:id",
+  requireRole("admin"),
+  vid,
+  writeLimiter,
+  forms.deleteForm
+);
 app.get(
   "/api/forms/:id/responses",
   requireRole("organizer"),
@@ -117,7 +226,7 @@ app.get(
 );
 
 // Rebuild
-app.post("/api/rebuild", requireRole("admin"), triggerRebuild);
+app.post("/api/rebuild", requireRole("admin"), writeLimiter, triggerRebuild);
 
 export const api = onRequest(
   { secrets: [GITHUB_TOKEN], invoker: "public" },
