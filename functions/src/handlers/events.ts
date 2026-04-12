@@ -1,7 +1,11 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
 import { AuthenticatedRequest } from "../middleware/auth";
-import { safeError, validateUrl } from "../middleware/validate";
+import {
+  safeError,
+  validateUrl,
+  validateMapEmbedUrl,
+} from "../middleware/validate";
 import { GitHubService } from "../services/github";
 import { GITHUB_TOKEN } from "../config";
 
@@ -20,6 +24,32 @@ interface EventIndexEntry {
   registration_url: string | null;
   materials: Record<string, string>;
   agenda: { time: string; title: string; speaker: string }[];
+}
+
+function validateEventUrls(
+  event: Record<string, unknown>,
+  res: Response
+): boolean {
+  const urlFields: Array<string | undefined> = [
+    event.image_url as string,
+    event.venue_map_url as string,
+    event.registration_url as string,
+  ];
+  if (urlFields.some((url) => url && !validateUrl(url))) {
+    res.status(400).json({ success: false, error: "Invalid URL format" });
+    return false;
+  }
+  if (
+    event.venue_map_embed &&
+    !validateMapEmbedUrl(event.venue_map_embed as string)
+  ) {
+    res.status(400).json({
+      success: false,
+      error: "venue_map_embed must be a google.com/maps/... https URL",
+    });
+    return false;
+  }
+  return true;
 }
 
 function toIndexEntry(event: Record<string, unknown>): EventIndexEntry {
@@ -77,15 +107,7 @@ export async function createEvent(req: Request, res: Response) {
       return;
     }
 
-    const urlFields = [
-      event.image_url,
-      event.venue_map_url,
-      event.registration_url,
-    ];
-    if (urlFields.some((url: string) => url && !validateUrl(url))) {
-      res.status(400).json({ success: false, error: "Invalid URL format" });
-      return;
-    }
+    if (!validateEventUrls(event, res)) return;
 
     const github = new GitHubService(GITHUB_TOKEN.value());
     const user = (req as AuthenticatedRequest).user;
@@ -134,6 +156,9 @@ export async function updateEvent(req: Request, res: Response) {
   try {
     const eventId = req.params.id;
     const event = { ...req.body, id: eventId };
+
+    if (!validateEventUrls(event, res)) return;
+
     const github = new GitHubService(GITHUB_TOKEN.value());
     const user = (req as AuthenticatedRequest).user;
 
