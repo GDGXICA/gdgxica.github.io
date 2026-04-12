@@ -8,6 +8,21 @@ const CATEGORIES = ["devfest", "io", "studyjam", "wtm", "meetup"] as const;
 const STATUSES = ["upcoming", "in-progress", "completed"] as const;
 const SCHEDULE_TYPES = ["break", "event", "networking", "workshop"] as const;
 
+function computeDuration(start: string, end: string): string {
+  if (!start || !end) return "";
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  if ([sh, sm, eh, em].some((n) => Number.isNaN(n))) return "";
+  let mins = eh * 60 + em - (sh * 60 + sm);
+  if (mins < 0) mins += 24 * 60;
+  if (mins === 0) return "";
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h === 0) return `${m} min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}min`;
+}
+
 interface AgendaItem {
   time: string;
   title: string;
@@ -238,6 +253,50 @@ export function EventForm() {
       s.name.toLowerCase().includes(speakerSearch.toLowerCase())
   );
 
+  function findSpeakerByName(name: string): Speaker | undefined {
+    if (!name) return undefined;
+    return availableSpeakers.find((s) => s.name === name);
+  }
+
+  function applySpeakerToAgenda(index: number, speaker: Speaker | null) {
+    setForm((prev) => ({
+      ...prev,
+      agenda: prev.agenda.map((a, i) =>
+        i === index
+          ? {
+              ...a,
+              speaker: speaker?.name ?? "",
+              role: speaker?.role ?? "",
+              image: speaker?.photo_url ?? "",
+            }
+          : a
+      ),
+    }));
+  }
+
+  function applySpeakerToSession(
+    trackId: string,
+    index: number,
+    speaker: Speaker | null
+  ) {
+    setForm((prev) => ({
+      ...prev,
+      track_sessions: {
+        ...prev.track_sessions,
+        [trackId]: (prev.track_sessions[trackId] || []).map((s, i) =>
+          i === index
+            ? {
+                ...s,
+                name: speaker?.name ?? "",
+                role: speaker?.role ?? "",
+                image: speaker?.photo_url ?? "",
+              }
+            : s
+        ),
+      },
+    }));
+  }
+
   // Sponsors
   function toggleSponsor(sponsor: RegisteredSponsor) {
     const isSelected = form.sponsors.some((s) => s.alt === sponsor.name);
@@ -374,9 +433,14 @@ export function EventForm() {
       ...prev,
       track_sessions: {
         ...prev.track_sessions,
-        [trackId]: (prev.track_sessions[trackId] || []).map((s, i) =>
-          i === index ? { ...s, [field]: value } : s
-        ),
+        [trackId]: (prev.track_sessions[trackId] || []).map((s, i) => {
+          if (i !== index) return s;
+          const next = { ...s, [field]: value };
+          if (field === "startTime" || field === "endTime") {
+            next.duration = computeDuration(next.startTime, next.endTime);
+          }
+          return next;
+        }),
       },
     }));
   }
@@ -1014,25 +1078,26 @@ export function EventForm() {
                       className={`${inputClass} sm:col-span-2`}
                     />
                   </div>
-                  <div className="mb-2 grid gap-2 sm:grid-cols-3">
-                    <input
-                      type="text"
-                      value={item.speaker}
+                  <div className="mb-2 grid gap-2 sm:grid-cols-2">
+                    <select
+                      value={findSpeakerByName(item.speaker)?.id ?? ""}
                       onChange={(e) =>
-                        updateAgendaItem(i, "speaker", e.target.value)
+                        applySpeakerToAgenda(
+                          i,
+                          availableSpeakers.find(
+                            (s) => s.id === e.target.value
+                          ) ?? null
+                        )
                       }
-                      placeholder="Speaker"
                       className={inputClass}
-                    />
-                    <input
-                      type="text"
-                      value={item.role}
-                      onChange={(e) =>
-                        updateAgendaItem(i, "role", e.target.value)
-                      }
-                      placeholder="Rol"
-                      className={inputClass}
-                    />
+                    >
+                      <option value="">-- Seleccionar speaker --</option>
+                      {availableSpeakers.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
                     <select
                       value={item.type}
                       onChange={(e) =>
@@ -1047,16 +1112,20 @@ export function EventForm() {
                       ))}
                     </select>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={item.image}
-                      onChange={(e) =>
-                        updateAgendaItem(i, "image", e.target.value)
-                      }
-                      placeholder="URL imagen speaker"
-                      className={`${inputClass} flex-1`}
-                    />
+                  {item.speaker && (
+                    <div className="mb-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                      <img
+                        src={toImagePath(item.image)}
+                        alt=""
+                        className="h-6 w-6 rounded-full bg-gray-200 object-cover"
+                      />
+                      <span>{item.speaker}</span>
+                      {item.role && (
+                        <span className="text-gray-400">· {item.role}</span>
+                      )}
+                    </div>
+                  )}
+                  <div className="flex items-center justify-end">
                     <button
                       type="button"
                       onClick={() => removeAgendaItem(i)}
@@ -1148,7 +1217,7 @@ export function EventForm() {
                     >
                       <div className="mb-1 grid gap-2 sm:grid-cols-4">
                         <input
-                          type="text"
+                          type="time"
                           value={session.startTime}
                           onChange={(e) =>
                             updateTrackSession(
@@ -1162,7 +1231,7 @@ export function EventForm() {
                           className={inputClass}
                         />
                         <input
-                          type="text"
+                          type="time"
                           value={session.endTime}
                           onChange={(e) =>
                             updateTrackSession(
@@ -1178,16 +1247,9 @@ export function EventForm() {
                         <input
                           type="text"
                           value={session.duration}
-                          onChange={(e) =>
-                            updateTrackSession(
-                              track.id,
-                              si,
-                              "duration",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Duracion"
-                          className={inputClass}
+                          readOnly
+                          placeholder="Duración"
+                          className={`${inputClass} cursor-not-allowed opacity-70`}
                         />
                         <select
                           value={session.type}
@@ -1223,42 +1285,49 @@ export function EventForm() {
                           placeholder="Titulo"
                           className={inputClass}
                         />
-                        <input
-                          type="text"
-                          value={session.name}
+                        <select
+                          value={findSpeakerByName(session.name)?.id ?? ""}
                           onChange={(e) =>
-                            updateTrackSession(
+                            applySpeakerToSession(
                               track.id,
                               si,
-                              "name",
-                              e.target.value
+                              availableSpeakers.find(
+                                (s) => s.id === e.target.value
+                              ) ?? null
                             )
                           }
-                          placeholder="Speaker"
                           className={inputClass}
-                        />
+                        >
+                          <option value="">-- Seleccionar speaker --</option>
+                          {availableSpeakers.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={session.role}
-                          onChange={(e) =>
-                            updateTrackSession(
-                              track.id,
-                              si,
-                              "role",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Rol"
-                          className={`${inputClass} flex-1`}
-                        />
+                      {session.name && (
+                        <div className="mb-1 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                          <img
+                            src={toImagePath(session.image)}
+                            alt=""
+                            className="h-6 w-6 rounded-full bg-gray-200 object-cover"
+                          />
+                          <span>{session.name}</span>
+                          {session.role && (
+                            <span className="text-gray-400">
+                              · {session.role}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <div className="flex items-center justify-end">
                         <button
                           type="button"
                           onClick={() => removeTrackSession(track.id, si)}
                           className="text-xs text-red-500"
                         >
-                          ×
+                          Eliminar
                         </button>
                       </div>
                     </div>
