@@ -119,8 +119,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async () => {
-    await firebaseSignIn();
+    // Must be set before the popup: Firebase fires onAuthStateChanged
+    // inside signInWithPopup (before the promise resolves), and the
+    // observer reads SESSION_KEY to decide whether the session is valid.
     localStorage.setItem(SESSION_KEY, Date.now().toString());
+    try {
+      await firebaseSignIn();
+    } catch (err) {
+      localStorage.removeItem(SESSION_KEY);
+      throw err;
+    }
   };
 
   const isOrganizer = role === "organizer" || role === "admin";
