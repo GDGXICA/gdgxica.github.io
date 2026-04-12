@@ -50,6 +50,12 @@ interface Speaker {
   role: string;
 }
 
+interface RegisteredSponsor {
+  name: string;
+  logo_url: string;
+  sector: string;
+}
+
 interface EventData {
   id: string;
   title: string;
@@ -135,6 +141,9 @@ export function EventForm() {
   const [includeInput, setIncludeInput] = useState("");
   const [speakerSearch, setSpeakerSearch] = useState("");
   const [availableSpeakers, setAvailableSpeakers] = useState<Speaker[]>([]);
+  const [availableSponsors, setAvailableSponsors] = useState<
+    RegisteredSponsor[]
+  >([]);
   const [scheduleMode, setScheduleMode] = useState<"simple" | "multitrack">(
     "simple"
   );
@@ -142,6 +151,11 @@ export function EventForm() {
   const isEdit = !!editId;
 
   useEffect(() => {
+    api.listSponsors().then((res) => {
+      if (res.success && res.data) {
+        setAvailableSponsors(res.data as RegisteredSponsor[]);
+      }
+    });
     api.listSpeakers().then((res) => {
       if (res.success && res.data) {
         setAvailableSpeakers(res.data as Speaker[]);
@@ -225,34 +239,26 @@ export function EventForm() {
   );
 
   // Sponsors
-  function addSponsor() {
-    setForm((prev) => ({
-      ...prev,
-      sponsors: [
-        ...prev.sponsors,
-        { id: String(prev.sponsors.length + 1), image_url: "", alt: "" },
-      ],
-    }));
-  }
-
-  function updateSponsor(
-    index: number,
-    field: keyof SponsorItem,
-    value: string
-  ) {
-    setForm((prev) => ({
-      ...prev,
-      sponsors: prev.sponsors.map((s, i) =>
-        i === index ? { ...s, [field]: value } : s
-      ),
-    }));
-  }
-
-  function removeSponsor(index: number) {
-    setForm((prev) => ({
-      ...prev,
-      sponsors: prev.sponsors.filter((_, i) => i !== index),
-    }));
+  function toggleSponsor(sponsor: RegisteredSponsor) {
+    const isSelected = form.sponsors.some((s) => s.alt === sponsor.name);
+    if (isSelected) {
+      setForm((prev) => ({
+        ...prev,
+        sponsors: prev.sponsors.filter((s) => s.alt !== sponsor.name),
+      }));
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        sponsors: [
+          ...prev.sponsors,
+          {
+            id: String(prev.sponsors.length + 1),
+            image_url: sponsor.logo_url,
+            alt: sponsor.name,
+          },
+        ],
+      }));
+    }
   }
 
   // Agenda simple
@@ -738,43 +744,71 @@ export function EventForm() {
 
         {/* Sponsors */}
         <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900 dark:text-white">
-              Sponsors ({form.sponsors.length})
-            </h3>
-            <button
-              type="button"
-              onClick={addSponsor}
-              className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400"
-            >
-              + Agregar
-            </button>
-          </div>
-          {form.sponsors.map((sponsor, i) => (
-            <div key={i} className="mb-3 flex items-center gap-2">
-              <input
-                type="text"
-                value={sponsor.alt}
-                onChange={(e) => updateSponsor(i, "alt", e.target.value)}
-                placeholder="Nombre"
-                className={`${inputClass} w-1/3`}
-              />
-              <input
-                type="url"
-                value={sponsor.image_url}
-                onChange={(e) => updateSponsor(i, "image_url", e.target.value)}
-                placeholder="URL del logo"
-                className={`${inputClass} flex-1`}
-              />
-              <button
-                type="button"
-                onClick={() => removeSponsor(i)}
-                className="text-red-500 hover:text-red-700"
-              >
-                ×
-              </button>
+          <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">
+            Sponsors ({form.sponsors.length})
+          </h3>
+          {form.sponsors.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {form.sponsors.map((s) => {
+                const sponsor = availableSponsors.find(
+                  (sp) => sp.name === s.alt
+                );
+                return (
+                  <span
+                    key={s.alt}
+                    className="inline-flex items-center gap-2 rounded-full bg-yellow-100 py-1 pr-3 pl-1 text-sm text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                  >
+                    <img
+                      src={toImagePath(sponsor?.logo_url || s.image_url)}
+                      alt=""
+                      className="h-6 w-6 rounded-full bg-white object-contain"
+                    />
+                    {s.alt}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        toggleSponsor(
+                          sponsor || {
+                            name: s.alt,
+                            logo_url: s.image_url,
+                            sector: "",
+                          }
+                        )
+                      }
+                      className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400"
+                    >
+                      ×
+                    </button>
+                  </span>
+                );
+              })}
             </div>
-          ))}
+          )}
+          <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-600">
+            {availableSponsors.map((sponsor) => (
+              <button
+                key={sponsor.name}
+                type="button"
+                onClick={() => toggleSponsor(sponsor)}
+                className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors ${
+                  form.sponsors.some((s) => s.alt === sponsor.name)
+                    ? "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400"
+                    : "hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                }`}
+              >
+                <img
+                  src={toImagePath(sponsor.logo_url)}
+                  alt=""
+                  className="h-6 w-6 rounded bg-white object-contain"
+                />
+                <span>{sponsor.name}</span>
+                <span className="text-xs text-gray-400">{sponsor.sector}</span>
+                {form.sponsors.some((s) => s.alt === sponsor.name) && (
+                  <span className="ml-auto text-yellow-600">✓</span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Topics + Technologies */}
