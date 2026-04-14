@@ -23,6 +23,7 @@ interface ExternalEvent {
   speaker_names: string[];
   speaker_ids: string[];
   registration_url: string | null;
+  whatsapp_group_link?: string;
   is_virtual: boolean;
   is_highlight: boolean;
   participants: number;
@@ -153,6 +154,7 @@ function transformEvent(
     speakerNames: event.speaker_names,
     largeDescription: event.description,
     registerFormLink: event.registration_url || "",
+    whatsappGroupLink: event.whatsapp_group_link || undefined,
     requirements: event.requirements,
     include: event.includes,
     technologies: event.technologies || event.topics,

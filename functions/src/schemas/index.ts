@@ -69,6 +69,7 @@ export const eventSchema = z
     speaker_ids: z.array(shortText(200)).max(100).default([]),
     speaker_names: z.array(shortText(500)).max(100).default([]),
     registration_url: shortText(2000).default(""),
+    whatsapp_group_link: shortText(2000).default(""),
     is_virtual: z.boolean().default(false),
     is_highlight: z.boolean().default(false),
     participants: z.number().int().min(0).max(1_000_000).default(0),
