@@ -36,6 +36,7 @@ const events = defineCollection({
     speakerNames: z.array(z.string()),
     largeDescription: z.string(),
     registerFormLink: z.string(),
+    whatsappGroupLink: z.string().url().optional(),
     requirements: z.array(z.string()),
     include: z.array(z.string()),
     technologies: z.array(z.string()),

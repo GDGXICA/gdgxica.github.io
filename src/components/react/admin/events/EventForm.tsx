@@ -88,6 +88,7 @@ interface EventData {
   speaker_ids: string[];
   speaker_names: string[];
   registration_url: string;
+  whatsapp_group_link: string;
   is_virtual: boolean;
   is_highlight: boolean;
   participants: number;
@@ -120,6 +121,7 @@ const EMPTY_EVENT: EventData = {
   speaker_ids: [],
   speaker_names: [],
   registration_url: "",
+  whatsapp_group_link: "",
   is_virtual: false,
   is_highlight: false,
   participants: 0,
@@ -729,6 +731,19 @@ export function EventForm() {
                   onChange={(e) =>
                     updateField("registration_url", e.target.value)
                   }
+                  className={inputClass}
+                />
+              </FormField>
+            </div>
+            <div className="sm:col-span-2">
+              <FormField label="Link grupo de WhatsApp (opcional)">
+                <input
+                  type="url"
+                  value={form.whatsapp_group_link}
+                  onChange={(e) =>
+                    updateField("whatsapp_group_link", e.target.value)
+                  }
+                  placeholder="https://chat.whatsapp.com/..."
                   className={inputClass}
                 />
               </FormField>

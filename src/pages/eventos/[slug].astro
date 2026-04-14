@@ -1,6 +1,7 @@
 ---
 import { Image } from "astro:assets";
 import { getCollection } from "astro:content";
+import QRCode from "qrcode";
 import Button from "@/components/Button.astro";
 import FeatureCard from "@/components/FeatureCard.astro";
 import Tag from "@/components/Tag.astro";
@@ -20,6 +21,7 @@ import {
   Heart,
   MapPinned,
   MicVocal,
+  MessageCircle,
   NotebookText,
   Store,
 } from "@lucide/astro";
@@ -132,6 +134,16 @@ const isArraySchedule = Array.isArray(schedule);
 const isTrackSchedule =
   !isArraySchedule && "trackSessions" in (schedule as object);
 const hasSchedule = isArraySchedule ? (schedule as unknown[]).length > 0 : true;
+
+const whatsappGroupLink = event.data.whatsappGroupLink;
+const whatsappQrSvg = whatsappGroupLink
+  ? await QRCode.toString(whatsappGroupLink, {
+      type: "svg",
+      errorCorrectionLevel: "M",
+      margin: 1,
+      color: { dark: "#111827", light: "#ffffff" },
+    })
+  : null;
 ---
 
 <Layout {...metadata}>
@@ -371,6 +383,31 @@ const hasSchedule = isArraySchedule ? (schedule as unknown[]).length > 0 : true;
               </Button>
             </div>
           </div>
+          {
+            whatsappGroupLink && whatsappQrSvg && (
+              <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
+                <h2 class="text-primary mb-4 text-2xl font-semibold">
+                  Grupo de WhatsApp
+                </h2>
+                <p class="text-secondary mb-4 text-sm">
+                  Únete al grupo del evento para recibir información sobre
+                  salones, charlas y novedades en tiempo real.
+                </p>
+                <div
+                  class="mb-4 flex items-center justify-center rounded-lg bg-white p-4 [&>svg]:h-auto [&>svg]:w-full [&>svg]:max-w-[240px]"
+                  set:html={whatsappQrSvg}
+                />
+                <Button
+                  variant="solid"
+                  href={whatsappGroupLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <MessageCircle size={16} /> Unirse al grupo
+                </Button>
+              </div>
+            )
+          }
           <!-- requeriments -->
           <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
             <h2 class="text-primary mb-6 text-2xl font-semibold">Requisitos</h2>

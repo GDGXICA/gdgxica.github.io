@@ -34,6 +34,7 @@ function validateEventUrls(
     event.image_url as string,
     event.venue_map_url as string,
     event.registration_url as string,
+    event.whatsapp_group_link as string,
   ];
   if (urlFields.some((url) => url && !validateUrl(url))) {
     res.status(400).json({ success: false, error: "Invalid URL format" });
