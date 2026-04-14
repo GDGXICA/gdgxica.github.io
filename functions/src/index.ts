@@ -2,7 +2,7 @@ import * as admin from "firebase-admin";
 import { onRequest } from "firebase-functions/v2/https";
 import express from "express";
 import cors from "cors";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { GITHUB_TOKEN } from "./config";
 import { requireRole, requireAuth } from "./middleware/auth";
 import { validateParamId } from "./middleware/validate";
@@ -72,7 +72,11 @@ const writeLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => {
     const uid = (req as { user?: { uid?: string } }).user?.uid;
-    return uid ? `u:${uid}` : `ip:${req.ip ?? "unknown"}`;
+    if (uid) return `u:${uid}`;
+    // express-rate-limit v8 requires routing IP-based keys through
+    // ipKeyGenerator() so IPv6 addresses are normalized and can't be
+    // used to bypass the limit by rotating the suffix.
+    return `ip:${ipKeyGenerator(req.ip ?? "unknown")}`;
   },
   message: {
     success: false,
