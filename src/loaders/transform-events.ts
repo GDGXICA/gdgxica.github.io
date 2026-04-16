@@ -166,7 +166,7 @@ function transformEvent(
 }
 
 function buildSchedule(event: ExternalEvent) {
-  if (event.track_sessions) {
+  if (event.track_sessions && Object.keys(event.track_sessions).length > 0) {
     const trackSessions: Record<string, (typeof event.track_sessions)[string]> =
       {};
     for (const [track, sessions] of Object.entries(event.track_sessions)) {
