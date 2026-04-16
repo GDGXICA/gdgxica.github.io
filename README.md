@@ -1,133 +1,122 @@
-# Google Developer Group (GDG) ICA 2025 - Sitio Web Oficial
+# Google Developer Group (GDG) ICA - Sitio Web Oficial
 
 ![gdg cover image](preview.png)
 
-[🖼️ Diseño en Figma](https://www.figma.com/design/OsE9m2hnvt7DjuI7e7Ocx3/GDG-ICA?node-id=0-1&t=XAHKhrJY81pkcRk6-1)
+[🌐 gdgica.com](https://gdgica.com) · [🖼️ Diseño en Figma](https://www.figma.com/design/OsE9m2hnvt7DjuI7e7Ocx3/GDG-ICA?node-id=0-1&t=XAHKhrJY81pkcRk6-1)
 
-## 🚀 Sobre el Proyecto
+## Sobre el Proyecto
 
-Este proyecto es una iniciativa del equipo de desarrollo para crear el sitio web oficial del Google Developer Group (GDG) ICA. La web está construida utilizando tecnologías modernas.
+Sitio web oficial del Google Developer Group (GDG) ICA, construido con Astro 5 como sitio estático. Todo el contenido (eventos, speakers, equipo, sponsors) se gestiona desde el repositorio externo [gdg-ica-data](https://github.com/GDGXICA/gdg-ica-data) y se consume en build time mediante custom loaders.
 
-### 📝 Licencia del Proyecto
+### Tecnologías
 
-Este proyecto está bajo la Licencia MIT, lo que permite su uso, modificación y distribución con fines personales o comerciales.
-Las contribuciones son bienvenidas. Si querés proponer mejoras, hacelo a través de un Pull Request (PR).
+- [Astro 5](https://astro.build) — Framework web estático
+- [TailwindCSS 4](https://tailwindcss.com) — Estilos utilitarios
+- [React 19](https://react.dev) — Islas interactivas (solo donde se necesita JS en el cliente)
+- [Firebase Hosting](https://firebase.google.com/docs/hosting) — Despliegue y CDN
 
-Consulta los términos completos en el archivo [LICENSE.md](LICENSE.md).
+### Páginas
 
-### 🛠️ Tecnologías
+| Ruta              | Descripción                                                    |
+| ----------------- | -------------------------------------------------------------- |
+| `/`               | Homepage                                                       |
+| `/eventos`        | Listado de eventos                                             |
+| `/eventos/[slug]` | Detalle de evento (agenda, speakers, sponsors, QR de WhatsApp) |
+| `/equipo`         | Equipo organizador y miembros                                  |
+| `/nosotros`       | Acerca de GDG ICA                                              |
+| `/patrocinadores` | Sponsors                                                       |
+| `/voluntarios`    | Voluntarios                                                    |
+| `/gallery`        | Galería de fotos                                               |
 
-- [Astro 5](https://astro.build)
-- [TailwindCSS 4](https://tailwindcss.com)
+### Datos
 
-## ⚠️ Requerimientos
+Todo el contenido proviene de [`GDGXICA/gdg-ica-data`](https://github.com/GDGXICA/gdg-ica-data). Los loaders en `src/loaders/` fetchean los JSON en build time desde ese repositorio. En CI se usa un clone local para evitar staleness del CDN.
+
+## Requerimientos
 
 - Git
 - Node 22.15.0
 - PNPM 10.11.0
 
-## 🔧 Instalación
-
-Instala las dependencias
+## Instalación
 
 ```sh
 pnpm install
+pnpm dev
 ```
 
-Inicia el proyecto en modo desarrollo
+El servidor de desarrollo corre en `http://localhost:4321`.
 
-```sh
-pnpm run dev
-```
+## Comandos
 
-## 🚀 Estructura del proyecto
+| Comando        | Acción                                     |
+| -------------- | ------------------------------------------ |
+| `pnpm install` | Instalar dependencias                      |
+| `pnpm dev`     | Servidor de desarrollo en `localhost:4321` |
+| `pnpm build`   | Build de producción en `./dist/`           |
+| `pnpm preview` | Preview del build                          |
+| `pnpm lint`    | Ejecutar ESLint                            |
+| `pnpm format`  | Formatear con Prettier                     |
 
-Dentro del proyecto, tu verás las siguientes carpetas y archivos:
+## Estructura del proyecto
 
 ```plaintext
 /
-├── public/
+├── public/              # Assets estáticos (imágenes, fonts)
 ├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+│   ├── components/      # Componentes Astro (.astro)
+│   │   └── react/       # Islas React (solo client-side interactivo)
+│   ├── layouts/         # Layout principal
+│   ├── loaders/         # Custom loaders para gdg-ica-data
+│   ├── pages/           # Rutas (file-based routing)
+│   ├── styles/          # CSS global y variables
+│   └── content.config.ts # Schemas Zod de las colecciones
+├── functions/           # Cloud Functions (API backend)
+└── .github/workflows/   # CI/CD con GitHub Actions
 ```
 
-## 🧞 Comandos
+## Despliegue
 
-Todos los comandos se ejecutan desde la raíz del proyecto, desde una terminal:
+GitHub Actions (`.github/workflows/deploy.yml`) construye y despliega a Firebase Hosting en cada push a `main`. También se dispara automáticamente cuando el repositorio de datos se actualiza.
 
-| Comando          | Acción                                          |
-| :--------------- | :---------------------------------------------- |
-| `pnpm install`   | Instalar dependencias                           |
-| `pnpm dev`       | Iniciar un servidor local `localhost:4321`      |
-| `pnpm build`     | Construir tu sitio para producción `./dist/`    |
-| `pnpm preview`   | Vista previa de su compilación                  |
-| `pnpm astro ...` | Ejecute comandos CLI `astro add`, `astro check` |
+## Cómo Contribuir
 
-## 🤝 Cómo Contribuir
-
-1. Clona el proyecto en tu local
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Haz commit de tus cambios (`git commit -m 'Add: AmazingFeature'`)
-4. Haz Push a la rama (`git push origin feature/AmazingFeature`)
+1. Clona el proyecto
+2. Crea una rama (`git checkout -b feature/AmazingFeature`)
+3. Haz commit siguiendo Conventional Commits (`git commit -m 'feat: add amazing feature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
 5. Abre un Pull Request
 
-> Nota: antes de codificar una nueva funcionalidad ve a la sección de issues y PRs del repositorio y verifica que ya no se esté discutiendo sobre ese tema, o que ya otra persona no lo haya relizado.
+> Antes de codificar, revisa los issues y PRs existentes para evitar trabajo duplicado.
 
-### 📋 Estándares de Código
+### Estándares
 
-#### Commits
+**Commits** — Conventional Commits obligatorio:
 
-Si es posible describe tus commits para que los mantenedores los puedan analizar de una forma más rápida y eficiente.
+| Prefijo     | Uso                           |
+| ----------- | ----------------------------- |
+| `feat:`     | Nueva funcionalidad           |
+| `fix:`      | Corrección de bug             |
+| `docs:`     | Documentación                 |
+| `style:`    | Formato, sin cambio de lógica |
+| `refactor:` | Refactorización               |
+| `test:`     | Tests                         |
+| `chore:`    | Mantenimiento, tooling        |
 
-- `feat:` - Nuevas características
-- `fix:` - Correcciones de bugs
-- `docs:` - Cambios en documentación
-- `style:` - Cambios que no afectan el código (espacios, formato, etc)
-- `refactor:` - Refactorización del código
-- `test:` - Añadir o modificar tests
-- `chore:` - Cambios en el proceso de build o herramientas auxiliares
+**Código:**
 
-Ejemplo: `feat: add newsletter subscription component`
+- Variables y funciones en camelCase
+- Componentes Astro/React en PascalCase
+- Tailwind para estilos, evitar CSS custom
+- Sin `!important`, sin `console.log` en producción
+- No añadir dependencias sin discutirlo primero
 
-#### Código
+**Pull Requests:**
 
-- Utiliza en lo posible el estilo de codificación configurado
-- Nombra las variables y funciones en camelCase
-- Utiliza nombres descriptivos en variables y funciones
-- Los componentes de Astro deben ir en PascalCase
-- Comenta tu código cuando solo sea necesario
+- Requieren al menos una aprobación
+- PR pequeños y enfocados en una sola cosa
+- Capturas de pantalla para cambios visuales
 
-#### CSS/TailwindCSS
+## Licencia
 
-- Utiliza las clases de Tailwind siempre que sea posible
-- Evita CSS personalizado a menos que sea absolutamente necesario
-
-#### Pull Requests
-
-- Describe claramente los cambios realizados
-- Incluye capturas de pantalla si hay cambios visuales
-- Referencia los issues relacionados si los hay
-- Mantén los PR pequeños y enfocados en una sola característica
-
-### Formas de contribuir
-
-- Todos los aportes son importantes
-- Codificación
-- Pruebas manuales o automatizadas
-- Traducciones, correcciones ortográficas
-
-### 🚫 Qué evitar
-
-- No hagas commit directamente a `main`
-- No uses `!important` en CSS
-- No dejes console.logs en el código
-- No añadas dependencias sin discutirlo primero
-- No modifiques la configuración del proyecto sin consenso
-- Evita ser grosero o imponerte en las discusiones
-
-### 👥 Proceso de Review
-
-1. Los PR necesitan al menos una aprobación
-2. Atiende los comentarios del review
+MIT — ver [LICENSE.md](LICENSE.md)
