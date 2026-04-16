@@ -132,7 +132,13 @@ const schedule = event.data.schedule;
 const isArraySchedule = Array.isArray(schedule);
 const isTrackSchedule =
   !isArraySchedule && "trackSessions" in (schedule as object);
-const hasSchedule = isArraySchedule ? (schedule as unknown[]).length > 0 : true;
+const hasSchedule = isArraySchedule
+  ? (schedule as unknown[]).length > 0
+  : isTrackSchedule
+    ? Object.keys(
+        (schedule as { trackSessions: Record<string, unknown[]> }).trackSessions
+      ).length > 0
+    : false;
 
 const whatsappGroupLink = event.data.whatsappGroupLink;
 const whatsappQrSvg = whatsappGroupLink
