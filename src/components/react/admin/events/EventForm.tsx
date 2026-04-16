@@ -376,12 +376,21 @@ export function EventForm() {
   function updateTrack(index: number, field: keyof TrackDef, value: string) {
     setForm((prev) => {
       const oldId = prev.tracks[index].id;
+      const updates: Partial<TrackDef> = { [field]: value };
+      if (field === "name") {
+        updates.id =
+          value
+            .toLowerCase()
+            .replace(/\s+/g, "-")
+            .replace(/[^a-z0-9-]/g, "") || `track-${index + 1}`;
+      }
       const newTracks = prev.tracks.map((t, i) =>
-        i === index ? { ...t, [field]: value } : t
+        i === index ? { ...t, ...updates } : t
       );
+      const newId = newTracks[index].id;
       const newSessions = { ...prev.track_sessions };
-      if (field === "id" && oldId !== value) {
-        newSessions[value] = newSessions[oldId] || [];
+      if (oldId !== newId) {
+        newSessions[newId] = newSessions[oldId] || [];
         delete newSessions[oldId];
       }
       return { ...prev, tracks: newTracks, track_sessions: newSessions };
@@ -1169,13 +1178,6 @@ export function EventForm() {
                 </h4>
                 {form.tracks.map((track, i) => (
                   <div key={i} className="mb-2 flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={track.id}
-                      onChange={(e) => updateTrack(i, "id", e.target.value)}
-                      placeholder="ID"
-                      className={`${inputClass} w-24`}
-                    />
                     <input
                       type="text"
                       value={track.name}
