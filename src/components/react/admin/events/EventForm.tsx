@@ -276,25 +276,71 @@ export function EventForm() {
     }));
   }
 
-  function applySpeakerToSession(
+  function addSpeakerToSession(
     trackId: string,
     index: number,
     speaker: Speaker | null
+  ) {
+    if (!speaker) return;
+    setForm((prev) => ({
+      ...prev,
+      track_sessions: {
+        ...prev.track_sessions,
+        [trackId]: (prev.track_sessions[trackId] || []).map((s, i) => {
+          if (i !== index) return s;
+          const names = s.name ? s.name.split(", ") : [];
+          if (names.includes(speaker.name)) return s;
+          names.push(speaker.name);
+          if (names.length === 1) {
+            return {
+              ...s,
+              name: speaker.name,
+              image: speaker.photo_url,
+              role: speaker.role,
+            };
+          }
+          return {
+            ...s,
+            name: names.join(", "),
+            image: "/gdg-logo.png",
+            role: "",
+          };
+        }),
+      },
+    }));
+  }
+
+  function removeSpeakerFromSession(
+    trackId: string,
+    index: number,
+    speakerName: string
   ) {
     setForm((prev) => ({
       ...prev,
       track_sessions: {
         ...prev.track_sessions,
-        [trackId]: (prev.track_sessions[trackId] || []).map((s, i) =>
-          i === index
-            ? {
-                ...s,
-                name: speaker?.name ?? "",
-                role: speaker?.role ?? "",
-                image: speaker?.photo_url ?? "",
-              }
-            : s
-        ),
+        [trackId]: (prev.track_sessions[trackId] || []).map((s, i) => {
+          if (i !== index) return s;
+          const names = s.name.split(", ").filter((n) => n !== speakerName);
+          if (names.length === 0) {
+            return { ...s, name: "", image: "", role: "" };
+          }
+          if (names.length === 1) {
+            const sp = availableSpeakers.find((x) => x.name === names[0]);
+            return {
+              ...s,
+              name: names[0],
+              image: sp?.photo_url ?? "",
+              role: sp?.role ?? "",
+            };
+          }
+          return {
+            ...s,
+            name: names.join(", "),
+            image: "/gdg-logo.png",
+            role: "",
+          };
+        }),
       },
     }));
   }
@@ -1303,39 +1349,63 @@ export function EventForm() {
                           className={inputClass}
                         />
                         <select
-                          value={findSpeakerByName(session.name)?.id ?? ""}
-                          onChange={(e) =>
-                            applySpeakerToSession(
+                          value=""
+                          onChange={(e) => {
+                            addSpeakerToSession(
                               track.id,
                               si,
                               availableSpeakers.find(
                                 (s) => s.id === e.target.value
                               ) ?? null
-                            )
-                          }
+                            );
+                          }}
                           className={inputClass}
                         >
-                          <option value="">-- Seleccionar speaker --</option>
-                          {availableSpeakers.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.name}
-                            </option>
-                          ))}
+                          <option value="">+ Agregar speaker</option>
+                          {availableSpeakers
+                            .filter(
+                              (s) => !session.name.split(", ").includes(s.name)
+                            )
+                            .map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.name}
+                              </option>
+                            ))}
                         </select>
                       </div>
                       {session.name && (
-                        <div className="mb-1 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                          <img
-                            src={toImagePath(session.image)}
-                            alt=""
-                            className="h-6 w-6 rounded-full bg-gray-200 object-cover"
-                          />
-                          <span>{session.name}</span>
-                          {session.role && (
-                            <span className="text-gray-400">
-                              · {session.role}
-                            </span>
-                          )}
+                        <div className="mb-1 flex flex-wrap gap-1.5">
+                          {session.name.split(", ").map((speakerName) => {
+                            const sp = availableSpeakers.find(
+                              (s) => s.name === speakerName
+                            );
+                            return (
+                              <span
+                                key={speakerName}
+                                className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 py-1 pr-2 pl-1 text-xs text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                              >
+                                <img
+                                  src={toImagePath(sp?.photo_url ?? "")}
+                                  alt=""
+                                  className="h-5 w-5 rounded-full bg-gray-200 object-cover"
+                                />
+                                {speakerName}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    removeSpeakerFromSession(
+                                      track.id,
+                                      si,
+                                      speakerName
+                                    )
+                                  }
+                                  className="ml-0.5 text-blue-600 hover:text-red-500 dark:text-blue-400"
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            );
+                          })}
                         </div>
                       )}
                       <div className="flex items-center justify-end">

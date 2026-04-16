@@ -182,12 +182,24 @@ const trackSessions = schedule.trackSessions;
                                 />
                               </div>
                               <div class="flex-grow">
-                                <p class="text-sm font-bold text-gray-900">
-                                  {session.name}
-                                </p>
-                                <p class="mt-0.5 line-clamp-1 text-xs text-gray-600">
-                                  {session.role}
-                                </p>
+                                {session.name.includes(", ") ? (
+                                  <div class="flex flex-col gap-0.5">
+                                    {session.name.split(", ").map((name) => (
+                                      <p class="text-sm font-bold text-gray-900">
+                                        {name}
+                                      </p>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <>
+                                    <p class="text-sm font-bold text-gray-900">
+                                      {session.name}
+                                    </p>
+                                    <p class="mt-0.5 line-clamp-1 text-xs text-gray-600">
+                                      {session.role}
+                                    </p>
+                                  </>
+                                )}
                               </div>
                             </div>
                           )}
