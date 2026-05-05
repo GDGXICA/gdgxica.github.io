@@ -71,6 +71,14 @@ interface RegisteredSponsor {
   sector: string;
 }
 
+interface Location {
+  id: string;
+  name: string;
+  address: string;
+  map_url: string;
+  map_embed: string;
+}
+
 interface EventData {
   id: string;
   title: string;
@@ -161,6 +169,8 @@ export function EventForm() {
   const [availableSponsors, setAvailableSponsors] = useState<
     RegisteredSponsor[]
   >([]);
+  const [availableLocations, setAvailableLocations] = useState<Location[]>([]);
+  const [savingLocation, setSavingLocation] = useState(false);
   const [scheduleMode, setScheduleMode] = useState<"simple" | "multitrack">(
     "simple"
   );
@@ -176,6 +186,11 @@ export function EventForm() {
     api.listSpeakers().then((res) => {
       if (res.success && res.data) {
         setAvailableSpeakers(res.data as Speaker[]);
+      }
+    });
+    api.listLocations().then((res) => {
+      if (res.success && res.data) {
+        setAvailableLocations(res.data as Location[]);
       }
     });
   }, []);
@@ -208,6 +223,47 @@ export function EventForm() {
 
   function updateField(field: keyof EventData, value: unknown) {
     setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function applyLocation(locationId: string) {
+    const loc = availableLocations.find((l) => l.id === locationId);
+    if (!loc) return;
+    setForm((prev) => ({
+      ...prev,
+      venue: loc.name,
+      venue_address: loc.address,
+      venue_map_url: loc.map_url,
+      venue_map_embed: loc.map_embed,
+    }));
+  }
+
+  async function handleSaveLocation() {
+    if (!form.venue) {
+      setToast({
+        message: "El nombre de la sede es obligatorio",
+        type: "error",
+      });
+      return;
+    }
+    setSavingLocation(true);
+    const res = await api.addLocation({
+      name: form.venue,
+      address: form.venue_address,
+      map_url: form.venue_map_url,
+      map_embed: form.venue_map_embed,
+    });
+    if (res.success) {
+      setToast({ message: "Ubicación guardada", type: "success" });
+      api.listLocations().then((r) => {
+        if (r.success && r.data) setAvailableLocations(r.data as Location[]);
+      });
+    } else {
+      setToast({
+        message: res.error || "Error al guardar ubicación",
+        type: "error",
+      });
+    }
+    setSavingLocation(false);
   }
 
   function addToList(
@@ -660,6 +716,24 @@ export function EventForm() {
                 className={inputClass}
               />
             </FormField>
+            {availableLocations.length > 0 && (
+              <div className="sm:col-span-2">
+                <FormField label="Cargar ubicación guardada">
+                  <select
+                    className={inputClass}
+                    value=""
+                    onChange={(e) => applyLocation(e.target.value)}
+                  >
+                    <option value="">Seleccionar ubicación guardada...</option>
+                    {availableLocations.map((loc) => (
+                      <option key={loc.id} value={loc.id}>
+                        {loc.name}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+              </div>
+            )}
             <FormField label="Sede">
               <input
                 type="text"
@@ -693,6 +767,18 @@ export function EventForm() {
                 className={inputClass}
               />
             </FormField>
+            <div className="flex justify-end sm:col-span-2">
+              <button
+                type="button"
+                onClick={handleSaveLocation}
+                disabled={savingLocation || !form.venue}
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                {savingLocation
+                  ? "Guardando..."
+                  : "Guardar como nueva ubicación"}
+              </button>
+            </div>
             <FormField label="URL imagen">
               <input
                 type="url"

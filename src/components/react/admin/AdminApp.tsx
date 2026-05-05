@@ -12,6 +12,7 @@ import { StatsEditor } from "./stats/StatsEditor";
 import { UserDirectory } from "./users/UserDirectory";
 import { FormRegistry } from "./forms/FormRegistry";
 import { FormViewer } from "./forms/FormViewer";
+import { LocationList } from "./locations/LocationList";
 
 interface Props {
   page: string;
@@ -89,6 +90,8 @@ function AdminContent({ page, currentPath }: Props) {
         return <FormRegistry />;
       case "form-viewer":
         return <FormViewer />;
+      case "ubicaciones":
+        return <LocationList />;
       default:
         return (
           <p className="text-gray-500 dark:text-gray-400">
@@ -124,6 +127,8 @@ function DevContent({ page, currentPath }: Props) {
         return <FormRegistry />;
       case "form-viewer":
         return <FormViewer />;
+      case "ubicaciones":
+        return <LocationList />;
       default:
         return (
           <p className="text-gray-500 dark:text-gray-400">

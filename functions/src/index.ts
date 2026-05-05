@@ -12,6 +12,7 @@ import {
   speakerSchema,
   sponsorSchema,
   teamMemberSchema,
+  locationSchema,
 } from "./schemas";
 import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
@@ -22,6 +23,7 @@ import * as stats from "./handlers/stats";
 import * as users from "./handlers/users";
 import * as forms from "./handlers/forms";
 import { triggerRebuild } from "./handlers/rebuild";
+import * as locations from "./handlers/locations";
 
 admin.initializeApp();
 
@@ -227,6 +229,31 @@ app.get(
   requireRole("organizer"),
   vid,
   forms.getFormResponses
+);
+
+// Locations
+app.get("/api/locations", requireRole("organizer"), locations.list);
+app.post(
+  "/api/locations",
+  requireRole("organizer"),
+  writeLimiter,
+  validateBody(locationSchema),
+  locations.create
+);
+app.put(
+  "/api/locations/:id",
+  requireRole("organizer"),
+  vid,
+  writeLimiter,
+  validateBody(locationSchema),
+  locations.update
+);
+app.delete(
+  "/api/locations/:id",
+  requireRole("admin"),
+  vid,
+  writeLimiter,
+  locations.remove
 );
 
 // Rebuild

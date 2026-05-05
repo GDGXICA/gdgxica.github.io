@@ -144,3 +144,15 @@ export const MOCK_FORM_RESPONSES = {
     ["Ana Torres", "ana@example.com", "Meta", "ML Engineer", "+51 777777"],
   ],
 };
+
+export const MOCK_LOCATIONS = [
+  {
+    id: "loc-utp-ica",
+    name: "Universidad Tecnológica Del Perú (UTP) - Sede Ica",
+    address: "Av. Ayabaca S/N, Ica 11001",
+    map_url: "https://www.google.com/maps/place/UTP+Ica",
+    map_embed: "",
+    createdAt: { _seconds: Math.floor(Date.now() / 1000) },
+    createdBy: "dev-admin",
+  },
+];

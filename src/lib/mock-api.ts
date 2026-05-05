@@ -7,6 +7,7 @@ import {
   MOCK_USERS,
   MOCK_FORMS,
   MOCK_FORM_RESPONSES,
+  MOCK_LOCATIONS,
 } from "./mock-data";
 
 function ok<T>(data: T) {
@@ -49,6 +50,11 @@ export const mockApi = {
   updateForm: () => ok({ id: "updated" }),
   deleteForm: () => ok(null),
   getFormResponses: () => ok(MOCK_FORM_RESPONSES),
+
+  listLocations: () => ok(MOCK_LOCATIONS),
+  addLocation: () => ok({ id: "new-location" }),
+  updateLocation: () => ok({ id: "updated" }),
+  deleteLocation: () => ok(null),
 
   triggerRebuild: () => ok(null),
 };
