@@ -86,6 +86,13 @@ const realApi = {
   deleteForm: (id: string) => request("DELETE", `/forms/${id}`),
   getFormResponses: (id: string) => request("GET", `/forms/${id}/responses`),
 
+  // Locations
+  listLocations: () => request("GET", "/locations"),
+  addLocation: (data: unknown) => request("POST", "/locations", data),
+  updateLocation: (id: string, data: unknown) =>
+    request("PUT", `/locations/${id}`, data),
+  deleteLocation: (id: string) => request("DELETE", `/locations/${id}`),
+
   // Rebuild
   triggerRebuild: () => request("POST", "/rebuild"),
 };

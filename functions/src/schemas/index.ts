@@ -130,3 +130,12 @@ export const teamMemberSchema = z
     responsibilities: z.array(shortText(500)).max(50).optional(),
   })
   .strict();
+
+export const locationSchema = z
+  .object({
+    name: shortText(500).min(1),
+    address: shortText(1000).default(""),
+    map_url: shortText(2000).default(""),
+    map_embed: shortText(2000).default(""),
+  })
+  .strict();

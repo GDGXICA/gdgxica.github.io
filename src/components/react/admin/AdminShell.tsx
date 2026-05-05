@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { label: "Eventos", href: "/admin/eventos", icon: "📅" },
   { label: "Equipo", href: "/admin/equipo", icon: "👥", adminOnly: true },
   { label: "Speakers", href: "/admin/speakers", icon: "🎤" },
+  { label: "Ubicaciones", href: "/admin/ubicaciones", icon: "📍" },
   { label: "Sponsors", href: "/admin/sponsors", icon: "🤝", adminOnly: true },
   { label: "Usuarios", href: "/admin/usuarios", icon: "👤", adminOnly: true },
   { label: "Stats", href: "/admin/stats", icon: "📈", adminOnly: true },
