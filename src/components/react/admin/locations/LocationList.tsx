@@ -32,13 +32,15 @@ export function LocationList() {
   } | null>(null);
   const [editing, setEditing] = useState<Location | null>(null);
   const [creating, setCreating] = useState(false);
+  const [creatingForm, setCreatingForm] = useState<LocationForm>({
+    ...EMPTY_LOCATION,
+  });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  const form: LocationForm | null =
-    editing || (creating ? { ...EMPTY_LOCATION } : null);
+  const form: LocationForm | null = editing || (creating ? creatingForm : null);
 
   useEffect(() => {
     loadLocations();
@@ -93,6 +95,7 @@ export function LocationList() {
       });
       setEditing(null);
       setCreating(false);
+      setCreatingForm({ ...EMPTY_LOCATION });
       loadLocations();
     } else {
       setToast({ message: res.error || "Error", type: "error" });
@@ -115,6 +118,7 @@ export function LocationList() {
 
   function updateForm(field: keyof LocationForm, value: string) {
     if (editing) setEditing({ ...editing, [field]: value });
+    else if (creating) setCreatingForm((prev) => ({ ...prev, [field]: value }));
   }
 
   if (loading) {
@@ -143,6 +147,7 @@ export function LocationList() {
           onClick={() => {
             setEditing(null);
             setCreating(false);
+            setCreatingForm({ ...EMPTY_LOCATION });
           }}
           className="mb-4 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
         >
@@ -252,6 +257,7 @@ export function LocationList() {
         </div>
         <button
           onClick={() => {
+            setCreatingForm({ ...EMPTY_LOCATION });
             setCreating(true);
             setEditing(null);
           }}
