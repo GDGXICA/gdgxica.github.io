@@ -25,6 +25,7 @@ import {
   Store,
 } from "@lucide/astro";
 import SharedButton from "@/components/react/SharedButton";
+import { MiniGamesRoot } from "@/components/react/event/MiniGamesRoot";
 import { parseSpanishDate } from "@/utils/parseSpanishDate";
 
 export async function getStaticPaths() {
@@ -542,4 +543,15 @@ const whatsappQrSvg = whatsappGroupLink
       </div>
     </div>
   </section>
+
+  {
+    (event.data.status?.type === "in-progress" ||
+      event.data.status?.type === "upcoming") && (
+      <MiniGamesRoot
+        client:idle
+        slug={event.id}
+        eventStatus={event.data.status?.type}
+      />
+    )
+  }
 </Layout>

@@ -16,6 +16,7 @@ import {
   minigameTemplateSchema,
   minigameInstanceCreateSchema,
   minigameStateSchema,
+  minigameJoinSchema,
 } from "./schemas";
 import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
@@ -29,6 +30,7 @@ import { triggerRebuild } from "./handlers/rebuild";
 import * as locations from "./handlers/locations";
 import * as minigameTemplates from "./handlers/minigameTemplates";
 import * as minigameInstances from "./handlers/minigameInstances";
+import * as minigameJoin from "./handlers/minigameJoin";
 
 admin.initializeApp();
 
@@ -88,6 +90,21 @@ const writeLimiter = rateLimit({
   message: {
     success: false,
     error: "Too many write requests, slow down",
+  },
+});
+
+// Public participant /join endpoint runs on Firebase anon tokens, which
+// any client can mint without cost — UID-based limiting is therefore
+// bypassable. We pin this limiter to the IP only.
+const joinLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip ?? "unknown")}`,
+  message: {
+    success: false,
+    error: "Demasiados intentos, espera un momento",
   },
 });
 
@@ -330,6 +347,16 @@ app.delete(
   vid,
   writeLimiter,
   minigameInstances.remove
+);
+
+// Public participant join — accepts any Firebase token (incl. anon).
+app.post(
+  "/api/events/:slug/minigames/join",
+  requireAuth(),
+  slugP,
+  joinLimiter,
+  validateBody(minigameJoinSchema),
+  minigameJoin.join
 );
 
 // Rebuild
