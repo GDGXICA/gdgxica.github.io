@@ -56,5 +56,10 @@ export const mockApi = {
   updateLocation: () => ok({ id: "updated" }),
   deleteLocation: () => ok(null),
 
+  listMinigameTemplates: () => ok([]),
+  addMinigameTemplate: () => ok({ id: "new-template" }),
+  updateMinigameTemplate: () => ok({ id: "updated", version: 2 }),
+  deleteMinigameTemplate: () => ok(null),
+
   triggerRebuild: () => ok(null),
 };
