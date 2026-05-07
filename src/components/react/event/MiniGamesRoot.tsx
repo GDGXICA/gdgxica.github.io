@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { signInAnonymouslyIfNeeded } from "@/lib/firebase";
+import type { PollConfig, QuizConfig } from "../admin/minigame-templates/types";
 import { BingoCardView } from "./BingoCardView";
 import { JoinModal } from "./JoinModal";
+import { PollOverlay } from "./PollOverlay";
+import { QuizOverlay } from "./QuizOverlay";
 import { useLiveMinigames } from "./useLiveMinigames";
 import { WordCloudView } from "./WordCloudView";
 import { LOCAL_STORAGE_ALIAS_KEY, type LiveInstance } from "./types";
@@ -128,12 +131,22 @@ export function MiniGamesRoot({ slug }: Props) {
   );
 
   // Global games (wordcloud + bingo) play inline once the participant is
-  // joined. PR6 will add overlays for the realtime modes (poll + quiz),
-  // which are intentionally ignored here.
+  // joined. Realtime games (poll + quiz) render in a fixed overlay above
+  // the page so they grab attention as soon as the admin activates them.
   const globalLive = useMemo(
     () =>
       (liveInstances as LiveInstance[]).filter(
         (inst) => inst.mode === "global"
+      ),
+    [liveInstances]
+  );
+
+  const realtimeLive = useMemo(
+    () =>
+      (liveInstances as LiveInstance[]).filter(
+        // Skip realtime instances whose snapshotted config is missing —
+        // we'd render an empty overlay otherwise.
+        (inst) => inst.mode === "realtime" && inst.config !== undefined
       ),
     [liveInstances]
   );
@@ -203,6 +216,55 @@ export function MiniGamesRoot({ slug }: Props) {
             ))}
           </div>
         </section>
+      )}
+
+      {step === "joined" && uid && realtimeLive.length > 0 && (
+        <div
+          className="fixed inset-0 z-40 overflow-y-auto bg-black/70 p-4"
+          role="dialog"
+          aria-label="Juegos en tiempo real"
+        >
+          <div className="container my-8 space-y-6">
+            {realtimeLive.map((inst) => (
+              <div
+                key={inst.id}
+                className="rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-800"
+              >
+                {inst.type === "poll" && inst.config && (
+                  <PollOverlay
+                    slug={slug}
+                    instanceId={inst.id}
+                    uid={uid}
+                    alias={alias ?? "Anónimo"}
+                    title={inst.title}
+                    config={inst.config as unknown as PollConfig}
+                  />
+                )}
+                {inst.type === "quiz" && inst.config && (
+                  <QuizOverlay
+                    slug={slug}
+                    instanceId={inst.id}
+                    uid={uid}
+                    alias={alias ?? "Anónimo"}
+                    title={inst.title}
+                    config={inst.config as unknown as QuizConfig}
+                    currentQuestionIndex={inst.currentQuestionIndex ?? -1}
+                    currentQuestionStartedAt={
+                      (
+                        inst as unknown as {
+                          currentQuestionStartedAt?: {
+                            seconds: number;
+                            nanoseconds?: number;
+                          } | null;
+                        }
+                      ).currentQuestionStartedAt ?? null
+                    }
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </>
   );

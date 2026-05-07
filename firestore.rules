@@ -38,12 +38,15 @@ service cloud.firestore {
         match /participants/{participantUid} {
           allow read: if true;
           allow create: if false;
-          // Self-update limited to bingo marking. We use diff().affectedKeys()
-          // .hasOnly so the client cannot rewrite alias/joinedAt/bingoCard.
+          // Self-update limited to gameplay state. We use
+          // diff().affectedKeys().hasOnly so the client cannot rewrite
+          // alias/joinedAt/bingoCard. Bingo marking, bingo wins and
+          // quiz answer/score state share this rule.
           allow update: if request.auth != null
                         && request.auth.uid == participantUid
                         && request.resource.data.diff(resource.data).affectedKeys()
-                           .hasOnly(['bingoMarked', 'bingoWonAt'])
+                           .hasOnly(['bingoMarked', 'bingoWonAt',
+                                     'quizScore', 'quizAnsweredQuestions'])
                         && (!('bingoMarked' in request.resource.data)
                             || (request.resource.data.bingoMarked is list
                                 && request.resource.data.bingoMarked.size() == 16));
@@ -51,7 +54,20 @@ service cloud.firestore {
         }
         match /responses/{responseId} {
           allow read: if true;
-          allow write: if false;
+          // Realtime games (poll + quiz). Doc id is deterministic
+          // `${uid}_${questionId}` so 1 response per (user, question) is
+          // enforced at the rule level. Parent must be live + type
+          // poll|quiz, and the participant must already exist.
+          allow create: if request.auth != null
+                        && request.auth.uid == request.resource.data.uid
+                        && responseId == request.auth.uid + '_' + request.resource.data.questionId
+                        && get(/databases/$(database)/documents/events/$(eventSlug)/minigames/$(instanceId)).data.state == 'live'
+                        && (
+                             get(/databases/$(database)/documents/events/$(eventSlug)/minigames/$(instanceId)).data.type == 'poll'
+                             || get(/databases/$(database)/documents/events/$(eventSlug)/minigames/$(instanceId)).data.type == 'quiz'
+                           )
+                        && exists(/databases/$(database)/documents/events/$(eventSlug)/minigames/$(instanceId)/participants/$(request.auth.uid));
+          allow update, delete: if false;
         }
         match /words/{wordId} {
           allow read: if true;
