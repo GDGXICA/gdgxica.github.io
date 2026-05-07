@@ -224,3 +224,23 @@ export const minigameTemplateSchema = z.discriminatedUnion("type", [
 
 export type MinigameTemplate = z.infer<typeof minigameTemplateSchema>;
 export type MinigameTemplateType = MinigameTemplate["type"];
+
+// Mini-game instances (template attached to an event) ---------------------
+//
+// Two narrow body schemas, one per write endpoint. The instance document
+// itself stores the snapshotted template config (built server-side at
+// attach time) plus runtime fields managed by the Cloud Function — those
+// are not part of any client write payload.
+
+export const minigameInstanceCreateSchema = z
+  .object({
+    templateId: shortText(100).min(1),
+    order: z.number().int().min(0).max(1000).default(0),
+  })
+  .strict();
+
+export const minigameStateSchema = z
+  .object({
+    state: z.enum(["scheduled", "live", "closed"]),
+  })
+  .strict();

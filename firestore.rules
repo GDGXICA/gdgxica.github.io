@@ -22,6 +22,38 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Per-event mini-game instances and their subcollections.
+    // Reads are public so participants can subscribe in PR4-PR6 without
+    // authenticating. All writes are denied here in PR3 — Cloud Functions
+    // do every mutation via the Admin SDK. PR4 (participants), PR5 (words),
+    // PR6 (responses) will progressively open specific writes.
+    match /events/{eventSlug} {
+      allow read: if true;
+      allow write: if false;
+
+      match /minigames/{instanceId} {
+        allow read: if true;
+        allow write: if false;
+
+        match /participants/{participantUid} {
+          allow read: if true;
+          allow write: if false;
+        }
+        match /responses/{responseId} {
+          allow read: if true;
+          allow write: if false;
+        }
+        match /words/{wordId} {
+          allow read: if true;
+          allow write: if false;
+        }
+        match /aggregates/{docId} {
+          allow read: if true;
+          allow write: if false;
+        }
+      }
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
