@@ -244,3 +244,11 @@ export const minigameStateSchema = z
     state: z.enum(["scheduled", "live", "closed"]),
   })
   .strict();
+
+// Public participant join body. Tight validation here keeps the join
+// handler focused on idempotency and bingo card seeding.
+export const minigameJoinSchema = z
+  .object({
+    alias: z.string().trim().min(1).max(24),
+  })
+  .strict();

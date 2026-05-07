@@ -31,3 +31,14 @@ export async function getFirestore() {
   );
   return firebaseGetFirestore(app);
 }
+
+// Used by the public event island in PR4. No-ops when there is already
+// a signed-in user (e.g. an admin opening the participant page in the
+// same browser as their Google session) so we never clobber that.
+export async function signInAnonymouslyIfNeeded() {
+  const auth = await getAuth();
+  if (auth.currentUser) return auth.currentUser;
+  const { signInAnonymously } = await import("firebase/auth");
+  const result = await signInAnonymously(auth);
+  return result.user;
+}

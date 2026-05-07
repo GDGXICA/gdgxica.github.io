@@ -69,5 +69,8 @@ export const mockApi = {
     ok({ id, currentQuestionIndex: 0 }),
   removeMinigameFromEvent: () => ok(null),
 
+  joinEventMinigames: (_slug: string, data: { alias: string }) =>
+    ok({ alias: data.alias, instances: [] }),
+
   triggerRebuild: () => ok(null),
 };

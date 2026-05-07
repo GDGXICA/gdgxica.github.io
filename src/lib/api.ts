@@ -121,6 +121,18 @@ const realApi = {
   removeMinigameFromEvent: (slug: string, id: string) =>
     request("DELETE", `/events/${encodeURIComponent(slug)}/minigames/${id}`),
 
+  // Public participant join (anon-friendly)
+  joinEventMinigames: (slug: string, data: { alias: string }) =>
+    request<{
+      alias: string;
+      instances: {
+        id: string;
+        type: string;
+        joined: boolean;
+        bingoCard?: string[];
+      }[];
+    }>("POST", `/events/${encodeURIComponent(slug)}/minigames/join`, data),
+
   // Rebuild
   triggerRebuild: () => request("POST", "/rebuild"),
 };
