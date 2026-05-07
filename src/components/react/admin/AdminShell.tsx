@@ -11,6 +11,12 @@ const NAV_ITEMS = [
   { label: "Usuarios", href: "/admin/usuarios", icon: "👤", adminOnly: true },
   { label: "Stats", href: "/admin/stats", icon: "📈", adminOnly: true },
   { label: "Formularios", href: "/admin/forms", icon: "📋" },
+  {
+    label: "Minijuegos",
+    href: "/admin/minigame-templates",
+    icon: "🎮",
+    adminOnly: true,
+  },
 ];
 
 interface Props {

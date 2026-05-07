@@ -13,6 +13,7 @@ import {
   sponsorSchema,
   teamMemberSchema,
   locationSchema,
+  minigameTemplateSchema,
 } from "./schemas";
 import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
@@ -24,6 +25,7 @@ import * as users from "./handlers/users";
 import * as forms from "./handlers/forms";
 import { triggerRebuild } from "./handlers/rebuild";
 import * as locations from "./handlers/locations";
+import * as minigameTemplates from "./handlers/minigameTemplates";
 
 admin.initializeApp();
 
@@ -254,6 +256,35 @@ app.delete(
   vid,
   writeLimiter,
   locations.remove
+);
+
+// Minigame Templates (admin-only — full CRUD)
+app.get(
+  "/api/minigame-templates",
+  requireRole("admin"),
+  minigameTemplates.list
+);
+app.post(
+  "/api/minigame-templates",
+  requireRole("admin"),
+  writeLimiter,
+  validateBody(minigameTemplateSchema),
+  minigameTemplates.create
+);
+app.put(
+  "/api/minigame-templates/:id",
+  requireRole("admin"),
+  vid,
+  writeLimiter,
+  validateBody(minigameTemplateSchema),
+  minigameTemplates.update
+);
+app.delete(
+  "/api/minigame-templates/:id",
+  requireRole("admin"),
+  vid,
+  writeLimiter,
+  minigameTemplates.remove
 );
 
 // Rebuild

@@ -93,6 +93,15 @@ const realApi = {
     request("PUT", `/locations/${id}`, data),
   deleteLocation: (id: string) => request("DELETE", `/locations/${id}`),
 
+  // Minigame Templates (admin-only on the server)
+  listMinigameTemplates: () => request("GET", "/minigame-templates"),
+  addMinigameTemplate: (data: unknown) =>
+    request("POST", "/minigame-templates", data),
+  updateMinigameTemplate: (id: string, data: unknown) =>
+    request("PUT", `/minigame-templates/${id}`, data),
+  deleteMinigameTemplate: (id: string) =>
+    request("DELETE", `/minigame-templates/${id}`),
+
   // Rebuild
   triggerRebuild: () => request("POST", "/rebuild"),
 };

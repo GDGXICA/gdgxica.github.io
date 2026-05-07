@@ -17,6 +17,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /minigame_templates/{templateId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

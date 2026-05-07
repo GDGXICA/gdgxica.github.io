@@ -139,3 +139,88 @@ export const locationSchema = z
     map_embed: shortText(2000).default(""),
   })
   .strict();
+
+// Mini-game templates ------------------------------------------------------
+//
+// Each template is one of four discriminated types. The schema is the
+// authoritative shape both for create and update — admins always send the
+// full document. Validation is `.strict()` everywhere so unknown fields are
+// rejected and cannot land in Firestore.
+
+const optionItemSchema = z
+  .object({
+    id: shortText(100),
+    label: shortText(500).min(1),
+  })
+  .strict();
+
+const quizQuestionSchema = z
+  .object({
+    id: shortText(100),
+    prompt: shortText(1000).min(1),
+    options: z.array(optionItemSchema).min(2).max(6),
+    correctOptionId: shortText(100),
+    timeLimitSec: z.number().int().min(5).max(300).default(30),
+    points: z.number().int().min(0).max(10000).default(100),
+  })
+  .strict();
+
+const baseTemplate = {
+  title: shortText(500).min(1),
+  description: longText(5000).default(""),
+};
+
+export const minigameTemplateSchema = z.discriminatedUnion("type", [
+  z
+    .object({
+      type: z.literal("poll"),
+      ...baseTemplate,
+      poll: z
+        .object({
+          question: shortText(1000).min(1),
+          options: z.array(optionItemSchema).min(2).max(6),
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("quiz"),
+      ...baseTemplate,
+      quiz: z
+        .object({
+          questions: z.array(quizQuestionSchema).min(1).max(50),
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("wordcloud"),
+      ...baseTemplate,
+      wordcloud: z
+        .object({
+          prompt: shortText(500).min(1),
+          maxWordsPerUser: z.number().int().min(1).max(10).default(3),
+          maxLength: z.number().int().min(5).max(120).default(60),
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("bingo"),
+      ...baseTemplate,
+      bingo: z
+        .object({
+          terms: z.array(shortText(120).min(1)).min(16).max(200),
+          cardSize: z.literal(4).default(4),
+          freeCenter: z.boolean().default(false),
+        })
+        .strict(),
+    })
+    .strict(),
+]);
+
+export type MinigameTemplate = z.infer<typeof minigameTemplateSchema>;
+export type MinigameTemplateType = MinigameTemplate["type"];
