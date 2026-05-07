@@ -61,5 +61,13 @@ export const mockApi = {
   updateMinigameTemplate: () => ok({ id: "updated", version: 2 }),
   deleteMinigameTemplate: () => ok(null),
 
+  listEventMinigames: () => ok([]),
+  attachMinigameToEvent: () => ok({ id: "new-instance", type: "poll" }),
+  setMinigameState: (_slug: string, id: string, state: string) =>
+    ok({ id, state }),
+  advanceQuizQuestion: (_slug: string, id: string) =>
+    ok({ id, currentQuestionIndex: 0 }),
+  removeMinigameFromEvent: () => ok(null),
+
   triggerRebuild: () => ok(null),
 };

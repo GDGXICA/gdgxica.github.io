@@ -14,6 +14,7 @@ import { FormRegistry } from "./forms/FormRegistry";
 import { FormViewer } from "./forms/FormViewer";
 import { LocationList } from "./locations/LocationList";
 import { MinigameTemplateList } from "./minigame-templates/MinigameTemplateList";
+import { EventMinigameManager } from "./event-minigames/EventMinigameManager";
 
 interface Props {
   page: string;
@@ -95,6 +96,8 @@ function AdminContent({ page, currentPath }: Props) {
         return <LocationList />;
       case "minigame-templates":
         return <MinigameTemplateList />;
+      case "event-minigames":
+        return <EventMinigameManager />;
       default:
         return (
           <p className="text-gray-500 dark:text-gray-400">
@@ -134,6 +137,8 @@ function DevContent({ page, currentPath }: Props) {
         return <LocationList />;
       case "minigame-templates":
         return <MinigameTemplateList />;
+      case "event-minigames":
+        return <EventMinigameManager />;
       default:
         return (
           <p className="text-gray-500 dark:text-gray-400">

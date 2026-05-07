@@ -14,6 +14,8 @@ import {
   teamMemberSchema,
   locationSchema,
   minigameTemplateSchema,
+  minigameInstanceCreateSchema,
+  minigameStateSchema,
 } from "./schemas";
 import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
@@ -26,6 +28,7 @@ import * as forms from "./handlers/forms";
 import { triggerRebuild } from "./handlers/rebuild";
 import * as locations from "./handlers/locations";
 import * as minigameTemplates from "./handlers/minigameTemplates";
+import * as minigameInstances from "./handlers/minigameInstances";
 
 admin.initializeApp();
 
@@ -287,6 +290,48 @@ app.delete(
   minigameTemplates.remove
 );
 
+// Minigame Instances (admin-only — attach templates to events)
+const slugP = validateParamId("slug");
+app.get(
+  "/api/events/:slug/minigames",
+  requireRole("admin"),
+  slugP,
+  minigameInstances.list
+);
+app.post(
+  "/api/events/:slug/minigames",
+  requireRole("admin"),
+  slugP,
+  writeLimiter,
+  validateBody(minigameInstanceCreateSchema),
+  minigameInstances.attach
+);
+app.patch(
+  "/api/events/:slug/minigames/:id/state",
+  requireRole("admin"),
+  slugP,
+  vid,
+  writeLimiter,
+  validateBody(minigameStateSchema),
+  minigameInstances.setState
+);
+app.post(
+  "/api/events/:slug/minigames/:id/quiz/advance",
+  requireRole("admin"),
+  slugP,
+  vid,
+  writeLimiter,
+  minigameInstances.quizAdvance
+);
+app.delete(
+  "/api/events/:slug/minigames/:id",
+  requireRole("admin"),
+  slugP,
+  vid,
+  writeLimiter,
+  minigameInstances.remove
+);
+
 // Rebuild
 app.post("/api/rebuild", requireRole("admin"), writeLimiter, triggerRebuild);
 
@@ -294,3 +339,7 @@ export const api = onRequest(
   { secrets: [GITHUB_TOKEN], invoker: "public" },
   app
 );
+
+// Firestore trigger: incrementally maintains aggregates/current per
+// minigame instance whenever a participant response is created.
+export { onMinigameResponseWritten } from "./triggers/recomputeAggregates";

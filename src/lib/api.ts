@@ -102,6 +102,25 @@ const realApi = {
   deleteMinigameTemplate: (id: string) =>
     request("DELETE", `/minigame-templates/${id}`),
 
+  // Minigame Instances (per event, admin-only)
+  listEventMinigames: (slug: string) =>
+    request("GET", `/events/${encodeURIComponent(slug)}/minigames`),
+  attachMinigameToEvent: (slug: string, data: unknown) =>
+    request("POST", `/events/${encodeURIComponent(slug)}/minigames`, data),
+  setMinigameState: (slug: string, id: string, state: string) =>
+    request(
+      "PATCH",
+      `/events/${encodeURIComponent(slug)}/minigames/${id}/state`,
+      { state }
+    ),
+  advanceQuizQuestion: (slug: string, id: string) =>
+    request(
+      "POST",
+      `/events/${encodeURIComponent(slug)}/minigames/${id}/quiz/advance`
+    ),
+  removeMinigameFromEvent: (slug: string, id: string) =>
+    request("DELETE", `/events/${encodeURIComponent(slug)}/minigames/${id}`),
+
   // Rebuild
   triggerRebuild: () => request("POST", "/rebuild"),
 };

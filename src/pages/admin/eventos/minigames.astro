@@ -1,0 +1,12 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { AdminApp } from "@/components/react/admin/AdminApp";
+---
+
+<AdminLayout title="Mini-juegos del evento">
+  <AdminApp
+    client:load
+    page="event-minigames"
+    currentPath="/admin/eventos/minigames"
+  />
+</AdminLayout>
