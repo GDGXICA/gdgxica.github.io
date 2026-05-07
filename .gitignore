@@ -32,6 +32,9 @@ pnpm-debug.log*
 # Firebase cache
 .firebase/
 firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+auth-debug.log*
 
 # Cloud Functions build output
 functions/lib/
