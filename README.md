@@ -58,6 +58,42 @@ El servidor de desarrollo corre en `http://localhost:4321`.
 | `pnpm lint`    | Ejecutar ESLint                            |
 | `pnpm format`  | Formatear con Prettier                     |
 
+## Mini-juegos en eventos
+
+Esta sección guía al equipo organizador para correr mini-juegos en vivo durante un evento (encuestas, quiz, nube de palabras, bingo).
+
+### Pre-evento
+
+1. **Plantillas** — desde `/admin/minigame-templates` crea las plantillas que vas a usar (poll, quiz, wordcloud, bingo). Las plantillas son reutilizables entre eventos.
+2. **Adjuntar al evento** — desde `/admin/eventos`, haz click en "🎮 Mini-juegos" en la fila del evento para abrir `/admin/eventos/minigames?slug=<id>`. Adjunta cada plantilla que vayas a usar.
+3. **Anonymous Authentication** — confirma que está habilitado en Firebase Console (Authentication → Sign-in method → Anonymous). Sin esto los participantes no se pueden unir en producción. El emulador local lo activa solo.
+4. **Smoke test** — abre `https://gdgica.com/eventos/<slug>?play=1` en una pestaña incognito antes del evento y verifica que aparezca el modal de unión.
+
+### Durante el evento
+
+1. **Conecta el proyector** — desde el panel admin del evento, click en "📺 Abrir proyector". Se abre `/eventos/<slug>/proyector` en una nueva pestaña; muévela a la pantalla del venue.
+2. **Activa los juegos globales** (bingo + wordcloud) al inicio. Están pensados para correr durante todo el evento.
+3. **Activa polls / quizzes** en momentos puntuales:
+   - Click "▶ Iniciar" en la card del juego cuando quieras lanzarlo.
+   - Para quiz, "⏭ Avanzar pregunta" controla el timer y la siguiente pregunta.
+   - Click "⏹ Cerrar" cuando termine.
+4. **Comparte la URL de unión** — el botón "📋 Copiar URL de unión" copia `https://gdgica.com/eventos/<slug>?play=1` al portapapeles; pégalo en el WhatsApp del evento o cualquier canal.
+5. **Modera el wordcloud** — el botón "Ver moderación" en cada card de wordcloud abre un panel donde admin oculta palabras inapropiadas. Los cambios se reflejan en el proyector y en los celulares en <1s.
+6. **Quiz en vivo** — la pantalla del proyector muestra timer, opciones, y leaderboard top-10. Los participantes ven lo mismo en sus celulares.
+
+### Post-evento
+
+1. **Cierra los juegos** (state=closed) desde el panel admin para detener escrituras.
+2. **Premia a los ganadores** — botón "Ver ganadores" en la card de bingo lista los participantes con `bingoWonAt` ordenados por timestamp.
+3. Los datos quedan en Firestore para análisis posterior — no es necesario borrar nada.
+
+### Solución de problemas comunes
+
+- **El modal no aparece para los participantes**: verifica que el juego esté en `live` y que Anonymous Authentication esté habilitado en Firebase Console.
+- **El QR del proyector apunta al dominio incorrecto**: el QR se genera al build con `https://gdgica.com`. Re-deployar después de cambios de dominio.
+- **"Demasiados intentos"** al unirse: el rate limiter por IP es 10/min. Para eventos grandes en una misma red WiFi, ajusta `joinLimiter` en `functions/src/index.ts`.
+- **Borrar una plantilla adjuntada**: solo se puede borrar una instancia en `state=scheduled`. Cierra el juego primero (`live` → `closed`) y luego archívalo visualmente; los datos históricos quedan.
+
 ## Estructura del proyecto
 
 ```plaintext

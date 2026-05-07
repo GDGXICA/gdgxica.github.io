@@ -54,6 +54,27 @@ export function EventMinigameManager({ initialSlug }: Props) {
     [instances]
   );
 
+  function buildJoinUrl(): string | null {
+    if (!slug) return null;
+    return `https://gdgica.com/eventos/${encodeURIComponent(slug)}?play=1`;
+  }
+
+  function openProjector() {
+    if (!slug || typeof window === "undefined") return;
+    window.open(`/eventos/${encodeURIComponent(slug)}/proyector`, "_blank");
+  }
+
+  async function copyJoinUrl() {
+    const url = buildJoinUrl();
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setToast({ message: "URL copiada al portapapeles", type: "success" });
+    } catch {
+      setToast({ message: "No se pudo copiar la URL", type: "error" });
+    }
+  }
+
   async function handleSetState(id: string, state: InstanceState) {
     if (!slug) return;
     setBusyId(id);
@@ -129,13 +150,29 @@ export function EventMinigameManager({ initialSlug }: Props) {
             Mini-juegos · <span className="font-mono">{slug}</span>
           </h1>
         </div>
-        <button
-          type="button"
-          onClick={() => setAttaching(true)}
-          className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          + Adjuntar plantilla
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={openProjector}
+            className="rounded-lg border border-purple-500 px-3 py-2 text-sm font-medium text-purple-700 hover:bg-purple-50 dark:border-purple-400 dark:text-purple-300 dark:hover:bg-purple-900/20"
+          >
+            📺 Abrir proyector
+          </button>
+          <button
+            type="button"
+            onClick={copyJoinUrl}
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            📋 Copiar URL de unión
+          </button>
+          <button
+            type="button"
+            onClick={() => setAttaching(true)}
+            className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            + Adjuntar plantilla
+          </button>
+        </div>
       </div>
 
       {loading && (
