@@ -1,0 +1,39 @@
+---
+import { getCollection } from "astro:content";
+import QRCode from "qrcode";
+import ProjectorLayout from "@/layouts/ProjectorLayout.astro";
+import { ProjectorView } from "@/components/react/event/ProjectorView";
+
+export async function getStaticPaths() {
+  const events = await getCollection("events");
+  return events.map((event) => ({
+    params: { slug: event.id },
+    props: { event },
+  }));
+}
+
+const { slug } = Astro.params;
+const { event } = Astro.props;
+const joinUrl = `https://gdgica.com/eventos/${slug}?play=1`;
+
+// QR is rendered server-side at build time so the projector page
+// works the moment it's served — even before the React island
+// hydrates. White-on-black so the SVG is legible against the dark
+// projector backdrop without inverting it client-side.
+const qrSvg = await QRCode.toString(joinUrl, {
+  type: "svg",
+  errorCorrectionLevel: "H",
+  margin: 1,
+  color: { dark: "#ffffff", light: "#000000" },
+});
+---
+
+<ProjectorLayout title={`Proyector · ${event.data.name}`}>
+  <ProjectorView
+    client:load
+    slug={slug!}
+    eventName={event.data.name}
+    joinUrl={joinUrl}
+    qrSvg={qrSvg}
+  />
+</ProjectorLayout>

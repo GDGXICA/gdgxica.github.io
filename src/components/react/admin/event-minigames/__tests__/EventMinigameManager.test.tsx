@@ -137,4 +137,29 @@ describe("EventMinigameManager", () => {
       })
     );
   });
+
+  it("opens the projector view in a new tab", async () => {
+    const user = userEvent.setup();
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    render(<EventMinigameManager initialSlug="devfest-2025" />);
+    await screen.findByText("First poll");
+    await user.click(screen.getByRole("button", { name: /Abrir proyector/i }));
+    expect(openSpy).toHaveBeenCalledWith(
+      "/eventos/devfest-2025/proyector",
+      "_blank"
+    );
+    openSpy.mockRestore();
+  });
+
+  it("copies the join URL to the clipboard", async () => {
+    // userEvent.setup() installs an in-memory Clipboard, so we can read
+    // back what the handler wrote without touching the real navigator.
+    const user = userEvent.setup();
+    render(<EventMinigameManager initialSlug="devfest-2025" />);
+    await screen.findByText("First poll");
+    await user.click(screen.getByRole("button", { name: /Copiar URL/i }));
+    expect(await screen.findByText(/URL copiada/i)).toBeInTheDocument();
+    const written = await navigator.clipboard.readText();
+    expect(written).toBe("https://gdgica.com/eventos/devfest-2025?play=1");
+  });
 });
