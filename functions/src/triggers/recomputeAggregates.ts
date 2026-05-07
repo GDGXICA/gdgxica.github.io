@@ -7,14 +7,18 @@ import * as admin from "firebase-admin";
 // raw responses collection — so this trigger absorbs the fan-out and caps
 // realtime read costs to 1 listener per game per phone.
 //
-// Implementation is intentionally O(1) per write: we use FieldValue.increment
-// and merge: true. PR6 will extend this trigger to also recompute the quiz
-// leaderboard (top N participants by score) — for now we just count votes
-// and total responses, which is what the poll/wordcloud overlays consume.
+// For poll responses we just bump optionCounts + totalResponses with
+// FieldValue.increment (O(1)). For quiz responses we additionally rebuild
+// the top-10 leaderboard by querying participants ordered by quizScore.
+// That extra query is bounded (limit 10) and only fires for quiz games,
+// so the cost stays well within the free tier even at ~200 attendees.
 //
-// Rule deletes responses are blocked, so we ignore the delete edge case
-// (no `before && !after`). For pure update events (also blocked by rules in
-// PR3+), we still no-op to avoid double-counting.
+// Rule deletes are blocked, so we ignore the delete edge case (no
+// `before && !after`). For pure update events (also blocked by rules)
+// we still no-op to avoid double-counting.
+
+const LEADERBOARD_LIMIT = 10;
+
 export interface ResponseWriteEvent {
   data?: {
     before?: { exists: boolean };
@@ -24,6 +28,16 @@ export interface ResponseWriteEvent {
     };
   };
   params: { slug: string; id: string };
+}
+
+interface ParticipantSnap {
+  id: string;
+  data: () =>
+    | {
+        alias?: string;
+        quizScore?: number;
+      }
+    | undefined;
 }
 
 // Inner handler — exported for unit tests so we can drive it with a synthetic
@@ -42,9 +56,11 @@ export async function recomputeAggregatesFromEvent(
   if (!data?.questionId || !data?.optionId) return;
 
   const { slug, id } = event.params;
-  const aggregateRef = admin
-    .firestore()
-    .doc(`events/${slug}/minigames/${id}/aggregates/current`);
+  const db = admin.firestore();
+  const instanceRef = db.doc(`events/${slug}/minigames/${id}`);
+  const aggregateRef = db.doc(
+    `events/${slug}/minigames/${id}/aggregates/current`
+  );
 
   const optionKey = `${data.questionId}:${data.optionId}`;
   await aggregateRef.set(
@@ -53,6 +69,36 @@ export async function recomputeAggregatesFromEvent(
         [optionKey]: admin.firestore.FieldValue.increment(1),
       },
       totalResponses: admin.firestore.FieldValue.increment(1),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  // Quiz instances also keep a top-10 leaderboard in the same doc so
+  // spectators only need one listener.
+  const instanceSnap = await instanceRef.get();
+  if (instanceSnap.data()?.type !== "quiz") return;
+
+  const topSnap = await instanceRef
+    .collection("participants")
+    .orderBy("quizScore", "desc")
+    .limit(LEADERBOARD_LIMIT)
+    .get();
+
+  const leaderboard = (topSnap.docs as ParticipantSnap[])
+    .map((d) => {
+      const pd = d.data();
+      return {
+        uid: d.id,
+        alias: typeof pd?.alias === "string" ? pd.alias : "Anónimo",
+        score: typeof pd?.quizScore === "number" ? pd.quizScore : 0,
+      };
+    })
+    .filter((entry) => entry.score > 0);
+
+  await aggregateRef.set(
+    {
+      leaderboard,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     },
     { merge: true }

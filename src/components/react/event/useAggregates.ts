@@ -1,41 +1,42 @@
 import { useEffect, useState } from "react";
 import { getFirestore } from "@/lib/firebase";
 
-export interface ParticipantDoc {
+export interface LeaderboardEntry {
   uid: string;
   alias: string;
-  bingoCard?: string[];
-  bingoMarked?: boolean[];
-  bingoWonAt?: { seconds: number } | null;
-  quizScore?: number;
-  quizAnsweredQuestions?: string[];
+  score: number;
+}
+
+export interface AggregatesDoc {
+  optionCounts?: Record<string, number>;
+  totalResponses?: number;
+  leaderboard?: LeaderboardEntry[];
+  updatedAt?: { seconds: number } | null;
 }
 
 interface State {
-  doc: ParticipantDoc | null;
+  aggregates: AggregatesDoc | null;
   loading: boolean;
   error: string | null;
 }
 
-// Subscribes to events/{slug}/minigames/{instanceId}/participants/{uid}
-// in real time. Returns null doc until the first snapshot arrives or if
-// the participant has not joined yet (the rules allow public reads, so
-// this works for everyone — the spectator badge in MiniGamesRoot also
-// consumes it).
-export function useParticipantDoc(
+// Subscribes to events/{slug}/minigames/{instanceId}/aggregates/current,
+// the single doc that the recomputeAggregates trigger maintains. Used by
+// the realtime overlays (poll bars, quiz leaderboard) and by the projector
+// view. Caps spectator reads to 1 listener per game per phone.
+export function useAggregates(
   slug: string | null,
-  instanceId: string | null,
-  uid: string | null
+  instanceId: string | null
 ): State {
   const [state, setState] = useState<State>({
-    doc: null,
+    aggregates: null,
     loading: true,
     error: null,
   });
 
   useEffect(() => {
-    if (!slug || !instanceId || !uid) {
-      setState({ doc: null, loading: false, error: null });
+    if (!slug || !instanceId) {
+      setState({ aggregates: null, loading: false, error: null });
       return;
     }
     let unsub: (() => void) | null = null;
@@ -48,28 +49,32 @@ export function useParticipantDoc(
         if (cancelled) return;
         const ref = doc(
           db,
-          `events/${slug}/minigames/${instanceId}/participants/${uid}`
+          `events/${slug}/minigames/${instanceId}/aggregates/current`
         );
         unsub = onSnapshot(
           ref,
           (snap) => {
             if (!snap.exists()) {
-              setState({ doc: null, loading: false, error: null });
+              setState({ aggregates: null, loading: false, error: null });
               return;
             }
             setState({
-              doc: { uid, ...(snap.data() as Omit<ParticipantDoc, "uid">) },
+              aggregates: snap.data() as AggregatesDoc,
               loading: false,
               error: null,
             });
           },
           (err) => {
-            setState({ doc: null, loading: false, error: err.message });
+            setState({
+              aggregates: null,
+              loading: false,
+              error: err.message,
+            });
           }
         );
       } catch (err) {
         setState({
-          doc: null,
+          aggregates: null,
           loading: false,
           error: err instanceof Error ? err.message : "Listener error",
         });
@@ -80,7 +85,7 @@ export function useParticipantDoc(
       cancelled = true;
       if (unsub) unsub();
     };
-  }, [slug, instanceId, uid]);
+  }, [slug, instanceId]);
 
   return state;
 }
