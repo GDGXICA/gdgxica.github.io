@@ -133,6 +133,28 @@ const realApi = {
       }[];
     }>("POST", `/events/${encodeURIComponent(slug)}/minigames/join`, data),
 
+  // Wordcloud moderation + bingo winners (admin-only)
+  listEventMinigameWords: (slug: string, id: string) =>
+    request("GET", `/events/${encodeURIComponent(slug)}/minigames/${id}/words`),
+  setMinigameWordHidden: (
+    slug: string,
+    id: string,
+    wordId: string,
+    hidden: boolean
+  ) =>
+    request(
+      "PATCH",
+      `/events/${encodeURIComponent(slug)}/minigames/${id}/words/${encodeURIComponent(
+        wordId
+      )}/hidden`,
+      { hidden }
+    ),
+  listMinigameBingoWinners: (slug: string, id: string) =>
+    request(
+      "GET",
+      `/events/${encodeURIComponent(slug)}/minigames/${id}/winners`
+    ),
+
   // Rebuild
   triggerRebuild: () => request("POST", "/rebuild"),
 };

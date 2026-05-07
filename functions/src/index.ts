@@ -17,6 +17,7 @@ import {
   minigameInstanceCreateSchema,
   minigameStateSchema,
   minigameJoinSchema,
+  minigameWordHiddenSchema,
 } from "./schemas";
 import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
@@ -31,6 +32,7 @@ import * as locations from "./handlers/locations";
 import * as minigameTemplates from "./handlers/minigameTemplates";
 import * as minigameInstances from "./handlers/minigameInstances";
 import * as minigameJoin from "./handlers/minigameJoin";
+import * as minigameWords from "./handlers/minigameWords";
 
 admin.initializeApp();
 
@@ -357,6 +359,33 @@ app.post(
   joinLimiter,
   validateBody(minigameJoinSchema),
   minigameJoin.join
+);
+
+// Word cloud moderation + bingo winners (admin-only)
+const vwid = validateParamId("wordId");
+app.get(
+  "/api/events/:slug/minigames/:id/words",
+  requireRole("admin"),
+  slugP,
+  vid,
+  minigameWords.listWords
+);
+app.patch(
+  "/api/events/:slug/minigames/:id/words/:wordId/hidden",
+  requireRole("admin"),
+  slugP,
+  vid,
+  vwid,
+  writeLimiter,
+  validateBody(minigameWordHiddenSchema),
+  minigameWords.setWordHidden
+);
+app.get(
+  "/api/events/:slug/minigames/:id/winners",
+  requireRole("admin"),
+  slugP,
+  vid,
+  minigameWords.listWinners
 );
 
 // Rebuild

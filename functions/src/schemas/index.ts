@@ -252,3 +252,10 @@ export const minigameJoinSchema = z
     alias: z.string().trim().min(1).max(24),
   })
   .strict();
+
+// Admin-only: hide/unhide a word from the wordcloud display.
+export const minigameWordHiddenSchema = z
+  .object({
+    hidden: z.boolean(),
+  })
+  .strict();

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { signInAnonymouslyIfNeeded } from "@/lib/firebase";
+import { BingoCardView } from "./BingoCardView";
 import { JoinModal } from "./JoinModal";
 import { useLiveMinigames } from "./useLiveMinigames";
+import { WordCloudView } from "./WordCloudView";
 import { LOCAL_STORAGE_ALIAS_KEY, type LiveInstance } from "./types";
 
 interface Props {
@@ -37,6 +39,7 @@ function readForcePlay(): boolean {
 
 export function MiniGamesRoot({ slug }: Props) {
   const [authReady, setAuthReady] = useState(false);
+  const [uid, setUid] = useState<string | null>(null);
   const [step, setStep] = useState<Step>("init");
   const [alias, setAlias] = useState<string | null>(() =>
     typeof window === "undefined" ? null : readStoredAlias(slug)
@@ -45,13 +48,18 @@ export function MiniGamesRoot({ slug }: Props) {
 
   const { loading, liveInstances } = useLiveMinigames(authReady ? slug : null);
 
-  // Sign in anonymously (or reuse current user) on mount.
+  // Sign in anonymously (or reuse current user) on mount. We capture the
+  // resulting uid so the gameplay components (bingo card, word cloud)
+  // can subscribe to the correct participant doc.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        await signInAnonymouslyIfNeeded();
-        if (!cancelled) setAuthReady(true);
+        const user = await signInAnonymouslyIfNeeded();
+        if (!cancelled) {
+          setUid(user?.uid ?? null);
+          setAuthReady(true);
+        }
       } catch {
         if (!cancelled) setAuthReady(true); // proceed; /join will fail loudly
       }
@@ -119,6 +127,17 @@ export function MiniGamesRoot({ slug }: Props) {
     [step, alias]
   );
 
+  // Global games (wordcloud + bingo) play inline once the participant is
+  // joined. PR6 will add overlays for the realtime modes (poll + quiz),
+  // which are intentionally ignored here.
+  const globalLive = useMemo(
+    () =>
+      (liveInstances as LiveInstance[]).filter(
+        (inst) => inst.mode === "global"
+      ),
+    [liveInstances]
+  );
+
   if (!authReady || loading || step === "init") return null;
   if (step === "no_live") return null;
 
@@ -144,6 +163,46 @@ export function MiniGamesRoot({ slug }: Props) {
             </span>
           </div>
         </div>
+      )}
+
+      {step === "joined" && uid && globalLive.length > 0 && (
+        <section className="container my-8" aria-label="Participación en vivo">
+          <h2 className="text-primary mb-4 text-2xl font-semibold">
+            Participación en vivo
+          </h2>
+          <div className="space-y-6">
+            {globalLive.map((inst) => (
+              <div
+                key={inst.id}
+                className="border-gray-custom rounded-lg border p-6 shadow-sm"
+              >
+                {inst.type === "wordcloud" && (
+                  <WordCloudView
+                    slug={slug}
+                    instanceId={inst.id}
+                    uid={uid}
+                    title={inst.title}
+                    prompt={
+                      (inst.config?.prompt as string | undefined) ??
+                      "Comparte tu palabra"
+                    }
+                    maxWordsPerUser={
+                      (inst.config?.maxWordsPerUser as number | undefined) ?? 3
+                    }
+                  />
+                )}
+                {inst.type === "bingo" && (
+                  <BingoCardView
+                    slug={slug}
+                    instanceId={inst.id}
+                    uid={uid}
+                    title={inst.title}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
       )}
     </>
   );
