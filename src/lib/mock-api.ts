@@ -72,5 +72,14 @@ export const mockApi = {
   joinEventMinigames: (_slug: string, data: { alias: string }) =>
     ok({ alias: data.alias, instances: [] }),
 
+  listEventMinigameWords: () => ok([]),
+  setMinigameWordHidden: (
+    _slug: string,
+    _id: string,
+    wordId: string,
+    hidden: boolean
+  ) => ok({ id: wordId, hidden }),
+  listMinigameBingoWinners: () => ok([]),
+
   triggerRebuild: () => ok(null),
 };

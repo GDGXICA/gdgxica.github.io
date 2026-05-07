@@ -14,6 +14,9 @@ interface Props {
   onAdvanceQuiz: () => Promise<void> | void;
   onDelete: () => Promise<void> | void;
   busy: boolean;
+  // PR5: opens the moderation/winners side panel for global games.
+  // Optional so admin tests of the card itself don't need to wire it.
+  onOpenModeration?: () => void;
 }
 
 function questionCount(instance: MinigameInstance): number {
@@ -28,7 +31,18 @@ export function InstanceCard({
   onAdvanceQuiz,
   onDelete,
   busy,
+  onOpenModeration,
 }: Props) {
+  const moderationLabel =
+    instance.type === "wordcloud"
+      ? "Ver moderación"
+      : instance.type === "bingo"
+        ? "Ver ganadores"
+        : null;
+  const moderationVisible =
+    moderationLabel !== null &&
+    instance.state !== "scheduled" &&
+    onOpenModeration;
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const isQuiz = instance.type === "quiz";
@@ -148,6 +162,16 @@ export function InstanceCard({
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
           >
             ↻ Reabrir
+          </button>
+        )}
+
+        {moderationVisible && (
+          <button
+            type="button"
+            onClick={onOpenModeration}
+            className="ml-auto rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            {moderationLabel}
           </button>
         )}
       </div>

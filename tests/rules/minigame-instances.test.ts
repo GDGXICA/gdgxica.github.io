@@ -132,3 +132,277 @@ describe("firestore.rules — events/{slug}/minigames", () => {
     );
   });
 });
+
+// ---- PR5 rules: bingo card marking + word submissions -----------------
+
+const BINGO_INSTANCE_ID = "instance-bingo";
+const WORDCLOUD_INSTANCE_ID = "instance-wordcloud";
+
+const BINGO_INSTANCE = {
+  eventSlug: SLUG,
+  templateId: "tpl-bingo",
+  templateVersion: 1,
+  type: "bingo",
+  mode: "global",
+  state: "live",
+  title: "Sample bingo",
+  config: { terms: [], cardSize: 4, freeCenter: false },
+  order: 0,
+  createdBy: "admin-uid",
+  createdAt: 0,
+};
+
+const WORDCLOUD_INSTANCE = {
+  eventSlug: SLUG,
+  templateId: "tpl-wc",
+  templateVersion: 1,
+  type: "wordcloud",
+  mode: "global",
+  state: "live",
+  title: "Sample wordcloud",
+  config: { prompt: "Say a word", maxWordsPerUser: 3, maxLength: 60 },
+  order: 1,
+  createdBy: "admin-uid",
+  createdAt: 0,
+};
+
+const SEED_PARTICIPANT_BINGO = {
+  uid: "user-1",
+  alias: "Ana",
+  joinedAt: 0,
+  bingoCard: Array.from({ length: 16 }, (_, i) => `term-${i}`),
+};
+
+async function seedBingoState(env: Awaited<ReturnType<typeof getTestEnv>>) {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    await setDoc(
+      doc(db, `events/${SLUG}/minigames/${BINGO_INSTANCE_ID}`),
+      BINGO_INSTANCE
+    );
+    await setDoc(
+      doc(
+        db,
+        `events/${SLUG}/minigames/${BINGO_INSTANCE_ID}/participants/user-1`
+      ),
+      SEED_PARTICIPANT_BINGO
+    );
+  });
+}
+
+async function seedWordCloudState(
+  env: Awaited<ReturnType<typeof getTestEnv>>,
+  options: { state?: string; type?: string; participantUid?: string } = {}
+) {
+  const state = options.state ?? "live";
+  const type = options.type ?? "wordcloud";
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, `events/${SLUG}/minigames/${WORDCLOUD_INSTANCE_ID}`), {
+      ...WORDCLOUD_INSTANCE,
+      state,
+      type,
+    });
+    if (options.participantUid) {
+      await setDoc(
+        doc(
+          db,
+          `events/${SLUG}/minigames/${WORDCLOUD_INSTANCE_ID}/participants/${options.participantUid}`
+        ),
+        { uid: options.participantUid, alias: "tester", joinedAt: 0 }
+      );
+    }
+  });
+}
+
+describe("firestore.rules — PR5 bingo marking", () => {
+  beforeAll(async () => {
+    await getTestEnv();
+  });
+
+  afterEach(async () => {
+    await clearAll();
+  });
+
+  afterAll(async () => {
+    await cleanup();
+  });
+
+  it("allows the owner to update only bingoMarked", async () => {
+    const env = await getTestEnv();
+    await seedBingoState(env);
+    const auth = env.authenticatedContext("user-1").firestore();
+    await assertSucceeds(
+      setDoc(
+        doc(
+          auth,
+          `events/${SLUG}/minigames/${BINGO_INSTANCE_ID}/participants/user-1`
+        ),
+        { bingoMarked: Array.from({ length: 16 }, () => false) },
+        { merge: true }
+      )
+    );
+  });
+
+  it("rejects bingoMarked of wrong length", async () => {
+    const env = await getTestEnv();
+    await seedBingoState(env);
+    const auth = env.authenticatedContext("user-1").firestore();
+    await assertFails(
+      setDoc(
+        doc(
+          auth,
+          `events/${SLUG}/minigames/${BINGO_INSTANCE_ID}/participants/user-1`
+        ),
+        { bingoMarked: [true, false, true] },
+        { merge: true }
+      )
+    );
+  });
+
+  it("rejects updates that change the alias", async () => {
+    const env = await getTestEnv();
+    await seedBingoState(env);
+    const auth = env.authenticatedContext("user-1").firestore();
+    await assertFails(
+      setDoc(
+        doc(
+          auth,
+          `events/${SLUG}/minigames/${BINGO_INSTANCE_ID}/participants/user-1`
+        ),
+        { alias: "Hacked" },
+        { merge: true }
+      )
+    );
+  });
+
+  it("rejects another user updating someone else's participant", async () => {
+    const env = await getTestEnv();
+    await seedBingoState(env);
+    const stranger = env.authenticatedContext("user-2").firestore();
+    await assertFails(
+      setDoc(
+        doc(
+          stranger,
+          `events/${SLUG}/minigames/${BINGO_INSTANCE_ID}/participants/user-1`
+        ),
+        { bingoMarked: Array.from({ length: 16 }, () => true) },
+        { merge: true }
+      )
+    );
+  });
+
+  it("allows setting bingoWonAt alongside bingoMarked", async () => {
+    const env = await getTestEnv();
+    await seedBingoState(env);
+    const auth = env.authenticatedContext("user-1").firestore();
+    const win = Array.from({ length: 16 }, (_, i) => i < 4);
+    await assertSucceeds(
+      setDoc(
+        doc(
+          auth,
+          `events/${SLUG}/minigames/${BINGO_INSTANCE_ID}/participants/user-1`
+        ),
+        { bingoMarked: win, bingoWonAt: new Date() },
+        { merge: true }
+      )
+    );
+  });
+});
+
+describe("firestore.rules — PR5 word submissions", () => {
+  beforeAll(async () => {
+    await getTestEnv();
+  });
+
+  afterEach(async () => {
+    await clearAll();
+  });
+
+  afterAll(async () => {
+    await cleanup();
+  });
+
+  it("allows a joined participant to write a word while live", async () => {
+    const env = await getTestEnv();
+    await seedWordCloudState(env, { participantUid: "user-1" });
+    const auth = env.authenticatedContext("user-1").firestore();
+    await assertSucceeds(
+      setDoc(
+        doc(
+          auth,
+          `events/${SLUG}/minigames/${WORDCLOUD_INSTANCE_ID}/words/hola`
+        ),
+        { text: "hola", normalized: "hola", count: 1 },
+        { merge: true }
+      )
+    );
+  });
+
+  it("rejects writes when the participant doc is missing", async () => {
+    const env = await getTestEnv();
+    await seedWordCloudState(env);
+    const auth = env.authenticatedContext("user-1").firestore();
+    await assertFails(
+      setDoc(
+        doc(
+          auth,
+          `events/${SLUG}/minigames/${WORDCLOUD_INSTANCE_ID}/words/hola`
+        ),
+        { text: "hola", normalized: "hola", count: 1 },
+        { merge: true }
+      )
+    );
+  });
+
+  it("rejects writes when the instance is not live", async () => {
+    const env = await getTestEnv();
+    await seedWordCloudState(env, {
+      state: "closed",
+      participantUid: "user-1",
+    });
+    const auth = env.authenticatedContext("user-1").firestore();
+    await assertFails(
+      setDoc(
+        doc(
+          auth,
+          `events/${SLUG}/minigames/${WORDCLOUD_INSTANCE_ID}/words/hola`
+        ),
+        { text: "hola", normalized: "hola", count: 1 },
+        { merge: true }
+      )
+    );
+  });
+
+  it("rejects writes when the instance is not a wordcloud", async () => {
+    const env = await getTestEnv();
+    await seedWordCloudState(env, { type: "poll", participantUid: "user-1" });
+    const auth = env.authenticatedContext("user-1").firestore();
+    await assertFails(
+      setDoc(
+        doc(
+          auth,
+          `events/${SLUG}/minigames/${WORDCLOUD_INSTANCE_ID}/words/hola`
+        ),
+        { text: "hola", normalized: "hola", count: 1 },
+        { merge: true }
+      )
+    );
+  });
+
+  it("rejects writes whose doc id does not match the normalized field", async () => {
+    const env = await getTestEnv();
+    await seedWordCloudState(env, { participantUid: "user-1" });
+    const auth = env.authenticatedContext("user-1").firestore();
+    await assertFails(
+      setDoc(
+        doc(
+          auth,
+          `events/${SLUG}/minigames/${WORDCLOUD_INSTANCE_ID}/words/hola`
+        ),
+        { text: "hola", normalized: "MISMATCH", count: 1 },
+        { merge: true }
+      )
+    );
+  });
+});

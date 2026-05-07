@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { Toast } from "../ui/Toast";
 import { AttachTemplateModal } from "./AttachTemplateModal";
+import { BingoWinnersPanel } from "./BingoWinnersPanel";
 import { InstanceCard } from "./InstanceCard";
+import { WordModerationPanel } from "./WordModerationPanel";
 import type { InstanceState, MinigameInstance } from "./types";
 
 interface Props {
@@ -27,6 +29,9 @@ export function EventMinigameManager({ initialSlug }: Props) {
   } | null>(null);
   const [attaching, setAttaching] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [moderationFor, setModerationFor] = useState<MinigameInstance | null>(
+    null
+  );
 
   const reload = useCallback(async () => {
     if (!slug) return;
@@ -162,9 +167,31 @@ export function EventMinigameManager({ initialSlug }: Props) {
               onSetState={(state) => handleSetState(inst.id, state)}
               onAdvanceQuiz={() => handleAdvanceQuiz(inst.id)}
               onDelete={() => handleDelete(inst.id)}
+              onOpenModeration={
+                inst.type === "wordcloud" || inst.type === "bingo"
+                  ? () => setModerationFor(inst)
+                  : undefined
+              }
             />
           ))}
         </div>
+      )}
+
+      {moderationFor && moderationFor.type === "wordcloud" && (
+        <WordModerationPanel
+          slug={slug!}
+          instanceId={moderationFor.id}
+          title={moderationFor.title}
+          onClose={() => setModerationFor(null)}
+        />
+      )}
+      {moderationFor && moderationFor.type === "bingo" && (
+        <BingoWinnersPanel
+          slug={slug!}
+          instanceId={moderationFor.id}
+          title={moderationFor.title}
+          onClose={() => setModerationFor(null)}
+        />
       )}
 
       {attaching && (

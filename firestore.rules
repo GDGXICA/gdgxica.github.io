@@ -37,7 +37,17 @@ service cloud.firestore {
 
         match /participants/{participantUid} {
           allow read: if true;
-          allow write: if false;
+          allow create: if false;
+          // Self-update limited to bingo marking. We use diff().affectedKeys()
+          // .hasOnly so the client cannot rewrite alias/joinedAt/bingoCard.
+          allow update: if request.auth != null
+                        && request.auth.uid == participantUid
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['bingoMarked', 'bingoWonAt'])
+                        && (!('bingoMarked' in request.resource.data)
+                            || (request.resource.data.bingoMarked is list
+                                && request.resource.data.bingoMarked.size() == 16));
+          allow delete: if false;
         }
         match /responses/{responseId} {
           allow read: if true;
@@ -45,7 +55,16 @@ service cloud.firestore {
         }
         match /words/{wordId} {
           allow read: if true;
-          allow write: if false;
+          // Authenticated participants of a live wordcloud instance can
+          // create or merge-update word docs. Doc id must equal the
+          // normalized text so duplicates collapse into a single counter.
+          allow write: if request.auth != null
+                       && get(/databases/$(database)/documents/events/$(eventSlug)/minigames/$(instanceId)).data.state == 'live'
+                       && get(/databases/$(database)/documents/events/$(eventSlug)/minigames/$(instanceId)).data.type == 'wordcloud'
+                       && exists(/databases/$(database)/documents/events/$(eventSlug)/minigames/$(instanceId)/participants/$(request.auth.uid))
+                       && request.resource.data.text is string
+                       && request.resource.data.text.size() <= 120
+                       && request.resource.data.normalized == wordId;
         }
         match /aggregates/{docId} {
           allow read: if true;
