@@ -9,12 +9,3 @@ export interface UserDocument {
   createdAt: import("firebase-admin/firestore").Timestamp;
   lastLoginAt: import("firebase-admin/firestore").Timestamp;
 }
-
-export interface AuditLogEntry {
-  action: string;
-  performedBy: string;
-  targetId: string;
-  targetType: string;
-  details: Record<string, unknown>;
-  timestamp: import("firebase-admin/firestore").Timestamp;
-}
