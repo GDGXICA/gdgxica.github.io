@@ -21,15 +21,5 @@ export interface LiveInstance {
   currentQuestionIndex?: number;
 }
 
-export interface JoinResult {
-  alias: string;
-  instances: {
-    id: string;
-    type: string;
-    joined: boolean;
-    bingoCard?: string[];
-  }[];
-}
-
 export const LOCAL_STORAGE_ALIAS_KEY = (slug: string) =>
   `gdg_minigame_alias_${slug}`;

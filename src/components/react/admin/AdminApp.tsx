@@ -1,3 +1,4 @@
+import React from "react";
 import { AuthProvider, DevAuthProvider, useAuth } from "./AuthProvider";
 import { LoginScreen } from "./LoginScreen";
 import { isDevPreview } from "@/lib/api";
@@ -19,6 +20,55 @@ import { EventMinigameManager } from "./event-minigames/EventMinigameManager";
 interface Props {
   page: string;
   currentPath: string;
+}
+
+function renderPage(
+  page: string,
+  guards: { isAdmin: boolean; role: string | null; signOut: () => void } | null
+) {
+  const adminPage = (component: React.ReactNode) => {
+    if (!guards) return component;
+    return guards.isAdmin ? (
+      component
+    ) : (
+      <AccessDenied role={guards.role} signOut={guards.signOut} />
+    );
+  };
+
+  switch (page) {
+    case "dashboard":
+      return <Dashboard />;
+    case "events":
+      return <EventList />;
+    case "event-form":
+      return <EventForm />;
+    case "team":
+      return <TeamList />;
+    case "speakers":
+      return <SpeakerList />;
+    case "sponsors":
+      return <SponsorList />;
+    case "stats":
+      return adminPage(<StatsEditor />);
+    case "users":
+      return adminPage(<UserDirectory />);
+    case "forms":
+      return adminPage(<FormRegistry />);
+    case "form-viewer":
+      return adminPage(<FormViewer />);
+    case "ubicaciones":
+      return <LocationList />;
+    case "minigame-templates":
+      return <MinigameTemplateList />;
+    case "event-minigames":
+      return <EventMinigameManager />;
+    default:
+      return (
+        <p className="text-gray-500 dark:text-gray-400">
+          Pagina en construccion
+        </p>
+      );
+  }
 }
 
 function AdminContent({ page, currentPath }: Props) {
@@ -70,106 +120,20 @@ function AdminContent({ page, currentPath }: Props) {
     );
   }
 
-  const pageContent = () => {
-    switch (page) {
-      case "dashboard":
-        return <Dashboard />;
-      case "events":
-        return <EventList />;
-      case "event-form":
-        return <EventForm />;
-      case "team":
-        return <TeamList />;
-      case "speakers":
-        return <SpeakerList />;
-      case "sponsors":
-        return <SponsorList />;
-      case "stats":
-        return isAdmin ? (
-          <StatsEditor />
-        ) : (
-          <AccessDenied role={role} signOut={signOut} />
-        );
-      case "users":
-        return isAdmin ? (
-          <UserDirectory />
-        ) : (
-          <AccessDenied role={role} signOut={signOut} />
-        );
-      case "forms":
-        return isAdmin ? (
-          <FormRegistry />
-        ) : (
-          <AccessDenied role={role} signOut={signOut} />
-        );
-      case "form-viewer":
-        return isAdmin ? (
-          <FormViewer />
-        ) : (
-          <AccessDenied role={role} signOut={signOut} />
-        );
-      case "ubicaciones":
-        return <LocationList />;
-      case "minigame-templates":
-        return <MinigameTemplateList />;
-      case "event-minigames":
-        return <EventMinigameManager />;
-      default:
-        return (
-          <p className="text-gray-500 dark:text-gray-400">
-            Pagina en construccion
-          </p>
-        );
-    }
-  };
-
-  return <AdminShell currentPage={currentPath}>{pageContent()}</AdminShell>;
+  return (
+    <AdminShell currentPage={currentPath}>
+      {renderPage(page, { isAdmin, role, signOut })}
+    </AdminShell>
+  );
 }
 
 function DevContent({ page, currentPath }: Props) {
-  const pageContent = () => {
-    switch (page) {
-      case "dashboard":
-        return <Dashboard />;
-      case "events":
-        return <EventList />;
-      case "event-form":
-        return <EventForm />;
-      case "team":
-        return <TeamList />;
-      case "speakers":
-        return <SpeakerList />;
-      case "sponsors":
-        return <SponsorList />;
-      case "stats":
-        return <StatsEditor />;
-      case "users":
-        return <UserDirectory />;
-      case "forms":
-        return <FormRegistry />;
-      case "form-viewer":
-        return <FormViewer />;
-      case "ubicaciones":
-        return <LocationList />;
-      case "minigame-templates":
-        return <MinigameTemplateList />;
-      case "event-minigames":
-        return <EventMinigameManager />;
-      default:
-        return (
-          <p className="text-gray-500 dark:text-gray-400">
-            Pagina en construccion
-          </p>
-        );
-    }
-  };
-
   return (
     <AdminShell currentPage={currentPath}>
       <div className="mb-4 rounded-lg border border-yellow-300 bg-yellow-50 px-4 py-2 text-sm text-yellow-800 dark:border-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400">
         PREVIEW MODE — datos de ejemplo, sin auth
       </div>
-      {pageContent()}
+      {renderPage(page, null)}
     </AdminShell>
   );
 }
