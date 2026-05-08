@@ -92,7 +92,7 @@ jobs:
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
-          firebase deploy --only "hosting:gdgica,functions,firestore:rules" --force
+          firebase deploy --only "hosting:gdgica,functions,firestore:rules,firestore:indexes" --force
 
       - name: Cleanup old hosting versions
         env:
