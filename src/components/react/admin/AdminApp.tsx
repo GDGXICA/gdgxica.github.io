@@ -22,7 +22,7 @@ interface Props {
 }
 
 function AdminContent({ page, currentPath }: Props) {
-  const { user, role, loading, isOrganizer, signOut } = useAuth();
+  const { user, role, loading, isOrganizer, isAdmin, signOut } = useAuth();
 
   if (loading) {
     return (
@@ -85,13 +85,29 @@ function AdminContent({ page, currentPath }: Props) {
       case "sponsors":
         return <SponsorList />;
       case "stats":
-        return <StatsEditor />;
+        return isAdmin ? (
+          <StatsEditor />
+        ) : (
+          <AccessDenied role={role} signOut={signOut} />
+        );
       case "users":
-        return <UserDirectory />;
+        return isAdmin ? (
+          <UserDirectory />
+        ) : (
+          <AccessDenied role={role} signOut={signOut} />
+        );
       case "forms":
-        return <FormRegistry />;
+        return isAdmin ? (
+          <FormRegistry />
+        ) : (
+          <AccessDenied role={role} signOut={signOut} />
+        );
       case "form-viewer":
-        return <FormViewer />;
+        return isAdmin ? (
+          <FormViewer />
+        ) : (
+          <AccessDenied role={role} signOut={signOut} />
+        );
       case "ubicaciones":
         return <LocationList />;
       case "minigame-templates":
@@ -155,6 +171,45 @@ function DevContent({ page, currentPath }: Props) {
       </div>
       {pageContent()}
     </AdminShell>
+  );
+}
+
+function AccessDenied({
+  role,
+  signOut,
+}: {
+  role: string | null;
+  signOut: () => void;
+}) {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="max-w-md rounded-xl bg-white p-8 text-center shadow-lg dark:bg-gray-800">
+        <p className="text-4xl">🔒</p>
+        <h2 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">
+          Acceso restringido
+        </h2>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">
+          Esta seccion requiere permisos de administrador.
+        </p>
+        <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
+          Rol actual: {role}
+        </p>
+        <div className="mt-6 flex justify-center gap-3">
+          <button
+            onClick={signOut}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            Cerrar sesion
+          </button>
+          <a
+            href="/admin"
+            className="inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            Ir al dashboard
+          </a>
+        </div>
+      </div>
+    </div>
   );
 }
 
