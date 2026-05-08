@@ -22,6 +22,9 @@
     "googleapis": "^171.4.0",
     "zod": "^4.3.6"
   },
+  "overrides": {
+    "protobufjs": ">=7.5.5"
+  },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.0",
     "@types/cors": "^2.8.19",
