@@ -87,12 +87,47 @@ Esta sección guía al equipo organizador para correr mini-juegos en vivo durant
 2. **Premia a los ganadores** — botón "Ver ganadores" en la card de bingo lista los participantes con `bingoWonAt` ordenados por timestamp.
 3. Los datos quedan en Firestore para análisis posterior — no es necesario borrar nada.
 
+### Primer deploy: bootstrap de Eventarc
+
+El trigger `onMinigameResponseWritten` (Cloud Function v2 con disparador Firestore) usa **Eventarc** detrás de escena. La **primera vez** que el proyecto despliega un trigger Eventarc, el deploy puede fallar con:
+
+```
+Permission denied while using the Eventarc Service Agent.
+Since this is your first time using 2nd gen functions, we need a little
+bit longer to finish setting everything up. Retry the deployment in a
+few minutes.
+```
+
+Esto pasa porque Firebase necesita inicializar el Service Agent de Eventarc y propagar los permisos antes de poder crear el trigger. Es una sola vez en la vida del proyecto.
+
+**Acción recomendada (suele bastar):** esperar ~5 min y re-ejecutar el job fallido en GitHub Actions ("Re-run failed jobs").
+
+**Si el retry también falla**, otorgar los roles manualmente con `gcloud` autenticado contra `appgdgica`:
+
+```bash
+PROJECT_ID=appgdgica
+PROJECT_NUMBER=647264238138
+
+# Permite a Eventarc invocar Cloud Functions v2 en este proyecto.
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:service-$PROJECT_NUMBER@gcp-sa-eventarc.iam.gserviceaccount.com" \
+  --role="roles/eventarc.serviceAgent"
+
+# Permite a la SA por defecto recibir eventos.
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+  --role="roles/eventarc.eventReceiver"
+```
+
+Después re-ejecutar el workflow. Una vez creado el trigger, los deploys siguientes no requieren más bootstrap.
+
 ### Solución de problemas comunes
 
 - **El modal no aparece para los participantes**: verifica que el juego esté en `live` y que Anonymous Authentication esté habilitado en Firebase Console.
 - **El QR del proyector apunta al dominio incorrecto**: el QR se genera al build con `https://gdgica.com`. Re-deployar después de cambios de dominio.
 - **"Demasiados intentos"** al unirse: el rate limiter por IP es 10/min. Para eventos grandes en una misma red WiFi, ajusta `joinLimiter` en `functions/src/index.ts`.
 - **Borrar una plantilla adjuntada**: solo se puede borrar una instancia en `state=scheduled`. Cierra el juego primero (`live` → `closed`) y luego archívalo visualmente; los datos históricos quedan.
+- **Deploy falla con "Permission denied while using the Eventarc Service Agent"**: ver la sección "Primer deploy: bootstrap de Eventarc" arriba.
 
 ## Estructura del proyecto
 
