@@ -99,7 +99,7 @@ export function MiniGamesRoot({ slug }: Props) {
       return;
     }
 
-    if (step === "joined" && !forcePlay) return;
+    if (step === "joined") return;
     if (step === "dismissed" && !forcePlay) return;
 
     if (alias && !forcePlay) {
