@@ -137,6 +137,57 @@ describe("MiniGamesRoot", () => {
     expect(mocks.joinEventMinigames).not.toHaveBeenCalled();
   });
 
+  it("silently re-joins when a new live instance appears after already joined", async () => {
+    // Participant joins while only the poll is live.
+    window.localStorage.setItem("gdg_minigame_alias_x", "Ana");
+    const { rerender } = render(<MiniGamesRoot slug="x" />);
+
+    mocks.useLiveMinigames.mockReturnValue({
+      loading: false,
+      liveInstances: [POLL],
+      error: null,
+    });
+    rerender(<MiniGamesRoot slug="x" />);
+
+    await waitFor(() =>
+      expect(mocks.joinEventMinigames).toHaveBeenCalledTimes(1)
+    );
+
+    // Quiz goes live after the participant already joined — new instance.
+    const QUIZ: LiveInstance = {
+      id: "i-quiz",
+      type: "quiz",
+      mode: "realtime",
+      state: "live",
+      title: "Live quiz",
+      order: 1,
+    };
+    mocks.joinEventMinigames.mockResolvedValueOnce({
+      success: true,
+      data: {
+        alias: "Ana",
+        instances: [
+          { id: "i-poll", type: "poll", joined: false },
+          { id: "i-quiz", type: "quiz", joined: true },
+        ],
+      },
+    });
+    mocks.useLiveMinigames.mockReturnValue({
+      loading: false,
+      liveInstances: [POLL, QUIZ],
+      error: null,
+    });
+    rerender(<MiniGamesRoot slug="x" />);
+
+    // Should re-join automatically to get a participant doc for the quiz.
+    await waitFor(() =>
+      expect(mocks.joinEventMinigames).toHaveBeenCalledTimes(2)
+    );
+    expect(mocks.joinEventMinigames).toHaveBeenLastCalledWith("x", {
+      alias: "Ana",
+    });
+  });
+
   it("forces the modal open when ?play=1 is in the URL even with stored alias", async () => {
     window.localStorage.setItem("gdg_minigame_alias_x", "Ana");
     window.history.replaceState({}, "", "/eventos/x?play=1");

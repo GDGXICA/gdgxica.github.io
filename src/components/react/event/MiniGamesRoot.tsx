@@ -72,6 +72,14 @@ export function MiniGamesRoot({ slug }: Props) {
     };
   }, []);
 
+  // Instance IDs the participant has a Firestore participant doc for.
+  // /join only creates docs for currently-live instances, so if the quiz
+  // goes live after the participant already joined we need to re-join to
+  // get a doc created — otherwise Firestore rules deny the answer write.
+  const [registeredIds, setRegisteredIds] = useState<ReadonlySet<string>>(
+    () => new Set()
+  );
+
   const submitJoin = useCallback(
     async (
       pendingAlias: string
@@ -82,12 +90,25 @@ export function MiniGamesRoot({ slug }: Props) {
         writeStoredAlias(slug, stored);
         setAlias(stored);
         setStep("joined");
+        setRegisteredIds(
+          new Set(res.data.instances.map((i: { id: string }) => i.id))
+        );
         return { success: true };
       }
       return { success: false, error: res.error };
     },
     [slug]
   );
+
+  // When already joined and a new live instance appears that we have no
+  // participant doc for, silently re-join. /join is idempotent — existing
+  // docs are left untouched; only the new instance gets a doc created.
+  useEffect(() => {
+    if (step !== "joined" || !alias) return;
+    const unregistered = liveInstances.filter((i) => !registeredIds.has(i.id));
+    if (unregistered.length === 0) return;
+    submitJoin(alias);
+  }, [liveInstances, step, alias, registeredIds, submitJoin]);
 
   // Drive the state machine off (live instances, alias, dismissed).
   useEffect(() => {
