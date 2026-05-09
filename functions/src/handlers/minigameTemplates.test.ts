@@ -112,10 +112,29 @@ describe("minigameTemplates handler", () => {
   });
 
   describe("list", () => {
-    it("returns docs ordered by updatedAt desc", async () => {
+    it("returns docs ordered by updatedAt desc with ISO timestamps", async () => {
+      const fakeTs = (iso: string) => ({
+        toDate: () => new Date(iso),
+      });
       const docs = [
-        { id: "t1", data: () => ({ ...samplePoll, version: 2 }) },
-        { id: "t2", data: () => ({ ...sampleQuiz, version: 1 }) },
+        {
+          id: "t1",
+          data: () => ({
+            ...samplePoll,
+            version: 2,
+            createdAt: fakeTs("2026-01-01T00:00:00.000Z"),
+            updatedAt: fakeTs("2026-05-01T12:00:00.000Z"),
+          }),
+        },
+        {
+          id: "t2",
+          data: () => ({
+            ...sampleQuiz,
+            version: 1,
+            createdAt: fakeTs("2026-02-01T00:00:00.000Z"),
+            updatedAt: fakeTs("2026-04-01T08:00:00.000Z"),
+          }),
+        },
       ];
       const orderBy = vi.fn(() => ({ get: vi.fn(async () => ({ docs })) }));
       collectionMock.mockReturnValue({ orderBy });
@@ -129,8 +148,20 @@ describe("minigameTemplates handler", () => {
       expect(res.json).toHaveBeenCalledWith({
         success: true,
         data: [
-          { id: "t1", ...samplePoll, version: 2 },
-          { id: "t2", ...sampleQuiz, version: 1 },
+          {
+            id: "t1",
+            ...samplePoll,
+            version: 2,
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-05-01T12:00:00.000Z",
+          },
+          {
+            id: "t2",
+            ...sampleQuiz,
+            version: 1,
+            createdAt: "2026-02-01T00:00:00.000Z",
+            updatedAt: "2026-04-01T08:00:00.000Z",
+          },
         ],
       });
     });
