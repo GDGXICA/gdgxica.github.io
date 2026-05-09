@@ -85,16 +85,14 @@ export async function recomputeAggregatesFromEvent(
     .limit(LEADERBOARD_LIMIT)
     .get();
 
-  const leaderboard = (topSnap.docs as ParticipantSnap[])
-    .map((d) => {
-      const pd = d.data();
-      return {
-        uid: d.id,
-        alias: typeof pd?.alias === "string" ? pd.alias : "Anónimo",
-        score: typeof pd?.quizScore === "number" ? pd.quizScore : 0,
-      };
-    })
-    .filter((entry) => entry.score > 0);
+  const leaderboard = (topSnap.docs as ParticipantSnap[]).map((d) => {
+    const pd = d.data();
+    return {
+      uid: d.id,
+      alias: typeof pd?.alias === "string" ? pd.alias : "Anónimo",
+      score: typeof pd?.quizScore === "number" ? pd.quizScore : 0,
+    };
+  });
 
   await aggregateRef.set(
     {

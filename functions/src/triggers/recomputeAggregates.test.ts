@@ -202,13 +202,12 @@ describe("recomputeAggregatesFromEvent", () => {
     ]);
   });
 
-  it("filters out participants with zero score from the leaderboard", async () => {
+  it("includes participants with zero score in the leaderboard", async () => {
     const wiring = wire({
       instanceType: "quiz",
       participants: [
         { id: "u1", alias: "Ana", quizScore: 100 },
-        { id: "u2", alias: "Bea" }, // no score yet
-        { id: "u3", alias: "Zero", quizScore: 0 },
+        { id: "u2", alias: "Zero", quizScore: 0 },
       ],
     });
     await recomputeAggregatesFromEvent(
@@ -219,6 +218,7 @@ describe("recomputeAggregatesFromEvent", () => {
     };
     expect(leaderboardPayload.leaderboard).toEqual([
       { uid: "u1", alias: "Ana", score: 100 },
+      { uid: "u2", alias: "Zero", score: 0 },
     ]);
   });
 
