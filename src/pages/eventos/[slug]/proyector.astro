@@ -18,13 +18,13 @@ const joinUrl = `https://gdgica.com/eventos/${slug}?play=1`;
 
 // QR is rendered server-side at build time so the projector page
 // works the moment it's served — even before the React island
-// hydrates. White-on-black so the SVG is legible against the dark
-// projector backdrop without inverting it client-side.
+// hydrates. Standard black-on-white; all containers (footer, overlay,
+// hero) already have a white background so no inversion is needed.
 const qrSvg = await QRCode.toString(joinUrl, {
   type: "svg",
   errorCorrectionLevel: "H",
   margin: 1,
-  color: { dark: "#ffffff", light: "#000000" },
+  color: { dark: "#000000", light: "#ffffff" },
 });
 ---
 
