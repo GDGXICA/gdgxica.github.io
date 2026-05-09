@@ -4,6 +4,7 @@ import { Toast } from "../ui/Toast";
 import { AttachTemplateModal } from "./AttachTemplateModal";
 import { BingoWinnersPanel } from "./BingoWinnersPanel";
 import { InstanceCard } from "./InstanceCard";
+import { RoulettePanel } from "./RoulettePanel";
 import { WordModerationPanel } from "./WordModerationPanel";
 import type { InstanceState, MinigameInstance } from "./types";
 
@@ -101,6 +102,24 @@ export function EventMinigameManager({ initialSlug }: Props) {
     } else {
       setToast({
         message: res.error || "Error al avanzar pregunta",
+        type: "error",
+      });
+    }
+    setBusyId(null);
+  }
+
+  async function handleSpin(id: string) {
+    if (!slug) return;
+    setBusyId(id);
+    const res = await api.spinRoulette(slug, id);
+    if (res.success && res.data) {
+      setToast({
+        message: `🎉 Ganó: ${res.data.alias} (giro #${res.data.spinNumber})`,
+        type: "success",
+      });
+    } else {
+      setToast({
+        message: res.error || "Error al girar la ruleta",
         type: "error",
       });
     }
@@ -205,9 +224,14 @@ export function EventMinigameManager({ initialSlug }: Props) {
               onAdvanceQuiz={() => handleAdvanceQuiz(inst.id)}
               onDelete={() => handleDelete(inst.id)}
               onOpenModeration={
-                inst.type === "wordcloud" || inst.type === "bingo"
+                inst.type === "wordcloud" ||
+                inst.type === "bingo" ||
+                inst.type === "roulette"
                   ? () => setModerationFor(inst)
                   : undefined
+              }
+              onSpin={
+                inst.type === "roulette" ? () => handleSpin(inst.id) : undefined
               }
             />
           ))}
@@ -224,6 +248,14 @@ export function EventMinigameManager({ initialSlug }: Props) {
       )}
       {moderationFor && moderationFor.type === "bingo" && (
         <BingoWinnersPanel
+          slug={slug!}
+          instanceId={moderationFor.id}
+          title={moderationFor.title}
+          onClose={() => setModerationFor(null)}
+        />
+      )}
+      {moderationFor && moderationFor.type === "roulette" && (
+        <RoulettePanel
           slug={slug!}
           instanceId={moderationFor.id}
           title={moderationFor.title}

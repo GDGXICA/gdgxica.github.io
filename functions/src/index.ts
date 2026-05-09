@@ -33,6 +33,7 @@ import * as minigameTemplates from "./handlers/minigameTemplates";
 import * as minigameInstances from "./handlers/minigameInstances";
 import * as minigameJoin from "./handlers/minigameJoin";
 import * as minigameWords from "./handlers/minigameWords";
+import * as minigameRoulette from "./handlers/minigameRoulette";
 
 admin.initializeApp();
 
@@ -359,6 +360,16 @@ app.post(
   joinLimiter,
   validateBody(minigameJoinSchema),
   minigameJoin.join
+);
+
+// Roulette spin (admin-only)
+app.post(
+  "/api/events/:slug/minigames/:id/roulette/spin",
+  requireRole("admin"),
+  slugP,
+  vid,
+  writeLimiter,
+  minigameRoulette.spin
 );
 
 // Word cloud moderation + bingo winners (admin-only)

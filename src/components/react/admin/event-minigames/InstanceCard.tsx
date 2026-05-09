@@ -14,9 +14,11 @@ interface Props {
   onAdvanceQuiz: () => Promise<void> | void;
   onDelete: () => Promise<void> | void;
   busy: boolean;
-  // PR5: opens the moderation/winners side panel for global games.
+  // Opens the moderation/winners side panel for global games.
   // Optional so admin tests of the card itself don't need to wire it.
   onOpenModeration?: () => void;
+  // Roulette-specific: spin the wheel.
+  onSpin?: () => Promise<void> | void;
 }
 
 function questionCount(instance: MinigameInstance): number {
@@ -32,11 +34,12 @@ export function InstanceCard({
   onDelete,
   busy,
   onOpenModeration,
+  onSpin,
 }: Props) {
   const moderationLabel =
     instance.type === "wordcloud"
       ? "Ver moderación"
-      : instance.type === "bingo"
+      : instance.type === "bingo" || instance.type === "roulette"
         ? "Ver ganadores"
         : null;
   const moderationVisible =
@@ -149,6 +152,16 @@ export function InstanceCard({
                 className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
               >
                 ⏭ Avanzar pregunta
+              </button>
+            )}
+            {instance.type === "roulette" && onSpin && (
+              <button
+                type="button"
+                onClick={() => onSpin()}
+                disabled={busy}
+                className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
+              >
+                🎰 Girar ruleta
               </button>
             )}
           </>

@@ -19,6 +19,10 @@ export interface LiveInstance {
   // into the relevant subtree; PR4 only needs `type` for badges.
   config?: Record<string, unknown>;
   currentQuestionIndex?: number;
+  // Roulette-specific runtime fields (written by Cloud Function on spin)
+  spinCount?: number;
+  lastSpinWinnerId?: string | null;
+  lastSpinAt?: { seconds: number; nanoseconds?: number } | null;
 }
 
 export const LOCAL_STORAGE_ALIAS_KEY = (slug: string) =>

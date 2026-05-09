@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   PollConfig,
   QuizConfig,
@@ -7,6 +7,7 @@ import type {
 import { useAggregates } from "./useAggregates";
 import { useBingoWinners } from "./useBingoWinners";
 import { useLiveMinigames } from "./useLiveMinigames";
+import { useRouletteParticipants } from "./useRouletteParticipants";
 import { useWordCloud } from "./useWordCloud";
 import type { LiveInstance } from "./types";
 
@@ -70,6 +71,9 @@ export function ProjectorView({ slug, eventName, joinUrl, qrSvg }: Props) {
                 )}
                 {inst.type === "bingo" && (
                   <ProjectorBingo slug={slug} instance={inst} />
+                )}
+                {inst.type === "roulette" && (
+                  <ProjectorRoulette slug={slug} instance={inst} />
                 )}
               </article>
             ))}
@@ -413,13 +417,162 @@ function ProjectorBingo({
   );
 }
 
+// ---- Roulette -------------------------------------------------------------
+
+const SPIN_DURATION_MS = 4000;
+
+function ProjectorRoulette({
+  slug,
+  instance,
+}: {
+  slug: string;
+  instance: LiveInstance;
+}) {
+  const { eligible, winners, loading } = useRouletteParticipants(
+    slug,
+    instance.id
+  );
+  const prize = instance.config?.prize as string | undefined;
+
+  // Detect new spins by watching lastSpinAt from the live instance.
+  const lastSpinAtRef = useRef<number | null>(null);
+  const [spinning, setSpinning] = useState(false);
+  const [displayedWinner, setDisplayedWinner] = useState<string | null>(null);
+  // Index cycling through eligible names during animation
+  const [spinIndex, setSpinIndex] = useState(0);
+
+  const lastSpinAt = instance.lastSpinAt;
+  const lastSpinWinnerId = instance.lastSpinWinnerId;
+
+  useEffect(() => {
+    const newSeconds = lastSpinAt?.seconds ?? null;
+    if (newSeconds === null) return;
+    if (newSeconds === lastSpinAtRef.current) return;
+    lastSpinAtRef.current = newSeconds;
+
+    // A new spin just happened — start the slot-machine animation.
+    setSpinning(true);
+    setDisplayedWinner(null);
+
+    const stop = window.setTimeout(() => {
+      setSpinning(false);
+      // Reveal winner after animation completes.
+      const winnerEntry =
+        winners.find((w) => w.uid === lastSpinWinnerId) ??
+        // Winner might still be in `eligible` list if state hasn't settled; fall back.
+        null;
+      setDisplayedWinner(
+        winnerEntry?.alias ??
+          (lastSpinWinnerId
+            ? (eligible.find((p) => p.uid === lastSpinWinnerId)?.alias ??
+              "¡Ganador!")
+            : "¡Ganador!")
+      );
+    }, SPIN_DURATION_MS);
+
+    // Cycle through random names while spinning
+    let frame = 0;
+    const allNames = [...eligible, ...winners].map((p) => p.alias);
+    const cycle = window.setInterval(
+      () => {
+        if (allNames.length > 0) {
+          setSpinIndex((prev) => (prev + 1) % allNames.length);
+        }
+        frame++;
+      },
+      Math.max(50, 80 - frame * 2)
+    ); // accelerate then slow — simple approximation
+
+    return () => {
+      window.clearTimeout(stop);
+      window.clearInterval(cycle);
+    };
+  }, [lastSpinAt?.seconds]); // intentionally only fires on new spin timestamps
+
+  const allNames = useMemo(
+    () => [...eligible, ...winners].map((p) => p.alias),
+    [eligible, winners]
+  );
+
+  const spinLabel =
+    allNames.length > 0 ? allNames[spinIndex % allNames.length] : "…";
+
+  return (
+    <div>
+      <Badge color="rose">Ruleta</Badge>
+      <h2 className="mt-3 text-3xl font-bold">{instance.title}</h2>
+      {prize && <p className="mt-1 text-lg text-white/80">Premio: {prize}</p>}
+
+      {/* Slot machine / winner reveal */}
+      <div className="mt-6 flex min-h-[120px] items-center justify-center rounded-2xl border border-white/10 bg-black/40 p-6 text-center">
+        {loading ? (
+          <p className="text-white/60">Cargando participantes...</p>
+        ) : spinning ? (
+          <p
+            className="text-4xl font-extrabold tracking-tight text-rose-300 transition-none"
+            aria-live="off"
+          >
+            {spinLabel}
+          </p>
+        ) : displayedWinner ? (
+          <div>
+            <p className="text-2xl" aria-hidden>
+              🎉
+            </p>
+            <p className="mt-1 text-4xl font-extrabold text-green-300">
+              {displayedWinner}
+            </p>
+            <p className="mt-2 text-sm text-white/60">
+              Giro #{instance.spinCount}
+            </p>
+          </div>
+        ) : eligible.length === 0 && winners.length === 0 ? (
+          <p className="text-white/60">
+            Esperando que los participantes se unan...
+          </p>
+        ) : (
+          <p className="text-white/60">
+            {eligible.length} participante{eligible.length !== 1 && "s"}{" "}
+            elegibles
+            {winners.length > 0 && ` · ${winners.length} ya ganaron`}
+          </p>
+        )}
+      </div>
+
+      {/* Winners leaderboard */}
+      {winners.length > 0 && (
+        <div className="mt-6 rounded-xl border border-white/10 bg-black/40 p-4">
+          <p className="text-xs tracking-widest text-white/50 uppercase">
+            Ganadores
+          </p>
+          <ol className="mt-2 space-y-1 text-base">
+            {winners.map((w, i) => (
+              <li key={w.uid} className="flex items-center justify-between">
+                <span>
+                  <span aria-hidden className="mr-2">
+                    {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🎉"}
+                  </span>
+                  {w.alias}
+                </span>
+                <span className="text-sm text-white/60">
+                  #{w.rouletteSpinNumber}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---- Shared --------------------------------------------------------------
 
 function Badge({
   color,
   children,
 }: {
-  color: "blue" | "purple" | "amber" | "green";
+  color: "blue" | "purple" | "amber" | "green" | "rose";
   children: React.ReactNode;
 }) {
   const palette: Record<typeof color, string> = {
@@ -427,6 +580,7 @@ function Badge({
     purple: "bg-purple-500/20 text-purple-200",
     amber: "bg-amber-500/20 text-amber-200",
     green: "bg-green-500/20 text-green-200",
+    rose: "bg-rose-500/20 text-rose-200",
   };
   return (
     <span
