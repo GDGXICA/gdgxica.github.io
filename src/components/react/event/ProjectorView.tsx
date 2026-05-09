@@ -19,6 +19,8 @@ interface Props {
 
 export function ProjectorView({ slug, eventName, joinUrl, qrSvg }: Props) {
   const { liveInstances } = useLiveMinigames(slug);
+  const [qrExpanded, setQrExpanded] = useState(false);
+
   // Skip realtime instances whose snapshotted config is missing — same
   // guard the participant overlay uses.
   const visible = useMemo(
@@ -85,13 +87,38 @@ export function ProjectorView({ slug, eventName, joinUrl, qrSvg }: Props) {
               <br />
               <span className="font-mono text-white">{joinUrl}</span>
             </p>
-            <div
-              className="h-24 w-24 rounded bg-white p-1"
-              dangerouslySetInnerHTML={{ __html: qrSvg }}
-              aria-label="QR para unirse"
-            />
+            <button
+              type="button"
+              onClick={() => setQrExpanded(true)}
+              className="h-24 w-24 rounded bg-white p-1 transition hover:ring-2 hover:ring-white/60"
+              aria-label="Agrandar QR"
+            >
+              <div dangerouslySetInnerHTML={{ __html: qrSvg }} />
+            </button>
           </div>
         </footer>
+      )}
+
+      {qrExpanded && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-8 bg-black/90 p-8"
+          onClick={() => setQrExpanded(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setQrExpanded(false)}
+            className="absolute top-6 right-8 rounded-lg border border-white/20 px-4 py-2 text-sm text-white/70 hover:bg-white/10"
+            aria-label="Cerrar QR grande"
+          >
+            ✕ Achicar
+          </button>
+          <div
+            className="h-[60vh] max-h-[640px] w-[60vh] max-w-[640px] rounded-2xl bg-white p-6"
+            dangerouslySetInnerHTML={{ __html: qrSvg }}
+            aria-label="QR de unión ampliado"
+          />
+          <p className="font-mono text-xl text-white/80">{joinUrl}</p>
+        </div>
       )}
     </div>
   );
