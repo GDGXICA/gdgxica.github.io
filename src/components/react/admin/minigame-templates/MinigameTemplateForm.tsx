@@ -11,6 +11,7 @@ import { PollFields } from "./forms/PollFields";
 import { QuizFields } from "./forms/QuizFields";
 import { WordCloudFields } from "./forms/WordCloudFields";
 import { BingoFields } from "./forms/BingoFields";
+import { RouletteFields } from "./forms/RouletteFields";
 
 interface Props {
   initial: Template;
@@ -64,6 +65,9 @@ function validate(template: Template): FormErrors {
       if (template.bingo.terms.length < 16) {
         errors.config = "El bingo necesita al menos 16 términos";
       }
+      break;
+    case "roulette":
+      // No required fields — prize is optional.
       break;
   }
   return errors;
@@ -195,6 +199,12 @@ export function MinigameTemplateForm({
             <BingoFields
               value={template.bingo}
               onChange={(next) => setTemplate({ ...template, bingo: next })}
+            />
+          )}
+          {template.type === "roulette" && (
+            <RouletteFields
+              value={template.roulette}
+              onChange={(next) => setTemplate({ ...template, roulette: next })}
             />
           )}
           {submitted && errors.config && (

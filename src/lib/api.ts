@@ -155,6 +155,13 @@ const realApi = {
       `/events/${encodeURIComponent(slug)}/minigames/${id}/winners`
     ),
 
+  // Roulette spin (admin-only)
+  spinRoulette: (slug: string, id: string) =>
+    request<{ winnerId: string; alias: string; spinNumber: number }>(
+      "POST",
+      `/events/${encodeURIComponent(slug)}/minigames/${id}/roulette/spin`
+    ),
+
   // Rebuild
   triggerRebuild: () => request("POST", "/rebuild"),
 };

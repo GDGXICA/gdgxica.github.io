@@ -220,6 +220,17 @@ export const minigameTemplateSchema = z.discriminatedUnion("type", [
         .strict(),
     })
     .strict(),
+  z
+    .object({
+      type: z.literal("roulette"),
+      ...baseTemplate,
+      roulette: z
+        .object({
+          prize: shortText(120).optional(),
+        })
+        .strict(),
+    })
+    .strict(),
 ]);
 
 export type MinigameTemplate = z.infer<typeof minigameTemplateSchema>;

@@ -6,6 +6,7 @@ import { BingoCardView } from "./BingoCardView";
 import { JoinModal } from "./JoinModal";
 import { PollOverlay } from "./PollOverlay";
 import { QuizOverlay } from "./QuizOverlay";
+import { RouletteView } from "./RouletteView";
 import { useLiveMinigames } from "./useLiveMinigames";
 import { WordCloudView } from "./WordCloudView";
 import { LOCAL_STORAGE_ALIAS_KEY, type LiveInstance } from "./types";
@@ -231,6 +232,15 @@ export function MiniGamesRoot({ slug }: Props) {
                     instanceId={inst.id}
                     uid={uid}
                     title={inst.title}
+                  />
+                )}
+                {inst.type === "roulette" && (
+                  <RouletteView
+                    slug={slug}
+                    instanceId={inst.id}
+                    uid={uid}
+                    title={inst.title}
+                    instance={inst}
                   />
                 )}
               </div>

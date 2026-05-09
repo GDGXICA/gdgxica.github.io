@@ -116,6 +116,11 @@ export async function attach(req: Request, res: Response) {
       baseInstance.currentQuestionIndex = -1;
       baseInstance.currentQuestionStartedAt = null;
     }
+    if (tpl.type === "roulette") {
+      baseInstance.spinCount = 0;
+      baseInstance.lastSpinWinnerId = null;
+      baseInstance.lastSpinAt = null;
+    }
 
     const ref = await instancesCol(slug).add(baseInstance);
 
@@ -302,5 +307,7 @@ function pickConfig(tpl: MinigameTemplate): Record<string, unknown> {
       return { ...tpl.wordcloud };
     case "bingo":
       return { ...tpl.bingo };
+    case "roulette":
+      return { ...tpl.roulette };
   }
 }

@@ -1,4 +1,4 @@
-export type MinigameType = "poll" | "quiz" | "wordcloud" | "bingo";
+export type MinigameType = "poll" | "quiz" | "wordcloud" | "bingo" | "roulette";
 
 export interface OptionItem {
   id: string;
@@ -35,6 +35,10 @@ export interface BingoConfig {
   freeCenter: boolean;
 }
 
+export interface RouletteConfig {
+  prize?: string;
+}
+
 interface BaseTemplate {
   id?: string;
   title: string;
@@ -47,13 +51,15 @@ export type Template =
   | (BaseTemplate & { type: "poll"; poll: PollConfig })
   | (BaseTemplate & { type: "quiz"; quiz: QuizConfig })
   | (BaseTemplate & { type: "wordcloud"; wordcloud: WordCloudConfig })
-  | (BaseTemplate & { type: "bingo"; bingo: BingoConfig });
+  | (BaseTemplate & { type: "bingo"; bingo: BingoConfig })
+  | (BaseTemplate & { type: "roulette"; roulette: RouletteConfig });
 
 export const TYPE_LABELS: Record<MinigameType, string> = {
   poll: "Encuesta",
   quiz: "Quiz",
   wordcloud: "Nube de palabras",
   bingo: "Bingo",
+  roulette: "Ruleta",
 };
 
 export const TYPE_COLORS: Record<MinigameType, string> = {
@@ -62,6 +68,7 @@ export const TYPE_COLORS: Record<MinigameType, string> = {
   wordcloud:
     "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
   bingo: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+  roulette: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
 };
 
 function makeId(): string {
@@ -135,6 +142,13 @@ export function emptyForType(type: MinigameType): Template {
           cardSize: 4,
           freeCenter: false,
         },
+      };
+    case "roulette":
+      return {
+        type: "roulette",
+        title: "",
+        description: "",
+        roulette: { prize: "" },
       };
   }
 }
