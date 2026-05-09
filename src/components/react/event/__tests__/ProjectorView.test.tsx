@@ -250,11 +250,11 @@ describe("ProjectorView", () => {
       error: null,
     });
     renderProjector();
-    expect(screen.getByLabelText("QR para unirse")).toBeInTheDocument();
+    expect(screen.getByLabelText("Agrandar QR")).toBeInTheDocument();
     expect(screen.getByText(/Recién llegando/i)).toBeInTheDocument();
   });
 
-  it("renders no interactive buttons (read-only view)", () => {
+  it("renders no interactive buttons in game content (read-only view)", () => {
     mocks.useLiveMinigames.mockReturnValue({
       loading: false,
       liveInstances: [
@@ -271,6 +271,10 @@ describe("ProjectorView", () => {
       error: null,
     });
     renderProjector();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    // The only button allowed in the projector is the QR toggle (presenter
+    // control). Game content itself must not render interactive elements.
+    const buttons = screen.queryAllByRole("button");
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toHaveAttribute("aria-label", "Agrandar QR");
   });
 });
