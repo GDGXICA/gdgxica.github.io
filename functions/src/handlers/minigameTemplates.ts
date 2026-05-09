@@ -28,6 +28,12 @@ function auditEntry(
   };
 }
 
+function toIso(
+  ts: admin.firestore.Timestamp | null | undefined
+): string | null {
+  return ts?.toDate?.().toISOString() ?? null;
+}
+
 export async function list(_req: Request, res: Response) {
   try {
     const snap = await admin
@@ -37,7 +43,15 @@ export async function list(_req: Request, res: Response) {
       .get();
     res.json({
       success: true,
-      data: snap.docs.map((d) => ({ id: d.id, ...d.data() })),
+      data: snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          createdAt: toIso(data.createdAt),
+          updatedAt: toIso(data.updatedAt),
+        };
+      }),
     });
   } catch (err) {
     res.status(500).json({ success: false, error: safeError(err) });
