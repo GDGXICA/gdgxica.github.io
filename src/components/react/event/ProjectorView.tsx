@@ -227,6 +227,7 @@ function ProjectorQuiz({
   const remainingSec = startedMs
     ? Math.max(0, Math.ceil((limitMs - elapsedMs) / 1000))
     : Math.ceil(limitMs / 1000);
+  const timerExpired = startedMs !== null && remainingSec === 0;
 
   const counts = aggregates?.optionCounts ?? {};
   const totalForQuestion = question
@@ -271,11 +272,12 @@ function ProjectorQuiz({
                   ? Math.round((count / totalForQuestion) * 100)
                   : 0;
               const isCorrect = opt.id === question.correctOptionId;
+              const revealCorrect = timerExpired && isCorrect;
               return (
                 <li
                   key={opt.id}
                   className={`relative overflow-hidden rounded-xl border px-5 py-3 ${
-                    isCorrect
+                    revealCorrect
                       ? "border-green-400 bg-black/40"
                       : "border-white/10 bg-black/40"
                   }`}
@@ -283,14 +285,14 @@ function ProjectorQuiz({
                   <div
                     aria-hidden
                     className={`absolute inset-y-0 left-0 transition-all ${
-                      isCorrect ? "bg-green-500/40" : "bg-purple-500/40"
+                      revealCorrect ? "bg-green-500/40" : "bg-purple-500/40"
                     }`}
                     style={{ width: `${pct}%` }}
                   />
                   <div className="relative flex items-center justify-between gap-3">
                     <span className="text-lg font-medium">
                       {opt.label}
-                      {isCorrect && (
+                      {revealCorrect && (
                         <span className="ml-2 text-sm text-green-300">
                           Correcto
                         </span>
