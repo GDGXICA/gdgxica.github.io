@@ -81,5 +81,20 @@ export const mockApi = {
   ) => ok({ id: wordId, hidden }),
   listMinigameBingoWinners: () => ok([]),
 
+  sendCertificates: (data: unknown) => {
+    const recipients =
+      (data as { recipients?: { name: string; email: string }[] })
+        ?.recipients ?? [];
+    return ok({
+      sent: recipients.length,
+      failed: 0,
+      results: recipients.map((r) => ({
+        email: r.email,
+        name: r.name,
+        ok: true,
+      })),
+    });
+  },
+
   triggerRebuild: () => ok(null),
 };

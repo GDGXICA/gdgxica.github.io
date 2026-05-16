@@ -3,7 +3,7 @@ import { onRequest } from "firebase-functions/v2/https";
 import express from "express";
 import cors from "cors";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
-import { GITHUB_TOKEN } from "./config";
+import { GITHUB_TOKEN, GMAIL_USER, GMAIL_APP_PASSWORD } from "./config";
 import { requireRole, requireAuth } from "./middleware/auth";
 import { validateParamId } from "./middleware/validate";
 import { validateBody } from "./middleware/validateBody";
@@ -18,6 +18,7 @@ import {
   minigameStateSchema,
   minigameJoinSchema,
   minigameWordHiddenSchema,
+  certificateSendSchema,
 } from "./schemas";
 import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
@@ -34,6 +35,7 @@ import * as minigameInstances from "./handlers/minigameInstances";
 import * as minigameJoin from "./handlers/minigameJoin";
 import * as minigameWords from "./handlers/minigameWords";
 import * as minigameRoulette from "./handlers/minigameRoulette";
+import * as certificates from "./handlers/certificates";
 
 admin.initializeApp();
 
@@ -399,11 +401,25 @@ app.get(
   minigameWords.listWinners
 );
 
+// Certificates — generate per recipient and email; nothing is stored.
+app.post(
+  "/api/certificates/send",
+  requireRole("organizer"),
+  writeLimiter,
+  validateBody(certificateSendSchema),
+  certificates.sendCertificates
+);
+
 // Rebuild
 app.post("/api/rebuild", requireRole("admin"), writeLimiter, triggerRebuild);
 
 export const api = onRequest(
-  { secrets: [GITHUB_TOKEN], invoker: "public" },
+  {
+    secrets: [GITHUB_TOKEN, GMAIL_USER, GMAIL_APP_PASSWORD],
+    invoker: "public",
+    timeoutSeconds: 300,
+    memory: "512MiB",
+  },
   app
 );
 
