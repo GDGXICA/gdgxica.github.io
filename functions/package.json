@@ -28,7 +28,7 @@
     "protobufjs": ">=7.5.5"
   },
   "devDependencies": {
-    "@firebase/rules-unit-testing": "^5.0.0",
+    "@firebase/rules-unit-testing": "^5.0.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/nodemailer": "^7.0.0",
