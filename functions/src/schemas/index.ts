@@ -270,3 +270,29 @@ export const minigameWordHiddenSchema = z
     hidden: z.boolean(),
   })
   .strict();
+
+// Certificate sending. One request carries the event metadata plus the
+// recipient list (1 = single send, N = batch from CSV). Nothing is
+// stored; the handler generates a PDF per recipient and emails it. The
+// 300-recipient cap keeps a single invocation within the function
+// timeout and the Gmail daily quota.
+const certificateRecipientSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    email: z.string().trim().email().max(254),
+  })
+  .strict();
+
+export const certificateSendSchema = z
+  .object({
+    eventName: z.string().trim().min(1).max(300),
+    startTime: z.string().trim().min(1).max(40),
+    endTime: z.string().trim().min(1).max(40),
+    hours: z.number().positive().max(1000),
+    eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    organizer: shortText(120).optional(),
+    recipients: z.array(certificateRecipientSchema).min(1).max(300),
+  })
+  .strict();
+
+export type CertificateSendBody = z.infer<typeof certificateSendSchema>;

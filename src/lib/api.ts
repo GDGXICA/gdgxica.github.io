@@ -162,6 +162,14 @@ const realApi = {
       `/events/${encodeURIComponent(slug)}/minigames/${id}/roulette/spin`
     ),
 
+  // Certificates (generated on the fly + emailed; nothing is stored)
+  sendCertificates: (data: unknown) =>
+    request<{
+      sent: number;
+      failed: number;
+      results: { email: string; name: string; ok: boolean; error?: string }[];
+    }>("POST", "/certificates/send", data),
+
   // Rebuild
   triggerRebuild: () => request("POST", "/rebuild"),
 };
