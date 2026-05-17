@@ -13,7 +13,7 @@ type Variant = keyof typeof variantValues;
   target={target}
   href={href}
   rel={target === "_blank" ? "noopener noreferrer" : ""}
-  class=`inline-flex  gap-[10px] items-center font-medium justify-center px-8 py-[10px] border rounded-md ${variantValues[variant as Variant]}`
+  class=`inline-flex gap-[10px] items-center font-medium justify-center whitespace-nowrap px-8 py-[10px] border rounded-md ${variantValues[variant as Variant]}`
   {...props}
 >
   <slot />
