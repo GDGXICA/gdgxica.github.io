@@ -8,8 +8,17 @@ let transporter: nodemailer.Transporter | null = null;
 
 function getTransporter(): nodemailer.Transporter {
   if (transporter) return transporter;
+  // Pool a single authenticated connection across messages. Without
+  // pooling, every sendMail opens TCP+TLS+AUTH from scratch; with the
+  // batch handler running multiple workers in parallel that triggers
+  // Gmail's "454-4.7.0 Too many login attempts" guard and the rest of
+  // the batch fails. One pooled connection authenticates once and
+  // streams every certificate through it.
   transporter = nodemailer.createTransport({
     service: "gmail",
+    pool: true,
+    maxConnections: 1,
+    maxMessages: 100,
     auth: {
       user: GMAIL_USER.value(),
       pass: GMAIL_APP_PASSWORD.value(),

@@ -49,11 +49,15 @@ async function sendOne(
     });
     return { email: recipient.email, name: recipient.name, ok: true };
   } catch (err) {
+    // The structured log gets the real message so failures are
+    // diagnosable directly from Cloud Logging; the response still
+    // surfaces only safeError's generic string to the caller.
+    const detail = err instanceof Error ? err.message : String(err);
     logger.error("certificate.failed", {
       recipientName: recipient.name,
       recipientEmail: recipient.email,
       eventName: body.eventName,
-      error: safeError(err),
+      error: detail,
     });
     return {
       email: recipient.email,
