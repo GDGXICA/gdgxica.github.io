@@ -2,11 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { Toast } from "../ui/Toast";
 import { FormField } from "../ui/FormField";
-
-interface Recipient {
-  name: string;
-  email: string;
-}
+import { EMAIL_RE, parseCsv, type Recipient } from "./parseCsv";
 
 interface SendResult {
   email: string;
@@ -14,8 +10,6 @@ interface SendResult {
   ok: boolean;
   error?: string;
 }
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const EMPTY_META = {
   eventName: "",
@@ -25,36 +19,6 @@ const EMPTY_META = {
   hours: "",
   organizer: "GDG ICA",
 };
-
-// Splits a CSV/TSV blob into {name,email} rows. Accepts comma, semicolon
-// or tab separators, skips a header row if the first line looks like
-// one, and tolerates "email,name" or "name,email" column order.
-function parseCsv(text: string): Recipient[] {
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-  if (lines.length === 0) return [];
-
-  const split = (line: string) => line.split(/[,;\t]/).map((c) => c.trim());
-  const first = split(lines[0]).join(" ").toLowerCase();
-  const hasHeader =
-    first.includes("email") ||
-    first.includes("correo") ||
-    first.includes("nombre");
-  const body = hasHeader ? lines.slice(1) : lines;
-
-  const out: Recipient[] = [];
-  for (const line of body) {
-    const cols = split(line);
-    if (cols.length < 2) continue;
-    const emailCol = cols.find((c) => EMAIL_RE.test(c));
-    const email = emailCol ?? cols[1];
-    const name = cols.find((c) => c !== email) ?? cols[0];
-    if (name && email) out.push({ name, email });
-  }
-  return out;
-}
 
 export function CertificateSender() {
   const [meta, setMeta] = useState({ ...EMPTY_META });
