@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { Toast } from "../ui/Toast";
 import { FormField } from "../ui/FormField";
@@ -11,6 +11,17 @@ interface SendResult {
   error?: string;
 }
 
+interface EventSummary {
+  id: string;
+  title: string;
+}
+
+interface EventDetail {
+  title: string;
+  date: string;
+  end_time: string;
+}
+
 const EMPTY_META = {
   eventName: "",
   eventDate: "",
@@ -20,8 +31,43 @@ const EMPTY_META = {
   organizer: "GDG ICA",
 };
 
+type Time = { h: number; m: number };
+
+// Parsea "02:00 PM", "5:00 p.m.", "17:00" → { h: 0-23, m: 0-59 }
+function parse12h(raw: string): Time | null {
+  if (!raw) return null;
+  const s = raw.trim().toLowerCase();
+  const match = s.match(/^(\d{1,2})(?::(\d{2}))?\s*(a\.?\s*m\.?|p\.?\s*m\.?)?/);
+  if (!match) return null;
+  let h = Number(match[1]);
+  const m = match[2] ? Number(match[2]) : 0;
+  const period = match[3]?.replace(/[.\s]/g, ""); // "am" | "pm" | undefined
+  if (Number.isNaN(h) || Number.isNaN(m) || h > 23 || m > 59) return null;
+  if (period === "pm" && h < 12) h += 12;
+  if (period === "am" && h === 12) h = 0;
+  return { h, m };
+}
+
+// { h: 8, m: 0 } → "8:00 a.m."
+function formatTime12h({ h, m }: Time): string {
+  const period = h < 12 ? "a.m." : "p.m.";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${m.toString().padStart(2, "0")} ${period}`;
+}
+
+// Horas decimales entre dos tiempos (maneja cruce de medianoche)
+function computeHours(start: Time, end: Time): number {
+  let mins = end.h * 60 + end.m - (start.h * 60 + start.m);
+  if (mins < 0) mins += 24 * 60;
+  return Math.round((mins / 60) * 100) / 100;
+}
+
 export function CertificateSender() {
   const [meta, setMeta] = useState({ ...EMPTY_META });
+  const [events, setEvents] = useState<EventSummary[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState("");
+  const [loadingEvent, setLoadingEvent] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [manual, setManual] = useState<Recipient>({ name: "", email: "" });
   const [sending, setSending] = useState(false);
@@ -32,6 +78,24 @@ export function CertificateSender() {
   } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Cuando no hay evento seleccionado, los campos manuales están siempre
+  // visibles (flujo manual); con evento seleccionado se ocultan salvo override.
+  const showManualFields = !selectedEventId || manualOpen;
+
+  useEffect(() => {
+    (async () => {
+      const res = await api.listEvents();
+      if (res.success && res.data) {
+        setEvents(res.data as EventSummary[]);
+      } else {
+        setToast({
+          message: res.error || "No se pudieron cargar los eventos",
+          type: "error",
+        });
+      }
+    })();
+  }, []);
+
   const invalidCount = useMemo(
     () => recipients.filter((r) => !EMAIL_RE.test(r.email)).length,
     [recipients]
@@ -39,6 +103,60 @@ export function CertificateSender() {
 
   function setMetaField(k: keyof typeof EMPTY_META, v: string) {
     setMeta((m) => ({ ...m, [k]: v }));
+  }
+
+  async function handleSelectEvent(id: string) {
+    setSelectedEventId(id);
+    if (!id) {
+      setMeta({ ...EMPTY_META });
+      setManualOpen(false);
+      return;
+    }
+    setLoadingEvent(true);
+    const res = await api.getEvent(id);
+    setLoadingEvent(false);
+    if (!res.success || !res.data) {
+      setToast({
+        message: res.error || "No se pudo cargar el evento",
+        type: "error",
+      });
+      return;
+    }
+    const ev = res.data as EventDetail;
+    const [datePart, timePart] = (ev.date || "").split("T");
+    let start: Time | null = null;
+    if (timePart) {
+      const [sh, sm] = timePart.split(":").map(Number);
+      if (!Number.isNaN(sh) && !Number.isNaN(sm)) start = { h: sh, m: sm };
+    }
+    const end = parse12h(ev.end_time || "");
+    const startTime = start ? formatTime12h(start) : "";
+    const endTime = (ev.end_time || "").trim();
+    const hours = start && end ? computeHours(start, end) : 0;
+
+    setMeta({
+      eventName: (ev.title || "").trim(),
+      eventDate: datePart || "",
+      startTime,
+      endTime,
+      hours: hours > 0 ? String(hours) : "",
+      organizer: "GDG ICA",
+    });
+    setManualOpen(false);
+
+    const missing: string[] = [];
+    if (!startTime) missing.push("hora de inicio");
+    if (!endTime) missing.push("hora de fin");
+    if (hours <= 0) missing.push("horas");
+    if (missing.length > 0) {
+      setManualOpen(true);
+      setToast({
+        message: `Evento cargado. Completa manualmente: ${missing.join(", ")}`,
+        type: "error",
+      });
+    } else {
+      setToast({ message: "Datos del evento cargados", type: "success" });
+    }
   }
 
   function dedupeAppend(incoming: Recipient[]) {
@@ -181,64 +299,124 @@ export function CertificateSender() {
       </header>
 
       <section className="mb-6 rounded-xl bg-white p-5 shadow dark:bg-gray-800">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-          Datos del evento
+        <h2 className="mb-1 text-lg font-semibold text-gray-900 dark:text-white">
+          Evento
         </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <FormField label="Nombre del evento" required>
-              <input
-                className={inputCls}
-                value={meta.eventName}
-                onChange={(e) => setMetaField("eventName", e.target.value)}
-                placeholder="Taller intensivo: prepárate para certificarte en Cloud"
-              />
-            </FormField>
+        <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+          Selecciona un evento para autocompletar los datos. El organizador es
+          siempre GDG ICA.
+        </p>
+
+        <FormField label="Seleccionar evento">
+          <select
+            className={inputCls}
+            value={selectedEventId}
+            disabled={loadingEvent}
+            onChange={(e) => handleSelectEvent(e.target.value)}
+          >
+            <option value="">— Ingresar manualmente —</option>
+            {events.map((ev) => (
+              <option key={ev.id} value={ev.id}>
+                {ev.title}
+              </option>
+            ))}
+          </select>
+        </FormField>
+        {loadingEvent && (
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Cargando datos del evento…
+          </p>
+        )}
+
+        {selectedEventId && !manualOpen && (
+          <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-700/40">
+            <p className="font-medium text-gray-900 dark:text-white">
+              {meta.eventName || "—"}
+            </p>
+            <p className="mt-1 text-gray-600 dark:text-gray-300">
+              {[
+                meta.eventDate,
+                meta.startTime && meta.endTime
+                  ? `${meta.startTime} – ${meta.endTime}`
+                  : "",
+                meta.hours ? `${meta.hours} h` : "",
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+            <p className="mt-1 text-gray-500 dark:text-gray-400">
+              Organizador: {meta.organizer}
+            </p>
           </div>
-          <FormField label="Fecha del evento" required>
-            <input
-              type="date"
-              className={inputCls}
-              value={meta.eventDate}
-              onChange={(e) => setMetaField("eventDate", e.target.value)}
-            />
-          </FormField>
-          <FormField label="Horas" required>
-            <input
-              type="number"
-              min="0"
-              step="0.5"
-              className={inputCls}
-              value={meta.hours}
-              onChange={(e) => setMetaField("hours", e.target.value)}
-              placeholder="4"
-            />
-          </FormField>
-          <FormField label="Hora de inicio" required>
-            <input
-              className={inputCls}
-              value={meta.startTime}
-              onChange={(e) => setMetaField("startTime", e.target.value)}
-              placeholder="9:00 am"
-            />
-          </FormField>
-          <FormField label="Hora de fin" required>
-            <input
-              className={inputCls}
-              value={meta.endTime}
-              onChange={(e) => setMetaField("endTime", e.target.value)}
-              placeholder="1:00 pm"
-            />
-          </FormField>
-          <div className="sm:col-span-2">
-            <FormField label="Organizador">
+        )}
+
+        {selectedEventId && (
+          <button
+            type="button"
+            onClick={() => setManualOpen((o) => !o)}
+            className="mt-4 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
+          >
+            {manualOpen ? "▾" : "▸"} Ajustar datos manualmente
+          </button>
+        )}
+
+        <div className={showManualFields ? "mt-4" : "hidden"}>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <FormField label="Nombre del evento" required>
+                <input
+                  className={inputCls}
+                  value={meta.eventName}
+                  onChange={(e) => setMetaField("eventName", e.target.value)}
+                  placeholder="Taller intensivo: prepárate para certificarte en Cloud"
+                />
+              </FormField>
+            </div>
+            <FormField label="Fecha del evento" required>
               <input
+                type="date"
                 className={inputCls}
-                value={meta.organizer}
-                onChange={(e) => setMetaField("organizer", e.target.value)}
-                placeholder="GDG ICA"
+                value={meta.eventDate}
+                onChange={(e) => setMetaField("eventDate", e.target.value)}
               />
             </FormField>
+            <FormField label="Horas" required>
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                className={inputCls}
+                value={meta.hours}
+                onChange={(e) => setMetaField("hours", e.target.value)}
+                placeholder="4"
+              />
+            </FormField>
+            <FormField label="Hora de inicio" required>
+              <input
+                className={inputCls}
+                value={meta.startTime}
+                onChange={(e) => setMetaField("startTime", e.target.value)}
+                placeholder="9:00 am"
+              />
+            </FormField>
+            <FormField label="Hora de fin" required>
+              <input
+                className={inputCls}
+                value={meta.endTime}
+                onChange={(e) => setMetaField("endTime", e.target.value)}
+                placeholder="1:00 pm"
+              />
+            </FormField>
+            <div className="sm:col-span-2">
+              <FormField label="Organizador">
+                <input
+                  className={inputCls}
+                  value={meta.organizer}
+                  onChange={(e) => setMetaField("organizer", e.target.value)}
+                  placeholder="GDG ICA"
+                />
+              </FormField>
+            </div>
           </div>
         </div>
       </section>
