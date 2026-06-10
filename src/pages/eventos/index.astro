@@ -9,6 +9,7 @@ import { getCollection } from "astro:content";
 import { parseSpanishDate } from "@/utils/parseSpanishDate";
 import { fetchStats, fetchLinks } from "@/loaders/transform-site-config";
 import StatsBar from "@/components/StatsBar.astro";
+import { EventFilters } from "@/components/react/EventFilters";
 
 const allEventsRaw = await getCollection("events");
 
@@ -113,15 +114,31 @@ const metadata = {
       <p class="text-secondary text-center text-xl">
         Explora nuestro catálogo completo de eventos pasados y próximos
       </p>
+      <EventFilters client:visible />
       <div
         class="grid-col-1 sm:grid-col-2 md:grid-col-2 mt-12 grid gap-8 lg:grid-cols-3"
       >
         {
           allEvents.map((event) => (
-            <EventCard slug={event.id} {...event.data} />
+            <div
+              class="h-full"
+              data-event-card
+              data-name={event.data.name.toLowerCase()}
+              data-category={event.data.category.type}
+              data-status={event.data.status.type}
+              data-tags={event.data.tags.join(",").toLowerCase()}
+            >
+              <EventCard slug={event.id} {...event.data} />
+            </div>
           ))
         }
       </div>
+      <p
+        id="events-empty"
+        class="text-secondary mt-12 hidden text-center text-xl"
+      >
+        No hay eventos que coincidan con tu búsqueda.
+      </p>
     </div>
   </section>
   <CallToActionSection>
