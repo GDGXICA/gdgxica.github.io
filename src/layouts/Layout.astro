@@ -28,6 +28,12 @@ const { title, description, image, url, schema } = Astro.props;
 
     <title>{title}</title>
     <meta name="description" content={description} />
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title="Eventos GDG Ica"
+      href="/rss.xml"
+    />
 
     <!-- Open Graph -->
     <meta property="og:title" content={title} />
