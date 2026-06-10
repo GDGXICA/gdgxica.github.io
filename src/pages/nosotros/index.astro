@@ -8,6 +8,7 @@ import { MapPin, Users, Calendar, User } from "@lucide/astro";
 // data
 import { getCollection } from "astro:content";
 import { fetchStats, fetchLinks } from "@/loaders/transform-site-config";
+import { buildAboutSchema } from "@/utils/schema";
 
 const organizersCollection = await getCollection("organizers");
 const organizers = organizersCollection.map((entry) => entry.data);
@@ -25,6 +26,7 @@ const metadata = {
     "Conoce la historia, misión y equipo del Google Developer Group Ica. Más de 10 años conectando desarrolladores en Ica, Perú.",
   image: "https://gdgica.com/gdg-logo.png",
   url: "https://gdgica.com/nosotros/",
+  schema: buildAboutSchema(links.social),
 };
 ---
 
