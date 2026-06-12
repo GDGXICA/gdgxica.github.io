@@ -23,16 +23,33 @@ async function request<T>(
     return { success: false, error: "Not authenticated" };
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
 
-  return res.json();
+    if (!res.ok) {
+      const fallback =
+        res.status === 401 || res.status === 403
+          ? "Sesión expirada o sin permisos. Vuelve a iniciar sesión."
+          : `Error ${res.status}`;
+      // El cuerpo puede no ser JSON (p. ej. una página de error HTML).
+      const data = await res.json().catch(() => null);
+      return {
+        success: false,
+        error: data?.error || data?.message || fallback,
+      };
+    }
+
+    return (await res.json()) as ApiResponse<T>;
+  } catch {
+    return { success: false, error: "No se pudo conectar con el servidor." };
+  }
 }
 
 const realApi = {
