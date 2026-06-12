@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { writeAuditLog, triggerRebuildAndLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import { GitHubService } from "../services/github";
@@ -37,9 +38,9 @@ export async function updateStats(req: Request, res: Response) {
       sha
     );
 
-    github.triggerRebuild().catch(() => {});
+    triggerRebuildAndLog(github);
 
-    admin.firestore().collection("audit_log").add({
+    await writeAuditLog({
       action: "stats.update",
       performedBy: user.uid,
       targetId: "stats",

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 
@@ -87,17 +88,14 @@ export async function setWordHidden(req: Request, res: Response) {
       hiddenAt: hidden ? admin.firestore.FieldValue.serverTimestamp() : null,
       hiddenBy: hidden ? user.uid : null,
     });
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add(
-        auditEntry(
-          hidden ? "minigame_word.hide" : "minigame_word.unhide",
-          user.uid,
-          wordId,
-          { slug, instanceId: id, wordId, hidden }
-        )
-      );
+    await writeAuditLog(
+      auditEntry(
+        hidden ? "minigame_word.hide" : "minigame_word.unhide",
+        user.uid,
+        wordId,
+        { slug, instanceId: id, wordId, hidden }
+      )
+    );
     res.json({ success: true, data: { id: wordId, hidden } });
   } catch (err) {
     res.status(500).json({ success: false, error: safeError(err) });

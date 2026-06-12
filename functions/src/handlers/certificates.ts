@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { writeAuditLog } from "../utils/audit";
 import { logger } from "firebase-functions";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
@@ -91,18 +92,14 @@ export async function sendCertificates(req: Request, res: Response) {
     const sent = results.filter((r) => r.ok).length;
     const failed = results.length - sent;
 
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add({
-        action: "certificate.send",
-        performedBy: user.uid,
-        targetId: body.eventName,
-        targetType: "certificate",
-        details: { eventName: body.eventName, sent, failed },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      })
-      .catch(() => {});
+    await writeAuditLog({
+      action: "certificate.send",
+      performedBy: user.uid,
+      targetId: body.eventName,
+      targetType: "certificate",
+      details: { eventName: body.eventName, sent, failed },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     res.json({
       success: true,
