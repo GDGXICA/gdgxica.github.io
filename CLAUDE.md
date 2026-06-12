@@ -13,9 +13,9 @@ Pre-commit hooks run automatically via Husky + lint-staged (ESLint + Prettier on
 File-based routing under `src/pages/`:
 
 - `/` — Homepage
-- `/eventos` — Events listing
-- `/eventos/[slug]` — Dynamic event detail pages (slug = JSON filename without extension)
-- `/equipo`, `/nosotros`, `/patrocinadores`, `/voluntarios`, `/gallery` — Static pages
+- `/events` — Events listing
+- `/events/[slug]` — Dynamic event detail pages (slug = JSON filename without extension)
+- `/team`, `/about`, `/sponsors`, `/volunteers`, `/gallery` — Static pages
 - `*.json.ts` endpoints — API routes returning collection data
 
 ### Data Layer
@@ -45,7 +45,7 @@ All content is sourced from the external repo [`GDGXICA/gdg-ica-data`](https://g
 
 - Google brand colors defined as CSS variables in `src/styles/global.css`: blue `#2463eb`, red `#ef4444`, yellow `#ebb308`, green `#16a34a`
 - `container` utility class provides the standard max-width wrapper
-- Event slugs are derived from JSON filenames (e.g., `devfest-2025.json` → `/eventos/devfest-2025`)
+- Event slugs are derived from JSON filenames (e.g., `devfest-2025.json` → `/events/devfest-2025`)
 - Images stored in `public/` subdirectories (`events/`, `speakers/`, `sponsors/`, `team/`, `gallery/`) — referenced as absolute paths
 
 ### Admin Panel
@@ -67,7 +67,7 @@ Protected admin UI at `/admin/*` using React islands (`client:load`). Firebase A
 - `auth.ts` — Google Sign-In, token management
 - `api.ts` — fetch wrapper with automatic ID token
 
-**Admin pages:** `/admin` (dashboard), `/admin/eventos`, `/admin/equipo`, `/admin/speakers`, `/admin/sponsors`, `/admin/stats`, `/admin/usuarios`
+**Admin pages:** `/admin` (dashboard), `/admin/events`, `/admin/team`, `/admin/speakers`, `/admin/sponsors`, `/admin/stats`, `/admin/users`
 
 **Firestore collections:** `users` (roles), `audit_log` (write history)
 

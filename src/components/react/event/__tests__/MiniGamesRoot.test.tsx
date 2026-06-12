@@ -54,7 +54,7 @@ beforeEach(() => {
   if (typeof window !== "undefined") {
     window.localStorage.clear();
     // jsdom default location is about:blank; emulate ?play=0 by clearing.
-    window.history.replaceState({}, "", "/eventos/x");
+    window.history.replaceState({}, "", "/events/x");
   }
 });
 
@@ -190,7 +190,7 @@ describe("MiniGamesRoot", () => {
 
   it("forces the modal open when ?play=1 is in the URL even with stored alias", async () => {
     window.localStorage.setItem("gdg_minigame_alias_x", "Ana");
-    window.history.replaceState({}, "", "/eventos/x?play=1");
+    window.history.replaceState({}, "", "/events/x?play=1");
     mocks.useLiveMinigames.mockReturnValue({
       loading: false,
       liveInstances: [POLL],

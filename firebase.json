@@ -34,6 +34,37 @@
       "site": "gdgica",
       "public": "dist",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "redirects": [
+        { "source": "/nosotros", "destination": "/about", "type": 301 },
+        { "source": "/equipo", "destination": "/team", "type": 301 },
+        {
+          "source": "/patrocinadores",
+          "destination": "/sponsors",
+          "type": 301
+        },
+        { "source": "/voluntarios", "destination": "/volunteers", "type": 301 },
+        {
+          "source": "/politica-de-privacidad",
+          "destination": "/privacy-policy",
+          "type": 301
+        },
+        {
+          "source": "/terminos-y-condiciones",
+          "destination": "/terms-and-conditions",
+          "type": 301
+        },
+        {
+          "source": "/eventos/:slug/proyector",
+          "destination": "/events/:slug/projector",
+          "type": 301
+        },
+        {
+          "source": "/eventos/:slug*",
+          "destination": "/events/:slug*",
+          "type": 301
+        },
+        { "source": "/eventos", "destination": "/events", "type": 301 }
+      ],
       "rewrites": [
         {
           "source": "/api/**",

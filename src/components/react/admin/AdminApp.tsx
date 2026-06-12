@@ -57,7 +57,7 @@ function renderPage(
       return adminPage(<FormRegistry />);
     case "form-viewer":
       return adminPage(<FormViewer />);
-    case "ubicaciones":
+    case "locations":
       return <LocationList />;
     case "minigame-templates":
       return <MinigameTemplateList />;

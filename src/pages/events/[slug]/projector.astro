@@ -14,7 +14,7 @@ export async function getStaticPaths() {
 
 const { slug } = Astro.params;
 const { event } = Astro.props;
-const joinUrl = `https://gdgica.com/eventos/${slug}?play=1`;
+const joinUrl = `https://gdgica.com/events/${slug}?play=1`;
 
 // QR is rendered server-side at build time so the projector page
 // works the moment it's served — even before the React island

@@ -145,7 +145,7 @@ describe("EventMinigameManager", () => {
     await screen.findByText("First poll");
     await user.click(screen.getByRole("button", { name: /Abrir proyector/i }));
     expect(openSpy).toHaveBeenCalledWith(
-      "/eventos/devfest-2025/proyector",
+      "/events/devfest-2025/projector",
       "_blank"
     );
     openSpy.mockRestore();
@@ -160,6 +160,6 @@ describe("EventMinigameManager", () => {
     await user.click(screen.getByRole("button", { name: /Copiar URL/i }));
     expect(await screen.findByText(/URL copiada/i)).toBeInTheDocument();
     const written = await navigator.clipboard.readText();
-    expect(written).toBe("https://gdgica.com/eventos/devfest-2025?play=1");
+    expect(written).toBe("https://gdgica.com/events/devfest-2025?play=1");
   });
 });

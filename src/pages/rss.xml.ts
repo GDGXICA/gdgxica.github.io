@@ -11,7 +11,7 @@ export async function GET(context: APIContext) {
       title: event.data.name,
       pubDate: parseSpanishDate(event.data.date),
       description: event.data.shortDescription,
-      link: `/eventos/${event.id}`,
+      link: `/events/${event.id}`,
       categories: [event.data.category.label],
     }))
     // Más recientes primero (fechas no parseables caen al epoch → al final).

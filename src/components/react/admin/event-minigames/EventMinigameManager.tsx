@@ -57,12 +57,12 @@ export function EventMinigameManager({ initialSlug }: Props) {
 
   function buildJoinUrl(): string | null {
     if (!slug) return null;
-    return `https://gdgica.com/eventos/${encodeURIComponent(slug)}?play=1`;
+    return `https://gdgica.com/events/${encodeURIComponent(slug)}?play=1`;
   }
 
   function openProjector() {
     if (!slug || typeof window === "undefined") return;
-    window.open(`/eventos/${encodeURIComponent(slug)}/proyector`, "_blank");
+    window.open(`/events/${encodeURIComponent(slug)}/projector`, "_blank");
   }
 
   async function copyJoinUrl() {
@@ -160,7 +160,7 @@ export function EventMinigameManager({ initialSlug }: Props) {
       <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <a
-            href="/admin/eventos"
+            href="/admin/events"
             className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
           >
             ← Volver a eventos

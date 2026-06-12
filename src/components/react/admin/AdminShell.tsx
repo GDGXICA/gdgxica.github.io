@@ -3,15 +3,15 @@ import { useAuth } from "./AuthProvider";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin", icon: "📊" },
-  { label: "Eventos", href: "/admin/eventos", icon: "📅" },
-  { label: "Equipo", href: "/admin/equipo", icon: "👥", adminOnly: true },
+  { label: "Eventos", href: "/admin/events", icon: "📅" },
+  { label: "Equipo", href: "/admin/team", icon: "👥", adminOnly: true },
   { label: "Speakers", href: "/admin/speakers", icon: "🎤" },
-  { label: "Ubicaciones", href: "/admin/ubicaciones", icon: "📍" },
+  { label: "Ubicaciones", href: "/admin/locations", icon: "📍" },
   { label: "Sponsors", href: "/admin/sponsors", icon: "🤝", adminOnly: true },
-  { label: "Usuarios", href: "/admin/usuarios", icon: "👤", adminOnly: true },
+  { label: "Usuarios", href: "/admin/users", icon: "👤", adminOnly: true },
   { label: "Stats", href: "/admin/stats", icon: "📈", adminOnly: true },
   { label: "Formularios", href: "/admin/forms", icon: "📋" },
-  { label: "Certificados", href: "/admin/certificados", icon: "📜" },
+  { label: "Certificados", href: "/admin/certificates", icon: "📜" },
   {
     label: "Minijuegos",
     href: "/admin/minigame-templates",
