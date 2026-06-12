@@ -15,13 +15,17 @@ export async function signOut() {
 
 export function onAuthStateChanged(callback: (user: User | null) => void) {
   let unsubscribe: (() => void) | null = null;
+  let cancelled = false;
   getAuth().then(async (auth) => {
-    const { onAuthStateChanged: firebaseOnAuthStateChanged } = await import(
-      "firebase/auth"
-    );
+    const { onAuthStateChanged: firebaseOnAuthStateChanged } =
+      await import("firebase/auth");
+    // El consumidor pudo desmontarse antes de que resolviera getAuth():
+    // evita suscribirse (y fugar el listener) si ya se llamó al cleanup.
+    if (cancelled) return;
     unsubscribe = firebaseOnAuthStateChanged(auth, callback);
   });
   return () => {
+    cancelled = true;
     if (unsubscribe) unsubscribe();
   };
 }
