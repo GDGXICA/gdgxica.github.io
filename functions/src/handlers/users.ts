@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import { Role } from "../types/users";
@@ -52,17 +53,14 @@ export async function updateRole(req: Request, res: Response) {
 
     await userRef.update({ role });
 
-    await admin
-      .firestore()
-      .collection("audit_log")
-      .add({
-        action: "user.role.change",
-        performedBy: performer.uid,
-        targetId: uid,
-        targetType: "user",
-        details: { newRole: role, previousRole: userDoc.data()?.role },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
+    await await writeAuditLog({
+      action: "user.role.change",
+      performedBy: performer.uid,
+      targetId: uid,
+      targetType: "user",
+      details: { newRole: role, previousRole: userDoc.data()?.role },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     res.json({ success: true, data: { uid, role } });
   } catch (err) {

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import type { MinigameTemplate, MinigameTemplateType } from "../schemas";
@@ -124,17 +125,14 @@ export async function attach(req: Request, res: Response) {
 
     const ref = await instancesCol(slug).add(baseInstance);
 
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add(
-        auditEntry("minigame_instance.attach", user.uid, ref.id, {
-          slug,
-          type: tpl.type,
-          title: tpl.title,
-          templateId,
-        })
-      );
+    await writeAuditLog(
+      auditEntry("minigame_instance.attach", user.uid, ref.id, {
+        slug,
+        type: tpl.type,
+        title: tpl.title,
+        templateId,
+      })
+    );
 
     res
       .status(201)
@@ -172,15 +170,12 @@ export async function setState(req: Request, res: Response) {
 
     await ref.update(update);
 
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add(
-        auditEntry(`minigame_instance.state.${state}`, user.uid, id, {
-          slug,
-          state,
-        })
-      );
+    await writeAuditLog(
+      auditEntry(`minigame_instance.state.${state}`, user.uid, id, {
+        slug,
+        state,
+      })
+    );
 
     res.json({ success: true, data: { id, state } });
   } catch (err) {
@@ -236,16 +231,13 @@ export async function quizAdvance(req: Request, res: Response) {
       currentQuestionStartedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add(
-        auditEntry("minigame_instance.quiz.advance", user.uid, id, {
-          slug,
-          fromIndex,
-          toIndex,
-        })
-      );
+    await writeAuditLog(
+      auditEntry("minigame_instance.quiz.advance", user.uid, id, {
+        slug,
+        fromIndex,
+        toIndex,
+      })
+    );
 
     res.json({ success: true, data: { id, currentQuestionIndex: toIndex } });
   } catch (err) {
@@ -279,15 +271,12 @@ export async function remove(req: Request, res: Response) {
     }
     await ref.delete();
 
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add(
-        auditEntry("minigame_instance.delete", user.uid, id, {
-          slug,
-          title: data?.title,
-        })
-      );
+    await writeAuditLog(
+      auditEntry("minigame_instance.delete", user.uid, id, {
+        slug,
+        title: data?.title,
+      })
+    );
 
     res.json({ success: true });
   } catch (err) {

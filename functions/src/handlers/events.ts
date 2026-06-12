@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { writeAuditLog, triggerRebuildAndLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import {
   safeError,
@@ -132,20 +133,17 @@ export async function createEvent(req: Request, res: Response) {
     );
 
     // Trigger rebuild
-    github.triggerRebuild().catch(() => {});
+    triggerRebuildAndLog(github);
 
     // Audit log
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add({
-        action: "event.create",
-        performedBy: user.uid,
-        targetId: event.id,
-        targetType: "event",
-        details: { title: event.title },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
+    await writeAuditLog({
+      action: "event.create",
+      performedBy: user.uid,
+      targetId: event.id,
+      targetType: "event",
+      details: { title: event.title },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     res.status(201).json({ success: true, data: { id: event.id } });
   } catch (err) {
@@ -189,19 +187,16 @@ export async function updateEvent(req: Request, res: Response) {
       indexSha
     );
 
-    github.triggerRebuild().catch(() => {});
+    triggerRebuildAndLog(github);
 
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add({
-        action: "event.update",
-        performedBy: user.uid,
-        targetId: eventId,
-        targetType: "event",
-        details: { title: event.title },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
+    await writeAuditLog({
+      action: "event.update",
+      performedBy: user.uid,
+      targetId: eventId,
+      targetType: "event",
+      details: { title: event.title },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     res.json({ success: true, data: { id: eventId } });
   } catch (err) {
@@ -236,9 +231,9 @@ export async function deleteEvent(req: Request, res: Response) {
       indexSha
     );
 
-    github.triggerRebuild().catch(() => {});
+    triggerRebuildAndLog(github);
 
-    admin.firestore().collection("audit_log").add({
+    await writeAuditLog({
       action: "event.delete",
       performedBy: user.uid,
       targetId: eventId,

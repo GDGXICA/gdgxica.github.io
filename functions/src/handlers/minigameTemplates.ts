@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import type { MinigameTemplate } from "../schemas";
@@ -73,15 +74,12 @@ export async function create(req: Request, res: Response) {
         updatedAt: now,
         version: 1,
       });
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add(
-        auditEntry("minigame_template.create", user.uid, ref.id, {
-          type: body.type,
-          title: body.title,
-        })
-      );
+    await writeAuditLog(
+      auditEntry("minigame_template.create", user.uid, ref.id, {
+        type: body.type,
+        title: body.title,
+      })
+    );
     res.status(201).json({ success: true, data: { id: ref.id } });
   } catch (err) {
     res.status(500).json({ success: false, error: safeError(err) });
@@ -111,16 +109,13 @@ export async function update(req: Request, res: Response) {
       },
       { merge: true }
     );
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add(
-        auditEntry("minigame_template.update", user.uid, id, {
-          type: body.type,
-          title: body.title,
-          version: nextVersion,
-        })
-      );
+    await writeAuditLog(
+      auditEntry("minigame_template.update", user.uid, id, {
+        type: body.type,
+        title: body.title,
+        version: nextVersion,
+      })
+    );
     res.json({ success: true, data: { id, version: nextVersion } });
   } catch (err) {
     res.status(500).json({ success: false, error: safeError(err) });
@@ -141,15 +136,12 @@ export async function remove(req: Request, res: Response) {
     }
     const data = snap.data() as Partial<MinigameTemplate> | undefined;
     await ref.delete();
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add(
-        auditEntry("minigame_template.delete", user.uid, id, {
-          type: data?.type ?? "poll",
-          title: data?.title ?? id,
-        })
-      );
+    await writeAuditLog(
+      auditEntry("minigame_template.delete", user.uid, id, {
+        type: data?.type ?? "poll",
+        title: data?.title ?? id,
+      })
+    );
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: safeError(err) });

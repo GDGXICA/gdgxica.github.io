@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import { isCleanAlias } from "../services/profanity";
@@ -125,21 +126,18 @@ export async function join(req: Request, res: Response) {
       })
     );
 
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add({
-        action: "minigame_participant.join",
-        performedBy: user.uid,
-        targetId: slug,
-        targetType: "event",
-        details: {
-          alias: canonicalAlias,
-          instanceCount: summaries.length,
-          newJoins: summaries.filter((s) => s.joined).length,
-        },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
+    await writeAuditLog({
+      action: "minigame_participant.join",
+      performedBy: user.uid,
+      targetId: slug,
+      targetType: "event",
+      details: {
+        alias: canonicalAlias,
+        instanceCount: summaries.length,
+        newJoins: summaries.filter((s) => s.joined).length,
+      },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     res.json({
       success: true,

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { GitHubService } from "../services/github";
 import { readSheet } from "../services/sheets";
@@ -65,17 +66,14 @@ export async function addForm(req: Request, res: Response) {
       sha
     );
 
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add({
-        action: "form.create",
-        performedBy: user.uid,
-        targetId: entry.id,
-        targetType: "form",
-        details: { name: entry.name },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
+    await writeAuditLog({
+      action: "form.create",
+      performedBy: user.uid,
+      targetId: entry.id,
+      targetType: "form",
+      details: { name: entry.name },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     res.status(201).json({ success: true, data: entry });
   } catch (err) {
@@ -108,17 +106,14 @@ export async function updateForm(req: Request, res: Response) {
       sha
     );
 
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add({
-        action: "form.update",
-        performedBy: user.uid,
-        targetId: formId,
-        targetType: "form",
-        details: { name: forms[index].name },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
+    await writeAuditLog({
+      action: "form.update",
+      performedBy: user.uid,
+      targetId: formId,
+      targetType: "form",
+      details: { name: forms[index].name },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     res.json({ success: true, data: forms[index] });
   } catch (err) {
@@ -148,7 +143,7 @@ export async function deleteForm(req: Request, res: Response) {
       sha
     );
 
-    admin.firestore().collection("audit_log").add({
+    await writeAuditLog({
       action: "form.delete",
       performedBy: user.uid,
       targetId: formId,

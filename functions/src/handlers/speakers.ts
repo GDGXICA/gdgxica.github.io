@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { writeAuditLog, triggerRebuildAndLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import { GitHubService } from "../services/github";
@@ -61,19 +62,16 @@ export async function addSpeaker(req: Request, res: Response) {
       sha
     );
 
-    github.triggerRebuild().catch(() => {});
+    triggerRebuildAndLog(github);
 
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add({
-        action: "speaker.create",
-        performedBy: user.uid,
-        targetId: speaker.id,
-        targetType: "speaker",
-        details: { name: speaker.name },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
+    await writeAuditLog({
+      action: "speaker.create",
+      performedBy: user.uid,
+      targetId: speaker.id,
+      targetType: "speaker",
+      details: { name: speaker.name },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     res.status(201).json({ success: true, data: { id: speaker.id } });
   } catch (err) {
@@ -111,19 +109,16 @@ export async function updateSpeaker(req: Request, res: Response) {
       indexSha
     );
 
-    github.triggerRebuild().catch(() => {});
+    triggerRebuildAndLog(github);
 
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add({
-        action: "speaker.update",
-        performedBy: user.uid,
-        targetId: speakerId,
-        targetType: "speaker",
-        details: { name: updates.name },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
+    await writeAuditLog({
+      action: "speaker.update",
+      performedBy: user.uid,
+      targetId: speakerId,
+      targetType: "speaker",
+      details: { name: updates.name },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     res.json({ success: true, data: { id: speakerId } });
   } catch (err) {
@@ -159,9 +154,9 @@ export async function deleteSpeaker(req: Request, res: Response) {
       indexSha
     );
 
-    github.triggerRebuild().catch(() => {});
+    triggerRebuildAndLog(github);
 
-    admin.firestore().collection("audit_log").add({
+    await writeAuditLog({
       action: "speaker.delete",
       performedBy: user.uid,
       targetId: speakerId,

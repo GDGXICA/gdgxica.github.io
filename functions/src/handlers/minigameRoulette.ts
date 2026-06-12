@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 
@@ -34,12 +35,10 @@ export async function spin(req: Request, res: Response) {
       return;
     }
     if (instance?.state !== "live") {
-      res
-        .status(400)
-        .json({
-          success: false,
-          error: "La ruleta debe estar en vivo para girar",
-        });
+      res.status(400).json({
+        success: false,
+        error: "La ruleta debe estar en vivo para girar",
+      });
       return;
     }
 
@@ -80,7 +79,7 @@ export async function spin(req: Request, res: Response) {
       return spinCount;
     });
 
-    db.collection("audit_log").add({
+    await writeAuditLog({
       action: "minigame_instance.roulette.spin",
       performedBy: user.uid,
       targetId: id,

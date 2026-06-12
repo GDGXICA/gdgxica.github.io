@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { writeAuditLog, triggerRebuildAndLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import { GitHubService } from "../services/github";
@@ -53,19 +54,16 @@ export async function addTeamMember(req: Request, res: Response) {
       sha
     );
 
-    github.triggerRebuild().catch(() => {});
+    triggerRebuildAndLog(github);
 
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add({
-        action: "team.create",
-        performedBy: user.uid,
-        targetId: member.id,
-        targetType: "team",
-        details: { name: member.name },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
+    await writeAuditLog({
+      action: "team.create",
+      performedBy: user.uid,
+      targetId: member.id,
+      targetType: "team",
+      details: { name: member.name },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     res.status(201).json({ success: true, data: { id: member.id } });
   } catch (err) {
@@ -97,19 +95,16 @@ export async function updateTeamMember(req: Request, res: Response) {
       sha
     );
 
-    github.triggerRebuild().catch(() => {});
+    triggerRebuildAndLog(github);
 
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add({
-        action: "team.update",
-        performedBy: user.uid,
-        targetId: memberId,
-        targetType: "team",
-        details: { name: updates.name },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
+    await writeAuditLog({
+      action: "team.update",
+      performedBy: user.uid,
+      targetId: memberId,
+      targetType: "team",
+      details: { name: updates.name },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     res.json({ success: true, data: { id: memberId } });
   } catch (err) {
@@ -139,9 +134,9 @@ export async function deleteTeamMember(req: Request, res: Response) {
       sha
     );
 
-    github.triggerRebuild().catch(() => {});
+    triggerRebuildAndLog(github);
 
-    admin.firestore().collection("audit_log").add({
+    await writeAuditLog({
       action: "team.delete",
       performedBy: user.uid,
       targetId: memberId,

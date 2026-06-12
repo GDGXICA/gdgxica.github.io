@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import {
   safeError,
@@ -43,7 +44,7 @@ export async function create(req: Request, res: Response) {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       createdBy: user.uid,
     });
-    admin.firestore().collection("audit_log").add({
+    await writeAuditLog({
       action: "location.create",
       performedBy: user.uid,
       targetId: ref.id,
@@ -76,7 +77,7 @@ export async function update(req: Request, res: Response) {
       return;
     }
     await ref.update({ name, address, map_url, map_embed });
-    admin.firestore().collection("audit_log").add({
+    await writeAuditLog({
       action: "location.update",
       performedBy: user.uid,
       targetId: id,
@@ -102,7 +103,7 @@ export async function remove(req: Request, res: Response) {
     }
     const name = (doc.data()?.name as string) || id;
     await ref.delete();
-    admin.firestore().collection("audit_log").add({
+    await writeAuditLog({
       action: "location.delete",
       performedBy: user.uid,
       targetId: id,

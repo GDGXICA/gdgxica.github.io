@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { writeAuditLog, triggerRebuildAndLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError, validateUrl } from "../middleware/validate";
 import { GitHubService } from "../services/github";
@@ -59,19 +60,16 @@ export async function addSponsor(req: Request, res: Response) {
       sha
     );
 
-    github.triggerRebuild().catch(() => {});
+    triggerRebuildAndLog(github);
 
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add({
-        action: "sponsor.create",
-        performedBy: user.uid,
-        targetId: sponsor.name,
-        targetType: "sponsor",
-        details: { name: sponsor.name },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
+    await writeAuditLog({
+      action: "sponsor.create",
+      performedBy: user.uid,
+      targetId: sponsor.name,
+      targetType: "sponsor",
+      details: { name: sponsor.name },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     res.status(201).json({ success: true, data: { name: sponsor.name } });
   } catch (err) {
@@ -110,19 +108,16 @@ export async function updateSponsor(req: Request, res: Response) {
       sha
     );
 
-    github.triggerRebuild().catch(() => {});
+    triggerRebuildAndLog(github);
 
-    admin
-      .firestore()
-      .collection("audit_log")
-      .add({
-        action: "sponsor.update",
-        performedBy: user.uid,
-        targetId: updates.name,
-        targetType: "sponsor",
-        details: { name: updates.name },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
+    await writeAuditLog({
+      action: "sponsor.update",
+      performedBy: user.uid,
+      targetId: updates.name,
+      targetType: "sponsor",
+      details: { name: updates.name },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     res.json({ success: true, data: { name: updates.name } });
   } catch (err) {
@@ -153,9 +148,9 @@ export async function deleteSponsor(req: Request, res: Response) {
       sha
     );
 
-    github.triggerRebuild().catch(() => {});
+    triggerRebuildAndLog(github);
 
-    admin.firestore().collection("audit_log").add({
+    await writeAuditLog({
       action: "sponsor.delete",
       performedBy: user.uid,
       targetId: sponsorId,
