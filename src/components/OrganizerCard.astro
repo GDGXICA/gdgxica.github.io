@@ -31,6 +31,7 @@ const { organizer } = Astro.props;
           href={organizer.links.linkedin}
           aria-label="LinkedIn"
           target="_blank"
+          rel="noopener noreferrer"
         >
           <Linkedin size={18} class="hover:text-google-blue" />
         </a>
@@ -38,21 +39,36 @@ const { organizer } = Astro.props;
     }
     {
       organizer.links.twitter && (
-        <a href={organizer.links.twitter} aria-label="Twitter" target="_blank">
+        <a
+          href={organizer.links.twitter}
+          aria-label="Twitter"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <Twitter size={18} class="hover:text-google-blue" />
         </a>
       )
     }
     {
       organizer.links.github && (
-        <a href={organizer.links.github} aria-label="GitHub" target="_blank">
+        <a
+          href={organizer.links.github}
+          aria-label="GitHub"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <Github size={18} class="hover:text-google-blue" />
         </a>
       )
     }
     {
       organizer.links.web && (
-        <a href={organizer.links.web} aria-label="Website" target="_blank">
+        <a
+          href={organizer.links.web}
+          aria-label="Website"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <Globe size={18} class="hover:text-google-blue" />
         </a>
       )

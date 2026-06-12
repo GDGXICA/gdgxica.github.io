@@ -46,28 +46,48 @@ const { member } = Astro.props;
   <div class="text-secondary mt-4 flex justify-center gap-3">
     {
       member.links.linkedin && (
-        <a href={member.links.linkedin} aria-label="LinkedIn" target="_blank">
+        <a
+          href={member.links.linkedin}
+          aria-label="LinkedIn"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <Linkedin size={16} class="hover:text-google-blue" />
         </a>
       )
     }
     {
       member.links.twitter && (
-        <a href={member.links.twitter} aria-label="Twitter" target="_blank">
+        <a
+          href={member.links.twitter}
+          aria-label="Twitter"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <Twitter size={16} class="hover:text-google-blue" />
         </a>
       )
     }
     {
       member.links.github && (
-        <a href={member.links.github} aria-label="GitHub" target="_blank">
+        <a
+          href={member.links.github}
+          aria-label="GitHub"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <Github size={16} class="hover:text-google-blue" />
         </a>
       )
     }
     {
       member.links.web && (
-        <a href={member.links.web} aria-label="Website" target="_blank">
+        <a
+          href={member.links.web}
+          aria-label="Website"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <Globe size={16} class="hover:text-google-blue" />
         </a>
       )

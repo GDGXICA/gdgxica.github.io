@@ -41,6 +41,7 @@ const { volunteer } = Astro.props;
           href={volunteer.links.linkedin}
           aria-label="LinkedIn"
           target="_blank"
+          rel="noopener noreferrer"
         >
           <Linkedin size={16} class="hover:text-google-blue" />
         </a>
@@ -48,14 +49,24 @@ const { volunteer } = Astro.props;
     }
     {
       volunteer.links.github && (
-        <a href={volunteer.links.github} aria-label="GitHub" target="_blank">
+        <a
+          href={volunteer.links.github}
+          aria-label="GitHub"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <Github size={16} class="hover:text-google-blue" />
         </a>
       )
     }
     {
       volunteer.links.twitter && (
-        <a href={volunteer.links.twitter} aria-label="Twitter" target="_blank">
+        <a
+          href={volunteer.links.twitter}
+          aria-label="Twitter"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <Twitter size={16} class="hover:text-google-blue" />
         </a>
       )
