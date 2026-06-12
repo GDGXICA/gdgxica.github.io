@@ -69,7 +69,7 @@ export function getEventDates(data: EventDateLike) {
 /** URL de "Añadir a Google Calendar" para un evento. */
 export function googleCalendarUrl(data: EventIcsLike, slug: string): string {
   const { startUTC, endUTC } = getEventDates(data);
-  const eventUrl = `https://gdgica.com/eventos/${slug}`;
+  const eventUrl = `https://gdgica.com/events/${slug}`;
   const details = `${data.shortDescription}\n\n${eventUrl}`;
   const location = data.isVirtual
     ? "Evento Virtual"
@@ -97,7 +97,7 @@ function escapeIcs(value: string): string {
 /** Genera el contenido de un archivo .ics (VCALENDAR con un VEVENT). */
 export function buildEventIcs(data: EventIcsLike, slug: string): string {
   const { startUTC, endUTC } = getEventDates(data);
-  const eventUrl = `https://gdgica.com/eventos/${slug}`;
+  const eventUrl = `https://gdgica.com/events/${slug}`;
   const location = data.isVirtual
     ? "Evento Virtual"
     : [data.location.name, data.location.direction].filter(Boolean).join(", ");

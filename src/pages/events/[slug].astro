@@ -45,7 +45,7 @@ function buildEventSchema(data: typeof event.data, slug: string) {
   const location = data.isVirtual
     ? {
         "@type": "VirtualLocation",
-        url: `https://gdgica.com/eventos/${slug}`,
+        url: `https://gdgica.com/events/${slug}`,
       }
     : {
         "@type": "Place",
@@ -72,7 +72,7 @@ function buildEventSchema(data: typeof event.data, slug: string) {
     eventStatus: "https://schema.org/EventScheduled",
     eventAttendanceMode,
     location,
-    url: `https://gdgica.com/eventos/${slug}`,
+    url: `https://gdgica.com/events/${slug}`,
     organizer: {
       "@type": "Organization",
       name: "Google Developer Group ICA",
@@ -108,12 +108,12 @@ const metadata = {
   title: `${event.data.name}`,
   description: `${event.data.shortDescription}`,
   image: event.data.image ? `https://gdgica.com${event.data.image}` : "",
-  url: `https://gdgica.com/eventos/${event.id}`,
+  url: `https://gdgica.com/events/${event.id}`,
   schema: buildEventSchema(event.data, event.id),
 };
 
 const gcalUrl = googleCalendarUrl(event.data, event.id);
-const icsUrl = `/eventos/${event.id}.ics`;
+const icsUrl = `/events/${event.id}.ics`;
 
 const schedule = event.data.schedule;
 const isArraySchedule = Array.isArray(schedule);

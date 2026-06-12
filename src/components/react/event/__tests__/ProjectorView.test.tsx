@@ -24,7 +24,7 @@ vi.mock("../useBingoWinners", () => ({
 import { ProjectorView } from "../ProjectorView";
 
 const QR_SVG = '<svg data-testid="qr-svg"><rect /></svg>';
-const JOIN_URL = "https://gdgica.com/eventos/x?play=1";
+const JOIN_URL = "https://gdgica.com/events/x?play=1";
 const NOW_MS = 1_700_000_000_000;
 
 beforeEach(() => {

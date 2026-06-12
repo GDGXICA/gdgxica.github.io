@@ -82,7 +82,7 @@ export function EventList() {
           {events.length} eventos
         </p>
         <a
-          href="/admin/eventos/nuevo"
+          href="/admin/events/new"
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
           + Crear evento
@@ -130,13 +130,13 @@ export function EventList() {
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2">
                     <a
-                      href={`/admin/eventos/nuevo?edit=${event.id}`}
+                      href={`/admin/events/new?edit=${event.id}`}
                       className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
                     >
                       Editar
                     </a>
                     <a
-                      href={`/admin/eventos/minigames?slug=${encodeURIComponent(event.id)}`}
+                      href={`/admin/events/minigames?slug=${encodeURIComponent(event.id)}`}
                       className="rounded px-3 py-1 text-sm text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20"
                     >
                       🎮 Mini-juegos

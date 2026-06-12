@@ -17,16 +17,16 @@ Sitio web oficial del Google Developer Group (GDG) ICA, construido con Astro 5 c
 
 ### Páginas
 
-| Ruta              | Descripción                                                    |
-| ----------------- | -------------------------------------------------------------- |
-| `/`               | Homepage                                                       |
-| `/eventos`        | Listado de eventos                                             |
-| `/eventos/[slug]` | Detalle de evento (agenda, speakers, sponsors, QR de WhatsApp) |
-| `/equipo`         | Equipo organizador y miembros                                  |
-| `/nosotros`       | Acerca de GDG ICA                                              |
-| `/patrocinadores` | Sponsors                                                       |
-| `/voluntarios`    | Voluntarios                                                    |
-| `/gallery`        | Galería de fotos                                               |
+| Ruta             | Descripción                                                    |
+| ---------------- | -------------------------------------------------------------- |
+| `/`              | Homepage                                                       |
+| `/events`        | Listado de eventos                                             |
+| `/events/[slug]` | Detalle de evento (agenda, speakers, sponsors, QR de WhatsApp) |
+| `/team`          | Equipo organizador y miembros                                  |
+| `/about`         | Acerca de GDG ICA                                              |
+| `/sponsors`      | Sponsors                                                       |
+| `/volunteers`    | Voluntarios                                                    |
+| `/gallery`       | Galería de fotos                                               |
 
 ### Datos
 
@@ -65,19 +65,19 @@ Esta sección guía al equipo organizador para correr mini-juegos en vivo durant
 ### Pre-evento
 
 1. **Plantillas** — desde `/admin/minigame-templates` crea las plantillas que vas a usar (poll, quiz, wordcloud, bingo). Las plantillas son reutilizables entre eventos.
-2. **Adjuntar al evento** — desde `/admin/eventos`, haz click en "🎮 Mini-juegos" en la fila del evento para abrir `/admin/eventos/minigames?slug=<id>`. Adjunta cada plantilla que vayas a usar.
+2. **Adjuntar al evento** — desde `/admin/events`, haz click en "🎮 Mini-juegos" en la fila del evento para abrir `/admin/events/minigames?slug=<id>`. Adjunta cada plantilla que vayas a usar.
 3. **Anonymous Authentication** — confirma que está habilitado en Firebase Console (Authentication → Sign-in method → Anonymous). Sin esto los participantes no se pueden unir en producción. El emulador local lo activa solo.
-4. **Smoke test** — abre `https://gdgica.com/eventos/<slug>?play=1` en una pestaña incognito antes del evento y verifica que aparezca el modal de unión.
+4. **Smoke test** — abre `https://gdgica.com/events/<slug>?play=1` en una pestaña incognito antes del evento y verifica que aparezca el modal de unión.
 
 ### Durante el evento
 
-1. **Conecta el proyector** — desde el panel admin del evento, click en "📺 Abrir proyector". Se abre `/eventos/<slug>/proyector` en una nueva pestaña; muévela a la pantalla del venue.
+1. **Conecta el proyector** — desde el panel admin del evento, click en "📺 Abrir proyector". Se abre `/events/<slug>/projector` en una nueva pestaña; muévela a la pantalla del venue.
 2. **Activa los juegos globales** (bingo + wordcloud) al inicio. Están pensados para correr durante todo el evento.
 3. **Activa polls / quizzes** en momentos puntuales:
    - Click "▶ Iniciar" en la card del juego cuando quieras lanzarlo.
    - Para quiz, "⏭ Avanzar pregunta" controla el timer y la siguiente pregunta.
    - Click "⏹ Cerrar" cuando termine.
-4. **Comparte la URL de unión** — el botón "📋 Copiar URL de unión" copia `https://gdgica.com/eventos/<slug>?play=1` al portapapeles; pégalo en el WhatsApp del evento o cualquier canal.
+4. **Comparte la URL de unión** — el botón "📋 Copiar URL de unión" copia `https://gdgica.com/events/<slug>?play=1` al portapapeles; pégalo en el WhatsApp del evento o cualquier canal.
 5. **Modera el wordcloud** — el botón "Ver moderación" en cada card de wordcloud abre un panel donde admin oculta palabras inapropiadas. Los cambios se reflejan en el proyector y en los celulares en <1s.
 6. **Quiz en vivo** — la pantalla del proyector muestra timer, opciones, y leaderboard top-10. Los participantes ven lo mismo en sus celulares.
 
