@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "module": "commonjs",
+    "rootDir": "src",
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "outDir": "lib",
