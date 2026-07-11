@@ -1,5 +1,8 @@
 ---
-import { Linkedin, Github, Twitter, Globe } from "@lucide/astro";
+import { Globe } from "@lucide/astro";
+import GithubIcon from "./icons/GithubIcon.astro";
+import LinkedinIcon from "./icons/LinkedinIcon.astro";
+import TwitterIcon from "./icons/TwitterIcon.astro";
 import Tag from "./Tag.astro";
 
 const { organizer } = Astro.props;
@@ -33,7 +36,7 @@ const { organizer } = Astro.props;
           target="_blank"
           rel="noopener noreferrer"
         >
-          <Linkedin size={18} class="hover:text-google-blue" />
+          <LinkedinIcon size={18} class="hover:text-google-blue" />
         </a>
       )
     }
@@ -45,7 +48,7 @@ const { organizer } = Astro.props;
           target="_blank"
           rel="noopener noreferrer"
         >
-          <Twitter size={18} class="hover:text-google-blue" />
+          <TwitterIcon size={18} class="hover:text-google-blue" />
         </a>
       )
     }
@@ -57,7 +60,7 @@ const { organizer } = Astro.props;
           target="_blank"
           rel="noopener noreferrer"
         >
-          <Github size={18} class="hover:text-google-blue" />
+          <GithubIcon size={18} class="hover:text-google-blue" />
         </a>
       )
     }

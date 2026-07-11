@@ -22,7 +22,7 @@
     "@astrojs/sitemap": "^3.4.1",
     "@fancyapps/ui": "^6.0.28",
     "@fontsource-variable/geist": "^5.2.9",
-    "@lucide/astro": "^0.525.0",
+    "@lucide/astro": "^1.24.0",
     "@radix-ui/react-popover": "^1.1.15",
     "@tailwindcss/vite": "^4.3.1",
     "@types/react": "^19.1.11",
