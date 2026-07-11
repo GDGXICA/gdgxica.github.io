@@ -1,5 +1,9 @@
 ---
-import { Globe, Twitter, Linkedin, Github, Youtube } from "@lucide/astro";
+import { Globe } from "@lucide/astro";
+import GithubIcon from "./icons/GithubIcon.astro";
+import LinkedinIcon from "./icons/LinkedinIcon.astro";
+import TwitterIcon from "./icons/TwitterIcon.astro";
+import YoutubeIcon from "./icons/YoutubeIcon.astro";
 const {
   image,
   name,
@@ -31,7 +35,7 @@ const {
         linkedin?.startsWith("http") && (
           <li>
             <a href={linkedin} target="_blank" rel="noopener noreferrer">
-              <Linkedin size={16} color="#71717a" />
+              <LinkedinIcon size={16} color="#71717a" />
             </a>
           </li>
         )
@@ -40,7 +44,7 @@ const {
         twitter?.startsWith("http") && (
           <li>
             <a href={twitter} target="_blank" rel="noopener noreferrer">
-              <Twitter size={16} color="#71717a" />
+              <TwitterIcon size={16} color="#71717a" />
             </a>
           </li>
         )
@@ -49,7 +53,7 @@ const {
         github?.startsWith("http") && (
           <li>
             <a href={github} target="_blank" rel="noopener noreferrer">
-              <Github size={16} color="#71717a" />
+              <GithubIcon size={16} color="#71717a" />
             </a>
           </li>
         )
@@ -58,7 +62,7 @@ const {
         youtube?.startsWith("http") && (
           <li>
             <a href={youtube} target="_blank" rel="noopener noreferrer">
-              <Youtube size={16} color="#71717a" />
+              <YoutubeIcon size={16} color="#71717a" />
             </a>
           </li>
         )
