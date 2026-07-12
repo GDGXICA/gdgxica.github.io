@@ -15,9 +15,7 @@ interface Props {
   // Server timestamp arrives as `{ seconds, nanoseconds }`. Optional because
   // it is null while the quiz is still on the "Esperando inicio" state.
   currentQuestionStartedAt?:
-    | { seconds: number; nanoseconds?: number }
-    | null
-    | undefined;
+    { seconds: number; nanoseconds?: number } | null | undefined;
 }
 
 function timestampToMillis(
@@ -156,7 +154,16 @@ export function QuizOverlay({
         </span>
       </div>
       <h2 className="text-primary mb-4 text-2xl font-semibold">{title}</h2>
-      <p className="text-secondary mb-4 text-base">{question.prompt}</p>
+      {/* aria-live here (not on the per-second timer above) so a new
+          question is announced once when it appears, instead of screen
+          readers re-announcing every countdown tick. */}
+      <p
+        className="text-secondary mb-4 text-base"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {question.prompt}
+      </p>
 
       {error && (
         <p className="mb-3 text-sm text-red-600 dark:text-red-400" role="alert">

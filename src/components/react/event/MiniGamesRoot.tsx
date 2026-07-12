@@ -201,7 +201,16 @@ export function MiniGamesRoot({ slug }: Props) {
       )}
 
       {step === "joined" && uid && globalLive.length > 0 && (
-        <section className="container my-8" aria-label="Participación en vivo">
+        <section
+          className={`container my-8 ${
+            // Reserve room below this section so it can never end up
+            // scrolled under the fixed bottom realtime panel (poll/quiz) —
+            // without this, scrolling all the way down while a poll/quiz
+            // is live could still put a bingo card behind the panel.
+            realtimeLive.length > 0 ? "pb-[70vh]" : ""
+          }`}
+          aria-label="Participación en vivo"
+        >
           <h2 className="text-primary mb-4 text-2xl font-semibold">
             Participación en vivo
           </h2>
@@ -259,6 +268,7 @@ export function MiniGamesRoot({ slug }: Props) {
           className="border-primary fixed inset-x-0 bottom-0 z-40 max-h-[70vh] overflow-y-auto border-t-4 bg-white/95 p-4 shadow-2xl backdrop-blur-sm dark:bg-gray-900/95"
           role="region"
           aria-label="Juegos en tiempo real"
+          aria-live="assertive"
         >
           <div className="container mx-auto space-y-6">
             {realtimeLive.map((inst) => (

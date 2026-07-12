@@ -249,8 +249,23 @@ describe("MiniGamesRoot", () => {
     expect(realtimeRegion).toBeInTheDocument();
 
     // ...and the realtime overlay is no longer a full-viewport scrim that
-    // covers/blocks the global games section rendered above it.
+    // covers/blocks the global games section rendered above it. Assert
+    // both the absence of a full-viewport footprint AND the absence of
+    // the opaque backdrop, so re-blocking the page with different-but-
+    // equivalent CSS (e.g. "inset-y-0 inset-x-0" instead of the literal
+    // "inset-0" string, or reintroducing the dark scrim) still fails
+    // this test even though it wouldn't match /inset-0/ alone.
     expect(realtimeRegion.className).not.toMatch(/inset-0/);
+    expect(realtimeRegion.className).not.toMatch(/\btop-0\b/);
+    expect(realtimeRegion.className).not.toMatch(/\bbg-black\b/);
+    expect(realtimeRegion.className).toMatch(/\bbottom-0\b/);
+    expect(realtimeRegion.className).toMatch(/max-h-/);
+
+    // And the global games section reserves enough space below itself
+    // that it can never end up scrolled underneath the fixed panel.
+    const bingoCard = screen.getByTestId("bingo-card");
+    const globalSection = bingoCard.closest("section");
+    expect(globalSection?.className).toMatch(/pb-\[70vh\]/);
   });
 
   it("forces the modal open when ?play=1 is in the URL even with stored alias", async () => {
