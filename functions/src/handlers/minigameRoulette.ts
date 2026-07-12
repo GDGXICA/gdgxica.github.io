@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
@@ -26,8 +27,7 @@ export async function spin(req: Request, res: Response) {
       return;
     }
     const instance = instanceSnap.data() as
-      | { type?: string; state?: string; spinCount?: number }
-      | undefined;
+      { type?: string; state?: string; spinCount?: number } | undefined;
     if (instance?.type !== "roulette") {
       res
         .status(400)
@@ -59,7 +59,7 @@ export async function spin(req: Request, res: Response) {
     const winner = eligible[Math.floor(Math.random() * eligible.length)];
     const winnerData = winner.data() as { alias?: string };
     const alias = winnerData.alias ?? "Anónimo";
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = FieldValue.serverTimestamp();
 
     const spinNumber = await db.runTransaction(async (tx) => {
       const freshSnap = await tx.get(instanceRef);

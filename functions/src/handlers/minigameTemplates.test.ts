@@ -15,6 +15,13 @@ vi.mock("firebase-admin", () => ({
   }),
 }));
 
+vi.mock("firebase-admin/firestore", () => ({
+  FieldValue: {
+    serverTimestamp: () => fieldValueServerTimestamp,
+  },
+  Timestamp: class {},
+}));
+
 // Imported after the mock is set up.
 import * as handler from "./minigameTemplates";
 import type { AuthenticatedRequest } from "../middleware/auth";

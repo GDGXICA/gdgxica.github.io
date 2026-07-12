@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
@@ -31,7 +32,7 @@ function auditEntry(
     targetId,
     targetType: "minigame_instance",
     details,
-    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    timestamp: FieldValue.serverTimestamp(),
   };
 }
 
@@ -80,8 +81,7 @@ export async function attach(req: Request, res: Response) {
       return;
     }
     const tpl = tplSnap.data() as
-      | (MinigameTemplate & { version?: number })
-      | undefined;
+      (MinigameTemplate & { version?: number }) | undefined;
     if (!tpl) {
       res.status(404).json({ success: false, error: "Template not found" });
       return;
@@ -93,12 +93,12 @@ export async function attach(req: Request, res: Response) {
     await eventRef.set(
       {
         slug,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
       },
       { merge: true }
     );
 
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = FieldValue.serverTimestamp();
     const config = pickConfig(tpl);
     const baseInstance: Record<string, unknown> = {
       eventSlug: slug,
@@ -163,9 +163,9 @@ export async function setState(req: Request, res: Response) {
 
     const update: Record<string, unknown> = { state };
     if (state === "live") {
-      update.activatedAt = admin.firestore.FieldValue.serverTimestamp();
+      update.activatedAt = FieldValue.serverTimestamp();
     } else if (state === "closed") {
-      update.closedAt = admin.firestore.FieldValue.serverTimestamp();
+      update.closedAt = FieldValue.serverTimestamp();
     }
 
     await ref.update(update);
@@ -228,7 +228,7 @@ export async function quizAdvance(req: Request, res: Response) {
 
     await ref.update({
       currentQuestionIndex: toIndex,
-      currentQuestionStartedAt: admin.firestore.FieldValue.serverTimestamp(),
+      currentQuestionStartedAt: FieldValue.serverTimestamp(),
     });
 
     await writeAuditLog(

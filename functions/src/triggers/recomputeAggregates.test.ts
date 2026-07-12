@@ -18,6 +18,13 @@ vi.mock("firebase-admin", () => ({
   }),
 }));
 
+vi.mock("firebase-admin/firestore", () => ({
+  FieldValue: {
+    increment: mocks.incrementMock,
+    serverTimestamp: mocks.serverTsMock,
+  },
+}));
+
 // Stub `firebase-functions/v2/firestore` so importing the module does not
 // require Functions runtime config. We don't invoke the wrapped export
 // directly; tests target the exported inner handler.

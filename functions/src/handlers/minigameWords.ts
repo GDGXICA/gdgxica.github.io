@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
@@ -23,7 +24,7 @@ function auditEntry(
     targetId,
     targetType: "minigame_word",
     details,
-    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    timestamp: FieldValue.serverTimestamp(),
   };
 }
 
@@ -85,7 +86,7 @@ export async function setWordHidden(req: Request, res: Response) {
     }
     await ref.update({
       hidden,
-      hiddenAt: hidden ? admin.firestore.FieldValue.serverTimestamp() : null,
+      hiddenAt: hidden ? FieldValue.serverTimestamp() : null,
       hiddenBy: hidden ? user.uid : null,
     });
     await writeAuditLog(
