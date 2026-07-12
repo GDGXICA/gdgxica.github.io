@@ -53,9 +53,6 @@ describe("firebase.ts auth readiness", () => {
   });
 
   it("signInAnonymouslyIfNeeded does not sign in anonymously when a persisted session resolves after authStateReady (the cross-tab race)", async () => {
-    // Simulates the reported bug: currentUser is only populated once the
-    // SDK finishes rehydrating persisted (IndexedDB) auth state, which
-    // authStateReady() waits for.
     const persistedUser = { uid: "admin-uid" };
     const auth = buildAuth({
       currentUser: null,

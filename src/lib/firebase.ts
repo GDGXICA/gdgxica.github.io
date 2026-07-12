@@ -9,11 +9,6 @@ const firebaseConfig = {
 
 let _appPromise: Promise<import("firebase/app").FirebaseApp> | null = null;
 
-// Cache the in-flight promise, not just the resolved app: two callers
-// invoking getApp() before the first `await import("firebase/app")`
-// settles would otherwise both see no cached app yet, and could both call
-// initializeApp(), which throws "Firebase App named '[DEFAULT]' already
-// exists" on the second call.
 function getApp() {
   if (!_appPromise) {
     _appPromise = (async () => {
@@ -30,12 +25,6 @@ export async function getAuth() {
   const app = await getApp();
   const { getAuth: firebaseGetAuth } = await import("firebase/auth");
   const auth = firebaseGetAuth(app);
-  // Wait for the SDK to finish restoring any persisted session (IndexedDB)
-  // before callers read `auth.currentUser`. Without this, a fresh tab can
-  // observe `currentUser` as null before rehydration completes and sign in
-  // anonymously (see signInAnonymouslyIfNeeded below), which — because auth
-  // state syncs across same-origin tabs — silently clobbers an existing
-  // signed-in session (e.g. an admin's) in every open tab.
   await auth.authStateReady();
   return auth;
 }
