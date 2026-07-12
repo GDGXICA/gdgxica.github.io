@@ -7,28 +7,32 @@ const firebaseConfig = {
   appId: "1:647264238138:web:68e7e6fb13454092801303",
 };
 
-let _app: import("firebase/app").FirebaseApp | null = null;
+let _appPromise: Promise<import("firebase/app").FirebaseApp> | null = null;
 
-async function getApp() {
-  if (!_app) {
-    const { initializeApp, getApps } = await import("firebase/app");
-    _app =
-      getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+function getApp() {
+  if (!_appPromise) {
+    _appPromise = (async () => {
+      const { initializeApp, getApps } = await import("firebase/app");
+      return getApps().length === 0
+        ? initializeApp(firebaseConfig)
+        : getApps()[0];
+    })();
   }
-  return _app;
+  return _appPromise;
 }
 
 export async function getAuth() {
   const app = await getApp();
   const { getAuth: firebaseGetAuth } = await import("firebase/auth");
-  return firebaseGetAuth(app);
+  const auth = firebaseGetAuth(app);
+  await auth.authStateReady();
+  return auth;
 }
 
 export async function getFirestore() {
   const app = await getApp();
-  const { getFirestore: firebaseGetFirestore } = await import(
-    "firebase/firestore"
-  );
+  const { getFirestore: firebaseGetFirestore } =
+    await import("firebase/firestore");
   return firebaseGetFirestore(app);
 }
 
