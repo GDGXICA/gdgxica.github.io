@@ -18,18 +18,37 @@ async function getApp() {
   return _app;
 }
 
+// PUBLIC_USE_FIREBASE_EMULATOR opts local dev into the Firebase Emulator
+// Suite instead of the production project, so manual/E2E testing never
+// touches real user data.
+const USE_EMULATOR = import.meta.env.PUBLIC_USE_FIREBASE_EMULATOR === "true";
+let _authEmulatorConnected = false;
+let _firestoreEmulatorConnected = false;
+
 export async function getAuth() {
   const app = await getApp();
-  const { getAuth: firebaseGetAuth } = await import("firebase/auth");
-  return firebaseGetAuth(app);
+  const { getAuth: firebaseGetAuth, connectAuthEmulator } =
+    await import("firebase/auth");
+  const auth = firebaseGetAuth(app);
+  if (USE_EMULATOR && !_authEmulatorConnected) {
+    connectAuthEmulator(auth, "http://127.0.0.1:9099", {
+      disableWarnings: true,
+    });
+    _authEmulatorConnected = true;
+  }
+  return auth;
 }
 
 export async function getFirestore() {
   const app = await getApp();
-  const { getFirestore: firebaseGetFirestore } = await import(
-    "firebase/firestore"
-  );
-  return firebaseGetFirestore(app);
+  const { getFirestore: firebaseGetFirestore, connectFirestoreEmulator } =
+    await import("firebase/firestore");
+  const db = firebaseGetFirestore(app);
+  if (USE_EMULATOR && !_firestoreEmulatorConnected) {
+    connectFirestoreEmulator(db, "127.0.0.1", 8080);
+    _firestoreEmulatorConnected = true;
+  }
+  return db;
 }
 
 // Used by the public event island in PR4. No-ops when there is already

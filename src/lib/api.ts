@@ -1,10 +1,13 @@
 import { getIdToken } from "./auth";
 import { mockApi } from "./mock-api";
 
+const USE_EMULATOR = import.meta.env.PUBLIC_USE_FIREBASE_EMULATOR === "true";
 const API_BASE = "/api";
 
 export const isDevPreview =
-  typeof window !== "undefined" && window.location.hostname === "localhost";
+  !USE_EMULATOR &&
+  typeof window !== "undefined" &&
+  window.location.hostname === "localhost";
 
 interface ApiResponse<T> {
   success: boolean;
