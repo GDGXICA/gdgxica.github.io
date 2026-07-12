@@ -27,7 +27,8 @@
   "overrides": {
     "protobufjs": ">=7.5.5",
     "@babel/core": "7.29.6",
-    "@tootallnate/once": "2.0.1"
+    "@tootallnate/once": "2.0.1",
+    "js-yaml": "3.15.0"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.1",
