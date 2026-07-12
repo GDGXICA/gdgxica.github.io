@@ -8,11 +8,26 @@ import sitemap from "@astrojs/sitemap";
 import react from "@astrojs/react";
 
 // https://astro.build/config
+try {
+  process.loadEnvFile();
+} catch {}
+const useFirebaseEmulator = process.env.PUBLIC_USE_FIREBASE_EMULATOR === "true";
+
 export default defineConfig({
   site: "https://gdgica.com",
 
   vite: {
     plugins: [tailwindcss()],
+    server: useFirebaseEmulator
+      ? {
+          proxy: {
+            "/api": {
+              target: "http://127.0.0.1:5001/appgdgica/us-central1/api",
+              changeOrigin: true,
+            },
+          },
+        }
+      : undefined,
   },
 
   integrations: [

@@ -21,19 +21,35 @@ function getApp() {
   return _appPromise;
 }
 
+const USE_EMULATOR = import.meta.env.PUBLIC_USE_FIREBASE_EMULATOR === "true";
+let _authEmulatorConnected = false;
+let _firestoreEmulatorConnected = false;
+
 export async function getAuth() {
   const app = await getApp();
-  const { getAuth: firebaseGetAuth } = await import("firebase/auth");
+  const { getAuth: firebaseGetAuth, connectAuthEmulator } =
+    await import("firebase/auth");
   const auth = firebaseGetAuth(app);
+  if (USE_EMULATOR && !_authEmulatorConnected) {
+    connectAuthEmulator(auth, "http://127.0.0.1:9099", {
+      disableWarnings: true,
+    });
+    _authEmulatorConnected = true;
+  }
   await auth.authStateReady();
   return auth;
 }
 
 export async function getFirestore() {
   const app = await getApp();
-  const { getFirestore: firebaseGetFirestore } =
+  const { getFirestore: firebaseGetFirestore, connectFirestoreEmulator } =
     await import("firebase/firestore");
-  return firebaseGetFirestore(app);
+  const db = firebaseGetFirestore(app);
+  if (USE_EMULATOR && !_firestoreEmulatorConnected) {
+    connectFirestoreEmulator(db, "127.0.0.1", 8080);
+    _firestoreEmulatorConnected = true;
+  }
+  return db;
 }
 
 // Used by the public event island in PR4. No-ops when there is already

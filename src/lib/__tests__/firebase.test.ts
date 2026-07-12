@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   getApps: vi.fn(() => []),
   getAuth: vi.fn(),
   signInAnonymously: vi.fn(),
+  connectAuthEmulator: vi.fn(),
 }));
 
 vi.mock("firebase/app", () => ({
@@ -15,6 +16,7 @@ vi.mock("firebase/app", () => ({
 vi.mock("firebase/auth", () => ({
   getAuth: mocks.getAuth,
   signInAnonymously: mocks.signInAnonymously,
+  connectAuthEmulator: mocks.connectAuthEmulator,
 }));
 
 function buildAuth(options: {
