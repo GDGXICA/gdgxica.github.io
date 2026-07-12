@@ -18,9 +18,6 @@ async function getApp() {
   return _app;
 }
 
-// PUBLIC_USE_FIREBASE_EMULATOR opts local dev into the Firebase Emulator
-// Suite instead of the production project, so manual/E2E testing never
-// touches real user data.
 const USE_EMULATOR = import.meta.env.PUBLIC_USE_FIREBASE_EMULATOR === "true";
 let _authEmulatorConnected = false;
 let _firestoreEmulatorConnected = false;
