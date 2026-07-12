@@ -72,6 +72,7 @@
   },
   "pnpm": {
     "overrides": {
+      "form-data": "4.0.6",
       "postcss": "8.5.10"
     }
   }
