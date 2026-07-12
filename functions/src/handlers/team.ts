@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog, triggerRebuildAndLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
@@ -62,7 +62,7 @@ export async function addTeamMember(req: Request, res: Response) {
       targetId: member.id,
       targetType: "team",
       details: { name: member.name },
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     res.status(201).json({ success: true, data: { id: member.id } });
@@ -103,7 +103,7 @@ export async function updateTeamMember(req: Request, res: Response) {
       targetId: memberId,
       targetType: "team",
       details: { name: updates.name },
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     res.json({ success: true, data: { id: memberId } });
@@ -142,7 +142,7 @@ export async function deleteTeamMember(req: Request, res: Response) {
       targetId: memberId,
       targetType: "team",
       details: {},
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     res.json({ success: true });

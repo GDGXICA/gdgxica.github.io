@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog, triggerRebuildAndLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import {
@@ -142,7 +142,7 @@ export async function createEvent(req: Request, res: Response) {
       targetId: event.id,
       targetType: "event",
       details: { title: event.title },
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     res.status(201).json({ success: true, data: { id: event.id } });
@@ -195,7 +195,7 @@ export async function updateEvent(req: Request, res: Response) {
       targetId: eventId,
       targetType: "event",
       details: { title: event.title },
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     res.json({ success: true, data: { id: eventId } });
@@ -239,7 +239,7 @@ export async function deleteEvent(req: Request, res: Response) {
       targetId: eventId,
       targetType: "event",
       details: {},
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     res.json({ success: true });

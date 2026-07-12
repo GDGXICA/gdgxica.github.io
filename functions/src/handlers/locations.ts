@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import {
@@ -41,7 +42,7 @@ export async function create(req: Request, res: Response) {
       address,
       map_url,
       map_embed,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
       createdBy: user.uid,
     });
     await writeAuditLog({
@@ -50,7 +51,7 @@ export async function create(req: Request, res: Response) {
       targetId: ref.id,
       targetType: "location",
       details: { name },
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
     res.status(201).json({ success: true, data: { id: ref.id } });
   } catch (err) {
@@ -83,7 +84,7 @@ export async function update(req: Request, res: Response) {
       targetId: id,
       targetType: "location",
       details: { name },
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
     res.json({ success: true, data: { id } });
   } catch (err) {
@@ -109,7 +110,7 @@ export async function remove(req: Request, res: Response) {
       targetId: id,
       targetType: "location",
       details: { name },
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
     res.json({ success: true });
   } catch (err) {

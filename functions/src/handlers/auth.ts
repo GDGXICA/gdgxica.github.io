@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { AuthenticatedRequest } from "../middleware/auth";
 
 export async function register(req: Request, res: Response) {
@@ -11,7 +12,7 @@ export async function register(req: Request, res: Response) {
 
     if (userDoc.exists) {
       await userRef.update({
-        lastLoginAt: admin.firestore.FieldValue.serverTimestamp(),
+        lastLoginAt: FieldValue.serverTimestamp(),
       });
       res.json({ success: true, data: userDoc.data() });
       return;
@@ -23,8 +24,8 @@ export async function register(req: Request, res: Response) {
       displayName: user.displayName || "",
       photoURL: user.photoURL || "",
       role: "member",
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      lastLoginAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      lastLoginAt: FieldValue.serverTimestamp(),
     };
 
     await userRef.set(newUser);
