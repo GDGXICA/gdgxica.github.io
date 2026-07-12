@@ -32,7 +32,8 @@
     "form-data": "2.5.6",
     "@grpc/grpc-js": "1.14.4",
     "fast-xml-parser": "5.7.0",
-    "fast-xml-builder": "1.1.7"
+    "fast-xml-builder": "1.1.7",
+    "vite": "8.0.16"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.1",
