@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
@@ -25,13 +26,11 @@ function auditEntry(
     targetId,
     targetType: "minigame_template",
     details,
-    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    timestamp: FieldValue.serverTimestamp(),
   };
 }
 
-function toIso(
-  ts: admin.firestore.Timestamp | null | undefined
-): string | null {
+function toIso(ts: Timestamp | null | undefined): string | null {
   return ts?.toDate?.().toISOString() ?? null;
 }
 
@@ -63,7 +62,7 @@ export async function create(req: Request, res: Response) {
   try {
     const user = (req as AuthenticatedRequest).user;
     const body = req.body as MinigameTemplate;
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = FieldValue.serverTimestamp();
     const ref = await admin
       .firestore()
       .collection(COLLECTION)
@@ -104,7 +103,7 @@ export async function update(req: Request, res: Response) {
     await ref.set(
       {
         ...body,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
         version: nextVersion,
       },
       { merge: true }

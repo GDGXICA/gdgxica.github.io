@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
@@ -80,8 +81,7 @@ export async function join(req: Request, res: Response) {
           const existing = await tx.get(participantRef);
           if (existing.exists) {
             const data = existing.data() as
-              | { alias?: string; bingoCard?: string[] }
-              | undefined;
+              { alias?: string; bingoCard?: string[] } | undefined;
             // Lock alias to whatever was stored first.
             if (data?.alias) {
               canonicalAlias = data.alias;
@@ -96,7 +96,7 @@ export async function join(req: Request, res: Response) {
           const participantDoc: Record<string, unknown> = {
             uid: user.uid,
             alias: requestedAlias,
-            joinedAt: admin.firestore.FieldValue.serverTimestamp(),
+            joinedAt: FieldValue.serverTimestamp(),
           };
 
           if (instanceData.type === "bingo") {
@@ -136,7 +136,7 @@ export async function join(req: Request, res: Response) {
         instanceCount: summaries.length,
         newJoins: summaries.filter((s) => s.joined).length,
       },
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     res.json({
