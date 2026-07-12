@@ -7,15 +7,18 @@ const firebaseConfig = {
   appId: "1:647264238138:web:68e7e6fb13454092801303",
 };
 
-let _app: import("firebase/app").FirebaseApp | null = null;
+let _appPromise: Promise<import("firebase/app").FirebaseApp> | null = null;
 
-async function getApp() {
-  if (!_app) {
-    const { initializeApp, getApps } = await import("firebase/app");
-    _app =
-      getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+function getApp() {
+  if (!_appPromise) {
+    _appPromise = (async () => {
+      const { initializeApp, getApps } = await import("firebase/app");
+      return getApps().length === 0
+        ? initializeApp(firebaseConfig)
+        : getApps()[0];
+    })();
   }
-  return _app;
+  return _appPromise;
 }
 
 const USE_EMULATOR = import.meta.env.PUBLIC_USE_FIREBASE_EMULATOR === "true";
@@ -33,6 +36,7 @@ export async function getAuth() {
     });
     _authEmulatorConnected = true;
   }
+  await auth.authStateReady();
   return auth;
 }
 

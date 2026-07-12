@@ -1,5 +1,6 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 
 // Fires whenever a response doc is written under a minigame instance and
 // keeps the single `aggregates/current` doc in sync. Spectators (the
@@ -66,10 +67,10 @@ export async function recomputeAggregatesFromEvent(
   await aggregateRef.set(
     {
       optionCounts: {
-        [optionKey]: admin.firestore.FieldValue.increment(1),
+        [optionKey]: FieldValue.increment(1),
       },
-      totalResponses: admin.firestore.FieldValue.increment(1),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      totalResponses: FieldValue.increment(1),
+      updatedAt: FieldValue.serverTimestamp(),
     },
     { merge: true }
   );
@@ -97,7 +98,7 @@ export async function recomputeAggregatesFromEvent(
   await aggregateRef.set(
     {
       leaderboard,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     },
     { merge: true }
   );

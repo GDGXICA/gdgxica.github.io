@@ -22,6 +22,12 @@ vi.mock("firebase-admin", () => ({
   ),
 }));
 
+vi.mock("firebase-admin/firestore", () => ({
+  FieldValue: {
+    serverTimestamp: () => "__SERVER_TS__",
+  },
+}));
+
 import * as handler from "./minigameJoin";
 import type { AuthenticatedRequest } from "../middleware/auth";
 
