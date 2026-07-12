@@ -154,9 +154,6 @@ export function QuizOverlay({
         </span>
       </div>
       <h2 className="text-primary mb-4 text-2xl font-semibold">{title}</h2>
-      {/* aria-live here (not on the per-second timer above) so a new
-          question is announced once when it appears, instead of screen
-          readers re-announcing every countdown tick. */}
       <p
         className="text-secondary mb-4 text-base"
         aria-live="polite"

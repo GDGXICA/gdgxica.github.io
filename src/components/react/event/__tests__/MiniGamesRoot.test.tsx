@@ -25,9 +25,6 @@ vi.mock("../useLiveMinigames", () => ({
   useLiveMinigames: mocks.useLiveMinigames,
 }));
 
-// Shallow-stub the presentational children so this file can exercise
-// MiniGamesRoot's own layout logic (which section renders where) without
-// also wiring up each child's Firestore-backed hooks.
 vi.mock("../BingoCardView", () => ({
   BingoCardView: () => <div data-testid="bingo-card">bingo</div>,
 }));
@@ -208,9 +205,6 @@ describe("MiniGamesRoot", () => {
   });
 
   it("keeps the global games section reachable when a realtime game is also live", async () => {
-    // Regression test: the realtime (poll/quiz) overlay used to be a
-    // fixed inset-0 scrim that completely blocked pointer events on the
-    // global games section (bingo/wordcloud/roulette) rendered above it.
     window.localStorage.setItem("gdg_minigame_alias_x", "Ana");
     const BINGO: LiveInstance = {
       id: "i-bingo",
@@ -241,28 +235,18 @@ describe("MiniGamesRoot", () => {
     });
     render(<MiniGamesRoot slug="x" />);
 
-    // Both sections mount...
     expect(await screen.findByTestId("bingo-card")).toBeInTheDocument();
     const realtimeRegion = await screen.findByRole("region", {
       name: /juegos en tiempo real/i,
     });
     expect(realtimeRegion).toBeInTheDocument();
 
-    // ...and the realtime overlay is no longer a full-viewport scrim that
-    // covers/blocks the global games section rendered above it. Assert
-    // both the absence of a full-viewport footprint AND the absence of
-    // the opaque backdrop, so re-blocking the page with different-but-
-    // equivalent CSS (e.g. "inset-y-0 inset-x-0" instead of the literal
-    // "inset-0" string, or reintroducing the dark scrim) still fails
-    // this test even though it wouldn't match /inset-0/ alone.
     expect(realtimeRegion.className).not.toMatch(/inset-0/);
     expect(realtimeRegion.className).not.toMatch(/\btop-0\b/);
     expect(realtimeRegion.className).not.toMatch(/\bbg-black\b/);
     expect(realtimeRegion.className).toMatch(/\bbottom-0\b/);
     expect(realtimeRegion.className).toMatch(/max-h-/);
 
-    // And the global games section reserves enough space below itself
-    // that it can never end up scrolled underneath the fixed panel.
     const bingoCard = screen.getByTestId("bingo-card");
     const globalSection = bingoCard.closest("section");
     expect(globalSection?.className).toMatch(/pb-\[70vh\]/);
