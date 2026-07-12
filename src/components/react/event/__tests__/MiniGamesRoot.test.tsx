@@ -25,6 +25,25 @@ vi.mock("../useLiveMinigames", () => ({
   useLiveMinigames: mocks.useLiveMinigames,
 }));
 
+// Shallow-stub the presentational children so this file can exercise
+// MiniGamesRoot's own layout logic (which section renders where) without
+// also wiring up each child's Firestore-backed hooks.
+vi.mock("../BingoCardView", () => ({
+  BingoCardView: () => <div data-testid="bingo-card">bingo</div>,
+}));
+vi.mock("../WordCloudView", () => ({
+  WordCloudView: () => <div data-testid="wordcloud">wordcloud</div>,
+}));
+vi.mock("../RouletteView", () => ({
+  RouletteView: () => <div data-testid="roulette">roulette</div>,
+}));
+vi.mock("../PollOverlay", () => ({
+  PollOverlay: () => <div data-testid="poll-overlay">poll</div>,
+}));
+vi.mock("../QuizOverlay", () => ({
+  QuizOverlay: () => <div data-testid="quiz-overlay">quiz</div>,
+}));
+
 import { MiniGamesRoot } from "../MiniGamesRoot";
 
 const POLL: LiveInstance = {
@@ -186,6 +205,52 @@ describe("MiniGamesRoot", () => {
     expect(mocks.joinEventMinigames).toHaveBeenLastCalledWith("x", {
       alias: "Ana",
     });
+  });
+
+  it("keeps the global games section reachable when a realtime game is also live", async () => {
+    // Regression test: the realtime (poll/quiz) overlay used to be a
+    // fixed inset-0 scrim that completely blocked pointer events on the
+    // global games section (bingo/wordcloud/roulette) rendered above it.
+    window.localStorage.setItem("gdg_minigame_alias_x", "Ana");
+    const BINGO: LiveInstance = {
+      id: "i-bingo",
+      type: "bingo",
+      mode: "global",
+      state: "live",
+      title: "Live bingo",
+      order: 0,
+    };
+    const POLL_WITH_CONFIG: LiveInstance = {
+      ...POLL,
+      config: { question: "Q?", options: [] },
+    };
+    mocks.joinEventMinigames.mockResolvedValue({
+      success: true,
+      data: {
+        alias: "Ana",
+        instances: [
+          { id: "i-bingo", type: "bingo", joined: true },
+          { id: "i-poll", type: "poll", joined: true },
+        ],
+      },
+    });
+    mocks.useLiveMinigames.mockReturnValue({
+      loading: false,
+      liveInstances: [BINGO, POLL_WITH_CONFIG],
+      error: null,
+    });
+    render(<MiniGamesRoot slug="x" />);
+
+    // Both sections mount...
+    expect(await screen.findByTestId("bingo-card")).toBeInTheDocument();
+    const realtimeRegion = await screen.findByRole("region", {
+      name: /juegos en tiempo real/i,
+    });
+    expect(realtimeRegion).toBeInTheDocument();
+
+    // ...and the realtime overlay is no longer a full-viewport scrim that
+    // covers/blocks the global games section rendered above it.
+    expect(realtimeRegion.className).not.toMatch(/inset-0/);
   });
 
   it("forces the modal open when ?play=1 is in the URL even with stored alias", async () => {
