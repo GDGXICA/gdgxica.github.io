@@ -25,7 +25,8 @@
     "zod": "^4.4.3"
   },
   "overrides": {
-    "protobufjs": ">=7.5.5"
+    "protobufjs": ">=7.5.5",
+    "@grpc/grpc-js": "1.14.4"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.1",
