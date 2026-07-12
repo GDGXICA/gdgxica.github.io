@@ -7,15 +7,23 @@ const firebaseConfig = {
   appId: "1:647264238138:web:68e7e6fb13454092801303",
 };
 
-let _app: import("firebase/app").FirebaseApp | null = null;
+let _appPromise: Promise<import("firebase/app").FirebaseApp> | null = null;
 
-async function getApp() {
-  if (!_app) {
-    const { initializeApp, getApps } = await import("firebase/app");
-    _app =
-      getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+// Cache the in-flight promise, not just the resolved app: two callers
+// invoking getApp() before the first `await import("firebase/app")`
+// settles would otherwise both see no cached app yet, and could both call
+// initializeApp(), which throws "Firebase App named '[DEFAULT]' already
+// exists" on the second call.
+function getApp() {
+  if (!_appPromise) {
+    _appPromise = (async () => {
+      const { initializeApp, getApps } = await import("firebase/app");
+      return getApps().length === 0
+        ? initializeApp(firebaseConfig)
+        : getApps()[0];
+    })();
   }
-  return _app;
+  return _appPromise;
 }
 
 export async function getAuth() {
