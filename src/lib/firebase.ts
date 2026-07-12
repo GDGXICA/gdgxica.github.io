@@ -21,14 +21,21 @@ async function getApp() {
 export async function getAuth() {
   const app = await getApp();
   const { getAuth: firebaseGetAuth } = await import("firebase/auth");
-  return firebaseGetAuth(app);
+  const auth = firebaseGetAuth(app);
+  // Wait for the SDK to finish restoring any persisted session (IndexedDB)
+  // before callers read `auth.currentUser`. Without this, a fresh tab can
+  // observe `currentUser` as null before rehydration completes and sign in
+  // anonymously (see signInAnonymouslyIfNeeded below), which — because auth
+  // state syncs across same-origin tabs — silently clobbers an existing
+  // signed-in session (e.g. an admin's) in every open tab.
+  await auth.authStateReady();
+  return auth;
 }
 
 export async function getFirestore() {
   const app = await getApp();
-  const { getFirestore: firebaseGetFirestore } = await import(
-    "firebase/firestore"
-  );
+  const { getFirestore: firebaseGetFirestore } =
+    await import("firebase/firestore");
   return firebaseGetFirestore(app);
 }
 
