@@ -25,7 +25,7 @@
     "zod": "^4.4.3"
   },
   "overrides": {
-    "protobufjs": ">=7.5.5",
+    "protobufjs": "8.6.0",
     "@babel/core": "7.29.6",
     "@tootallnate/once": "2.0.1",
     "js-yaml": "3.15.0",
