@@ -25,7 +25,8 @@
     "zod": "^4.4.3"
   },
   "overrides": {
-    "protobufjs": ">=7.5.5"
+    "protobufjs": ">=7.5.5",
+    "vite": "8.0.16"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.1",
