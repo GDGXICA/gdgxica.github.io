@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog, triggerRebuildAndLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
@@ -70,7 +70,7 @@ export async function addSpeaker(req: Request, res: Response) {
       targetId: speaker.id,
       targetType: "speaker",
       details: { name: speaker.name },
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     res.status(201).json({ success: true, data: { id: speaker.id } });
@@ -117,7 +117,7 @@ export async function updateSpeaker(req: Request, res: Response) {
       targetId: speakerId,
       targetType: "speaker",
       details: { name: updates.name },
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     res.json({ success: true, data: { id: speakerId } });
@@ -162,7 +162,7 @@ export async function deleteSpeaker(req: Request, res: Response) {
       targetId: speakerId,
       targetType: "speaker",
       details: {},
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     res.json({ success: true });

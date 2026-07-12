@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog } from "../utils/audit";
 import { logger } from "firebase-functions";
 import { AuthenticatedRequest } from "../middleware/auth";
@@ -98,7 +98,7 @@ export async function sendCertificates(req: Request, res: Response) {
       targetId: body.eventName,
       targetType: "certificate",
       details: { eventName: body.eventName, sent, failed },
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     res.json({

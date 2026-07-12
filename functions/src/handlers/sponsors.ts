@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog, triggerRebuildAndLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError, validateUrl } from "../middleware/validate";
@@ -68,7 +68,7 @@ export async function addSponsor(req: Request, res: Response) {
       targetId: sponsor.name,
       targetType: "sponsor",
       details: { name: sponsor.name },
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     res.status(201).json({ success: true, data: { name: sponsor.name } });
@@ -116,7 +116,7 @@ export async function updateSponsor(req: Request, res: Response) {
       targetId: updates.name,
       targetType: "sponsor",
       details: { name: updates.name },
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     res.json({ success: true, data: { name: updates.name } });
@@ -156,7 +156,7 @@ export async function deleteSponsor(req: Request, res: Response) {
       targetId: sponsorId,
       targetType: "sponsor",
       details: {},
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     res.json({ success: true });

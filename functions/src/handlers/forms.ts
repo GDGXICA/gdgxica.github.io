@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { GitHubService } from "../services/github";
@@ -72,7 +72,7 @@ export async function addForm(req: Request, res: Response) {
       targetId: entry.id,
       targetType: "form",
       details: { name: entry.name },
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     res.status(201).json({ success: true, data: entry });
@@ -112,7 +112,7 @@ export async function updateForm(req: Request, res: Response) {
       targetId: formId,
       targetType: "form",
       details: { name: forms[index].name },
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     res.json({ success: true, data: forms[index] });
@@ -149,7 +149,7 @@ export async function deleteForm(req: Request, res: Response) {
       targetId: formId,
       targetType: "form",
       details: {},
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     res.json({ success: true });
