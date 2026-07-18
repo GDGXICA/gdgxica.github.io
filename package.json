@@ -78,7 +78,8 @@
       "mdast-util-to-hast": "13.2.1",
       "postcss": "8.5.10",
       "undici": "7.28.0",
-      "vite": "8.0.16"
+      "vite": "8.0.16",
+      "websocket-driver": "0.7.5"
     }
   }
 }
