@@ -81,10 +81,7 @@ interface WiringResult {
   auditAdd: ReturnType<typeof vi.fn>;
 }
 
-function wireFirestore(
-  liveInstances: InstanceFixture[],
-  slug = "devfest-2025"
-): WiringResult {
+function wireFirestore(liveInstances: InstanceFixture[]): WiringResult {
   const setCalls: Array<{ ref: object; data: Record<string, unknown> }> = [];
   const auditAdd = vi.fn(async () => undefined);
 
