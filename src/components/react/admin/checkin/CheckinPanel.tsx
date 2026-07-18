@@ -233,8 +233,13 @@ export function CheckinPanel({ initialSlug }: Props) {
         />
       )}
 
-      {!hasRoster ? (
+      {error ? null : !hasRoster ? (
         <div className="rounded-xl border border-gray-200 bg-white p-8 text-center dark:border-gray-700 dark:bg-gray-800">
+          {/* Suppressed while `error` is set: the listener error handler
+              clears the roster, and without this guard a mid-event
+              permission-denied would render "nobody is registered" plus a
+              prominent Import button right below the error banner —
+              inviting exactly the re-import this panel must never provoke. */}
           {syncedOnce ? (
             // Only claim the roster is empty once the SERVER has said so.
             // Asserting it from a cold cache told a volunteer at the door

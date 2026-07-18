@@ -121,6 +121,33 @@ describe("parseBevyDate", () => {
     expect(parseBevyDate("--")).toBeNull();
   });
 
+  // THE format the CSV export actually writes — verified against the
+  // "Paid date (UTC)" column of a real DevFest Ica 2026 export. The
+  // dashboard's "Jul 06, 2026 - 03:10 PM" is what the web UI *renders*; an
+  // earlier version of this parser only accepted that, so every genuinely
+  // checked-in registrant would have parsed to null and the Bevy sync would
+  // have silently believed nobody was checked in.
+  it("parses the real CSV export format", () => {
+    expect(parseBevyDate("2026-07-06 20:10:16+00:00")?.toISOString()).toBe(
+      "2026-07-06T20:10:16.000Z"
+    );
+  });
+
+  it("honours a non-UTC offset instead of assuming UTC", () => {
+    expect(parseBevyDate("2026-07-06 15:10:00-05:00")?.toISOString()).toBe(
+      "2026-07-06T20:10:00.000Z"
+    );
+  });
+
+  it.each([
+    ["2026-07-06T15:10:00Z", "2026-07-06T15:10:00.000Z"],
+    ["2026-07-06 15:10:00", "2026-07-06T15:10:00.000Z"], // no offset = UTC
+    ["2026-07-06 15:10", "2026-07-06T15:10:00.000Z"], // seconds optional
+    ["2026-07-06 15:10:00.123+00:00", "2026-07-06T15:10:00.123Z"],
+  ])("parses ISO variant %j", (input, expected) => {
+    expect(parseBevyDate(input)?.toISOString()).toBe(expected);
+  });
+
   // Regression: this used to hand the string to `new Date()`, whose legacy
   // parser skips tokens it does not recognize. Each of these produced a
   // VALID Date, which reads as "already checked in on Bevy" and makes the
@@ -131,15 +158,8 @@ describe("parseBevyDate", () => {
     "pending Jul 06, 2026",
     "Jul 06, 2026",
     "06/07/2026 - 03:10 PM",
-    "2026-07-06T15:10:00Z",
   ])("rejects %j instead of guessing", (input) => {
     expect(parseBevyDate(input)).toBeNull();
-  });
-
-  it("rejects a trailing offset rather than silently overriding it", () => {
-    // Appending " UTC" used to win over the real offset, shifting the
-    // timestamp by five hours with no error.
-    expect(parseBevyDate("Jul 06, 2026 - 03:10 PM -05:00")).toBeNull();
   });
 
   it("rejects impossible calendar dates instead of rolling them over", () => {

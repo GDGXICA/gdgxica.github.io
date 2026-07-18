@@ -126,6 +126,105 @@ describe("checkin roster rules", () => {
     });
   });
 
+  describe("first check-in on a freshly imported document", () => {
+    /**
+     * Seeds a document exactly as importRoster leaves it: roster fields
+     * only, with NO checkedIn/checkedInAt/checkedInBy keys at all.
+     */
+    async function seedImportedOnly() {
+      const env = await getTestEnv();
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), ATTENDEE), {
+          ticketNumber: "GOOGA263171317",
+          firstName: "Alex Alberto",
+          lastName: "Quintanilla Garcia",
+          email: "wcandry@gmail.com",
+          searchTokens: ["alex", "quintanilla"],
+          bevyCheckinAt: null,
+          lastImportId: "imp_1",
+        });
+      });
+    }
+
+    // The import deliberately writes no check-in fields, so the very first
+    // check-in ADDS those keys rather than changing them. Every other test
+    // seeds them up front, which would keep passing even if a future rules
+    // edit started requiring them to pre-exist — and that would break every
+    // first check-in in production while the suite stayed green.
+    it("allows an organizer to add the check-in keys", async () => {
+      const env = await getTestEnv();
+      await seedImportedOnly();
+      await seedRole("org-1", "organizer");
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertSucceeds(
+        updateDoc(doc(org, ATTENDEE), {
+          checkedIn: true,
+          checkedInAt: new Date(),
+          checkedInBy: "org-1",
+          checkedInByName: "Alvaro",
+        })
+      );
+    });
+
+    it("still rejects a roster field smuggled into that first write", async () => {
+      const env = await getTestEnv();
+      await seedImportedOnly();
+      await seedRole("org-1", "organizer");
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertFails(
+        updateDoc(doc(org, ATTENDEE), {
+          checkedIn: true,
+          checkedInBy: "org-1",
+          email: "attacker@evil.com",
+        })
+      );
+    });
+  });
+
+  describe("bounds on the remaining allowlisted fields", () => {
+    it("rejects an over-long checkedInByName", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("org-1", "organizer");
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertFails(
+        updateDoc(doc(org, ATTENDEE), {
+          checkedIn: true,
+          checkedInBy: "org-1",
+          checkedInByName: "x".repeat(121),
+        })
+      );
+    });
+
+    it("rejects a dniMatchScore outside 0..1", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("org-1", "organizer");
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertFails(
+        updateDoc(doc(org, ATTENDEE), {
+          checkedIn: true,
+          checkedInBy: "org-1",
+          dniMatchScore: 7,
+        })
+      );
+    });
+
+    it("rejects a non-boolean dniVerified", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("org-1", "organizer");
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertFails(
+        updateDoc(doc(org, ATTENDEE), {
+          checkedIn: true,
+          checkedInBy: "org-1",
+          dniVerified: "yes",
+        })
+      );
+    });
+  });
+
   describe("check-in writes", () => {
     it("allows an organizer to mark someone present", async () => {
       const env = await getTestEnv();

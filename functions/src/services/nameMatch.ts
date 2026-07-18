@@ -92,7 +92,15 @@ export function buildSearchTokens(a: {
   return [...tokens];
 }
 
-// Bevy's "Checkin Date (UTC)" cell, e.g. "Jul 06, 2026 - 03:10 PM".
+// The format the CSV export actually uses, confirmed against the sibling
+// "Paid date (UTC)" column of a real export: "2026-07-06 20:10:16+00:00".
+// Space or "T" separator, optional fractional seconds, optional offset.
+const ISO_DATE_RE =
+  /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?(\.\d+)?\s*(z|[+-]\d{2}:?\d{2})?$/i;
+
+// The format the Bevy web dashboard DISPLAYS, e.g. "Jul 06, 2026 - 03:10 PM".
+// Accepted as a fallback because the two surfaces disagree and an organizer
+// may paste from either.
 const BEVY_DATE_RE =
   /^([a-z]{3})\s+(\d{1,2}),\s*(\d{4})\s*-\s*(\d{1,2}):(\d{2})\s*(am|pm)$/i;
 
@@ -112,18 +120,43 @@ const MONTHS: Record<string, number> = {
 };
 
 /**
- * Parses Bevy's check-in cell, returning null for anything that is not
- * exactly that format.
+ * Parses Bevy's "Checkin Date (UTC)" cell, returning null for anything that
+ * is not one of the two shapes Bevy actually produces.
  *
- * Deliberately strict rather than handing the string to `new Date()`. V8's
+ * Strict by design rather than handing the string to `new Date()`: V8's
  * legacy parser skips tokens it does not recognize, so "2026" and
- * "pending Jul 06, 2026" both yield valid Dates — and a non-null value here
- * means "already checked in on Bevy", which makes the sync skip a person who
- * never was. It also silently honours a trailing offset over the UTC the
- * column header promises. Rejecting the unexpected is the safer failure.
+ * "pending Jul 06, 2026" both yield valid Dates. A non-null value here means
+ * "already checked in on Bevy", which makes the sync skip that person — so
+ * guessing is the expensive failure and rejecting is the cheap one.
+ *
+ * Both formats are supported because the CSV export and the web dashboard
+ * disagree: the export writes "2026-07-06 20:10:16+00:00" (verified against
+ * a real export's "Paid date (UTC)" column) while the dashboard renders
+ * "Jul 06, 2026 - 03:10 PM". The check-in column is empty in an export where
+ * nobody checked in, so the format cannot be observed there directly —
+ * accepting both is what keeps this from silently parsing nothing.
  */
 export function parseBevyDate(raw: string): Date | null {
-  const m = BEVY_DATE_RE.exec(raw.trim());
+  const s = raw.trim();
+  if (!s) return null;
+
+  const iso = ISO_DATE_RE.exec(s);
+  if (iso) {
+    // Rebuild in canonical ISO 8601, which Date parses per spec rather than
+    // by V8-specific fallback. An absent offset means UTC, per the header.
+    const offset = iso[8]
+      ? iso[8].toLowerCase() === "z"
+        ? "Z"
+        : iso[8].replace(/^([+-]\d{2})(\d{2})$/, "$1:$2")
+      : "Z";
+    const d = new Date(
+      `${iso[1]}-${iso[2]}-${iso[3]}T${iso[4]}:${iso[5]}:${iso[6] ?? "00"}` +
+        `${iso[7] ?? ""}${offset}`
+    );
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  const m = BEVY_DATE_RE.exec(s);
   if (!m) return null;
 
   const month = MONTHS[m[1].toLowerCase()];

@@ -117,19 +117,29 @@ export function useRoster(slug: string | null): State {
             );
 
             setState((s) => {
-              // A server-backed snapshot is the only proof we are online.
-              // Before the first one arrives, fromCache just means the cache
-              // answered first — treat that as still loading, not offline,
-              // or a cold cache renders "this roster is empty" for an event
-              // that is fully populated server-side and invites a re-import.
+              // A server-backed snapshot is the only proof we reached the
+              // server. Before the first one, fromCache is ambiguous: it
+              // means either "the cache answered first while online" or
+              // "we are offline and this is all we have".
               const syncedOnce = s.syncedOnce || !snap.metadata.fromCache;
+
+              // navigator.onLine breaks the tie. Without it, a volunteer who
+              // opens the panel at the venue with no signal but a warm cache
+              // sees a green "Sincronizado" bar — the one situation the
+              // offline indicator exists for.
+              const disconnected =
+                typeof navigator !== "undefined" && !navigator.onLine;
+
               return {
                 ...s,
                 attendees,
-                loading: !syncedOnce && attendees.length === 0,
+                // Any snapshot means we have something to render. Whether
+                // an empty roster is real or just unsynced is decided by
+                // syncedOnce, not by holding a spinner up indefinitely.
+                loading: false,
                 error: null,
                 syncedOnce,
-                offline: snap.metadata.fromCache && syncedOnce,
+                offline: snap.metadata.fromCache && (syncedOnce || disconnected),
                 pendingCount: attendees.filter((a) => a.pending).length,
               };
             });
@@ -157,6 +167,9 @@ export function useRoster(slug: string | null): State {
             const data = snap.data();
             setState((s) => ({
               ...s,
+              // Cleared on recovery: a latched banner that contradicts a
+              // working UI underneath is worse than no banner at all.
+              metaError: null,
               meta: data
                 ? {
                     lastImportId: data.lastImportId ?? null,
