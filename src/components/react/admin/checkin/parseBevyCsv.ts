@@ -5,6 +5,9 @@
 // one splits on /[,;\t]/ with no quote handling, which is fine for a
 // two-column name/email list but shatters on Bevy's 21-column export the
 // first time someone's Company or Title contains a comma ("Acme, Inc.").
+// Its EMAIL_RE is still the right shared definition, so we reuse that.
+
+import { EMAIL_RE } from "../certificates/parseCsv";
 
 export interface BevyRegistration {
   ticketNumber: string;
@@ -150,6 +153,7 @@ export function parseBevyCsv(text: string): ParseBevyCsvResult {
   const seenTickets = new Set<string>();
   let skippedNoTicket = 0;
   let skippedNoEmail = 0;
+  let skippedBadEmail = 0;
   let duplicates = 0;
 
   for (const raw of table.slice(1)) {
@@ -164,6 +168,13 @@ export function parseBevyCsv(text: string): ParseBevyCsvResult {
     }
     if (!email) {
       skippedNoEmail++;
+      continue;
+    }
+    // The import endpoint validates emails with Zod, which rejects the
+    // WHOLE request on the first bad one. Screening here turns "your
+    // 300-row import failed" into "one row was skipped, here's how many".
+    if (!EMAIL_RE.test(email)) {
+      skippedBadEmail++;
       continue;
     }
     if (seenTickets.has(ticketNumber)) {
@@ -193,6 +204,11 @@ export function parseBevyCsv(text: string): ParseBevyCsvResult {
   }
   if (skippedNoEmail > 0) {
     warnings.push(`${skippedNoEmail} fila(s) sin email fueron omitidas.`);
+  }
+  if (skippedBadEmail > 0) {
+    warnings.push(
+      `${skippedBadEmail} fila(s) con un email mal formado fueron omitidas.`
+    );
   }
   if (duplicates > 0) {
     warnings.push(`${duplicates} fila(s) con ticket repetido fueron omitidas.`);

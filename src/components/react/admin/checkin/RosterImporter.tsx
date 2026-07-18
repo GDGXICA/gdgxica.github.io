@@ -7,6 +7,11 @@ interface Props {
   onImported: (summary: string) => void;
 }
 
+// Must match checkinImportSchema in functions/src/schemas/index.ts. Past
+// this, the endpoint answers with an opaque Zod error, so catch it here
+// where we can say something the organizer can act on.
+const MAX_ROWS = 2000;
+
 /**
  * Uploads the Bevy registrations CSV. Parsing happens here in the
  * browser; the handler only ever receives validated rows.
@@ -28,6 +33,14 @@ export function RosterImporter({ slug, onImported }: Props) {
     const text = await file.text();
     const result = parseBevyCsv(text);
     setWarnings(result.warnings);
+    if (result.rows.length > MAX_ROWS) {
+      setRows(null);
+      setError(
+        `El CSV trae ${result.rows.length} registrados y el máximo por ` +
+          `importación es ${MAX_ROWS}.`
+      );
+      return;
+    }
     setRows(result.rows.length > 0 ? result.rows : null);
   }
 

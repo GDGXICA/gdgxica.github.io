@@ -60,7 +60,7 @@ export async function getFirestore() {
       // The multi-tab manager is not optional — a second tab otherwise
       // fails to take the IndexedDB lock and silently degrades to an
       // in-memory cache, which would drop queued check-ins.
-      let db;
+      let db: import("firebase/firestore").Firestore;
       try {
         db = initializeFirestore(app, {
           localCache: persistentLocalCache({
@@ -79,6 +79,16 @@ export async function getFirestore() {
       }
       return db;
     })();
+
+    // Memoizing a promise also memoizes its rejection. Without this, one
+    // transient failure (a chunk that fails to load on flaky wifi) would
+    // leave every later call rejecting for the lifetime of the page —
+    // permanently breaking the public mini-game islands that share this
+    // helper. Clearing the slot lets the next caller retry, which is how
+    // this behaved before it was memoized.
+    _dbPromise.catch(() => {
+      _dbPromise = null;
+    });
   }
   return _dbPromise;
 }

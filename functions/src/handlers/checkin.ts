@@ -43,11 +43,23 @@ export async function importRoster(req: Request, res: Response) {
   try {
     const slug = req.params.slug as string;
     const user = (req as AuthenticatedRequest).user;
-    const rows = (req.body.rows ?? []) as RosterRow[];
+    const rawRows = (req.body.rows ?? []) as RosterRow[];
 
-    if (rows.length === 0) {
+    if (rawRows.length === 0) {
       res.status(400).json({ success: false, error: "No hay filas que importar" });
       return;
+    }
+
+    // The browser parser already drops duplicate tickets, but this
+    // endpoint is reachable directly by any organizer. Two rows sharing a
+    // ticket number would write the same document twice and skew the
+    // created/updated counts, which would in turn make `stale` negative.
+    const rows: RosterRow[] = [];
+    const seen = new Set<string>();
+    for (const row of rawRows) {
+      if (seen.has(row.ticketNumber)) continue;
+      seen.add(row.ticketNumber);
+      rows.push(row);
     }
 
     const db = admin.firestore();

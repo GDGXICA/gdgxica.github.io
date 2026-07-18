@@ -12,22 +12,68 @@ interface Props {
   initialSlug?: string;
 }
 
+/** Firestore paths are built from this, and a slug with a "/" would
+ *  silently address the wrong collection depth. The API validates it
+ *  server-side too (validateParamId), but the listener runs first. */
+const SLUG_RE = /^[a-zA-Z0-9_-]{1,100}$/;
+
 function slugFromUrl(): string | null {
   if (typeof window === "undefined") return null;
-  return new URLSearchParams(window.location.search).get("slug");
+  const raw = new URLSearchParams(window.location.search).get("slug");
+  return raw && SLUG_RE.test(raw) ? raw : null;
 }
 
-/** Mirrors normalizeName() in functions/src/services/nameMatch.ts, which
- *  built the stored searchTokens — both sides must strip diacritics the
- *  same way or typing "nanez" would not find "Ñañez". */
-function normalizeQuery(q: string): string {
+/**
+ * Mirrors normalizeName() in functions/src/services/nameMatch.ts, which
+ * built the stored searchTokens — both sides must treat characters the
+ * same way or the search silently misses people.
+ *
+ * That server-side function turns every non-alphanumeric character into a
+ * separator, so "Quintanilla-Garcia" is stored as two tokens. Keeping the
+ * hyphen here would produce the single term "quintanilla-garcia", which
+ * prefix-matches neither of them — the attendee becomes unfindable by
+ * typing their surname exactly as registered.
+ *
+ * "@" and "." are the deliberate exceptions: buildSearchTokens stores the
+ * email verbatim alongside the name tokens, so they must survive for a
+ * full-address search to work.
+ */
+export function normalizeQuery(q: string): string {
   return q
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
-    .replace(/[^a-z0-9\s@._-]/g, " ")
+    .replace(/[^a-z0-9\s@.]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+// Mirrors the PARTICLES set in functions/src/services/nameMatch.ts.
+const PARTICLES = new Set([
+  "de",
+  "del",
+  "la",
+  "las",
+  "los",
+  "y",
+  "da",
+  "dos",
+  "van",
+  "von",
+]);
+
+/**
+ * Splits a query into the terms actually matched against searchTokens.
+ *
+ * nameTokens() drops single characters and connective particles when it
+ * builds the stored tokens, so the query has to drop them too. Otherwise
+ * every term must match and these never can: typing "Juan de la Cruz" in
+ * full would find nobody, because no stored token starts with "de".
+ */
+export function queryTerms(q: string): string[] {
+  return normalizeQuery(q)
+    .split(" ")
+    .filter((t) => t.length > 1 && !PARTICLES.has(t));
 }
 
 export function CheckinPanel({ initialSlug }: Props) {
@@ -55,7 +101,7 @@ export function CheckinPanel({ initialSlug }: Props) {
   );
 
   const filtered = useMemo(() => {
-    const terms = normalizeQuery(query).split(" ").filter(Boolean);
+    const terms = queryTerms(query);
     return attendees.filter((a) => {
       if (onlyPending && a.checkedIn) return false;
       if (terms.length === 0) return true;
