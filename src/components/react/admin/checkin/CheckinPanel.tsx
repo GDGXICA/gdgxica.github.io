@@ -3,6 +3,7 @@ import { isDevPreview } from "@/lib/api";
 import { useAuth } from "../AuthProvider";
 import { Toast } from "../ui/Toast";
 import { AttendeeRow } from "./AttendeeRow";
+import { bevyCsvFilename, buildBevyCheckinCsv } from "./buildBevyCsv";
 import { RosterImporter } from "./RosterImporter";
 import { SyncStatusBar } from "./SyncStatusBar";
 import { setCheckedIn, useRoster } from "./useRoster";
@@ -126,6 +127,41 @@ export function CheckinPanel({ initialSlug }: Props) {
     });
   }, [attendees, query, onlyPending]);
 
+  function handleExportBevyCsv() {
+    if (!slug) return;
+    const { csv, rows, alreadyInBevy } = buildBevyCheckinCsv(attendees);
+    if (rows === 0) {
+      setToast({
+        message:
+          alreadyInBevy > 0
+            ? "Bevy ya tiene marcados a todos los presentes."
+            : "Todavía no has marcado a nadie.",
+        type: "success",
+      });
+      return;
+    }
+
+    // Blob + object URL rather than a data: URI — a few hundred rows of
+    // names exceeds what some browsers accept in a URL.
+    const url = URL.createObjectURL(
+      new Blob([csv], { type: "text/csv;charset=utf-8" })
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = bevyCsvFilename(slug, new Date());
+    link.click();
+    URL.revokeObjectURL(url);
+
+    setToast({
+      message:
+        `CSV con ${rows} check-in(s) para subir a Bevy` +
+        (alreadyInBevy > 0
+          ? `. Se omitieron ${alreadyInBevy} que Bevy ya tenía.`
+          : "."),
+      type: "success",
+    });
+  }
+
   function handleToggle(a: Attendee) {
     if (!slug || !user) return;
     // Fire-and-forget on purpose — see setCheckedIn's comment. Awaiting
@@ -216,12 +252,22 @@ export function CheckinPanel({ initialSlug }: Props) {
         <h1 className="text-xl font-bold text-gray-900 dark:text-white">
           Check-in · {slug}
         </h1>
-        <button
-          onClick={() => setShowImporter((v) => !v)}
-          className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-        >
-          {showImporter ? "Ocultar importador" : "Importar CSV"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={handleExportBevyCsv}
+            disabled={present === 0}
+            title="Descarga un CSV listo para el Bulk upload de Bevy"
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            Exportar para Bevy
+          </button>
+          <button
+            onClick={() => setShowImporter((v) => !v)}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            {showImporter ? "Ocultar importador" : "Importar CSV"}
+          </button>
+        </div>
       </div>
 
       {showImporter && (

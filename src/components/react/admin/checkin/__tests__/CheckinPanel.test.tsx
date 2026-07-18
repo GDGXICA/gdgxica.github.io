@@ -174,6 +174,55 @@ describe("CheckinPanel — marking someone present", () => {
   });
 });
 
+describe("CheckinPanel — exporting for Bevy", () => {
+  it("is disabled until somebody has been marked present", () => {
+    render(<CheckinPanel initialSlug="devfest-ica-2026" />);
+    expect(
+      screen.getByRole("button", { name: "Exportar para Bevy" })
+    ).toBeDisabled();
+  });
+
+  it("downloads a file named for the event once there are check-ins", async () => {
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => {});
+    mocks.useRoster.mockReturnValue(
+      rosterState({ attendees: [attendee({ checkedIn: true })] })
+    );
+
+    render(<CheckinPanel initialSlug="devfest-ica-2026" />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Exportar para Bevy" })
+    );
+
+    expect(click).toHaveBeenCalledTimes(1);
+    const anchor = click.mock.instances[0] as HTMLAnchorElement;
+    expect(anchor.download).toMatch(/^bevy-checkin-devfest-ica-2026-/);
+    expect(await screen.findByText(/1 check-in\(s\) para subir/)).toBeVisible();
+    click.mockRestore();
+  });
+
+  it("says so instead of downloading an empty file when Bevy is in sync", async () => {
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => {});
+    mocks.useRoster.mockReturnValue(
+      rosterState({
+        attendees: [attendee({ checkedIn: true, bevyCheckinAt: new Date() })],
+      })
+    );
+
+    render(<CheckinPanel initialSlug="devfest-ica-2026" />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Exportar para Bevy" })
+    );
+
+    expect(click).not.toHaveBeenCalled();
+    expect(await screen.findByText(/Bevy ya tiene marcados/)).toBeVisible();
+    click.mockRestore();
+  });
+});
+
 describe("CheckinPanel — empty and error states", () => {
   // Regression: a cold cache reported a fully populated event as empty and
   // offered a re-import — the one action a volunteer must not take mid-door.
