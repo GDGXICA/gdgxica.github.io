@@ -80,7 +80,13 @@ export function tokenizeCsv(text: string): string[][] {
       endRow();
       i++;
     } else if (c === "\r") {
-      i++; // CRLF: the \n does the row break
+      // Break the row here and swallow a following \n, so CRLF, LF and a
+      // lone CR all behave. Treating \r as filler collapsed a CR-only file
+      // (some Excel export paths still emit them) into a single row, and
+      // the organizer got "faltan columnas obligatorias" — a message
+      // pointing at entirely the wrong cause.
+      endRow();
+      i += text[i + 1] === "\n" ? 2 : 1;
     } else {
       field += c;
       i++;
@@ -154,6 +160,7 @@ export function parseBevyCsv(text: string): ParseBevyCsvResult {
   let skippedNoTicket = 0;
   let skippedNoEmail = 0;
   let skippedBadEmail = 0;
+  let skippedNoName = 0;
   let duplicates = 0;
 
   for (const raw of table.slice(1)) {
@@ -175,6 +182,15 @@ export function parseBevyCsv(text: string): ParseBevyCsvResult {
     // 300-row import failed" into "one row was skipped, here's how many".
     if (!EMAIL_RE.test(email)) {
       skippedBadEmail++;
+      continue;
+    }
+    // REQUIRED only proves the name COLUMNS exist. A row with both name
+    // cells blank imports fine, produces no name tokens, and renders as an
+    // empty line that cannot be found by typing the person's surname —
+    // which is the entire job of the search box. Every other skip reason
+    // warns; this one used to pass silently.
+    if (!cell(raw, "firstName") && !cell(raw, "lastName")) {
+      skippedNoName++;
       continue;
     }
     if (seenTickets.has(ticketNumber)) {
@@ -208,6 +224,12 @@ export function parseBevyCsv(text: string): ParseBevyCsvResult {
   if (skippedBadEmail > 0) {
     warnings.push(
       `${skippedBadEmail} fila(s) con un email mal formado fueron omitidas.`
+    );
+  }
+  if (skippedNoName > 0) {
+    warnings.push(
+      `${skippedNoName} fila(s) sin nombre ni apellido fueron omitidas: ` +
+        `no se podría buscarlas por nombre en la puerta.`
     );
   }
   if (duplicates > 0) {

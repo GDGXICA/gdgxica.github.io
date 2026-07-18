@@ -7,8 +7,23 @@ interface State {
   meta: CheckinMeta | null;
   loading: boolean;
   error: string | null;
-  /** Snapshot served from the local cache — i.e. we are offline. */
-  fromCache: boolean;
+  /**
+   * True only when we believe we are actually disconnected.
+   *
+   * NOT the same as snapshot.metadata.fromCache. With persistence enabled
+   * Firestore serves a cached snapshot on every load before the server
+   * responds, so fromCache alone flags a perfectly healthy page as offline.
+   */
+  offline: boolean;
+  /** True once a server-backed snapshot has arrived at least once. */
+  syncedOnce: boolean;
+  /**
+   * Import metadata failed to load. Kept separate from `error` because the
+   * roster itself is still usable — it only means the "ya no está en el
+   * CSV" badges cannot be computed, which is worth saying out loud rather
+   * than letting the feature quietly do nothing.
+   */
+  metaError: string | null;
   /** Rows whose write has not reached the server yet. */
   pendingCount: number;
 }
@@ -34,7 +49,9 @@ export function useRoster(slug: string | null): State {
     meta: null,
     loading: true,
     error: null,
-    fromCache: false,
+    offline: false,
+    syncedOnce: false,
+    metaError: null,
     pendingCount: 0,
   });
 
@@ -63,7 +80,12 @@ export function useRoster(slug: string | null): State {
           { includeMetadataChanges: true },
           (snap) => {
             const attendees = snap.docs.map((d) => {
-              const data = d.data();
+              // "estimate" resolves a still-pending serverTimestamp() to the
+              // local clock instead of null. With the default ("none") a
+              // just-marked attendee showed "✓ Presente" with no time and no
+              // volunteer name until the server acked — which on venue wifi,
+              // the whole reason this feature exists, can be the entire event.
+              const data = d.data({ serverTimestamps: "estimate" });
               return {
                 id: d.id,
                 ticketNumber: data.ticketNumber ?? "",
@@ -94,17 +116,38 @@ export function useRoster(slug: string | null): State {
               )
             );
 
-            setState((s) => ({
-              ...s,
-              attendees,
-              loading: false,
-              error: null,
-              fromCache: snap.metadata.fromCache,
-              pendingCount: attendees.filter((a) => a.pending).length,
-            }));
+            setState((s) => {
+              // A server-backed snapshot is the only proof we are online.
+              // Before the first one arrives, fromCache just means the cache
+              // answered first — treat that as still loading, not offline,
+              // or a cold cache renders "this roster is empty" for an event
+              // that is fully populated server-side and invites a re-import.
+              const syncedOnce = s.syncedOnce || !snap.metadata.fromCache;
+              return {
+                ...s,
+                attendees,
+                loading: !syncedOnce && attendees.length === 0,
+                error: null,
+                syncedOnce,
+                offline: snap.metadata.fromCache && syncedOnce,
+                pendingCount: attendees.filter((a) => a.pending).length,
+              };
+            });
           },
           (err) => {
-            setState((s) => ({ ...s, loading: false, error: err.message }));
+            // Firestore does not re-attach a listener after an error, so
+            // this state is terminal until remount. Clear the roster: on a
+            // permission error (role revoked mid-event) the cached snapshot
+            // would otherwise stay on screen, fully tappable, behind a
+            // banner, with every tap rejected and nothing else updating.
+            setState((s) => ({
+              ...s,
+              attendees: [],
+              loading: false,
+              offline: false,
+              pendingCount: 0,
+              error: err.message,
+            }));
           }
         );
 
@@ -124,9 +167,17 @@ export function useRoster(slug: string | null): State {
                 : null,
             }));
           },
-          // A missing meta doc is normal before the first import, so a
-          // failure here must not blank out a working roster.
-          () => {}
+          // The previous comment here claimed this guarded a missing meta
+          // doc before the first import. That was wrong: a non-existent
+          // document goes to the SUCCESS callback with exists === false,
+          // which the branch above already handles. So a no-op only ever
+          // swallowed real errors, and `meta` staying null silently
+          // disables the "ya no está en el CSV" badge the import handler
+          // depends on. Record it instead of hiding it — but keep it out of
+          // `error`, which would blank a perfectly working roster.
+          (err) => {
+            setState((s) => ({ ...s, metaError: err.message }));
+          }
         );
       } catch (err) {
         setState((s) => ({

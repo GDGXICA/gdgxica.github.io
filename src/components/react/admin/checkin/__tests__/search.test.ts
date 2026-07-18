@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildSearchTokens } from "../../../../../../functions/src/services/nameMatch";
+import {
+  buildSearchTokens,
+  tokenize,
+} from "../../../../../../functions/src/services/nameMatch";
 import { normalizeQuery, queryTerms } from "../CheckinPanel";
 
 // The panel and the import handler live on opposite sides of the wire but
@@ -22,6 +25,32 @@ const attendee = (over: Partial<Parameters<typeof buildSearchTokens>[0]> = {}) =
     ticketNumber: "GOOGA263171317",
     ...over,
   });
+
+// The load-bearing test. The panel and the import handler ship in different
+// bundles and cannot share a module, so the tokenizer is duplicated. If the
+// copies ever drift, nothing throws — the volunteer is just told "no
+// matches" for someone standing in front of them. This asserts the two
+// implementations produce identical output on the inputs that have actually
+// broken before.
+describe("client and server tokenizers must stay identical", () => {
+  it.each([
+    "Quintanilla-Garcia",
+    "Ñañez Solís",
+    "Ana M. Torres",
+    "Juan de la Cruz Rojas",
+    "O'Brien",
+    "juan+gdg@gmail.com",
+    "ana_lopez@gmail.com",
+    "luis.diaz@gmail.com",
+    "maria-jose@empresa-x.com",
+    "ABC-123",
+    "GOOGA263171317",
+    "  MÚLTIPLES   espacios  ",
+    "",
+  ])("agrees on %j", (input) => {
+    expect(queryTerms(input)).toEqual(tokenize(input));
+  });
+});
 
 describe("door search — the ways a volunteer actually types", () => {
   it("finds by first name", () => {
@@ -51,6 +80,28 @@ describe("door search — the ways a volunteer actually types", () => {
   it("finds by ticket number, case-insensitively", () => {
     expect(finds("googa263171317", attendee())).toBe(true);
     expect(finds("GOOGA263171317", attendee())).toBe(true);
+  });
+
+  // Regression: these were all indexed verbatim but split by the query, so
+  // typing the address exactly as registered found nobody. Plus-addressing
+  // and underscores are common in a developer audience.
+  it.each([
+    ["juan+gdg@gmail.com", "plus-addressed"],
+    ["ana_lopez@gmail.com", "underscored"],
+    ["maria-jose@empresa-x.com", "hyphenated"],
+    ["luis.diaz@gmail.com", "dotted"],
+  ])("finds %s (%s) typed in full", (email) => {
+    expect(finds(email, attendee({ email }))).toBe(true);
+  });
+
+  it("finds a dotted local part typed without the domain", () => {
+    expect(finds("luis.diaz", attendee({ email: "luis.diaz@gmail.com" }))).toBe(
+      true
+    );
+  });
+
+  it("finds a ticket number containing a hyphen", () => {
+    expect(finds("ABC-123", attendee({ ticketNumber: "ABC-123" }))).toBe(true);
   });
 
   it("rejects someone who does not match", () => {
@@ -100,6 +151,14 @@ describe("door search — punctuation must not split the two sides apart", () =>
     const obrien = attendee({ firstName: "Sean", lastName: "O'Brien" });
     expect(finds("o'brien", obrien)).toBe(true);
     expect(finds("brien", obrien)).toBe(true);
+  });
+
+  // A period is kept inside addresses but is a separator elsewhere, so a
+  // written-out middle initial matches whether or not it is typed with one.
+  it("handles a middle initial written with its period", () => {
+    const ana = attendee({ firstName: "Ana M.", lastName: "Torres" });
+    expect(finds("Ana M. Torres", ana)).toBe(true);
+    expect(finds("ana torres", ana)).toBe(true);
   });
 });
 

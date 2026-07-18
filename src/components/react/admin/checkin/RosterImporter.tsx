@@ -48,18 +48,34 @@ export function RosterImporter({ slug, onImported }: Props) {
     if (!rows) return;
     setImporting(true);
     setError(null);
-    const res = await api.importCheckinRoster(slug, rows);
-    setImporting(false);
-    if (res.success && res.data) {
-      const { created, updated, stale } = res.data;
-      onImported(
-        `${created} nuevos, ${updated} actualizados` +
-          (stale > 0 ? `, ${stale} ya no figuran en el CSV` : "")
+    // try/finally, because api.importCheckinRoster can REJECT rather than
+    // resolve {success:false}: request() awaits getIdToken() outside its own
+    // try, and that refreshes over the network once the cached token is an
+    // hour old. Without this, an organizer who has had the panel open all
+    // morning taps Importar on flaky wifi and the button stays disabled
+    // reading "Importando…" until they reload the page.
+    try {
+      const res = await api.importCheckinRoster(slug, rows);
+      if (res.success && res.data) {
+        const { created, updated, stale, unusableTickets } = res.data;
+        onImported(
+          `${created} nuevos, ${updated} actualizados` +
+            (stale > 0 ? `, ${stale} ya no figuran en el CSV` : "") +
+            (unusableTickets > 0
+              ? `, ${unusableTickets} sin ticket utilizable`
+              : "")
+        );
+        setRows(null);
+        if (fileRef.current) fileRef.current.value = "";
+      } else {
+        setError(res.error || "No se pudo importar el roster.");
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "No se pudo importar el roster."
       );
-      setRows(null);
-      if (fileRef.current) fileRef.current.value = "";
-    } else {
-      setError(res.error || "No se pudo importar el roster.");
+    } finally {
+      setImporting(false);
     }
   }
 

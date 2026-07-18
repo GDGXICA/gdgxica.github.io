@@ -131,7 +131,28 @@ service cloud.firestore {
                           || request.resource.data.checkedInBy == request.auth.uid)
                       && (!('note' in request.resource.data)
                           || request.resource.data.note == null
-                          || request.resource.data.note.size() <= 200);
+                          || request.resource.data.note.size() <= 200)
+                      // The remaining allowlisted keys need bounds too. The
+                      // client is untrusted even when the caller holds the
+                      // organizer role, and without these a volunteer could
+                      // write a multi-megabyte checkedInByName or fabricate
+                      // the DNI-verification state these fields are reserved
+                      // for.
+                      && (!('checkedInByName' in request.resource.data)
+                          || request.resource.data.checkedInByName == null
+                          || (request.resource.data.checkedInByName is string
+                              && request.resource.data.checkedInByName.size() <= 120))
+                      && (!('dniVerified' in request.resource.data)
+                          || request.resource.data.dniVerified is bool)
+                      && (!('dniMatchedName' in request.resource.data)
+                          || request.resource.data.dniMatchedName == null
+                          || (request.resource.data.dniMatchedName is string
+                              && request.resource.data.dniMatchedName.size() <= 200))
+                      && (!('dniMatchScore' in request.resource.data)
+                          || request.resource.data.dniMatchScore == null
+                          || (request.resource.data.dniMatchScore is number
+                              && request.resource.data.dniMatchScore >= 0
+                              && request.resource.data.dniMatchScore <= 1));
       }
 
       // Import metadata (last import id, roster count, last Bevy sync).

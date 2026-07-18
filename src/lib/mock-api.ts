@@ -103,6 +103,7 @@ export const mockApi = {
       created: rows.length,
       updated: 0,
       stale: 0,
+      unusableTickets: 0,
     }),
 
   triggerRebuild: () => ok(null),

@@ -17,6 +17,14 @@ function getApp() {
         ? initializeApp(firebaseConfig)
         : getApps()[0];
     })();
+    // Same reasoning as the reset in getFirestore below: memoizing a promise
+    // memoizes its rejection too. This is the FIRST chunk loaded, so without
+    // a reset here a single failed import("firebase/app") on flaky wifi
+    // poisons getAuth() and getFirestore() alike for the page's lifetime —
+    // clearing only the db slot would rebuild it around the same dead app.
+    _appPromise.catch(() => {
+      _appPromise = null;
+    });
   }
   return _appPromise;
 }

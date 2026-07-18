@@ -200,6 +200,7 @@ const realApi = {
       created: number;
       updated: number;
       stale: number;
+      unusableTickets: number;
     }>("POST", `/events/${encodeURIComponent(slug)}/checkin/import`, { rows }),
 
   // Rebuild
