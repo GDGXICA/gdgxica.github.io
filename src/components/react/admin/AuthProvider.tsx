@@ -44,6 +44,9 @@ export function useAuth() {
 export function DevAuthProvider({ children }: { children: React.ReactNode }) {
   const mockValue: AuthContextType = {
     user: {
+      // uid is not decorative: any panel that attributes a write needs it,
+      // and passing undefined into a Firestore field throws at runtime.
+      uid: "dev-preview-uid",
       displayName: "Dev Preview",
       email: "dev@preview.local",
       photoURL: "",

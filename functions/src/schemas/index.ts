@@ -296,3 +296,31 @@ export const certificateSendSchema = z
   .strict();
 
 export type CertificateSendBody = z.infer<typeof certificateSendSchema>;
+
+// Check-in roster import. The client parses the Bevy registrations CSV
+// and posts the rows; the handler writes them to Firestore. The 2000-row
+// cap sits well above any GDG ICA event while keeping the payload inside
+// the 1mb express body limit.
+const rosterRowSchema = z
+  .object({
+    // Bevy's per-registration primary key; becomes the document ID.
+    ticketNumber: z.string().trim().min(1).max(100),
+    orderNumber: shortText(100),
+    firstName: shortText(200),
+    lastName: shortText(200),
+    email: z.string().trim().email().max(254),
+    company: shortText(300),
+    title: shortText(300),
+    ticketTitle: shortText(200),
+    // Raw "Checkin Date (UTC)" cell; empty when not checked in on Bevy.
+    bevyCheckinAt: shortText(100),
+  })
+  .strict();
+
+export const checkinImportSchema = z
+  .object({
+    rows: z.array(rosterRowSchema).min(1).max(2000),
+  })
+  .strict();
+
+export type CheckinImportBody = z.infer<typeof checkinImportSchema>;

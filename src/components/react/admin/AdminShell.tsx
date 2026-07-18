@@ -4,6 +4,7 @@ import { useAuth } from "./AuthProvider";
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin", icon: "📊" },
   { label: "Eventos", href: "/admin/events", icon: "📅" },
+  { label: "Check-in", href: "/admin/checkin", icon: "✅" },
   { label: "Equipo", href: "/admin/team", icon: "👥", adminOnly: true },
   { label: "Speakers", href: "/admin/speakers", icon: "🎤" },
   { label: "Ubicaciones", href: "/admin/locations", icon: "📍" },

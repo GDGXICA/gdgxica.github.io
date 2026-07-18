@@ -19,6 +19,7 @@ import {
   minigameJoinSchema,
   minigameWordHiddenSchema,
   certificateSendSchema,
+  checkinImportSchema,
 } from "./schemas";
 import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
@@ -36,6 +37,7 @@ import * as minigameJoin from "./handlers/minigameJoin";
 import * as minigameWords from "./handlers/minigameWords";
 import * as minigameRoulette from "./handlers/minigameRoulette";
 import * as certificates from "./handlers/certificates";
+import * as checkin from "./handlers/checkin";
 
 admin.initializeApp();
 
@@ -408,6 +410,18 @@ app.post(
   writeLimiter,
   validateBody(certificateSendSchema),
   certificates.sendCertificates
+);
+
+// On-site check-in. The roster import is the only write that goes
+// through the API — volunteers toggle check-in straight against
+// Firestore so the write can be queued when venue wifi drops.
+app.post(
+  "/api/events/:slug/checkin/import",
+  requireRole("organizer"),
+  slugP,
+  writeLimiter,
+  validateBody(checkinImportSchema),
+  checkin.importRoster
 );
 
 // Rebuild

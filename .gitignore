@@ -51,3 +51,7 @@ public/carousel/
 # Windows Zone.Identifier files
 *:Zone.Identifier
 *.Identifier
+
+# Playwright MCP artifacts (snapshots, console logs, test fixtures).
+# Never commit: E2E runs put real attendee CSVs here.
+.playwright-mcp/

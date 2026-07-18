@@ -190,6 +190,19 @@ const realApi = {
       results: { email: string; name: string; ok: boolean; error?: string }[];
     }>("POST", "/certificates/send", data),
 
+  // On-site check-in. Only the roster import goes through the API —
+  // volunteers toggle check-in directly against Firestore so the write
+  // survives a venue wifi drop.
+  importCheckinRoster: (slug: string, rows: unknown[]) =>
+    request<{
+      importId: string;
+      total: number;
+      created: number;
+      updated: number;
+      stale: number;
+      unusableTickets: number;
+    }>("POST", `/events/${encodeURIComponent(slug)}/checkin/import`, { rows }),
+
   // Rebuild
   triggerRebuild: () => request("POST", "/rebuild"),
 };

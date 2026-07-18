@@ -1,6 +1,18 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Reads the caller's role from users/{uid}. Costs one billed document
+    // read per rule evaluation, so on a roster subscribe it is ~1 extra
+    // read per attendee doc. Fine at event scale; if the roster ever
+    // reaches thousands, move role into a custom auth claim
+    // (request.auth.token.role), which is free.
+    function callerRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    function isOrganizer() {
+      return request.auth != null && callerRole() in ['organizer', 'admin'];
+    }
+
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow create: if request.auth != null
@@ -86,6 +98,68 @@ service cloud.firestore {
           allow read: if true;
           allow write: if false;
         }
+      }
+
+      // Attendee roster imported from the Bevy registrations CSV, used by
+      // the on-site check-in panel. Contains names and emails, so unlike
+      // the parent event doc it is NOT publicly readable. Note that the
+      // `allow read: if true` above does not cascade here — rules only
+      // inherit through recursive wildcards — but we state the restriction
+      // explicitly so a later refactor cannot widen it by accident.
+      match /roster/{attendeeId} {
+        allow read: if isOrganizer();
+
+        // Import and removal run through Cloud Functions with the Admin
+        // SDK, which bypasses these rules.
+        allow create, delete: if false;
+
+        // Volunteers toggle check-in straight from the client rather than
+        // via an HTTPS call, because only a direct Firestore write can be
+        // queued in the local cache and replayed when venue wifi drops.
+        // hasOnly() pins them to the check-in fields, so a volunteer
+        // cannot rewrite an attendee's email, name or bevyCheckinAt.
+        allow update: if isOrganizer()
+                      && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['checkedIn', 'checkedInAt', 'checkedInBy',
+                                   'checkedInByName', 'note',
+                                   'dniVerified', 'dniVerifiedAt',
+                                   'dniMatchScore', 'dniMatchedName'])
+                      && request.resource.data.checkedIn is bool
+                      // Marking someone present must be attributable; only
+                      // un-checking may leave checkedInBy unset.
+                      && (request.resource.data.checkedIn == false
+                          || request.resource.data.checkedInBy == request.auth.uid)
+                      && (!('note' in request.resource.data)
+                          || request.resource.data.note == null
+                          || request.resource.data.note.size() <= 200)
+                      // The remaining allowlisted keys need bounds too. The
+                      // client is untrusted even when the caller holds the
+                      // organizer role, and without these a volunteer could
+                      // write a multi-megabyte checkedInByName or fabricate
+                      // the DNI-verification state these fields are reserved
+                      // for.
+                      && (!('checkedInByName' in request.resource.data)
+                          || request.resource.data.checkedInByName == null
+                          || (request.resource.data.checkedInByName is string
+                              && request.resource.data.checkedInByName.size() <= 120))
+                      && (!('dniVerified' in request.resource.data)
+                          || request.resource.data.dniVerified is bool)
+                      && (!('dniMatchedName' in request.resource.data)
+                          || request.resource.data.dniMatchedName == null
+                          || (request.resource.data.dniMatchedName is string
+                              && request.resource.data.dniMatchedName.size() <= 200))
+                      && (!('dniMatchScore' in request.resource.data)
+                          || request.resource.data.dniMatchScore == null
+                          || (request.resource.data.dniMatchScore is number
+                              && request.resource.data.dniMatchScore >= 0
+                              && request.resource.data.dniMatchScore <= 1));
+      }
+
+      // Import metadata (last import id, roster count, last Bevy sync).
+      // Written only by Cloud Functions.
+      match /checkinMeta/{docId} {
+        allow read: if isOrganizer();
+        allow write: if false;
       }
     }
 

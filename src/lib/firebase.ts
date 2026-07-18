@@ -17,13 +17,21 @@ function getApp() {
         ? initializeApp(firebaseConfig)
         : getApps()[0];
     })();
+    // Same reasoning as the reset in getFirestore below: memoizing a promise
+    // memoizes its rejection too. This is the FIRST chunk loaded, so without
+    // a reset here a single failed import("firebase/app") on flaky wifi
+    // poisons getAuth() and getFirestore() alike for the page's lifetime —
+    // clearing only the db slot would rebuild it around the same dead app.
+    _appPromise.catch(() => {
+      _appPromise = null;
+    });
   }
   return _appPromise;
 }
 
 const USE_EMULATOR = import.meta.env.PUBLIC_USE_FIREBASE_EMULATOR === "true";
 let _authEmulatorConnected = false;
-let _firestoreEmulatorConnected = false;
+let _dbPromise: Promise<import("firebase/firestore").Firestore> | null = null;
 
 export async function getAuth() {
   const app = await getApp();
@@ -40,16 +48,73 @@ export async function getAuth() {
   return auth;
 }
 
+// Memoized: initializeFirestore() must be the first Firestore call on the
+// app instance, and it throws "already started" on the second. Memoizing
+// the db promise (not just the app) is what guarantees it runs once.
 export async function getFirestore() {
-  const app = await getApp();
-  const { getFirestore: firebaseGetFirestore, connectFirestoreEmulator } =
-    await import("firebase/firestore");
-  const db = firebaseGetFirestore(app);
-  if (USE_EMULATOR && !_firestoreEmulatorConnected) {
-    connectFirestoreEmulator(db, "127.0.0.1", 8080);
-    _firestoreEmulatorConnected = true;
+  if (!_dbPromise) {
+    _dbPromise = (async () => {
+      const app = await getApp();
+      const {
+        initializeFirestore,
+        getFirestore: firebaseGetFirestore,
+        persistentLocalCache,
+        persistentMultipleTabManager,
+        connectFirestoreEmulator,
+      } = await import("firebase/firestore");
+
+      // Offline persistence keeps the check-in panel usable on venue wifi:
+      // the SDK queues writes in IndexedDB and replays them on reconnect.
+      // The multi-tab manager is not optional — a second tab otherwise
+      // fails to take the IndexedDB lock and silently degrades to an
+      // in-memory cache, which would drop queued check-ins.
+      //
+      // Known tradeoff, considered and accepted: this caches whatever the
+      // page subscribes to on disk, and the SDK does not clear it on sign
+      // out. On /admin/checkin that includes attendee names and emails.
+      // Reading the roster already requires the organizer role, so this
+      // crosses no privilege boundary — the exposure is someone with
+      // physical access to an unlocked profile, who on a venue phone is
+      // typically another organizer. Clearing it in signOut() via
+      // terminate() + clearIndexedDbPersistence() is possible, but it also
+      // discards check-ins still queued offline, which is worse mid-event.
+      //
+      // Persistence is deliberately NOT behind a per-caller opt-in.
+      // getUserRole() in ./auth.ts calls this helper on every admin page
+      // before the panel mounts, so a first-caller-wins flag would let it
+      // initialize the memory cache and silently disable the offline queue
+      // this whole feature depends on.
+      let db: import("firebase/firestore").Firestore;
+      try {
+        db = initializeFirestore(app, {
+          localCache: persistentLocalCache({
+            tabManager: persistentMultipleTabManager(),
+          }),
+        });
+      } catch {
+        // Throws in Safari private mode (no IndexedDB) and if something
+        // already started Firestore. This helper is on the critical path
+        // for the public mini-game islands, so degrade instead of break.
+        db = firebaseGetFirestore(app);
+      }
+
+      if (USE_EMULATOR) {
+        connectFirestoreEmulator(db, "127.0.0.1", 8080);
+      }
+      return db;
+    })();
+
+    // Memoizing a promise also memoizes its rejection. Without this, one
+    // transient failure (a chunk that fails to load on flaky wifi) would
+    // leave every later call rejecting for the lifetime of the page —
+    // permanently breaking the public mini-game islands that share this
+    // helper. Clearing the slot lets the next caller retry, which is how
+    // this behaved before it was memoized.
+    _dbPromise.catch(() => {
+      _dbPromise = null;
+    });
   }
-  return db;
+  return _dbPromise;
 }
 
 // Used by the public event island in PR4. No-ops when there is already
