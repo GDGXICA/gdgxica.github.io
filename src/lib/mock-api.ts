@@ -96,5 +96,14 @@ export const mockApi = {
     });
   },
 
+  importCheckinRoster: (_slug: string, rows: unknown[]) =>
+    ok({
+      importId: "imp_mock",
+      total: rows.length,
+      created: rows.length,
+      updated: 0,
+      stale: 0,
+    }),
+
   triggerRebuild: () => ok(null),
 };

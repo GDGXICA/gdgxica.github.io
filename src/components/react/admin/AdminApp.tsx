@@ -17,6 +17,7 @@ import { LocationList } from "./locations/LocationList";
 import { MinigameTemplateList } from "./minigame-templates/MinigameTemplateList";
 import { EventMinigameManager } from "./event-minigames/EventMinigameManager";
 import { CertificateSender } from "./certificates/CertificateSender";
+import { CheckinPanel } from "./checkin/CheckinPanel";
 
 interface Props {
   page: string;
@@ -65,6 +66,8 @@ function renderPage(
       return <EventMinigameManager />;
     case "certificates":
       return <CertificateSender />;
+    case "checkin":
+      return <CheckinPanel />;
     default:
       return (
         <p className="text-gray-500 dark:text-gray-400">
