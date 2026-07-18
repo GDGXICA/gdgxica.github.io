@@ -1,0 +1,37 @@
+---
+import { cn } from "@/utils/cn";
+
+/**
+ * Soft dune crest used to transition between two sections, replacing a hard
+ * 1px border. Huacachina — the oasis the dune profile is taken from — is in
+ * Ica city itself. `currentColor` is the colour of the section BELOW, so this
+ * sits at the foot of the section above.
+ */
+
+interface Props {
+  /** Mirror the crest so consecutive dividers don't repeat identically. */
+  flip?: boolean;
+  class?: string;
+}
+
+const { flip = false, class: className } = Astro.props;
+---
+
+<div
+  class={cn("pointer-events-none relative -mb-px block", className)}
+  aria-hidden="true"
+>
+  <svg
+    viewBox="0 0 1440 90"
+    preserveAspectRatio="none"
+    fill="currentColor"
+    class={cn(
+      "block h-[42px] w-full sm:h-[64px] lg:h-[90px]",
+      flip && "-scale-x-100"
+    )}
+  >
+    <path
+      d="M0 90 L0 62 C 180 30, 320 84, 520 66 C 720 48, 840 6, 1040 20 C 1200 31, 1320 66, 1440 54 L1440 90 Z"
+    ></path>
+  </svg>
+</div>

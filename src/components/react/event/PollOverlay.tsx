@@ -60,9 +60,8 @@ export function PollOverlay({ slug, instanceId, uid, title, config }: Props) {
     setError(null);
     try {
       const db = await getFirestore();
-      const { doc, setDoc, serverTimestamp } = await import(
-        "firebase/firestore"
-      );
+      const { doc, setDoc, serverTimestamp } =
+        await import("firebase/firestore");
       const ref = doc(
         db,
         `events/${slug}/minigames/${instanceId}/responses/${uid}_${QUESTION_ID}`
@@ -87,8 +86,8 @@ export function PollOverlay({ slug, instanceId, uid, title, config }: Props) {
         <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
           Encuesta en vivo
         </span>
-        <h2 className="text-primary mt-3 text-2xl font-semibold">{title}</h2>
-        <p className="text-secondary mt-1 text-base">{config.question}</p>
+        <h2 className="text-fg mt-3 text-2xl font-semibold">{title}</h2>
+        <p className="text-fg-muted mt-1 text-base">{config.question}</p>
       </div>
 
       {error && (

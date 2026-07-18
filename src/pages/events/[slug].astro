@@ -3,7 +3,8 @@ import { Image } from "astro:assets";
 import { getCollection } from "astro:content";
 import QRCode from "qrcode";
 import Button from "@/components/Button.astro";
-import FeatureCard from "@/components/FeatureCard.astro";
+import EmptyState from "@/components/EmptyState.astro";
+import SectionHeader from "@/components/SectionHeader.astro";
 import Tag from "@/components/Tag.astro";
 import Layout from "@/layouts/Layout.astro";
 import ScheduleCard from "@/components/ScheduleCard.astro";
@@ -11,7 +12,6 @@ import TrackTabSchedule from "@/components/TrackTabSchedule.astro";
 import SpeakerCard from "@/components/SpeakerCard.astro";
 import {
   Ticket,
-  Share2,
   Calendar,
   CalendarPlus,
   Download,
@@ -127,6 +127,52 @@ const hasSchedule = isArraySchedule
       ).length > 0
     : false;
 
+// A track schedule is only renderable when the event also declares its tracks;
+// the previous `tracks!` assertion would have thrown at build time otherwise.
+const tracks = event.data.tracks ?? [];
+const renderTrackSchedule = hasSchedule && isTrackSchedule && tracks.length > 0;
+
+// `participants` can exceed `maxParticipants` (build-with-ai-ica-2026 is
+// 513/500), which used to render "-13 lugares disponibles".
+const seatsLeft = Math.max(
+  0,
+  event.data.maxParticipants - event.data.participants
+);
+
+// devfest-2024 and google-cloud ship an empty `registerFormLink`, so both
+// "Registrarse gratis" CTAs rendered as `href=""` — a button that silently
+// reloads the page.
+const registerLink = event.data.registerFormLink?.trim();
+const canRegister =
+  Boolean(registerLink) && event.data.status?.type !== "completed";
+
+const stats = [
+  {
+    Icon: Calendar,
+    tone: "text-brand-blue-text",
+    term: "Fecha",
+    value: event.data.date,
+  },
+  {
+    Icon: Clock,
+    tone: "text-brand-red-text",
+    term: "Horario",
+    value: event.data.time,
+  },
+  {
+    Icon: Building,
+    tone: "text-brand-green-text",
+    term: event.data.isVirtual ? "Modalidad" : "Ubicación",
+    value: event.data.isVirtual ? "Virtual" : event.data.location.name,
+  },
+  {
+    Icon: Users,
+    tone: "text-brand-yellow-text",
+    term: "Asistentes",
+    value: `${event.data.participants} / ${event.data.maxParticipants}`,
+  },
+];
+
 const whatsappGroupLink = event.data.whatsappGroupLink;
 const whatsappQrSvg = whatsappGroupLink
   ? await QRCode.toString(whatsappGroupLink, {
@@ -139,20 +185,31 @@ const whatsappQrSvg = whatsappGroupLink
 ---
 
 <Layout {...metadata}>
+  {
+    /* The hero sits on a photograph in both themes, so its copy uses the
+      on-ink tokens rather than the theme-following foreground tokens. */
+  }
   <section
-    class="relative flex min-h-[24rem] items-end py-12 md:min-h-[28rem] md:py-16"
+    class="relative isolate flex min-h-96 items-end overflow-hidden py-12 md:min-h-112 md:py-16"
   >
-    <span class="absolute inset-0 z-[1] bg-black/50"></span>
     <Image
       src={event.data.image || "/placeholder.svg"}
-      alt={`Foto de evento ${event.data.name}`}
-      class="absolute inset-0 h-full w-full object-cover object-center"
+      alt=""
+      class="absolute inset-0 -z-10 h-full w-full object-cover object-center"
       width={1920}
       height={1080}
+      loading="eager"
+      fetchpriority="high"
     />
-    <div class="relative z-[2] container">
-      <div class="max-w-[768px]">
-        <div class="mb-4 flex gap-2">
+    <div
+      class="absolute inset-0 -z-10 bg-gradient-to-t from-black/85 via-black/65 to-black/40"
+      aria-hidden="true"
+    >
+    </div>
+
+    <div class="relative container">
+      <div class="max-w-3xl">
+        <div class="mb-5 flex flex-wrap gap-2">
           {
             event.data.category && (
               <Tag
@@ -170,20 +227,23 @@ const whatsappQrSvg = whatsappGroupLink
             )
           }
         </div>
-        <h1 class="mb-4 text-4xl font-bold text-white lg:text-5xl">
-          {event.data.name}
-        </h1>
-        <p class="mb-6 text-xl text-white">
+
+        <h1 class="text-h1 text-fg-on-ink text-balance">{event.data.name}</h1>
+
+        <p class="text-lead text-fg-on-ink-muted mt-5 text-pretty">
           {event.data.shortDescription}
         </p>
-        <div class="flex flex-col gap-4 md:flex-row">
-          <Button
-            variant="solid"
-            href={event.data.registerFormLink}
-            target="_blank"
-          >
-            <Ticket size={16} /> Registrarse Gratis
-          </Button>
+
+        <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          {
+            canRegister && (
+              <Button variant="primary" href={registerLink} target="_blank">
+                <Ticket size={16} stroke-width={1.75} aria-hidden /> Registrarse
+                gratis
+              </Button>
+            )
+          }
+
           <SharedButton
             client:visible
             title={event.data.name}
@@ -197,29 +257,34 @@ const whatsappQrSvg = whatsappGroupLink
             eventHashtags={JSON.stringify(event.data.tags)}
             eventOrganization="Google Developer Group Ica"
           />
+
+          {
+            /* Kept as <details> but restyled to read as Button variant="secondary". */
+          }
           <details class="group relative">
             <summary
-              class="border-gray-custom text-primary inline-flex cursor-pointer list-none items-center justify-center gap-[10px] rounded-md border bg-white px-8 py-[10px] font-medium whitespace-nowrap [&::-webkit-details-marker]:hidden"
+              class="border-line-strong bg-raised text-fg hover:border-fg-subtle hover:bg-inset inline-flex cursor-pointer list-none items-center justify-center gap-2 rounded-md border px-6 py-2.5 text-[0.9375rem] font-semibold whitespace-nowrap transition-[background-color,border-color,color] duration-200 [&::-webkit-details-marker]:hidden"
             >
-              <CalendarPlus size={16} /> Añadir a calendario
+              <CalendarPlus size={16} stroke-width={1.75} aria-hidden /> Añadir a
+              calendario
             </summary>
             <div
-              class="absolute z-10 mt-2 flex w-60 flex-col overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
+              class="card absolute z-20 mt-2 flex w-60 flex-col overflow-hidden p-0 shadow-[var(--shadow-pop)]"
             >
               <a
                 href={gcalUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                class="text-primary flex items-center gap-2 px-4 py-3 hover:bg-gray-100"
+                class="text-fg hover:bg-inset flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors"
               >
-                <Calendar size={16} /> Google Calendar
+                <Calendar size={16} stroke-width={1.75} aria-hidden /> Google Calendar
               </a>
               <a
                 href={icsUrl}
                 download
-                class="text-primary flex items-center gap-2 px-4 py-3 hover:bg-gray-100"
+                class="text-fg hover:bg-inset border-line flex items-center gap-2 border-t px-4 py-3 text-sm font-medium transition-colors"
               >
-                <Download size={16} /> Descargar .ics
+                <Download size={16} stroke-width={1.75} aria-hidden /> Descargar .ics
               </a>
             </div>
           </details>
@@ -227,64 +292,45 @@ const whatsappQrSvg = whatsappGroupLink
       </div>
     </div>
   </section>
-  <section class="bg-section py-20">
-    <div class="container">
-      <div
-        class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-      >
-        <FeatureCard className="text-center">
-          <Calendar stroke-width={1.5} color="#2463EB" class="mx-auto mb-3" />
-          <strong class="text-primary mb-2 font-semibold">Fecha</strong>
-          <p class="text-secondary">{event.data.date}</p>
-        </FeatureCard>
-        <FeatureCard className="text-center">
-          <Clock stroke-width={1.5} color="#EF4444" class="mx-auto mb-3" />
-          <strong class="text-primary mb-2 font-semibold">Horario</strong>
-          <p class="text-secondary">{event.data.time}</p>
-        </FeatureCard>
-        <FeatureCard className="text-center">
-          <Building stroke-width={1.5} color="#16A34A" class="mx-auto mb-3" />
-          <strong class="text-primary mb-2 font-semibold">
-            {event.data.isVirtual ? "Modalidad" : "Ubicación"}
-          </strong>
-          <p class="text-secondary">
-            {event.data.isVirtual ? "Virtual" : event.data.location.name}
-          </p>
-        </FeatureCard>
-        <FeatureCard className="text-center">
-          <Users stroke-width={1.5} color="#EBB308" class="mx-auto mb-3" />
-          <strong class="text-primary mb-2 font-semibold">Asistentes</strong>
-          <p class="text-secondary">
-            <span>{event.data.participants}</span>/<span
-              >{event.data.maxParticipants}</span
-            >
-          </p>
-        </FeatureCard>
-      </div>
+
+  <section class="border-line bg-surface border-y">
+    <div class="section-tight container">
+      <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {
+          stats.map(({ Icon, tone, term, value }) => (
+            <div class="card flex flex-col items-center gap-2 p-6 text-center">
+              <Icon size={22} stroke-width={1.75} class={tone} aria-hidden />
+              <dt class="text-overline text-fg-subtle uppercase">{term}</dt>
+              <dd class="text-fg font-semibold text-balance">{value}</dd>
+            </div>
+          ))
+        }
+      </dl>
     </div>
   </section>
-  <section class="py-12">
-    <div class="container">
-      <div class="flex flex-col gap-8 lg:flex-row">
-        <div class="flex basis-8/12 flex-col gap-8">
-          <!-- about -->
-          <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-            <h2 class="text-primary mb-6 text-2xl font-semibold">
-              Acerca del Evento
-            </h2>
 
-            <p class="text-secondary">
-              {event.data.largeDescription}
-            </p>
-          </div>
-          <!-- agenda -->
-          <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-            <div class="mb-6">
-              <h2 class="text-primary mb-2 text-2xl font-semibold">Agenda</h2>
-            </div>
+  <div class="section container">
+    <div class="flex flex-col gap-16 lg:flex-row lg:gap-12">
+      <div class="flex min-w-0 flex-col gap-16 lg:basis-2/3">
+        <section>
+          <SectionHeader eyebrow="Resumen" title="Acerca del evento" />
+          <p class="text-fg-muted mt-6 text-pretty">
+            {event.data.largeDescription}
+          </p>
+        </section>
+
+        <section>
+          <SectionHeader
+            eyebrow="Programa"
+            title="Agenda"
+            description={renderTrackSchedule
+              ? "Elige una sala para ver sus sesiones."
+              : undefined}
+          />
+          <div class="mt-8">
             {
               hasSchedule ? (
-                isTrackSchedule ? (
+                renderTrackSchedule ? (
                   <TrackTabSchedule
                     schedule={
                       schedule as {
@@ -305,7 +351,7 @@ const whatsappQrSvg = whatsappGroupLink
                         >;
                       }
                     }
-                    tracks={event.data.tracks!}
+                    tracks={tracks}
                   />
                 ) : (
                   <div class="flex flex-col gap-4">
@@ -324,237 +370,269 @@ const whatsappQrSvg = whatsappGroupLink
                   </div>
                 )
               ) : (
-                <div class="flex flex-col items-center justify-center gap-4 text-center text-gray-400">
-                  <NotebookText size={48} stroke-width={1} />
-                  <p>Nuestra agenda está en construcción. ¡Vuelve pronto!</p>
-                </div>
+                <EmptyState
+                  icon={NotebookText}
+                  message="Nuestra agenda está en construcción. ¡Vuelve pronto!"
+                />
               )
             }
           </div>
-          <!-- speakers -->
-          <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-            <h2 class="text-primary mb-6 text-2xl font-semibold">Speakers</h2>
+        </section>
+
+        <section>
+          <SectionHeader eyebrow="Ponentes" title="Speakers" />
+          <div class="mt-8">
             {
               event.data.speakers.length > 0 ? (
-                <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+                <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
                   {event.data.speakers.map((speaker) => (
                     <SpeakerCard {...speaker} />
                   ))}
                 </div>
               ) : (
-                <div class="flex flex-col items-center justify-center gap-4 text-center text-gray-400">
-                  <MicVocal size={48} stroke-width={1} />
-                  <p>
-                    Pronto revelaremos a nuestros speakers invitados. ¡Estate
-                    atento!
-                  </p>
-                </div>
+                <EmptyState
+                  icon={MicVocal}
+                  message="Pronto revelaremos a nuestros speakers invitados. ¡Estate atento!"
+                />
               )
             }
           </div>
-          <!-- sponsors -->
-          <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-            <h2 class="text-primary mb-6 text-2xl font-semibold">Sponsors</h2>
+        </section>
+
+        <section>
+          <SectionHeader eyebrow="Apoyo" title="Sponsors" />
+          <div class="mt-8">
             {
               event.data.sponsors.length > 0 ? (
-                <div class="grid grid-cols-2 gap-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                <ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                   {event.data.sponsors.map((sponsor) => (
-                    <div class="flex items-center justify-center rounded-lg border border-gray-100 bg-white p-4 shadow-sm transition-shadow duration-200 hover:shadow-md">
+                    <li class="bg-inset border-line flex h-24 items-center justify-center rounded-lg border px-4">
                       <Image
                         src={sponsor.image || "/placeholder.svg"}
-                        width={100}
-                        height={100}
-                        class="h-16 w-auto max-w-[100px] object-contain sm:h-20 md:h-24"
+                        width={120}
+                        height={80}
+                        class="max-h-14 w-auto object-contain"
                         alt={`Logo de ${sponsor.alt}`}
                       />
-                    </div>
+                    </li>
                   ))}
-                </div>
+                </ul>
               ) : (
-                <div class="flex flex-col items-center justify-center gap-4 text-center text-gray-400">
-                  <Store size={48} stroke-width={1} />
-                  <p>
-                    Estamos preparando una gran alianza de patrocinadores. ¡Muy
-                    pronto!
-                  </p>
-                </div>
+                <EmptyState
+                  icon={Store}
+                  message="Estamos preparando una gran alianza de patrocinadores. ¡Muy pronto!"
+                />
               )
             }
           </div>
-        </div>
-        <div class="flex flex-col gap-8 lg:basis-1/3">
-          <!-- register -->
-          <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-            <h2 class="text-primary mb-6 text-2xl font-semibold">Registro</h2>
-            <p class="text-google-green mb-2 text-center text-2xl font-bold">
-              Gratuito
-            </p>
-            <p class="text-secondary mb-4 text-center">
-              {event.data.maxParticipants - event.data.participants} lugares disponibles
-            </p>
-            <div class="flex flex-col gap-4">
-              <Button variant="solid" href={event.data.registerFormLink}>
-                <Ticket size={16} /> Registrarse Gratis
-              </Button>
-              <Button variant="outline" href="/"
-                ><Share2 size={16} /> Compartir Evento
-              </Button>
+        </section>
+      </div>
+
+      {
+        /* One <h2> anchors the aside so the widget <h3>s below it don't skip a
+          level; it is visually hidden because the cards are self-evident. */
+      }
+      <aside class="flex flex-col gap-6 lg:basis-1/3">
+        <h2 class="sr-only">Detalles del evento</h2>
+
+        <div class="card p-6">
+          <h3 class="text-h4 text-fg">Registro</h3>
+          <dl class="mt-4 flex items-baseline justify-between gap-4">
+            <div>
+              <dt class="text-fg-subtle text-sm">Precio</dt>
+              <dd class="text-brand-green-text text-h3">Gratuito</dd>
             </div>
-          </div>
+            <div class="text-right">
+              <dt class="text-fg-subtle text-sm">Cupos</dt>
+              <dd class="text-fg font-semibold tabular-nums">
+                {seatsLeft > 0 ? `${seatsLeft} disponibles` : "Aforo completo"}
+              </dd>
+            </div>
+          </dl>
           {
-            whatsappGroupLink && whatsappQrSvg && (
-              <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-                <h2 class="text-primary mb-4 text-2xl font-semibold">
-                  Grupo de WhatsApp
-                </h2>
-                <p class="text-secondary mb-4 text-sm">
-                  Únete al grupo del evento para recibir información sobre
-                  salones, charlas y novedades en tiempo real.
-                </p>
-                <div
-                  class="mb-4 flex items-center justify-center rounded-lg bg-white p-4 [&>svg]:h-auto [&>svg]:w-full [&>svg]:max-w-[240px]"
-                  set:html={whatsappQrSvg}
-                />
-                <div class="flex justify-center">
-                  <Button
-                    variant="solid"
-                    href={whatsappGroupLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      width="16"
-                      height="16"
-                      fill="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12.05 21.785h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.002-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.892 6.994c-.003 5.45-4.437 9.884-9.884 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.88 11.88 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.82 11.82 0 0 0-3.48-8.413" />
-                    </svg>
-                    Unirse al grupo
-                  </Button>
-                </div>
-              </div>
+            canRegister ? (
+              <Button
+                variant="primary"
+                href={registerLink}
+                target="_blank"
+                class="mt-6 w-full"
+              >
+                <Ticket size={16} stroke-width={1.75} aria-hidden /> Registrarse
+                gratis
+              </Button>
+            ) : (
+              <p class="bg-inset text-fg-muted mt-6 rounded-md px-4 py-3 text-center text-sm">
+                {event.data.status?.type === "completed"
+                  ? "Este evento ya se realizó."
+                  : "El registro aún no está abierto."}
+              </p>
             )
           }
-          <!-- requeriments -->
-          <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-            <h2 class="text-primary mb-6 text-2xl font-semibold">Requisitos</h2>
-            <ul class="flex flex-col gap-2">
-              {
-                event.data.requirements.map((requeriment) => (
-                  <li class="text-secondary flex items-center gap-3 text-sm">
-                    <CircleCheckBig size={16} color="#16A34A" />
-                    {requeriment}
+        </div>
+
+        {
+          whatsappGroupLink && whatsappQrSvg && (
+            <div class="card p-6">
+              <h3 class="text-h4 text-fg">Grupo de WhatsApp</h3>
+              <p class="text-fg-muted mt-2 text-sm">
+                Únete al grupo del evento para recibir información sobre
+                salones, charlas y novedades en tiempo real.
+              </p>
+              {/* Deliberate literal white, not a token: the QR is generated
+                  dark-on-white and `margin: 1` leaves only one module of quiet
+                  zone, so the plate has to extend that zone in white in both
+                  themes. On a themed surface the dark-mode quiet zone would go
+                  dark and scanners would struggle. */}
+              <div
+                class="mt-4 flex items-center justify-center rounded-md bg-white p-3 [&>svg]:h-auto [&>svg]:w-full [&>svg]:max-w-60"
+                role="img"
+                aria-label="Código QR para unirse al grupo de WhatsApp del evento"
+                set:html={whatsappQrSvg}
+              />
+              <Button
+                variant="secondary"
+                href={whatsappGroupLink}
+                target="_blank"
+                class="mt-4 w-full"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12.05 21.785h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.002-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.892 6.994c-.003 5.45-4.437 9.884-9.884 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.88 11.88 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.82 11.82 0 0 0-3.48-8.413" />
+                </svg>
+                Unirse al grupo
+              </Button>
+            </div>
+          )
+        }
+
+        {
+          event.data.requirements.length > 0 && (
+            <div class="card p-6">
+              <h3 class="text-h4 text-fg">Requisitos</h3>
+              <ul class="mt-4 flex flex-col gap-2.5">
+                {event.data.requirements.map((requirement) => (
+                  <li class="text-fg-muted flex items-start gap-3 text-sm">
+                    <CircleCheckBig
+                      size={16}
+                      stroke-width={1.75}
+                      class="text-brand-green-text mt-0.5 shrink-0"
+                      aria-hidden
+                    />
+                    {requirement}
                   </li>
-                ))
-              }
-            </ul>
-          </div>
-          <!-- includes -->
-          <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-            <h2 class="text-primary mb-6 text-2xl font-semibold">Incluye</h2>
-            <ul class="flex flex-col gap-2">
-              {
-                event.data.include.map((item) => (
-                  <li class="text-secondary flex items-center gap-3 text-sm">
-                    <Heart size={16} color="#EF4444" />
+                ))}
+              </ul>
+            </div>
+          )
+        }
+
+        {
+          event.data.include.length > 0 && (
+            <div class="card p-6">
+              <h3 class="text-h4 text-fg">Incluye</h3>
+              <ul class="mt-4 flex flex-col gap-2.5">
+                {event.data.include.map((item) => (
+                  <li class="text-fg-muted flex items-start gap-3 text-sm">
+                    <Heart
+                      size={16}
+                      stroke-width={1.75}
+                      class="text-brand-red-text mt-0.5 shrink-0"
+                      aria-hidden
+                    />
                     {item}
                   </li>
-                ))
-              }
-            </ul>
-          </div>
-          <!-- technologies -->
-          <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-            <h2 class="text-primary mb-6 text-2xl font-semibold">
-              Tecnologías
-            </h2>
-            <ul class="flex flex-wrap gap-2">
-              {
-                event.data.technologies.map((technology) => (
+                ))}
+              </ul>
+            </div>
+          )
+        }
+
+        {
+          event.data.technologies.length > 0 && (
+            <div class="card p-6">
+              <h3 class="text-h4 text-fg">Tecnologías</h3>
+              <ul class="mt-4 flex flex-wrap gap-2">
+                {event.data.technologies.map((technology) => (
                   <li>
                     <Tag label={technology} />
                   </li>
-                ))
-              }
-            </ul>
-          </div>
-          <!-- ubication -->
-          {
-            !event.data.isVirtual && (
-              <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-                <h2 class="text-primary mb-6 text-2xl font-semibold">
-                  Ubicación
-                </h2>
-                <p class="text-primary font-semibold">
-                  {event.data.location.name}
-                </p>
-                <p class="text-secondary mb-3 text-sm">
-                  {event.data.location.direction}
-                </p>
-                {event.data.location.googleMapEmbed ? (
-                  <iframe
-                    src={event.data.location.googleMapEmbed}
-                    width="600"
-                    height="450"
-                    style="border:0;"
-                    allowfullscreen=""
-                    loading="lazy"
-                    referrerpolicy="no-referrer-when-downgrade"
-                    class="h-60 w-full"
+                ))}
+              </ul>
+            </div>
+          )
+        }
+
+        {
+          !event.data.isVirtual && (
+            <div class="card p-6">
+              <h3 class="text-h4 text-fg">Ubicación</h3>
+              <p class="text-fg mt-4 font-semibold">
+                {event.data.location.name}
+              </p>
+              <p class="text-fg-muted mt-1 text-sm">
+                {event.data.location.direction}
+              </p>
+              {event.data.location.googleMapEmbed ? (
+                <iframe
+                  src={event.data.location.googleMapEmbed}
+                  title={`Mapa de ${event.data.location.name}`}
+                  loading="lazy"
+                  referrerpolicy="no-referrer-when-downgrade"
+                  allowfullscreen
+                  class="border-line mt-4 h-60 w-full rounded-md border"
+                />
+              ) : (
+                <div class="bg-inset text-fg-muted mt-4 flex h-32 items-center justify-center gap-2 rounded-md">
+                  <MapPinned size={16} stroke-width={1.75} aria-hidden />
+                  <span class="text-sm">Mapa no disponible</span>
+                </div>
+              )}
+              <Button
+                variant="secondary"
+                target="_blank"
+                href={event.data.location.googleMapLink}
+                class="mt-4 w-full"
+              >
+                <ExternalLink size={16} stroke-width={1.75} aria-hidden />
+                Ver en Google Maps
+              </Button>
+            </div>
+          )
+        }
+
+        {
+          event.data.isVirtual && (
+            <div class="card p-6">
+              <h3 class="text-h4 text-fg">Modalidad</h3>
+              <div class="mt-4 flex flex-col items-center gap-4 text-center">
+                <span class="bg-brand-blue-soft rounded-full p-4">
+                  <ExternalLink
+                    size={28}
+                    stroke-width={1.5}
+                    class="text-brand-blue-text"
+                    aria-hidden
                   />
-                ) : (
-                  <div class="flex h-32 items-center justify-center gap-2 rounded-lg bg-gray-100">
-                    <MapPinned size={16} color="#4b5563" />
-                    <span class="text-secondary">Mapa interactivo</span>
-                  </div>
-                )}
-                <div class="mt-3 grid">
-                  <Button
-                    variant="outline"
-                    target="_blank"
-                    href={event.data.location.googleMapLink}
-                  >
-                    <ExternalLink />
-                    Ver en Google Maps
-                  </Button>
+                </span>
+                <div>
+                  <p class="text-fg font-semibold">Evento virtual</p>
+                  <p class="text-fg-muted mt-1 text-sm text-pretty">
+                    Este evento se realizará de manera virtual. El enlace de
+                    acceso se enviará a tu correo después del registro.
+                  </p>
                 </div>
               </div>
-            )
-          }
-          {
-            event.data.isVirtual && (
-              <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-                <h2 class="text-primary mb-6 text-2xl font-semibold">
-                  Modalidad
-                </h2>
-                <div class="flex flex-col items-center justify-center gap-4 text-center">
-                  <div class="rounded-full bg-blue-50 p-4">
-                    <ExternalLink
-                      size={32}
-                      color="#2463EB"
-                      stroke-width={1.5}
-                    />
-                  </div>
-                  <div>
-                    <p class="text-primary mb-2 text-lg font-semibold">
-                      Evento Virtual
-                    </p>
-                    <p class="text-secondary text-sm">
-                      Este evento se realizará de manera virtual. El enlace de
-                      acceso se enviará a tu correo después del registro.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )
-          }
-        </div>
-      </div>
+            </div>
+          )
+        }
+      </aside>
     </div>
-  </section>
+  </div>
 
   {
     (event.data.status?.type === "in-progress" ||

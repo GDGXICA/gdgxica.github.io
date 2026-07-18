@@ -9,17 +9,18 @@ import {
   Code2,
   Boxes,
 } from "@lucide/astro";
+import Tag from "./Tag.astro";
 
 interface Props {
   title: string;
   description: string;
   icon: string;
-  iconColor: string;
+  iconColor?: string;
   skills: string[];
   commitment: string;
 }
 
-const { title, description, icon, iconColor, skills, commitment } = Astro.props;
+const { title, description, icon, skills, commitment } = Astro.props;
 
 const ICON_MAP: Record<string, typeof Camera> = {
   camera: Camera,
@@ -35,38 +36,47 @@ const ICON_MAP: Record<string, typeof Camera> = {
 const IconComponent = ICON_MAP[icon];
 ---
 
-<article
-  class="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 text-center"
->
+{
+  /* `iconColor` from the feed is ignored: the values it carries are the raw
+    brand hexes, which drop below 3:1 on this surface and don't invert for the
+    dark theme. The accent token stays legible in both. */
+}
+<article class="card card-interactive flex h-full flex-col p-6">
   {
     IconComponent && (
-      <IconComponent
-        class="mx-auto h-6 w-6"
-        stroke-width={1.5}
-        color={iconColor}
-      />
+      <span
+        class="bg-brand-blue-soft text-brand-blue-text mb-5 inline-flex h-11 w-11 items-center justify-center rounded-md"
+        aria-hidden="true"
+      >
+        <IconComponent class="h-5 w-5" stroke-width={1.75} />
+      </span>
     )
   }
-  <h3 class="text-primary text-lg font-bold">{title}</h3>
-  <p class="text-secondary text-sm">{description}</p>
-  <div>
-    <p class="text-primary mt-2 mb-[10px] font-semibold tracking-wide">
-      Habilidades
-    </p>
-    <ul
-      class="flex flex-wrap justify-center gap-1 text-xs font-semibold text-[#1F2937]"
-    >
-      {
-        skills.map((skill) => (
-          <li class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px]">{skill}</li>
-        ))
-      }
-    </ul>
-  </div>
-  <div>
-    <p class="text-primary mb-[10px] text-base font-semibold tracking-wide">
+
+  <h3 class="text-h4 text-fg">{title}</h3>
+  <p class="text-fg-muted mt-2 text-sm">{description}</p>
+
+  {
+    skills.length > 0 && (
+      <div class="mt-5">
+        <h4 class="text-fg-subtle text-xs font-semibold tracking-wide uppercase">
+          Habilidades
+        </h4>
+        <ul class="mt-2 flex flex-wrap gap-1.5">
+          {skills.map((skill) => (
+            <li>
+              <Tag label={skill} />
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
+
+  <div class="border-line mt-auto pt-5">
+    <h4 class="text-fg-subtle text-xs font-semibold tracking-wide uppercase">
       Compromiso
-    </p>
-    <p class="text-secondary text-sm">{commitment}</p>
+    </h4>
+    <p class="text-fg mt-1 text-sm font-medium">{commitment}</p>
   </div>
 </article>

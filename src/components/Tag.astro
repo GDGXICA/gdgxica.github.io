@@ -3,39 +3,49 @@ import { Star } from "@lucide/astro";
 import { cn } from "@/utils/cn";
 
 const typeStyles = {
-  devfest: "bg-[#DBEAFE] text-[#1E40AF]",
-  io: "bg-[#FEE2E2] text-[#991B1B]",
-  studyjam: "bg-[#DCFCE7] text-[#166534]",
-  wtm: "bg-[#F3E8FF] text-[#6B21A8]",
-  meetup: "bg-[#FEF9C3] text-[#854D0E]",
-  hackaton: "bg-[#FCEBDC] text-[#D66A05]",
-  upcoming: "bg-[#DCFCE7] text-[#166534]",
-  "in-progress": "bg-[#DBEAFE] text-[#1E40AF]",
-  completed: "bg-[#F3F4F6] text-[#1F2937]",
+  devfest: "bg-brand-blue-soft text-brand-blue-text",
+  io: "bg-brand-red-soft text-brand-red-text",
+  studyjam: "bg-brand-green-soft text-brand-green-text",
+  wtm: "bg-accent-violet-soft text-accent-violet",
+  meetup: "bg-brand-yellow-soft text-brand-yellow-text",
+  hackaton: "bg-accent-orange-soft text-accent-orange",
+  upcoming: "bg-brand-green-soft text-brand-green-text",
+  "in-progress": "bg-brand-blue-soft text-brand-blue-text",
+  completed: "bg-inset text-fg-muted",
 } as const;
+
 type Type = keyof typeof typeStyles;
 
-const { label, type, isHighLight } = Astro.props;
+interface Props {
+  label: string;
+  type?: Type;
+  isHighlight?: boolean;
+  class?: string;
+}
+
+const { label, type, isHighlight, class: className } = Astro.props;
 ---
 
 {
-  isHighLight ? (
-    <div
+  isHighlight ? (
+    <span
       class={cn(
-        "inline-flex items-center justify-center gap-[2px] rounded-4xl bg-gradient-to-tr from-[#FACC15] to-[#CA8A04] px-[10px] py-[2px] text-xs font-semibold text-[#713F12]"
+        "bg-brand-yellow-soft text-brand-yellow-text inline-flex items-center justify-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
+        className
       )}
     >
-      <Star size={16} />
-      <span>{label}</span>
-    </div>
+      <Star size={13} aria-hidden />
+      {label}
+    </span>
   ) : (
-    <div
+    <span
       class={cn(
-        "inline-flex rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px] text-xs font-semibold text-[#1F2937]",
-        typeStyles[type as Type]
+        "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold",
+        typeStyles[type as Type] ?? typeStyles.completed,
+        className
       )}
     >
-      <span>{label}</span>
-    </div>
+      {label}
+    </span>
   )
 }

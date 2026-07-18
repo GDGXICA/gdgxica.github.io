@@ -123,8 +123,8 @@ export function QuizOverlay({
         <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
           Quiz
         </span>
-        <h2 className="text-primary mt-3 text-2xl font-semibold">{title}</h2>
-        <p className="text-secondary mt-2">
+        <h2 className="text-fg mt-3 text-2xl font-semibold">{title}</h2>
+        <p className="text-fg-muted mt-2">
           Esperando que el organizador inicie la primera pregunta...
         </p>
         {participant?.quizScore !== undefined && participant.quizScore > 0 && (
@@ -153,9 +153,9 @@ export function QuizOverlay({
           {remainingSec}s
         </span>
       </div>
-      <h2 className="text-primary mb-4 text-2xl font-semibold">{title}</h2>
+      <h2 className="text-fg mb-4 text-2xl font-semibold">{title}</h2>
       <p
-        className="text-secondary mb-4 text-base"
+        className="text-fg-muted mb-4 text-base"
         aria-live="polite"
         aria-atomic="true"
       >

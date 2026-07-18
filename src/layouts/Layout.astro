@@ -25,6 +25,16 @@ const { title, description, image, url, schema } = Astro.props;
     <link rel="preconnect" href="https://www.google.com" crossorigin />
     <link rel="dns-prefetch" href="https://www.google.com" />
     <meta name="generator" content={Astro.generator} />
+    <meta
+      name="theme-color"
+      content="#ffffff"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#0a0c10"
+      media="(prefers-color-scheme: dark)"
+    />
 
     <title>{title}</title>
     <meta name="description" content={description} />
@@ -41,6 +51,8 @@ const { title, description, image, url, schema } = Astro.props;
     {image && <meta property="og:image" content={image} />}
     <meta property="og:type" content="website" />
     <meta property="og:url" content={url} />
+    <meta property="og:locale" content="es_PE" />
+    <meta property="og:site_name" content="GDG ICA" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
@@ -53,11 +65,46 @@ const { title, description, image, url, schema } = Astro.props;
         <script type="application/ld+json" set:html={JSON.stringify(schema)} />
       )
     }
+
+    {/* Applies the stored theme before first paint to avoid a flash. */}
+    <script is:inline>
+      (function () {
+        try {
+          const stored = localStorage.getItem("gdg-theme");
+          const dark = stored
+            ? stored === "dark"
+            : window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.classList.toggle("dark", dark);
+        } catch {
+          /* private mode / storage disabled — fall back to light */
+        }
+      })();
+    </script>
+
     <ClientRouter />
   </head>
-  <body>
+  <body class="bg-bg text-fg">
+    <a href="#main" class="skip-link">Saltar al contenido</a>
     <Header />
-    <slot />
+    <main id="main">
+      <slot />
+    </main>
     <Footer />
+
+    <script is:inline>
+      // ClientRouter replaces <html>'s attributes on navigation, so the theme
+      // class has to be re-applied after every swap.
+      document.addEventListener("astro:after-swap", function () {
+        try {
+          const stored = localStorage.getItem("gdg-theme");
+          const dark = stored
+            ? stored === "dark"
+            : window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.classList.toggle("dark", dark);
+        } catch {
+          /* noop */
+        }
+      });
+    </script>
   </body>
 </html>

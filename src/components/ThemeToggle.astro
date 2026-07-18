@@ -1,0 +1,48 @@
+---
+import { Sun, Moon } from "@lucide/astro";
+---
+
+<button
+  type="button"
+  data-theme-toggle
+  class="border-line text-fg-muted hover:border-line-strong hover:bg-inset hover:text-fg inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border transition-colors duration-200"
+  aria-label="Cambiar a tema oscuro"
+>
+  <Sun stroke-width={1.75} size={18} class="hidden dark:block" aria-hidden />
+  <Moon stroke-width={1.75} size={18} class="block dark:hidden" aria-hidden />
+</button>
+
+<script is:inline>
+  (function () {
+    function syncLabels() {
+      const isDark = document.documentElement.classList.contains("dark");
+      document.querySelectorAll("[data-theme-toggle]").forEach(function (btn) {
+        btn.setAttribute(
+          "aria-label",
+          isDark ? "Cambiar a tema claro" : "Cambiar a tema oscuro"
+        );
+      });
+    }
+
+    function onClick() {
+      const isDark = document.documentElement.classList.toggle("dark");
+      try {
+        localStorage.setItem("gdg-theme", isDark ? "dark" : "light");
+      } catch {
+        /* storage unavailable — the toggle still works for this page view */
+      }
+      syncLabels();
+    }
+
+    function init() {
+      document.querySelectorAll("[data-theme-toggle]").forEach(function (btn) {
+        btn.removeEventListener("click", onClick);
+        btn.addEventListener("click", onClick);
+      });
+      syncLabels();
+    }
+
+    init();
+    document.addEventListener("astro:after-swap", init);
+  })();
+</script>

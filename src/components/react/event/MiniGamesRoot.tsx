@@ -207,14 +207,14 @@ export function MiniGamesRoot({ slug }: Props) {
           }`}
           aria-label="Participación en vivo"
         >
-          <h2 className="text-primary mb-4 text-2xl font-semibold">
+          <h2 className="text-fg mb-4 text-2xl font-semibold">
             Participación en vivo
           </h2>
           <div className="space-y-6">
             {globalLive.map((inst) => (
               <div
                 key={inst.id}
-                className="border-gray-custom rounded-lg border p-6 shadow-sm"
+                className="border-line rounded-lg border p-6 shadow-sm"
               >
                 {inst.type === "wordcloud" && (
                   <WordCloudView
@@ -256,7 +256,7 @@ export function MiniGamesRoot({ slug }: Props) {
 
       {step === "joined" && uid && realtimeLive.length > 0 && (
         <div
-          className="border-primary fixed inset-x-0 bottom-0 z-40 max-h-[70vh] overflow-y-auto border-t-4 bg-white/95 p-4 shadow-2xl backdrop-blur-sm dark:bg-gray-900/95"
+          className="border-accent fixed inset-x-0 bottom-0 z-40 max-h-[70vh] overflow-y-auto border-t-4 bg-white/95 p-4 shadow-2xl backdrop-blur-sm dark:bg-gray-900/95"
           role="region"
           aria-label="Juegos en tiempo real"
           aria-live="assertive"

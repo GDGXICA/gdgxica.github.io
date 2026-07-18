@@ -1,40 +1,165 @@
 ---
-import { Coffee } from "@lucide/astro";
-const { time, title, name, image, role, type } = Astro.props;
+import { Clock, Coffee, MicVocal, Star, Users, Wrench } from "@lucide/astro";
+import { cn } from "@/utils/cn";
+
+interface Props {
+  /** Flat schedules carry a single `time` string. */
+  time?: string;
+  /** Track schedules carry a start/end pair plus a duration. */
+  startTime?: string;
+  endTime?: string;
+  duration?: string;
+  title: string;
+  name?: string;
+  image?: string;
+  role?: string;
+  type?: string;
+  isKeynote?: boolean;
+  /** Keeps the document outline correct: h3 under a section, h4 under a track. */
+  as?: "h3" | "h4";
+  class?: string;
+}
+
+const {
+  time,
+  startTime,
+  endTime,
+  duration,
+  title,
+  name,
+  image,
+  role,
+  type,
+  isKeynote = false,
+  as: Heading = "h3",
+  class: className,
+} = Astro.props;
+
+// One definition of "session kind" for both schedule shapes. Previously the
+// flat card knew only `break`, while the track view carried its own emoji
+// labels, so the same concept rendered two different ways.
+const KIND = {
+  workshop: {
+    label: "Taller",
+    Icon: Wrench,
+    badge: "bg-brand-green-soft text-brand-green-text",
+  },
+  networking: {
+    label: "Networking",
+    Icon: Users,
+    badge: "bg-brand-yellow-soft text-brand-yellow-text",
+  },
+  break: {
+    label: "Pausa",
+    Icon: Coffee,
+    badge: "bg-inset text-fg-muted",
+  },
+  keynote: {
+    label: "Keynote",
+    Icon: Star,
+    badge: "bg-brand-yellow-soft text-brand-yellow-text",
+  },
+  event: {
+    label: "Charla",
+    Icon: MicVocal,
+    badge: "bg-brand-blue-soft text-brand-blue-text",
+  },
+} as const;
+
+const kindKey = isKeynote
+  ? "keynote"
+  : type && type in KIND
+    ? (type as keyof typeof KIND)
+    : "event";
+const kind = KIND[kindKey];
+
+// Breaks and networking slots are transitions, not sessions: they render as a
+// quiet divider row and stay out of the heading outline.
+const isInterlude = type === "break" || type === "networking";
+
+const startLabel = time ?? startTime;
+const speakerNames = (name ?? "")
+  .split(", ")
+  .map((value) => value.trim())
+  .filter(Boolean);
+const hasSpeaker = !isInterlude && speakerNames.length > 0;
 ---
 
 {
-  type === "break" ? (
-    <article class="flex items-center justify-center gap-5 p-4">
-      <hr class="text-gray-custom grow" />
-      <div class="flex flex-col items-center justify-center">
-        <h3 class="text-primary flex items-center gap-2 text-sm font-medium">
-          <Coffee size={16} color="#111827" /> {title}
-        </h3>
-        <p class="text-primary text-sm font-medium">{time}</p>
-      </div>
-      <hr class="text-gray-custom grow" />
-    </article>
+  isInterlude ? (
+    <div
+      class={cn("flex items-center gap-4 px-1 py-2", className)}
+      data-session-kind={kindKey}
+    >
+      <span class="bg-line h-px grow" aria-hidden="true" />
+      <p class="text-fg-muted flex items-center gap-2 text-center text-sm font-medium">
+        <kind.Icon size={15} stroke-width={1.75} aria-hidden />
+        <span>{title}</span>
+        {startLabel && (
+          <span class="text-fg-subtle tabular-nums">
+            · {startLabel}
+            {endTime && ` – ${endTime}`}
+          </span>
+        )}
+      </p>
+      <span class="bg-line h-px grow" aria-hidden="true" />
+    </div>
   ) : (
-    <article class="bg-section border-gray-custom rounded-md border p-4 md:flex md:items-center md:justify-between">
-      <p class="text-google-blue mb-4 text-sm font-medium md:mb-0">{time}</p>
-      <h3 class="text-primary mb-4 text-base font-semibold md:mb-0 md:basis-1/2">
-        {title}
-      </h3>
-      <div class="flex items-center gap-4 md:basis-[30%]">
-        <img
-          src={image || "/placeholder.svg"}
-          alt={`Foto de ${name}`}
-          height={48}
-          width={48}
-          class="aspect-square h-12 w-12 rounded-md border border-gray-200 bg-gray-100 object-cover"
-          loading="lazy"
-          decoding="async"
-        />
-        <div class="flex flex-col gap-[6px]">
-          <p class="text-secondary text-sm">{name}</p>
-          <p class="text-google-blue text-sm">{role}</p>
+    <article
+      class={cn("card flex flex-col gap-4 p-5 sm:flex-row sm:gap-6", className)}
+      data-session-kind={kindKey}
+    >
+      <div class="flex shrink-0 items-baseline gap-2 sm:w-28 sm:flex-col sm:items-start sm:gap-0.5">
+        {startLabel && (
+          <p class="text-fg font-semibold tabular-nums">{startLabel}</p>
+        )}
+        {endTime && (
+          <p class="text-fg-subtle text-sm tabular-nums">{endTime}</p>
+        )}
+      </div>
+
+      <div class="min-w-0 flex-1">
+        <Heading class="text-h4 text-fg text-pretty">{title}</Heading>
+
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          <span
+            class={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
+              kind.badge
+            )}
+          >
+            <kind.Icon size={13} stroke-width={2} aria-hidden />
+            {kind.label}
+          </span>
+          {duration && (
+            <span class="text-fg-subtle inline-flex items-center gap-1.5 text-xs font-medium">
+              <Clock size={13} stroke-width={2} aria-hidden />
+              {duration}
+            </span>
+          )}
         </div>
+
+        {hasSpeaker && (
+          <div class="border-line mt-4 flex items-center gap-3 border-t pt-4">
+            <img
+              src={image || "/placeholder.svg"}
+              alt=""
+              width={44}
+              height={44}
+              loading="lazy"
+              decoding="async"
+              class="bg-inset h-11 w-11 shrink-0 rounded-full object-cover"
+            />
+            <div class="min-w-0">
+              {speakerNames.map((speaker) => (
+                <p class="text-fg truncate text-sm font-semibold">{speaker}</p>
+              ))}
+              {role && speakerNames.length === 1 && (
+                <p class="text-fg-muted mt-0.5 line-clamp-1 text-xs">{role}</p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </article>
   )

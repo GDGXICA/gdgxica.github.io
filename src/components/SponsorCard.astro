@@ -1,58 +1,116 @@
 ---
-import { Globe } from "@lucide/astro";
+import { ArrowUpRight } from "@lucide/astro";
+import { cn } from "@/utils/cn";
 
-const { name, logo, sector, description, eventsSponsored, sinceYear, website } =
-  Astro.props;
+interface Props {
+  name: string;
+  logo?: string;
+  sector?: string;
+  description?: string;
+  eventsSponsored?: number;
+  sinceYear?: number | string;
+  website?: string;
+  featured?: boolean;
+  class?: string;
+}
+
+const {
+  name,
+  logo,
+  sector,
+  description,
+  eventsSponsored,
+  sinceYear,
+  website,
+  featured = false,
+  class: className,
+} = Astro.props;
 ---
 
 <article
-  class="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6"
+  class={cn(
+    "card card-interactive group relative flex h-full flex-col p-6",
+    className
+  )}
 >
-  <img
-    src={logo || "/placeholder.svg"}
-    alt={`Logo ${name}`}
-    class="mx-auto h-28 w-28 rounded-md object-contain"
-    width={112}
-    height={112}
-    loading="lazy"
-  />
-
-  <div class="text-center">
-    <h3 class="text-primary mb-1 text-lg font-semibold">{name}</h3>
-    <p
-      class="text-google-blue mb-3 text-sm font-medium tracking-wide uppercase"
-    >
-      {sector}
-    </p>
-    <p class="text-secondary mx-auto mb-4 line-clamp-5 text-sm">
-      {description}
-    </p>
-  </div>
-
+  {/* Fixed-height plate so logos of wildly different aspect ratios line up. */}
   <div
-    class="mt-auto flex items-center justify-between gap-4 text-center text-xs"
+    class="bg-inset flex h-20 w-full items-center justify-center rounded-md px-4"
   >
-    <div class="flex flex-col">
-      <span class="text-google-blue text-sm font-semibold"
-        >{eventsSponsored}</span
-      >
-      <span class="text-secondary text-sm">Eventos</span>
-    </div>
-    <div class="flex flex-col">
-      <span class="text-google-green text-sm font-semibold">{sinceYear}</span>
-      <span class="text-secondary text-sm">Desde</span>
-    </div>
+    <img
+      src={logo || "/placeholder.svg"}
+      alt={`Logo de ${name}`}
+      class={cn(
+        "max-h-12 w-auto object-contain",
+        featured ? "max-h-14" : "max-h-12"
+      )}
+      width={160}
+      height={56}
+      loading="lazy"
+      decoding="async"
+    />
   </div>
 
-  <div class="pt-4">
-    <a
-      href={website}
-      target="_blank"
-      rel="noopener noreferrer"
-      class="text-primary hover:border-google-blue hover:text-google-blue inline-flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium transition"
-    >
-      <Globe size={16} stroke-width={1.5} />
-      Visitar Website
-    </a>
-  </div>
+  <h3 class="text-h4 text-fg mt-5">
+    {
+      website ? (
+        <a
+          href={website}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="after:absolute after:inset-0 after:content-['']"
+        >
+          {name}
+        </a>
+      ) : (
+        name
+      )
+    }
+  </h3>
+
+  {
+    sector && (
+      <p class="text-fg-subtle mt-1 text-xs font-semibold tracking-wide uppercase">
+        {sector}
+      </p>
+    )
+  }
+
+  {
+    description && (
+      <p class="text-fg-muted mt-3 line-clamp-4 text-sm">{description}</p>
+    )
+  }
+
+  <dl class="border-line mt-auto flex items-center gap-6 border-t pt-5 text-sm">
+    {
+      eventsSponsored !== undefined && (
+        <div>
+          <dt class="text-fg-subtle text-xs">Eventos</dt>
+          <dd class="text-fg font-semibold tabular-nums">{eventsSponsored}</dd>
+        </div>
+      )
+    }
+    {
+      sinceYear !== undefined && (
+        <div>
+          <dt class="text-fg-subtle text-xs">Desde</dt>
+          <dd class="text-fg font-semibold tabular-nums">{sinceYear}</dd>
+        </div>
+      )
+    }
+    {
+      website && (
+        <p class="text-accent ml-auto flex items-center gap-1 text-sm font-semibold">
+          Visitar
+          <ArrowUpRight
+            size={15}
+            stroke-width={2}
+            class="transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+            aria-hidden
+          />
+        </p>
+      )
+    }
+  </dl>
 </article>

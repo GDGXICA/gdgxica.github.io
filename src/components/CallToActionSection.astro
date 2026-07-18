@@ -1,11 +1,43 @@
 ---
+interface Props {
+  title: string;
+  description?: string;
+}
 
+const { title, description } = Astro.props;
 ---
 
-<section class="bg-gradient-to-r from-blue-600 via-red-500 to-green-600 py-20">
-  <div class="mx-auto max-w-[1400px] px-4">
-    <div class="mx-auto max-w-[768px] text-center">
-      <slot />
+{
+  /*
+  The previous CTA was a full-bleed blue→red→yellow→green gradient carrying
+  white body copy: 3.76:1 over the red stop and 3.30:1 over the green stop,
+  both failing WCAG AA. This uses the ink surface (19.43:1) and keeps the four
+  brand colours as a rule above the content, where contrast rules don't bind.
+*/
+}
+<section class="bg-ink relative isolate overflow-hidden">
+  <div class="brand-rule absolute inset-x-0 top-0 h-1" aria-hidden="true"></div>
+
+  <div
+    class="pointer-events-none absolute -top-32 left-1/2 h-96 w-[42rem] -translate-x-1/2 rounded-full opacity-25 blur-3xl"
+    style="background: radial-gradient(closest-side, var(--brand-blue), transparent);"
+    aria-hidden="true"
+  >
+  </div>
+
+  <div class="section relative container">
+    <div class="mx-auto flex max-w-2xl flex-col items-center text-center">
+      <h2 class="text-h2 text-fg-on-ink text-balance">{title}</h2>
+      {
+        description && (
+          <p class="text-lead text-fg-on-ink-muted mt-5 text-pretty">
+            {description}
+          </p>
+        )
+      }
+      <div class="mt-9 flex flex-col gap-3 sm:flex-row">
+        <slot />
+      </div>
     </div>
   </div>
 </section>

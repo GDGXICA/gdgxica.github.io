@@ -4,6 +4,7 @@ import CallToActionSection from "@/components/CallToActionSection.astro";
 import EventCard from "@/components/EventCard.astro";
 import HeroPage from "@/components/HeroPage.astro";
 import Layout from "@/layouts/Layout.astro";
+import SectionHeader from "@/components/SectionHeader.astro";
 import { Calendar } from "@lucide/astro";
 import { getCollection } from "astro:content";
 import { parseSpanishDate } from "@/utils/parseSpanishDate";
@@ -46,112 +47,99 @@ const metadata = {
 ---
 
 <Layout {...metadata}>
-  <HeroPage>
-    <div class="mx-auto max-w-[768px] text-center">
-      <p
-        class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-red-500 to-green-600"
-      >
-        <Calendar stroke-width={1.5} size={64} color="#FFFFFF" />
-      </p>
-      <h1 class="mb-6 text-4xl font-bold md:text-5xl">
-        <span class="text-google-blue">Nuestros</span>
-        <span class="text-google-red">Eventos</span>
-      </h1>
-      <p class="text-secondary mb-8 text-xl">
-        Una comunidad vibrante de desarrolladores unidos por la pasión de crear,
-        aprender y compartir conocimiento sobre las tecnologías de Google. Desde
-        2019, hemos sido el punto de encuentro para desarrolladores de todos los
-        niveles.
-      </p>
+  <HeroPage
+    eyebrow="Eventos"
+    title="Workshops, charlas y meetups"
+    description="Explora el catálogo completo de eventos de la comunidad: desde study jams y charlas técnicas hasta el DevFest anual."
+  >
+    <StatsBar
+      class="border-line mt-16 border-t pt-12"
+      stats={[
+        {
+          value: `${stats.totalMembers}+`,
+          label: "Miembros activos",
+          color: "blue",
+        },
+        { value: `${stats.totalEvents}+`, label: "Eventos", color: "red" },
+        {
+          value: `${stats.totalSpeakers}+`,
+          label: "Expertos speakers",
+          color: "yellow",
+        },
+        {
+          value: `${stats.yearsActive}+`,
+          label: "Años activos",
+          color: "green",
+        },
+      ]}
+    />
+  </HeroPage>
 
-      <StatsBar
-        stats={[
-          {
-            value: `${stats.totalMembers}+`,
-            label: "Miembros activos",
-            color: "blue",
-          },
-          { value: `${stats.totalEvents}+`, label: "Eventos", color: "red" },
-          {
-            value: `${stats.totalSpeakers}+`,
-            label: "Expertos speakers",
-            color: "yellow",
-          },
-          {
-            value: `${stats.yearsActive}+`,
-            label: "Años activos",
-            color: "green",
-          },
-        ]}
-      />
+  {
+    highLightEvent && (
+      <section class="border-line bg-surface border-t">
+        <div class="section container">
+          <SectionHeader eyebrow="Destacado" title="Próximo evento destacado" />
+          {/* Full container width — the old markup nested this inside the
+              hero's 768px wrapper, squeezing the horizontal card. */}
+          <div class="mt-10">
+            <EventCard
+              isHorizontal={true}
+              slug={highLightEvent.id}
+              {...highLightEvent.data}
+            />
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <section class="section container">
+    <SectionHeader
+      eyebrow="Catálogo"
+      title="Todos los eventos"
+      description="Explora nuestro catálogo completo de eventos pasados y próximos."
+    />
+
+    <EventFilters client:visible />
+
+    <div
+      id="events-grid"
+      class="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+    >
       {
-        highLightEvent && (
-          <>
-            <p class="mt-[65px] mb-8 text-2xl font-bold">
-              Próximo Evento Destacado
-            </p>
-          </>
-        )
+        allEvents.map((event) => (
+          <div
+            class="h-full"
+            data-event-card
+            data-name={event.data.name.toLowerCase()}
+            data-category={event.data.category.type}
+            data-status={event.data.status.type}
+            data-tags={event.data.tags.join(",").toLowerCase()}
+          >
+            <EventCard slug={event.id} {...event.data} />
+          </div>
+        ))
       }
     </div>
-    {
-      highLightEvent && (
-        <div class="mx-auto max-w-[1152px]">
-          <EventCard
-            isHorizontal={true}
-            slug={highLightEvent?.id}
-            {...highLightEvent?.data}
-          />
-        </div>
-      )
-    }
-  </HeroPage>
-  <section class="py-20">
-    <div class="container">
-      <h2 class="text-primary mb-6 text-center text-4xl font-bold">
-        Todos los Eventos
-      </h2>
-      <p class="text-secondary text-center text-xl">
-        Explora nuestro catálogo completo de eventos pasados y próximos
-      </p>
-      <EventFilters client:visible />
-      <div
-        class="grid-col-1 sm:grid-col-2 md:grid-col-2 mt-12 grid gap-8 lg:grid-cols-3"
-      >
-        {
-          allEvents.map((event) => (
-            <div
-              class="h-full"
-              data-event-card
-              data-name={event.data.name.toLowerCase()}
-              data-category={event.data.category.type}
-              data-status={event.data.status.type}
-              data-tags={event.data.tags.join(",").toLowerCase()}
-            >
-              <EventCard slug={event.id} {...event.data} />
-            </div>
-          ))
-        }
-      </div>
-      <p
-        id="events-empty"
-        class="text-secondary mt-12 hidden text-center text-xl"
-      >
-        No hay eventos que coincidan con tu búsqueda.
-      </p>
-    </div>
-  </section>
-  <CallToActionSection>
-    <h2 class="mb-6 text-3xl font-bold text-white md:text-4xl">
-      ¿Tienes una idea para un evento?
-    </h2>
-    <p class="mb-8 text-xl text-white">
-      Ayúdanos a crear eventos increíbles. Propón un tema, sugiere un speaker o
-      colabora en la organización de nuestros próximos eventos.
+
+    <p id="events-empty" class="text-fg-muted mt-12 hidden text-center">
+      No hay eventos que coincidan con tu búsqueda.
     </p>
-    <Button variant="white" href={links.forms.proposeEvent} target="_blank">
-      <Calendar />
-      Proponer Evento
+  </section>
+
+  <CallToActionSection
+    title="¿Tienes una idea para un evento?"
+    description="Propón un tema, sugiere un speaker o colabora en la organización de los próximos eventos."
+  >
+    <Button
+      href={links.forms.proposeEvent}
+      target="_blank"
+      variant="inverse"
+      size="lg"
+    >
+      <Calendar size={18} stroke-width={1.75} aria-hidden />
+      Proponer evento
     </Button>
   </CallToActionSection>
 </Layout>
