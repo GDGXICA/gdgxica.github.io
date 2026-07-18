@@ -1,10 +1,12 @@
 import * as admin from "firebase-admin";
+import { logger } from "firebase-functions";
 import { onRequest } from "firebase-functions/v2/https";
 import express from "express";
 import cors from "cors";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { GITHUB_TOKEN, GMAIL_USER, GMAIL_APP_PASSWORD } from "./config";
 import { requireRole, requireAuth } from "./middleware/auth";
+import { isAllowedOrigin, rejectDisallowedOrigin } from "./middleware/cors";
 import { validateParamId } from "./middleware/validate";
 import { validateBody } from "./middleware/validateBody";
 import {
@@ -41,30 +43,28 @@ import * as checkin from "./handlers/checkin";
 
 admin.initializeApp();
 
-const ALLOWED_ORIGINS = [
-  "https://gdgica.com",
-  "https://appgdgica.web.app",
-  "https://appgdgica.firebaseapp.com",
-  "http://localhost:4321",
-];
-
 const app = express();
 // Firebase Hosting + Cloud Functions sits behind exactly one Google
 // Frontend hop, so trust a single proxy. Setting `true` would let
 // callers spoof X-Forwarded-For and bypass IP-based rate limiting.
 app.set("trust proxy", 1);
+
+// Registered BEFORE cors(), which answers OPTIONS itself and never calls
+// next() — anything after it would be dead code for preflight. See the
+// note in middleware/cors.ts for what this does and does not cover.
+app.use(rejectDisallowedOrigin);
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin || ALLOWED_ORIGINS.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    // Disallowed origins were already answered with 403 above, so this
+    // only decides which headers to attach for callers let through.
+    origin: (origin, callback) =>
+      callback(null, !origin || isAllowedOrigin(origin)),
   })
 );
 app.use(express.json({ limit: "1mb" }));
+
+// Latched so the warning below fires once per cold start, not per request.
+let warnedMissingIp = false;
 
 // Outer perimeter limit: large window, generous cap. Protects against
 // raw IP floods that haven't yet been authenticated.
@@ -74,6 +74,30 @@ app.use(
     max: 300,
     standardHeaders: true,
     legacyHeaders: false,
+    // Skip rather than fall back to a shared key. Keying every caller
+    // into one bucket would turn an undefined req.ip into a global 429
+    // for everyone after 300 requests — including the check-in panel
+    // mid-event. Losing the perimeter limit is the milder failure: the
+    // per-uid writeLimiter still guards every expensive route.
+    //
+    // Announced once per cold start rather than per request: skipping is
+    // a real weakening of the outer defence, and the previous behaviour
+    // at least made noise (it threw ERR_ERL_UNDEFINED_IP_ADDRESS, which
+    // is how this was noticed). Silence here would mean the API serves
+    // unlimited unauthenticated traffic with nothing saying so.
+    skip: (req) => {
+      if (req.ip) return false;
+      if (!warnedMissingIp) {
+        warnedMissingIp = true;
+        logger.warn(
+          "req.ip is undefined; perimeter rate limit is being skipped. " +
+            "Check the proxy configuration — the per-uid writeLimiter is " +
+            "still active."
+        );
+      }
+      return true;
+    },
+    keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip as string)}`,
     message: { success: false, error: "Too many requests, try again later" },
   })
 );
