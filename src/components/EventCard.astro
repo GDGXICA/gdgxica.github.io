@@ -1,10 +1,36 @@
 ---
-import { Calendar, Clock, MapPin, Globe, Users, Ticket } from "@lucide/astro";
-import Button from "./Button.astro";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Globe,
+  Users,
+  ArrowRight,
+} from "@lucide/astro";
 import Tag from "./Tag.astro";
+import { cn } from "@/utils/cn";
+
+interface Props {
+  isHorizontal?: boolean;
+  name: string;
+  image?: string;
+  shortDescription?: string;
+  date?: string;
+  time?: string;
+  location?: { name?: string };
+  isVirtual?: boolean;
+  participants?: number;
+  maxParticipants?: number;
+  category?: { label: string; type: string };
+  status?: { label: string; type: string };
+  isHighlight?: boolean;
+  tags?: string[];
+  slug: string;
+  class?: string;
+}
 
 const {
-  isHorizontal,
+  isHorizontal = false,
   name,
   image,
   shortDescription,
@@ -17,143 +43,130 @@ const {
   category,
   status,
   isHighlight,
-  tags,
+  tags = [],
   slug,
+  class: className,
 } = Astro.props;
+
+const href = `/events/${slug}`;
+
+// Previously this list was duplicated verbatim between the two layouts, and the
+// horizontal variant hardcoded `category`/`status` so every featured event
+// rendered as "DevFest · Próximo" regardless of its real values.
+const meta = [
+  { Icon: Calendar, text: date, tone: "text-brand-blue-text" },
+  { Icon: Clock, text: time, tone: "text-brand-red-text" },
+  isVirtual
+    ? { Icon: Globe, text: "Evento virtual", tone: "text-brand-green-text" }
+    : { Icon: MapPin, text: location?.name, tone: "text-brand-green-text" },
+  maxParticipants
+    ? {
+        Icon: Users,
+        text: `${participants ?? 0}/${maxParticipants} registrados`,
+        tone: "text-brand-yellow-text",
+      }
+    : null,
+].filter((item): item is NonNullable<typeof item> => Boolean(item?.text));
+
+const visibleTags = tags.filter(Boolean).slice(0, 5);
+const remainingTags = tags.filter(Boolean).length - visibleTags.length;
 ---
 
-{
-  isHorizontal ? (
-    <article class="border-gray-custom relative overflow-hidden rounded-lg border bg-white shadow-sm md:flex">
-      <div class="bg-gray-100 md:basis-1/2">
-        <img
-          src={image || "/placeholder.svg"}
-          class="h-full w-full rounded-t-lg object-contain md:rounded-none md:rounded-tl-lg md:rounded-bl-lg"
-          width={385}
-          height={192}
-          alt={`Foto del evento de ${name}`}
-          loading="lazy"
-          decoding="async"
-        />
-      </div>
-      <div class="basis-1/2">
-        <div class="p-6">
-          <div class="mb-4 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <Tag label="DevFest" type="devfest" />
-              <Tag label="Próximo" type="upcoming" />
-            </div>
-            <Tag label="Destacado" type="devfest" isHighLight={isHighlight} />
-          </div>
-          <p class="text-primary mb-1 text-start text-2xl font-bold">{name}</p>
-          <p class="text-secondary mb-6 text-start">{shortDescription}</p>
-          <ul class="text-secondary mb-4 flex flex-col gap-3">
-            <li class="flex items-center gap-3">
-              <Calendar stroke-width={1.5} size={16} color="#2463EB" />
-              {date}
-            </li>
-            <li class="flex items-center gap-3">
-              <Clock stroke-width={1.5} size={16} color="#EF4444" />
-              {time}
-            </li>
-            {isVirtual ? (
-              <li class="flex items-center gap-3">
-                <Globe stroke-width={1.5} size={16} color="#16A34A" />
-                Evento Virtual
-              </li>
-            ) : (
-              <li class="flex items-center gap-3">
-                <MapPin stroke-width={1.5} size={16} color="#16A34A" />
-                {location.name}
-              </li>
-            )}
-            <li class="flex items-center gap-3">
-              <Users stroke-width={1.5} size={16} color="#EBB308" />
-              {participants}/{maxParticipants} registrados
-            </li>
-          </ul>
-          {tags.length > 0 && (
-            <ul class="mb-4 flex flex-wrap gap-1">
-              {tags.map((tag: string) => (
-                <li>
-                  <Tag label={tag} />
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <p class="grid">
-            <Button variant="solid" href={`/events/${slug}`}>
-              <Ticket stroke-width={1.5} />
-              Ver Detalles
-            </Button>
-          </p>
+<article
+  class={cn(
+    "card card-interactive group relative flex h-full flex-col overflow-hidden",
+    isHorizontal && "md:flex-row",
+    className
+  )}
+>
+  <div
+    class={cn(
+      "bg-inset relative shrink-0 overflow-hidden",
+      isHorizontal ? "md:w-2/5" : ""
+    )}
+  >
+    <img
+      src={image || "/placeholder.svg"}
+      alt=""
+      width={640}
+      height={360}
+      loading="lazy"
+      decoding="async"
+      class={cn(
+        "w-full object-cover transition-transform duration-500 ease-[var(--ease-out-quint)] group-hover:scale-[1.03]",
+        isHorizontal ? "h-56 md:h-full md:min-h-[18rem]" : "aspect-video"
+      )}
+    />
+    <div class="absolute top-4 left-4 flex flex-wrap gap-2">
+      {category && <Tag label={category.label} type={category.type as never} />}
+      {status && <Tag label={status.label} type={status.type as never} />}
+    </div>
+    {
+      isHighlight && (
+        <div class="absolute top-4 right-4">
+          <Tag label="Destacado" isHighlight />
         </div>
-      </div>
-    </article>
-  ) : (
-    <article class="border-gray-custom relative flex h-full flex-col rounded-lg border bg-white">
-      <img
-        src={image ? image : "/placeholder.svg"}
-        class="aspect-video h-[192px] w-full rounded-t-lg object-cover"
-        width={385}
-        height={192}
-        alt={`Imagen del evento ${name}`}
-        loading="lazy"
-        decoding="async"
-      />
-      <div class="absolute top-4 left-6 flex gap-2">
-        {category && <Tag label={category.label} type={category.type} />}
-        {status && <Tag label={status.label} type={status.type} />}
-      </div>
-      <div class="absolute top-4 right-6">
-        {isHighlight && <Tag label="Destacado" isHighLight={true} />}
-      </div>
-      <div class="flex flex-1 flex-col p-6">
-        <p class="text-primary mb-1 text-2xl font-bold">{name}</p>
-        <p class="text-secondary mb-6 line-clamp-2">{shortDescription}</p>
-        <ul class="text-secondary mb-4 flex flex-col gap-3">
-          <li class="flex items-center gap-3">
-            <Calendar stroke-width={1.5} size={16} color="#2463EB" />
-            {date}
+      )
+    }
+  </div>
+
+  <div class="flex flex-1 flex-col p-6">
+    <h3 class="text-h3 text-fg">
+      <a
+        href={href}
+        class="after:absolute after:inset-0 after:content-['']"
+        aria-label={`Ver detalles de ${name}`}
+      >
+        {name}
+      </a>
+    </h3>
+
+    {
+      shortDescription && (
+        <p class="text-fg-muted mt-2 line-clamp-2 text-sm">
+          {shortDescription}
+        </p>
+      )
+    }
+
+    <ul class="mt-5 flex flex-col gap-2.5">
+      {
+        meta.map(({ Icon, text, tone }) => (
+          <li class="text-fg-muted flex items-center gap-2.5 text-sm">
+            <Icon size={16} stroke-width={1.75} class={tone} aria-hidden />
+            <span class="min-w-0 truncate">{text}</span>
           </li>
-          <li class="flex items-center gap-3">
-            <Clock stroke-width={1.5} size={16} color="#EF4444" />
-            {time}
-          </li>
-          {isVirtual ? (
-            <li class="flex items-center gap-3">
-              <Globe stroke-width={1.5} size={16} color="#16A34A" />
-              Evento Virtual
+        ))
+      }
+    </ul>
+
+    {
+      visibleTags.length > 0 && (
+        <ul class="mt-5 flex flex-wrap gap-1.5">
+          {visibleTags.map((tag) => (
+            <li>
+              <Tag label={tag} />
             </li>
-          ) : (
-            <li class="flex items-center gap-3">
-              <MapPin stroke-width={1.5} size={16} color="#16A34A" />
-              {location.name}
+          ))}
+          {remainingTags > 0 && (
+            <li>
+              <Tag label={`+${remainingTags}`} />
             </li>
           )}
-          <li class="flex items-center gap-3">
-            <Users stroke-width={1.5} size={16} color="#EBB308" />
-            {participants}/{maxParticipants} registrados
-          </li>
         </ul>
-        {tags.length > 0 && (
-          <ul class="mb-4 flex min-h-[32px] flex-wrap gap-1">
-            {tags.map((tag: string) => (
-              <li>
-                <Tag label={tag} />
-              </li>
-            ))}
-          </ul>
-        )}
+      )
+    }
 
-        <p class="mt-auto grid">
-          <Button variant="solid" href={`/events/${slug}`}>
-            <Ticket stroke-width={1.5} />
-            Ver Detalles
-          </Button>
-        </p>
-      </div>
-    </article>
-  )
-}
+    <p
+      class="text-accent mt-auto flex items-center gap-1.5 pt-6 text-sm font-semibold"
+    >
+      Ver detalles
+      <ArrowRight
+        size={16}
+        stroke-width={2}
+        class="transition-transform duration-200 group-hover:translate-x-1"
+        aria-hidden
+      />
+    </p>
+  </div>
+</article>

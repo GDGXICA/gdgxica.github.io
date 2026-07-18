@@ -1,13 +1,40 @@
 ---
+interface Props {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+}
 
+const { eyebrow, title, description } = Astro.props;
 ---
 
-<section
-  class="bg-gradient-to-br from-[#EFF6FF] via-[#FFFFFF] to-[#F0FDF4] py-10 md:py-20"
->
-  <div class="container">
-    <div class="mx-auto max-w-[768px] text-center">
-      <slot />
+<section class="border-line grain relative isolate overflow-hidden border-b">
+  <div
+    class="pointer-events-none absolute -bottom-40 -left-32 h-[26rem] w-[26rem] rounded-full opacity-[0.06] blur-3xl dark:opacity-15"
+    style="background: radial-gradient(closest-side, var(--brand-green), transparent);"
+    aria-hidden="true"
+  >
+  </div>
+
+  <div class="section relative container">
+    <div class="max-w-3xl">
+      {
+        eyebrow && (
+          <p class="text-overline text-fg-subtle mb-6 flex items-center gap-3 uppercase">
+            <span class="brand-rule h-1 w-10 rounded-full" aria-hidden="true" />
+            {eyebrow}
+          </p>
+        )
+      }
+      <h1 class="text-h1 text-fg text-balance">{title}</h1>
+      {
+        description && (
+          <p class="text-lead text-fg-muted mt-6 max-w-2xl text-pretty">
+            {description}
+          </p>
+        )
+      }
     </div>
+    <slot />
   </div>
 </section>

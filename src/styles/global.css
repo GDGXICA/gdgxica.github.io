@@ -1,29 +1,439 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 @import "@fontsource-variable/geist";
+@import "@fontsource-variable/space-grotesk";
 @plugin "@tailwindcss/typography";
 
-@theme {
-  --font-geist: "Geist Variable", sans-serif;
-  /* brand colors */
-  --color-google-blue: #2463eb;
-  --color-google-red: #ef4444;
-  --color-google-yellow: #ebb308;
-  --color-google-green: #16a34a;
-  /* text colors */
-  --color-primary: #111827;
-  --color-secondary: #4b5563;
-  --color-tertiary: #71717a;
-  /* border color */
-  --color-gray-custom: #e4e4e7;
-  /* surface colors */
-  --color-section: #f9fafb;
+/* ==========================================================================
+   Design tokens
+   --------------------------------------------------------------------------
+   Two-tier brand palette:
+   - `brand-*`      vivid Google colors, for decorative fills and graphics.
+   - `brand-*-text` contrast-safe variants, for anything that carries meaning
+                    (text, icons with semantics). The vivid yellow sits at
+                    1.91:1 on white, so it can never be used for text.
+   Semantic tokens (`bg`, `surface`, `fg`, ...) resolve through `@theme inline`
+   so a single `.dark` class on <html> re-themes every utility.
+   ========================================================================== */
+
+@theme inline {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  /* Characterful display face carrying the personality; Geist stays on body
+     copy where neutrality is a virtue. The previous single-neutral-family
+     setup was the main reason the site read as a generic template. */
+  --font-display: "Space Grotesk Variable", "Geist Variable", sans-serif;
+
+  /* vivid brand — decorative only */
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-red: var(--brand-red);
+  --color-brand-yellow: var(--brand-yellow);
+  --color-brand-green: var(--brand-green);
+
+  /* contrast-safe brand — text and meaningful icons */
+  --color-brand-blue-text: var(--brand-blue-text);
+  --color-brand-red-text: var(--brand-red-text);
+  --color-brand-yellow-text: var(--brand-yellow-text);
+  --color-brand-green-text: var(--brand-green-text);
+
+  /* tinted surfaces for badges/soft fills */
+  --color-brand-blue-soft: var(--brand-blue-soft);
+  --color-brand-red-soft: var(--brand-red-soft);
+  --color-brand-yellow-soft: var(--brand-yellow-soft);
+  --color-brand-green-soft: var(--brand-green-soft);
+
+  /* content-category accents beyond the four brand colours (WTM, hackathon) */
+  --color-accent-violet: var(--accent-violet);
+  --color-accent-violet-soft: var(--accent-violet-soft);
+  --color-accent-orange: var(--accent-orange);
+  --color-accent-orange-soft: var(--accent-orange-soft);
+
+  /* surfaces */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-inset: var(--inset);
+  --color-ink: var(--ink);
+
+  /* text */
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-fg-on-ink: var(--fg-on-ink);
+  --color-fg-on-ink-muted: var(--fg-on-ink-muted);
+
+  /* lines */
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  /* accent (primary action) */
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-ring: var(--accent-ring);
+
+  /* radius scale */
+  --radius-xs: 0.375rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.75rem;
+
+  /* fluid type scale — editorial: large display sizes, tight tracking */
+  --text-display: clamp(2.75rem, 1.6rem + 5.2vw, 5.25rem);
+  --text-display--line-height: 0.98;
+  --text-display--letter-spacing: -0.035em;
+  --text-display--font-weight: 700;
+
+  --text-h1: clamp(2.25rem, 1.5rem + 3.2vw, 3.75rem);
+  --text-h1--line-height: 1.05;
+  --text-h1--letter-spacing: -0.03em;
+  --text-h1--font-weight: 700;
+
+  --text-h2: clamp(1.75rem, 1.3rem + 1.9vw, 2.75rem);
+  --text-h2--line-height: 1.12;
+  --text-h2--letter-spacing: -0.025em;
+  --text-h2--font-weight: 700;
+
+  --text-h3: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
+  --text-h3--line-height: 1.22;
+  --text-h3--letter-spacing: -0.018em;
+  --text-h3--font-weight: 650;
+
+  --text-h4: 1.125rem;
+  --text-h4--line-height: 1.35;
+  --text-h4--letter-spacing: -0.012em;
+  --text-h4--font-weight: 650;
+
+  --text-lead: clamp(1.0625rem, 1rem + 0.4vw, 1.3125rem);
+  --text-lead--line-height: 1.6;
+
+  /* Interactive-chrome size: buttons and nav sit between text-sm and text-base. */
+  --text-ui: 0.9375rem;
+  --text-ui--line-height: 1.4;
+
+  --text-overline: 0.8125rem;
+  --text-overline--line-height: 1.2;
+  --text-overline--letter-spacing: 0.09em;
+  --text-overline--font-weight: 600;
+
+  /* motion */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 
-body {
-  font-family: "Geist Variable", sans-serif;
+/* --------------------------------------------------------------------------
+   Light theme (default)
+   -------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+
+  --brand-blue: #2463eb;
+  --brand-red: #ef4444;
+  --brand-yellow: #ebb308;
+  --brand-green: #16a34a;
+
+  /* Verified against BOTH surfaces these land on — plain white and the matching
+     `-soft` tag fill. Checking only white is what let the earlier yellow (4.45)
+     and green (4.48) slip under the 4.5 floor on tinted chips.
+     on #ffffff: 6.70 / 6.47 / 6.85 / 7.13
+     on -soft:   5.91 / 5.66 / 6.19 / 6.37 */
+  --brand-blue-text: #1d4ed8;
+  --brand-red-text: #b91c1c;
+  --brand-yellow-text: #854d0e;
+  --brand-green-text: #166534;
+
+  --brand-blue-soft: #eaf1fe;
+  --brand-red-soft: #fdecec;
+  --brand-yellow-soft: #fdf3d7;
+  --brand-green-soft: #e6f6ec;
+
+  --accent-violet: #6b21a8;
+  --accent-violet-soft: #f4e8ff;
+  --accent-orange: #9a3412;
+  --accent-orange-soft: #ffedd5;
+
+  /* Desert-warm neutrals. Ica is desert; the cool grey these replaced read as
+     generic SaaS. Hue stays constant (~35°) so the four brand colours sit on
+     it without clashing. */
+  /* Committed desert ochre rather than a timid off-white. The near-white
+     previous step was too cautious to register as a decision. */
+  --bg: #fffcf7;
+  --surface: #f5ecdc;
+  --raised: #ffffff;
+  --inset: #ebdec7;
+  --ink: #17120b;
+
+  --fg: #0b0d12; /* 19.43 on white */
+  --fg-muted: #4b5563; /* 7.56 */
+  /* Verified against the LIGHTEST surface it can sit on (--inset), not just
+     --bg: #6b7280 passed on white (4.83) but failed on --inset (4.27). */
+  --fg-subtle: #5f6875; /* 4.98 worst case */
+  --fg-on-ink: #ffffff;
+  --fg-on-ink-muted: #b9c0cc;
+
+  --line: #e3d5bd;
+  --line-strong: #cbb894;
+
+  --accent: #2463eb;
+  --accent-hover: #1d4ed8;
+  --accent-active: #1e40af;
+  --accent-fg: #ffffff; /* 5.17 on --accent */
+  --accent-ring: #2463eb;
+
+  --shadow-card:
+    0 1px 2px rgb(11 13 18 / 0.04), 0 4px 12px rgb(11 13 18 / 0.05);
+  --shadow-card-hover:
+    0 2px 4px rgb(11 13 18 / 0.05), 0 12px 28px rgb(11 13 18 / 0.1);
+  --shadow-pop: 0 8px 32px rgb(11 13 18 / 0.14);
 }
 
-.container {
-  @apply mx-auto max-w-[1400px] px-4;
+/* --------------------------------------------------------------------------
+   Dark theme — Google's dark-surface brand palette (all AAA on --bg)
+   -------------------------------------------------------------------------- */
+.dark {
+  color-scheme: dark;
+
+  --brand-blue: #8ab4f8;
+  --brand-red: #f28b82;
+  --brand-yellow: #fdd663;
+  --brand-green: #81c995;
+
+  /* on #0a0c10: 9.29 / 8.19 / 13.96 / 9.99 */
+  --brand-blue-text: #8ab4f8;
+  --brand-red-text: #f28b82;
+  --brand-yellow-text: #fdd663;
+  --brand-green-text: #81c995;
+
+  --brand-blue-soft: #16233a;
+  --brand-red-soft: #33191a;
+  --brand-yellow-soft: #302608;
+  --brand-green-soft: #12291b;
+
+  --accent-violet: #d8b4fe;
+  --accent-violet-soft: #241733;
+  --accent-orange: #fdba74;
+  --accent-orange-soft: #33200f;
+
+  /* Warm charcoal rather than blue-black — night over the desert, and it keeps
+     the light/dark themes reading as the same brand. */
+  --bg: #0e0b07;
+  --surface: #191308;
+  --raised: #201a11;
+  --inset: #2b2215;
+  --ink: #191308;
+
+  --fg: #f5f6f8; /* 18.10 */
+  --fg-muted: #a8b0bd; /* 8.96 */
+  /* Same correction as light: #79828f cleared --bg (5.04) but fell to 4.44 on
+     raised cards and 4.10 on --inset. */
+  --fg-subtle: #8a93a0; /* 5.13 worst case */
+  --fg-on-ink: #f5f6f8;
+  --fg-on-ink-muted: #a8b0bd;
+
+  --line: #2c2620;
+  --line-strong: #3d352c;
+
+  --accent: #8ab4f8;
+  --accent-hover: #a5c6fa;
+  --accent-active: #c0d7fc;
+  --accent-fg: #0a0c10; /* dark text on light-blue fill */
+  --accent-ring: #8ab4f8;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);
+  --shadow-card-hover:
+    0 2px 4px rgb(0 0 0 / 0.5), 0 12px 28px rgb(0 0 0 / 0.45);
+  --shadow-pop: 0 8px 32px rgb(0 0 0 / 0.6);
+}
+
+/* --------------------------------------------------------------------------
+   Base
+   -------------------------------------------------------------------------- */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Every heading tier picks up the display face, including the ones built
+     from utilities rather than h1–h4 tags. */
+  h1,
+  h2,
+  h3,
+  h4,
+  .text-display,
+  .text-h1,
+  .text-h2,
+  .text-h3,
+  .text-h4,
+  .text-overline {
+    font-family: var(--font-display);
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Single global focus treatment. Replaces the zero focus-visible rules
+     the previous stylesheet shipped with. */
+  :focus-visible {
+    outline: 2px solid var(--accent-ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+
+  /* Images default to not overflowing their box. */
+  img,
+  svg,
+  video {
+    max-width: 100%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Layout primitives
+   -------------------------------------------------------------------------- */
+@utility container {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 80rem; /* 1280px — editorial measure */
+  padding-inline: 1.25rem;
+
+  @media (width >= 48rem) {
+    padding-inline: 2rem;
+  }
+
+  @media (width >= 80rem) {
+    padding-inline: 2.5rem;
+  }
+}
+
+/* Vertical rhythm. The old stylesheet mixed py-10/py-12/py-20 across five
+   different section paddings; this collapses them to two steps. */
+@utility section {
+  padding-block: clamp(3.5rem, 2rem + 6vw, 6.5rem);
+}
+
+@utility section-tight {
+  padding-block: clamp(2.5rem, 1.5rem + 4vw, 4.5rem);
+}
+
+/* Card shell — one definition, previously duplicated in 11 places. */
+@utility card {
+  background-color: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+@utility card-interactive {
+  transition:
+    box-shadow 250ms var(--ease-out-quint),
+    transform 250ms var(--ease-out-quint),
+    border-color 250ms var(--ease-out-quint);
+
+  &:hover {
+    box-shadow: var(--shadow-card-hover);
+    border-color: var(--line-strong);
+    transform: translateY(-3px);
+  }
+}
+
+/* The four-colour brand rule used as a section/CTA accent. Replaces the
+   full-bleed rainbow gradient that put white text over yellow and green. */
+@utility brand-rule {
+  background-image: linear-gradient(
+    to right,
+    var(--brand-blue) 0 25%,
+    var(--brand-red) 25% 50%,
+    var(--brand-yellow) 50% 75%,
+    var(--brand-green) 75% 100%
+  );
+}
+
+/* Desert-ground grain. Inline feTurbulence so it costs no request, kept low
+   enough to read as paper/sand tooth rather than noise. */
+@utility grain {
+  position: relative;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+.dark .grain::after {
+  opacity: 0.05;
+}
+
+/* One grade across every community photo so a mixed-camera, mixed-lighting
+   archive reads as a single brand instead of a loose album. Deliberately mild:
+   enough to unify, not enough to look filtered. */
+@utility photo-graded {
+  filter: saturate(0.92) contrast(1.06) brightness(0.99) sepia(0.06);
+}
+
+@utility skip-link {
+  position: absolute;
+  left: 1rem;
+  top: 1rem;
+  z-index: 100;
+  translate: 0 -200%;
+  border-radius: var(--radius-sm);
+  background-color: var(--accent);
+  color: var(--accent-fg);
+  padding: 0.75rem 1.25rem;
+  font-weight: 600;
+  transition: translate 200ms var(--ease-out-quint);
+
+  &:focus-visible {
+    translate: 0 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Animations
+   -------------------------------------------------------------------------- */
+@keyframes gdg-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility animate-fade-up {
+  animation: gdg-fade-up 600ms var(--ease-out-quint) both;
 }

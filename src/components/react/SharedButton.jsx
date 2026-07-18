@@ -147,7 +147,7 @@ export default function SharedButton({
     <Popover.Root>
       <Popover.Trigger asChild>
         <button
-          className="text-primary inline-flex items-center justify-center gap-[10px] rounded-md border border-white bg-white px-8 py-[10px] font-medium"
+          className="border-line-strong bg-raised text-fg hover:border-fg-subtle hover:bg-inset active:bg-line inline-flex items-center justify-center gap-2 rounded-md border px-6 py-2.5 text-[0.9375rem] font-semibold whitespace-nowrap transition-[background-color,border-color,color] duration-200"
           aria-label="Compartir evento"
         >
           <svg
@@ -173,11 +173,11 @@ export default function SharedButton({
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          className="focus:shadow-[0_10px_38px_-10px_hsla(206,22%,7%,.35),0_10px_20px_-15px_hsla(206,22%,7%,.2),0_0_0_2px_theme(colors.violet7)] data-[state=open]:data-[side=bottom]:animate-slideUpAndFade data-[state=open]:data-[side=left]:animate-slideRightAndFade data-[state=open]:data-[side=right]:animate-slideLeftAndFade data-[state=open]:data-[side=top]:animate-slideDownAndFade z-5 w-[260px] rounded bg-white p-5 shadow-[0_10px_38px_-10px_hsla(206,22%,7%,.35),0_10px_20px_-15px_hsla(206,22%,7%,.2)] will-change-[transform,opacity]"
+          className="border-line bg-raised z-20 w-65 rounded-lg border p-5 shadow-[var(--shadow-pop)] will-change-[transform,opacity]"
           sideOffset={5}
         >
           <div className="flex flex-col gap-2.5">
-            <p className="text-mauve12 mb-2.5 text-[15px] leading-[19px] font-medium">
+            <p className="text-fg mb-2.5 text-sm font-semibold">
               Compartir en:
             </p>
             {/* Twitter */}
@@ -287,13 +287,13 @@ export default function SharedButton({
             </div>
 
             {/* Botón copiar enlace */}
-            <div className="border-t border-gray-200 pt-3">
+            <div className="border-line border-t pt-3">
               <button
                 onClick={copyToClipboard}
-                className={`inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-colors ${
+                className={`inline-flex w-full items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium transition-colors ${
                   copySuccess
-                    ? "border border-green-200 bg-green-50 text-green-700"
-                    : "border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
+                    ? "border-brand-green-soft bg-brand-green-soft text-brand-green-text"
+                    : "border-line bg-surface text-fg-muted hover:bg-inset hover:text-fg"
                 }`}
                 title="Copiar enlace del evento"
               >
@@ -338,8 +338,8 @@ export default function SharedButton({
             </div>
           </div>
           <Popover.Close
-            className="text-violet11 hover:bg-violet4 focus:shadow-violet7 absolute top-[5px] right-[5px] inline-flex size-[25px] cursor-default items-center justify-center rounded-full outline-none focus:shadow-[0_0_0_2px]"
-            aria-label="Close"
+            className="text-fg-subtle hover:bg-inset hover:text-fg absolute top-1.5 right-1.5 inline-flex size-7 items-center justify-center rounded-full transition-colors"
+            aria-label="Cerrar"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -357,7 +357,7 @@ export default function SharedButton({
               <path d="m6 6 12 12" />
             </svg>
           </Popover.Close>
-          <Popover.Arrow className="fill-white" />
+          <Popover.Arrow className="fill-raised" />
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

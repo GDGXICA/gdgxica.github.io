@@ -3,7 +3,8 @@ import Button from "@/components/Button.astro";
 import CallToActionSection from "@/components/CallToActionSection.astro";
 import HeroPage from "@/components/HeroPage.astro";
 import Layout from "@/layouts/Layout.astro";
-import MemberCard from "@/components/MemberCard.astro";
+import PersonCard from "@/components/PersonCard.astro";
+import SectionHeader from "@/components/SectionHeader.astro";
 import { Users } from "@lucide/astro";
 import { getCollection } from "astro:content";
 import { fetchStats, fetchLinks } from "@/loaders/transform-site-config";
@@ -15,7 +16,6 @@ const members = membersCollection.map((entry) => entry.data);
 const stats = await fetchStats();
 const links = await fetchLinks();
 
-// metadata
 const metadata = {
   title: "Equipo - Google Developer Group Ica",
   description:
@@ -27,78 +27,74 @@ const metadata = {
 ---
 
 <Layout {...metadata}>
-  <HeroPage>
-    <p
-      class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-red-500 to-green-600"
-    >
-      <Users stroke-width={1.5} size={64} color="#FFFFFF" />
-    </p>
-    <h1 class="mb-6 text-4xl font-bold md:text-5xl">
-      <span class="text-google-blue">Nuestro</span>
-      <span class="text-google-red">Equipo</span>
-    </h1>
-    <p class="text-secondary mb-8 text-xl">
-      Conoce a las personas dedicadas que hacen posible nuestra comunidad.
-      Voluntarios apasionados que dedican su tiempo y experiencia para crear un
-      espacio donde todos puedan aprender y crecer.
-    </p>
-
+  <HeroPage
+    eyebrow="Equipo"
+    title="Las personas detrás de la comunidad"
+    description="Voluntarios apasionados que dedican su tiempo y experiencia para crear un espacio donde todos puedan aprender y crecer."
+  >
     <StatsBar
+      class="border-line mt-16 border-t pt-12"
       stats={[
         {
           value: `${stats.totalOrganizers}`,
-          label: "Organizadores Activos",
+          label: "Organizadores activos",
           color: "blue",
         },
         {
-          value: `${stats.yearsActive}`,
-          label: "Años de Experiencia",
+          value: `${stats.yearsActive}+`,
+          label: "Años de experiencia",
           color: "red",
         },
         {
           value: `${stats.totalEvents}+`,
-          label: "Eventos Organizados",
+          label: "Eventos organizados",
           color: "yellow",
         },
         {
           value: `${stats.developersMentored}+`,
-          label: "Desarrolladores Mentoreados",
+          label: "Desarrolladores mentoreados",
           color: "green",
         },
       ]}
     />
   </HeroPage>
-  <section class="py-20">
-    <div class="container">
-      <h2 class="text-primary mb-6 text-center text-4xl font-bold">
-        Todo el Equipo
-      </h2>
-      <p class="text-secondary text-center text-xl">
-        Conoce a todos los miembros de nuestro equipo
-      </p>
-      <!-- <div class="mt-8  flex-wrap justify-center gap-4">
-        <Button variant="solid" href="#" target="_blank"> Todos </Button>
-        <Button variant="outline" href="#" target="_blank"> Leadership </Button>
-        <Button variant="outline" href="#" target="_blank"> Community </Button>
-        <Button variant="outline" href="#" target="_blank"> Events </Button>
-      </div> -->
-      <div class="mt-12 flex flex-wrap justify-center gap-8">
-        {members.map((member) => <MemberCard member={member} />)}
-      </div>
-    </div>
+
+  <section class="section container">
+    <SectionHeader
+      eyebrow="Miembros"
+      title="Todo el equipo"
+      description="Conoce a todas las personas que mueven el GDG Ica."
+    />
+
+    {
+      members.length > 0 ? (
+        <div class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {members.map((member) => (
+            <PersonCard person={member} variant="detailed" />
+          ))}
+        </div>
+      ) : (
+        <div class="card mt-14 p-10 text-center">
+          <p class="text-fg-muted">
+            Estamos actualizando la lista del equipo. Vuelve pronto.
+          </p>
+        </div>
+      )
+    }
   </section>
-  <CallToActionSection>
-    <h2 class="mb-6 text-3xl font-bold text-white md:text-4xl">
-      ¿Quieres Unirte a Nuestro Equipo?
-    </h2>
-    <p class="mb-8 text-xl text-white">
-      Estamos siempre buscando personas apasionadas que quieran contribuir al
-      crecimiento de nuestra comunidad. Si tienes ganas de hacer la diferencia,
-      ¡nos encantaría conocerte!
-    </p>
-    <Button variant="white" href={links.forms.joinTeam} target="_blank">
-      <Users />
-      Aplicar al Equipo
+
+  <CallToActionSection
+    title="¿Quieres unirte a nuestro equipo?"
+    description="Buscamos personas apasionadas que quieran contribuir al crecimiento de la comunidad. Si tienes ganas de hacer la diferencia, nos encantaría conocerte."
+  >
+    <Button
+      href={links.forms.joinTeam}
+      target="_blank"
+      variant="inverse"
+      size="lg"
+    >
+      <Users size={18} stroke-width={1.75} aria-hidden />
+      Aplicar al equipo
     </Button>
   </CallToActionSection>
 </Layout>
