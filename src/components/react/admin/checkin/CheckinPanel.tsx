@@ -123,7 +123,9 @@ export function CheckinPanel({ initialSlug }: Props) {
       if (terms.length === 0) return true;
       // Every term must prefix-match some token, so "qui gar" finds
       // "Quintanilla Garcia" without needing the full spelling.
-      return terms.every((t) => a.searchTokens.some((tok) => tok.startsWith(t)));
+      return terms.every((t) =>
+        a.searchTokens.some((tok) => tok.startsWith(t))
+      );
     });
   }, [attendees, query, onlyPending]);
 
@@ -150,7 +152,11 @@ export function CheckinPanel({ initialSlug }: Props) {
     link.href = url;
     link.download = bevyCsvFilename(slug, new Date());
     link.click();
-    URL.revokeObjectURL(url);
+    // Revoked on a later tick, not on the next line. Chromium starts the
+    // download synchronously inside click(), but Firefox and Safari read
+    // the blob afterwards — revoking immediately cancels the download
+    // there, and the success toast below would still claim it worked.
+    setTimeout(() => URL.revokeObjectURL(url), 0);
 
     setToast({
       message:
@@ -242,8 +248,8 @@ export function CheckinPanel({ initialSlug }: Props) {
 
       {metaError && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-          No se pudo leer la información de la última importación, así que no
-          se marcará a quienes ya no figuran en el CSV. El check-in funciona
+          No se pudo leer la información de la última importación, así que no se
+          marcará a quienes ya no figuran en el CSV. El check-in funciona
           normal.
         </div>
       )}
@@ -274,7 +280,10 @@ export function CheckinPanel({ initialSlug }: Props) {
         <RosterImporter
           slug={slug}
           onImported={(summary) =>
-            setToast({ message: `Roster importado: ${summary}`, type: "success" })
+            setToast({
+              message: `Roster importado: ${summary}`,
+              type: "success",
+            })
           }
         />
       )}
@@ -309,8 +318,8 @@ export function CheckinPanel({ initialSlug }: Props) {
                 Conectando con el servidor…
               </p>
               <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
-                Sin datos en caché todavía. Si no hay señal, espera a
-                reconectar antes de importar nada.
+                Sin datos en caché todavía. Si no hay señal, espera a reconectar
+                antes de importar nada.
               </p>
             </>
           )}
@@ -360,7 +369,8 @@ export function CheckinPanel({ initialSlug }: Props) {
                     key={a.id}
                     attendee={a}
                     stale={
-                      !!meta?.lastImportId && a.lastImportId !== meta.lastImportId
+                      !!meta?.lastImportId &&
+                      a.lastImportId !== meta.lastImportId
                     }
                     onToggle={handleToggle}
                   />

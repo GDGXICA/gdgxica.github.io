@@ -58,8 +58,18 @@ export function buildBevyCheckinCsv(attendees: Attendee[]): BevyCsvResult {
   };
 }
 
-/** Filename that identifies the event and the moment, for the audit trail. */
+/**
+ * Filename that identifies the event and the moment.
+ *
+ * Built from LOCAL time, not toISOString(). The organizer exports two or
+ * three times during an event and picks the latest by eye; a UTC stamp
+ * would read five hours ahead of the clock they are looking at in Ica.
+ * Zero-padded so the names still sort chronologically.
+ */
 export function bevyCsvFilename(slug: string, now: Date): string {
-  const stamp = now.toISOString().slice(0, 16).replace(/[:T]/g, "-");
+  const p = (n: number) => String(n).padStart(2, "0");
+  const stamp =
+    `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}` +
+    `-${p(now.getHours())}-${p(now.getMinutes())}`;
   return `bevy-checkin-${slug}-${stamp}.csv`;
 }

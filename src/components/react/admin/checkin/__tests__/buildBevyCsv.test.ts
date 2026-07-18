@@ -132,8 +132,26 @@ describe("buildBevyCheckinCsv — escaping", () => {
 
 describe("bevyCsvFilename", () => {
   it("identifies the event and the moment", () => {
-    expect(
-      bevyCsvFilename("devfest-ica-2026", new Date("2026-07-18T14:22:10Z"))
-    ).toBe("bevy-checkin-devfest-ica-2026-2026-07-18-14-22.csv");
+    // Local time, not UTC: constructed from local components so the
+    // assertion holds in any timezone the suite runs in.
+    const at = new Date(2026, 6, 18, 14, 22, 10);
+    expect(bevyCsvFilename("devfest-ica-2026", at)).toBe(
+      "bevy-checkin-devfest-ica-2026-2026-07-18-14-22.csv"
+    );
+  });
+
+  // Regression: toISOString() stamped UTC, so an export at 4:17 pm in Ica
+  // was named ...-21-17 — five hours off the clock the organizer is
+  // reading while deciding which file is the latest.
+  it("uses the organizer's local clock, not UTC", () => {
+    const at = new Date(2026, 6, 18, 16, 17, 0);
+    expect(bevyCsvFilename("e", at)).toContain("-16-17.csv");
+  });
+
+  it("zero-pads so names sort chronologically", () => {
+    const at = new Date(2026, 0, 5, 9, 4, 0);
+    expect(bevyCsvFilename("e", at)).toBe(
+      "bevy-checkin-e-2026-01-05-09-04.csv"
+    );
   });
 });
