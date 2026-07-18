@@ -1,4 +1,5 @@
 import * as admin from "firebase-admin";
+import { logger } from "firebase-functions";
 import { onRequest } from "firebase-functions/v2/https";
 import express from "express";
 import cors from "cors";
@@ -48,6 +49,21 @@ const ALLOWED_ORIGINS = [
   "http://localhost:4321",
 ];
 
+// Only true inside the Functions emulator; the variable is set by the
+// emulator itself and never exists in a deployed function.
+const IS_EMULATOR = process.env.FUNCTIONS_EMULATOR === "true";
+
+// Astro picks the next free port when 4321 is taken (a second dev server,
+// a leftover process), and every API call then fails CORS with no hint as
+// to why. Accept any localhost port — but ONLY under the emulator, so the
+// deployed allowlist stays exactly the four origins above.
+const LOCALHOST_RE = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
+
+function isAllowedOrigin(origin: string): boolean {
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  return IS_EMULATOR && LOCALHOST_RE.test(origin);
+}
+
 const app = express();
 // Firebase Hosting + Cloud Functions sits behind exactly one Google
 // Frontend hop, so trust a single proxy. Setting `true` would let
@@ -56,14 +72,34 @@ app.set("trust proxy", 1);
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      if (!origin || isAllowedOrigin(origin)) {
         callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
+        return;
       }
+      // Never pass an Error here: cors() forwards it to the default
+      // express handler, which answers 500. The caller then sees a bare
+      // "Error 500" with nothing pointing at the origin — the actual
+      // cause. Reject the CORS headers instead and let the explicit 403
+      // middleware below answer with something diagnosable.
+      logger.warn("Blocked CORS origin", { origin });
+      callback(null, false);
     },
   })
 );
+
+// Requests from a disallowed origin reach here without CORS headers. Answer
+// them explicitly so the failure is legible in the network tab and in logs.
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && !isAllowedOrigin(origin)) {
+    res.status(403).json({
+      success: false,
+      error: `Origen no permitido: ${origin}`,
+    });
+    return;
+  }
+  next();
+});
 app.use(express.json({ limit: "1mb" }));
 
 // Outer perimeter limit: large window, generous cap. Protects against
@@ -74,6 +110,12 @@ app.use(
     max: 300,
     standardHeaders: true,
     legacyHeaders: false,
+    // The two limiters below already guard against a missing req.ip; this
+    // one did not, and threw ERR_ERL_UNDEFINED_IP_ADDRESS on every request
+    // under the emulator. Falling back to a shared bucket keeps the
+    // perimeter limit working instead of erroring out.
+    keyGenerator: (req) =>
+      req.ip ? `ip:${ipKeyGenerator(req.ip)}` : "ip:unknown",
     message: { success: false, error: "Too many requests, try again later" },
   })
 );
