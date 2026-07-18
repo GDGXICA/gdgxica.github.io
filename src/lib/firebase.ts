@@ -60,6 +60,22 @@ export async function getFirestore() {
       // The multi-tab manager is not optional — a second tab otherwise
       // fails to take the IndexedDB lock and silently degrades to an
       // in-memory cache, which would drop queued check-ins.
+      //
+      // Known tradeoff, considered and accepted: this caches whatever the
+      // page subscribes to on disk, and the SDK does not clear it on sign
+      // out. On /admin/checkin that includes attendee names and emails.
+      // Reading the roster already requires the organizer role, so this
+      // crosses no privilege boundary — the exposure is someone with
+      // physical access to an unlocked profile, who on a venue phone is
+      // typically another organizer. Clearing it in signOut() via
+      // terminate() + clearIndexedDbPersistence() is possible, but it also
+      // discards check-ins still queued offline, which is worse mid-event.
+      //
+      // Persistence is deliberately NOT behind a per-caller opt-in.
+      // getUserRole() in ./auth.ts calls this helper on every admin page
+      // before the panel mounts, so a first-caller-wins flag would let it
+      // initialize the memory cache and silently disable the offline queue
+      // this whole feature depends on.
       let db: import("firebase/firestore").Firestore;
       try {
         db = initializeFirestore(app, {

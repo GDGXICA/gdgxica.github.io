@@ -69,6 +69,46 @@ describe("checkin roster rules", () => {
       await assertFails(getDoc(doc(ghost, ATTENDEE)));
     });
 
+    // The full chain an outsider would actually attempt. The public event
+    // pages mint anonymous Firebase tokens (signInAnonymouslyIfNeeded), so
+    // request.auth != null is free to anyone who loads the site. The
+    // pre-existing users/ rule then lets them self-register — capped at
+    // role "member". This asserts the two halves compose safely: a real
+    // token plus a real users/ doc still must not reach attendee PII.
+    it("denies an anonymous user who self-registers as member", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      const anonUid = "anon-visitor";
+      const anon = env.authenticatedContext(anonUid).firestore();
+
+      // Goes through the real rule, not withSecurityRulesDisabled — if
+      // this ever starts failing, self-registration changed and the
+      // premise of the test needs revisiting.
+      await assertSucceeds(
+        setDoc(doc(anon, `users/${anonUid}`), {
+          uid: anonUid,
+          email: "",
+          displayName: "",
+          photoURL: "",
+          role: "member",
+        })
+      );
+
+      await assertFails(getDoc(doc(anon, ATTENDEE)));
+    });
+
+    it("denies self-escalation to organizer to reach the roster", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("climber", "member");
+      const climber = env.authenticatedContext("climber").firestore();
+      // users/ denies update outright, so the role cannot be raised.
+      await assertFails(
+        updateDoc(doc(climber, "users/climber"), { role: "organizer" })
+      );
+      await assertFails(getDoc(doc(climber, ATTENDEE)));
+    });
+
     it("allows an organizer", async () => {
       const env = await getTestEnv();
       await seedAttendee();
