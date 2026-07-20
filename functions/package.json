@@ -40,7 +40,7 @@
     "@firebase/rules-unit-testing": "^5.0.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
-    "@types/node": "^25.6.0",
+    "@types/node": "^26.1.1",
     "@types/nodemailer": "^8.0.1",
     "@typescript-eslint/eslint-plugin": "^8.64.0",
     "@typescript-eslint/parser": "^8.35.1",
