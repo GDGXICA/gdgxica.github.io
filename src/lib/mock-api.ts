@@ -80,6 +80,7 @@ export const mockApi = {
       sequenceNumber: 42,
       groupLetter: "Q",
     }),
+  attachCredentialImage: () => ok(null),
 
   listEventMinigameWords: () => ok([]),
   setMinigameWordHidden: (

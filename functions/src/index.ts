@@ -23,6 +23,7 @@ import {
   certificateSendSchema,
   checkinImportSchema,
   credentialCreateSchema,
+  credentialImageSchema,
 } from "./schemas";
 import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
@@ -423,6 +424,20 @@ app.post(
   credentialLimiter,
   validateBody(credentialCreateSchema),
   credentials.createCredential
+);
+
+// Attaching the composed card is a SECOND public call, not part of create:
+// the group letter comes from a server-assigned sequence number, so the
+// client cannot render the final card until create has returned. The
+// handler pins the write to the anonymous UID that created the record.
+app.patch(
+  "/api/events/:slug/credentials/:id/image",
+  requireAuth(),
+  slugP,
+  vid,
+  credentialLimiter,
+  validateBody(credentialImageSchema),
+  credentials.attachCredentialImage
 );
 
 // Roulette spin (admin-only)
