@@ -184,6 +184,59 @@ export const MOCK_USERS = [
   },
 ];
 
+export const MOCK_ACCESS_REQUESTS = [
+  {
+    uid: "req-1",
+    email: "nueva.colaboradora@example.com",
+    displayName: "Nueva Colaboradora",
+    photoURL: "",
+    requestedRole: "contributor",
+    motivo:
+      "Trabajo en Android y me gustaría proponer una charla sobre Compose para el próximo DevFest.",
+    links: "https://github.com/ejemplo",
+    eventSlug: null,
+    status: "pending",
+    createdAt: { _seconds: NOW_SECONDS - 3600 },
+  },
+  {
+    uid: "req-2",
+    email: "voluntario.puerta@example.com",
+    displayName: "Voluntario de Puerta",
+    photoURL: "",
+    requestedRole: "volunteer",
+    motivo: "Puedo ayudar con el registro de asistentes el día del evento.",
+    links: "",
+    eventSlug: "devfest-2026",
+    status: "pending",
+    createdAt: { _seconds: NOW_SECONDS - 86400 },
+  },
+];
+
+export const MOCK_INVITATIONS = [
+  {
+    id: "inv-1",
+    emailLower: "persona.invitada@example.com",
+    role: "organizer",
+    expiresAt: new Date(Date.now() + 10 * 86400_000).toISOString(),
+    usedAt: null,
+    usedBy: null,
+    revokedAt: null,
+    createdBy: "dev-admin",
+    createdAt: { _seconds: NOW_SECONDS - 7200 },
+  },
+  {
+    id: "inv-2",
+    emailLower: "ya.acepto@example.com",
+    role: "volunteer",
+    expiresAt: new Date(Date.now() + 3 * 86400_000).toISOString(),
+    usedAt: { _seconds: NOW_SECONDS - 3600 },
+    usedBy: "dev-volunteer",
+    revokedAt: null,
+    createdBy: "dev-admin",
+    createdAt: { _seconds: NOW_SECONDS - 172800 },
+  },
+];
+
 export const MOCK_AUDIT = [
   {
     id: "a1",

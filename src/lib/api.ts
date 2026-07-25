@@ -112,6 +112,27 @@ const realApi = {
     return request("GET", `/audit${qs ? `?${qs}` : ""}`);
   },
 
+  // Access — solicitudes e invitaciones
+  getMyAccessRequest: () => request("GET", "/access/requests/me"),
+  createAccessRequest: (data: unknown) =>
+    request("POST", "/access/requests", data),
+  listAccessRequests: (status = "pending") =>
+    request("GET", `/access/requests?status=${encodeURIComponent(status)}`),
+  decideAccessRequest: (
+    uid: string,
+    approve: boolean,
+    note: string,
+    role?: string
+  ) =>
+    request("POST", `/access/requests/${uid}/decide`, { approve, note, role }),
+  listInvitations: () => request("GET", "/access/invitations"),
+  createInvitation: (email: string, role: string) =>
+    request("POST", "/access/invitations", { email, role }),
+  revokeInvitation: (id: string) =>
+    request("DELETE", `/access/invitations/${id}`),
+  redeemInvitation: (token: string) =>
+    request("POST", "/access/invitations/redeem", { token }),
+
   // Forms
   listForms: () => request("GET", "/forms"),
   addForm: (data: unknown) => request("POST", "/forms", data),

@@ -109,6 +109,25 @@ service cloud.firestore {
     }
 
     match /audit_log/{logId} {
+      // Readable only through GET /api/audit, which checks `audit:read`.
+      // Never client-writable: an append-only log that its own subjects can
+      // edit is not a log.
+      allow read, write: if false;
+    }
+
+    // Access requests. Someone may read their own to see whether it is still
+    // pending, but reviewing and deciding go through the API so the
+    // no-escalation guard always runs.
+    match /access_requests/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    // Invitations are fully closed to clients. They hold `tokenHash`, and
+    // although a hash cannot be redeemed, there is no reason to expose who
+    // was invited to what. Creating, revoking and redeeming all run through
+    // the API, which verifies the redeemer's email matches the invitee.
+    match /invitations/{invitationId} {
       allow read, write: if false;
     }
 

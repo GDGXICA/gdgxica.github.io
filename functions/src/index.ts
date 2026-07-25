@@ -31,6 +31,7 @@ import * as sponsors from "./handlers/sponsors";
 import * as stats from "./handlers/stats";
 import * as users from "./handlers/users";
 import * as audit from "./handlers/audit";
+import * as access from "./handlers/access";
 import * as forms from "./handlers/forms";
 import { triggerRebuild } from "./handlers/rebuild";
 import * as locations from "./handlers/locations";
@@ -295,6 +296,72 @@ app.put(
 
 // Audit log — de solo lectura, y solo para quien tenga `audit:read`.
 app.get("/api/audit", requirePermission("audit:read"), audit.listAudit);
+
+// Access — solicitudes e invitaciones.
+//
+// Crear una solicitud y canjear una invitación son las dos únicas rutas que
+// puede llamar alguien SIN permisos (solo con sesión iniciada), así que
+// llevan un limitador propio y estrecho: son la superficie que ve cualquiera
+// con una cuenta de Google.
+const accessLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const uid = (req as { user?: { uid?: string } }).user?.uid;
+    return uid ? `u:${uid}` : `ip:${ipKeyGenerator(req.ip ?? "unknown")}`;
+  },
+  message: {
+    success: false,
+    error: "Demasiados intentos, inténtalo más tarde",
+  },
+});
+
+app.get("/api/access/requests/me", requireAuth(), access.getMyRequest);
+app.post(
+  "/api/access/requests",
+  requireAuth(),
+  accessLimiter,
+  access.createRequest
+);
+app.post(
+  "/api/access/invitations/redeem",
+  requireAuth(),
+  accessLimiter,
+  access.redeemInvitation
+);
+
+app.get(
+  "/api/access/requests",
+  requirePermission("access:review"),
+  access.listRequests
+);
+app.post(
+  "/api/access/requests/:uid/decide",
+  requirePermission("access:review"),
+  vuid,
+  writeLimiter,
+  access.decideRequest
+);
+app.get(
+  "/api/access/invitations",
+  requirePermission("access:review"),
+  access.listInvitations
+);
+app.post(
+  "/api/access/invitations",
+  requirePermission("access:review"),
+  writeLimiter,
+  access.createInvitation
+);
+app.delete(
+  "/api/access/invitations/:id",
+  requirePermission("access:review"),
+  vid,
+  writeLimiter,
+  access.revokeInvitation
+);
 
 // Forms
 app.get("/api/forms", requirePermission("forms:read"), forms.listForms);

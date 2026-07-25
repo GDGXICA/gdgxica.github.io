@@ -291,11 +291,23 @@ describe("no escalada", () => {
     expect(canGrant(organizer, "audit:read")).toBe(false);
   });
 
-  it("un organizador no puede nombrar admin ni organizador", () => {
+  it("un organizador no puede nombrar admin", () => {
     const organizer = { role: "organizer" };
     expect(canAssignRole(organizer, "admin")).toBe(false);
+  });
+
+  // `organizer` contiene a `contributor` y a `volunteer`, así que puede dar
+  // de alta a ambos. Si no fuera así, la regla de no escalada le impediría
+  // incorporar justo a los perfiles que más va a incorporar.
+  it("un organizador sí puede nombrar contributor, volunteer y member", () => {
+    const organizer = { role: "organizer" };
+    expect(canAssignRole(organizer, "contributor")).toBe(true);
+    expect(canAssignRole(organizer, "volunteer")).toBe(true);
     expect(canAssignRole(organizer, "member")).toBe(true);
-    expect(canAssignRole(organizer, "contributor")).toBe(false);
+  });
+
+  it("un voluntario no puede nombrar organizador", () => {
+    expect(canAssignRole({ role: "volunteer" }, "organizer")).toBe(false);
   });
 
   it("un admin puede nombrar cualquier rol", () => {

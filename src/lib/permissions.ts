@@ -103,6 +103,8 @@ const ORGANIZER_GLOBAL: readonly Permission[] = [
   "checkin:operate",
   "checkin:import",
   "certificates:send",
+  "minigames:operate",
+  "proposals:create",
   "proposals:review",
 ];
 

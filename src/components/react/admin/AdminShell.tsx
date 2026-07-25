@@ -55,6 +55,12 @@ const NAV_ITEMS: {
     permission: "users:read",
   },
   {
+    label: "Accesos",
+    href: "/admin/access",
+    icon: "🚪",
+    permission: "access:review",
+  },
+  {
     label: "Roles y permisos",
     href: "/admin/roles",
     icon: "🔑",

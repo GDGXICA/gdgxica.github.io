@@ -91,6 +91,16 @@ const ORGANIZER_GLOBAL: readonly Permission[] = [
   "checkin:operate",
   "checkin:import",
   "certificates:send",
+  // Operar los minijuegos de un evento es parte de llevar el evento. Las
+  // PLANTILLAS siguen siendo de admin: son configuración global, no
+  // operación.
+  "minigames:operate",
+  // Un organizador ya puede escribir eventos directamente, así que poder
+  // proponerlos no le añade alcance. Está aquí para que `organizer` contenga
+  // a `contributor` y a `volunteer`: si no, la regla de no escalada le
+  // impediría dar de alta precisamente a esos dos perfiles, que es lo que
+  // más va a hacer.
+  "proposals:create",
   "proposals:review",
 ];
 

@@ -20,6 +20,7 @@ import { CertificateSender } from "./certificates/CertificateSender";
 import { CheckinPanel } from "./checkin/CheckinPanel";
 import { RoleMatrix } from "./roles/RoleMatrix";
 import { AuditLog } from "./audit/AuditLog";
+import { AccessReview } from "./access/AccessReview";
 import { ROLE_BUNDLES, isRole, type Permission } from "@/lib/permissions";
 
 interface Props {
@@ -51,6 +52,7 @@ const PAGE_PERMISSIONS: Record<string, Permission> = {
   // poder ver el directorio para consultarla.
   roles: "users:read",
   audit: "audit:read",
+  access: "access:review",
   forms: "forms:read",
   "form-viewer": "forms:responses:read",
   locations: "locations:read",
@@ -82,6 +84,8 @@ function pageContent(page: string) {
       return <RoleMatrix />;
     case "audit":
       return <AuditLog />;
+    case "access":
+      return <AccessReview />;
     case "forms":
       return <FormRegistry />;
     case "form-viewer":
@@ -164,7 +168,7 @@ function AdminContent({ page, currentPath }: Props) {
           <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">
             Sesion: {user.email} (rol: {role})
           </p>
-          <div className="mt-6 flex justify-center gap-3">
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
             <button
               onClick={signOut}
               className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -172,8 +176,14 @@ function AdminContent({ page, currentPath }: Props) {
               Cerrar sesion
             </button>
             <a
-              href="/"
+              href="/admin/solicitar"
               className="inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              Solicitar acceso
+            </a>
+            <a
+              href="/"
+              className="inline-block rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               Volver al sitio
             </a>

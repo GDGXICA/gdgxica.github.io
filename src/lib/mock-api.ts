@@ -6,6 +6,8 @@ import {
   MOCK_STATS,
   MOCK_USERS,
   MOCK_AUDIT,
+  MOCK_ACCESS_REQUESTS,
+  MOCK_INVITATIONS,
   MOCK_FORMS,
   MOCK_FORM_RESPONSES,
   MOCK_LOCATIONS,
@@ -49,6 +51,15 @@ export const mockApi = {
   updateUserGrants: () => ok({ uid: "dev", grants: [], revocations: [] }),
 
   listAudit: () => ok({ entries: MOCK_AUDIT, nextCursor: null }),
+
+  getMyAccessRequest: () => ok(null),
+  createAccessRequest: () => ok({ status: "pending" }),
+  listAccessRequests: () => ok(MOCK_ACCESS_REQUESTS),
+  decideAccessRequest: () => ok({ uid: "dev", approved: true }),
+  listInvitations: () => ok(MOCK_INVITATIONS),
+  createInvitation: () => ok({ id: "inv-nueva" }),
+  revokeInvitation: () => ok(null),
+  redeemInvitation: () => ok({ role: "contributor" }),
 
   listForms: () => ok(MOCK_FORMS),
   addForm: () => ok({ id: "new-form" }),
