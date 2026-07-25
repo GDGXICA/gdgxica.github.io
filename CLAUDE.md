@@ -76,7 +76,9 @@ Protected admin UI at `/admin/*` using React islands (`client:load`). Firebase A
 - `auth.ts` — Google Sign-In, token management
 - `api.ts` — fetch wrapper with automatic ID token
 
-**Admin pages:** `/admin` (dashboard), `/admin/events`, `/admin/team`, `/admin/speakers`, `/admin/sponsors`, `/admin/stats`, `/admin/users`
+**Admin pages:** `/admin` (dashboard), `/admin/events`, `/admin/team`, `/admin/speakers`, `/admin/sponsors`, `/admin/stats`, `/admin/users`, `/admin/roles` (read-only permission matrix), `/admin/audit` (audit log viewer)
+
+**Access-control admin:** role, status and per-user grants are changed only through `PATCH /api/users/:uid/role`, `PATCH /api/users/:uid/status` and `PUT /api/users/:uid/grants`. All three require a written reason (stored in `audit_log`) and enforce two guards in `functions/src/handlers/users.ts`: no-escalation (you cannot assign, remove or grant beyond your own permissions) and last-admin (the final active admin cannot be demoted or suspended). `GET /api/audit` is paginated by document cursor and accepts at most one filter at a time — each filter has its own composite index in `firestore.indexes.json`.
 
 **Firestore collections:** `users` (role, status, grants, revocations), `audit_log` (write history), `events/{slug}/staff` (per-event assignments)
 

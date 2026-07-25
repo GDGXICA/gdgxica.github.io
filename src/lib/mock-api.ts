@@ -5,6 +5,7 @@ import {
   MOCK_SPONSORS,
   MOCK_STATS,
   MOCK_USERS,
+  MOCK_AUDIT,
   MOCK_FORMS,
   MOCK_FORM_RESPONSES,
   MOCK_LOCATIONS,
@@ -44,6 +45,10 @@ export const mockApi = {
 
   listUsers: () => ok(MOCK_USERS),
   updateUserRole: () => ok({ uid: "dev", role: "admin" }),
+  updateUserStatus: () => ok({ uid: "dev", status: "active" }),
+  updateUserGrants: () => ok({ uid: "dev", grants: [], revocations: [] }),
+
+  listAudit: () => ok({ entries: MOCK_AUDIT, nextCursor: null }),
 
   listForms: () => ok(MOCK_FORMS),
   addForm: () => ok({ id: "new-form" }),

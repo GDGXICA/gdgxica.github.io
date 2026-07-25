@@ -95,8 +95,22 @@ const realApi = {
 
   // Users
   listUsers: () => request("GET", "/users"),
-  updateUserRole: (uid: string, role: string) =>
-    request("PATCH", `/users/${uid}/role`, { role }),
+  updateUserRole: (uid: string, role: string, reason: string) =>
+    request("PATCH", `/users/${uid}/role`, { role, reason }),
+  updateUserStatus: (uid: string, status: string, reason: string) =>
+    request("PATCH", `/users/${uid}/status`, { status, reason }),
+  updateUserGrants: (
+    uid: string,
+    grants: unknown[],
+    revocations: string[],
+    reason: string
+  ) => request("PUT", `/users/${uid}/grants`, { grants, revocations, reason }),
+
+  // Audit
+  listAudit: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request("GET", `/audit${qs ? `?${qs}` : ""}`);
+  },
 
   // Forms
   listForms: () => request("GET", "/forms"),

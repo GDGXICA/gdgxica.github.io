@@ -30,6 +30,7 @@ import * as speakers from "./handlers/speakers";
 import * as sponsors from "./handlers/sponsors";
 import * as stats from "./handlers/stats";
 import * as users from "./handlers/users";
+import * as audit from "./handlers/audit";
 import * as forms from "./handlers/forms";
 import { triggerRebuild } from "./handlers/rebuild";
 import * as locations from "./handlers/locations";
@@ -277,6 +278,23 @@ app.patch(
   writeLimiter,
   users.updateRole
 );
+app.patch(
+  "/api/users/:uid/status",
+  requirePermission("users:role:write"),
+  vuid,
+  writeLimiter,
+  users.updateStatus
+);
+app.put(
+  "/api/users/:uid/grants",
+  requirePermission("users:role:write"),
+  vuid,
+  writeLimiter,
+  users.updateGrants
+);
+
+// Audit log — de solo lectura, y solo para quien tenga `audit:read`.
+app.get("/api/audit", requirePermission("audit:read"), audit.listAudit);
 
 // Forms
 app.get("/api/forms", requirePermission("forms:read"), forms.listForms);

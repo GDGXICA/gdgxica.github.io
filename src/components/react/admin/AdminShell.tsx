@@ -55,6 +55,18 @@ const NAV_ITEMS: {
     permission: "users:read",
   },
   {
+    label: "Roles y permisos",
+    href: "/admin/roles",
+    icon: "🔑",
+    permission: "users:read",
+  },
+  {
+    label: "Auditoría",
+    href: "/admin/audit",
+    icon: "🧾",
+    permission: "audit:read",
+  },
+  {
     label: "Stats",
     href: "/admin/stats",
     icon: "📈",

@@ -18,6 +18,8 @@ import { MinigameTemplateList } from "./minigame-templates/MinigameTemplateList"
 import { EventMinigameManager } from "./event-minigames/EventMinigameManager";
 import { CertificateSender } from "./certificates/CertificateSender";
 import { CheckinPanel } from "./checkin/CheckinPanel";
+import { RoleMatrix } from "./roles/RoleMatrix";
+import { AuditLog } from "./audit/AuditLog";
 import { ROLE_BUNDLES, isRole, type Permission } from "@/lib/permissions";
 
 interface Props {
@@ -45,6 +47,10 @@ const PAGE_PERMISSIONS: Record<string, Permission> = {
   sponsors: "sponsors:read",
   stats: "stats:read",
   users: "users:read",
+  // La matriz solo enseña lo que ya está en el código del cliente; basta con
+  // poder ver el directorio para consultarla.
+  roles: "users:read",
+  audit: "audit:read",
   forms: "forms:read",
   "form-viewer": "forms:responses:read",
   locations: "locations:read",
@@ -72,6 +78,10 @@ function pageContent(page: string) {
       return <StatsEditor />;
     case "users":
       return <UserDirectory />;
+    case "roles":
+      return <RoleMatrix />;
+    case "audit":
+      return <AuditLog />;
     case "forms":
       return <FormRegistry />;
     case "form-viewer":
