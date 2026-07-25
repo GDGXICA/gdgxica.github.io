@@ -123,6 +123,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Content proposals. Readable by their author so the panel can show the
+    // review outcome; every mutation goes through the API, which revalidates
+    // the payload and decides who may review or publish. Client writes are
+    // closed so an author cannot flip their own proposal to `approved`.
+    match /proposals/{proposalId} {
+      allow read: if request.auth != null
+                  && resource.data.createdBy == request.auth.uid;
+      allow write: if false;
+    }
+
     // Invitations are fully closed to clients. They hold `tokenHash`, and
     // although a hash cannot be redeemed, there is no reason to expose who
     // was invited to what. Creating, revoking and redeeming all run through

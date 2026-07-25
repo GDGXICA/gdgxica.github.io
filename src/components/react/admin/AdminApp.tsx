@@ -22,6 +22,7 @@ import { RoleMatrix } from "./roles/RoleMatrix";
 import { AuditLog } from "./audit/AuditLog";
 import { AccessReview } from "./access/AccessReview";
 import { EventStaffPanel } from "./event-staff/EventStaffPanel";
+import { ProposalsPanel } from "./proposals/ProposalsPanel";
 import { ROLE_BUNDLES, isRole, type Permission } from "@/lib/permissions";
 
 interface Props {
@@ -54,6 +55,8 @@ const PAGE_PERMISSIONS: Record<string, Permission> = {
   roles: "users:read",
   audit: "audit:read",
   access: "access:review",
+  // Basta con poder proponer: el panel enseña las propias a quien no revisa.
+  proposals: "proposals:create",
   forms: "forms:read",
   "form-viewer": "forms:responses:read",
   locations: "locations:read",
@@ -102,6 +105,8 @@ function pageContent(page: string) {
       return <EventMinigameManager />;
     case "event-staff":
       return <EventStaffPanel />;
+    case "proposals":
+      return <ProposalsPanel />;
     case "certificates":
       return <CertificateSender />;
     case "checkin":

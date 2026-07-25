@@ -55,6 +55,12 @@ const NAV_ITEMS: {
     permission: "users:read",
   },
   {
+    label: "Propuestas",
+    href: "/admin/proposals",
+    icon: "💡",
+    permission: "proposals:create",
+  },
+  {
     label: "Accesos",
     href: "/admin/access",
     icon: "🚪",

@@ -184,6 +184,52 @@ export const MOCK_USERS = [
   },
 ];
 
+export const MOCK_PROPOSALS = [
+  {
+    id: "prop-1",
+    type: "event",
+    status: "submitted",
+    createdBy: "dev-contributor",
+    createdByName: "Colaboradora Externa",
+    createdByEmail: "externa@preview.dev",
+    payload: {
+      id: "charla-compose",
+      title: "Charla sobre Jetpack Compose",
+      description: "Una introducción práctica al toolkit de UI de Android.",
+      date: "2026-09-01",
+    },
+    createdAt: { _seconds: NOW_SECONDS - 5400 },
+    reviewNote: null,
+  },
+  {
+    id: "prop-2",
+    type: "speaker",
+    status: "changes_requested",
+    createdBy: "dev-contributor",
+    createdByName: "Colaboradora Externa",
+    createdByEmail: "externa@preview.dev",
+    payload: { id: "ana-perez", name: "Ana Pérez" },
+    createdAt: { _seconds: NOW_SECONDS - 172800 },
+    reviewNote: "Falta la biografía y una foto.",
+  },
+  {
+    id: "prop-3",
+    type: "event",
+    status: "approved",
+    createdBy: "dev-contributor",
+    createdByName: "Colaboradora Externa",
+    createdByEmail: "externa@preview.dev",
+    payload: {
+      id: "taller-firebase",
+      title: "Taller de Firebase",
+      description: "Sesión práctica de dos horas.",
+      date: "2026-10-15",
+    },
+    createdAt: { _seconds: NOW_SECONDS - 259200 },
+    reviewNote: null,
+  },
+];
+
 export const MOCK_EVENT_STAFF = [
   {
     uid: "dev-volunteer",

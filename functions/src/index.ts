@@ -33,6 +33,7 @@ import * as users from "./handlers/users";
 import * as audit from "./handlers/audit";
 import * as access from "./handlers/access";
 import * as eventStaff from "./handlers/eventStaff";
+import * as proposals from "./handlers/proposals";
 import * as forms from "./handlers/forms";
 import { triggerRebuild } from "./handlers/rebuild";
 import * as locations from "./handlers/locations";
@@ -319,6 +320,44 @@ const accessLimiter = rateLimit({
     error: "Demasiados intentos, inténtalo más tarde",
   },
 });
+
+// Propuestas de contenido. `proposals:create` basta para crear y listar —el
+// handler filtra a las propias de quien no revisa—, mientras que revisar y
+// publicar exigen `proposals:review`. Publicar es un paso aparte de aprobar:
+// aceptar el contenido y escribirlo en el repo público son decisiones
+// distintas.
+app.get(
+  "/api/proposals",
+  requirePermission("proposals:create"),
+  proposals.listProposals
+);
+app.post(
+  "/api/proposals",
+  requirePermission("proposals:create"),
+  writeLimiter,
+  proposals.createProposal
+);
+app.put(
+  "/api/proposals/:id",
+  requirePermission("proposals:create"),
+  vid,
+  writeLimiter,
+  proposals.updateProposal
+);
+app.post(
+  "/api/proposals/:id/review",
+  requirePermission("proposals:review"),
+  vid,
+  writeLimiter,
+  proposals.reviewProposal
+);
+app.post(
+  "/api/proposals/:id/publish",
+  requirePermission("proposals:review"),
+  vid,
+  writeLimiter,
+  proposals.publishProposal
+);
 
 // Asignaciones de staff por evento. Gestionarlas exige `users:role:write`:
 // asignar a alguien a un evento es concederle permisos, aunque acotados, y

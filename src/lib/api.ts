@@ -112,6 +112,16 @@ const realApi = {
     return request("GET", `/audit${qs ? `?${qs}` : ""}`);
   },
 
+  // Propuestas de contenido
+  listProposals: () => request("GET", "/proposals"),
+  createProposal: (type: string, payload: unknown) =>
+    request("POST", "/proposals", { type, payload }),
+  updateProposal: (id: string, payload: unknown) =>
+    request("PUT", `/proposals/${id}`, { payload }),
+  reviewProposal: (id: string, decision: string, note?: string) =>
+    request("POST", `/proposals/${id}/review`, { decision, note }),
+  publishProposal: (id: string) => request("POST", `/proposals/${id}/publish`),
+
   // Equipo por evento
   listEventStaff: (slug: string) => request("GET", `/events/${slug}/staff`),
   assignEventStaff: (slug: string, uid: string, data: unknown) =>

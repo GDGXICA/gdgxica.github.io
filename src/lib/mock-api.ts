@@ -9,6 +9,7 @@ import {
   MOCK_ACCESS_REQUESTS,
   MOCK_INVITATIONS,
   MOCK_EVENT_STAFF,
+  MOCK_PROPOSALS,
   MOCK_FORMS,
   MOCK_FORM_RESPONSES,
   MOCK_LOCATIONS,
@@ -52,6 +53,12 @@ export const mockApi = {
   updateUserGrants: () => ok({ uid: "dev", grants: [], revocations: [] }),
 
   listAudit: () => ok({ entries: MOCK_AUDIT, nextCursor: null }),
+
+  listProposals: () => ok(MOCK_PROPOSALS),
+  createProposal: () => ok({ id: "prop-nueva" }),
+  updateProposal: () => ok({ id: "prop-1" }),
+  reviewProposal: () => ok({ id: "prop-1", status: "approved" }),
+  publishProposal: () => ok({ id: "prop-1", publishedId: "charla-compose" }),
 
   listEventStaff: () => ok(MOCK_EVENT_STAFF),
   assignEventStaff: () => ok({ uid: "dev-volunteer" }),
