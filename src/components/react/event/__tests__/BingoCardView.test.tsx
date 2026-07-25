@@ -163,6 +163,84 @@ describe("BingoCardView", () => {
     expect(screen.getByText(/¡Bingo!/i)).toBeInTheDocument();
   });
 
+  // Regression cover for taps vanishing while a write was in flight. The
+  // card lights up from the local cache echo, well before setDoc resolves
+  // against the server, so a player who taps, sees blue and moves on was
+  // tapping into a lock that silently dropped them.
+  describe("rapid tapping", () => {
+    function deferredSetDoc() {
+      const resolvers: Array<() => void> = [];
+      mocks.setDoc.mockImplementation(
+        () =>
+          new Promise<void>((resolve) => {
+            resolvers.push(() => resolve());
+          })
+      );
+      return resolvers;
+    }
+
+    beforeEach(() => {
+      mocks.useParticipantDoc.mockReturnValue({
+        doc: {
+          uid: "u1",
+          alias: "Ana",
+          bingoCard: card(),
+          bingoMarked: Array.from({ length: 16 }, () => false),
+        },
+        loading: false,
+        error: null,
+      });
+    });
+
+    it("keeps a second tap that lands while the first write is pending", async () => {
+      const resolvers = deferredSetDoc();
+      const user = userEvent.setup();
+      render(<BingoCardView slug="x" instanceId="i" uid="u1" title="B" />);
+      const buttons = screen.getAllByRole("button");
+
+      await user.click(buttons[0]);
+      await waitFor(() => expect(mocks.setDoc).toHaveBeenCalledTimes(1));
+      // Still unresolved — exactly when taps used to disappear.
+      await user.click(buttons[1]);
+      await user.click(buttons[2]);
+
+      // Both later taps are visible right away rather than waiting on the
+      // server, and none of them is lost.
+      expect(buttons[1]).toHaveAttribute("aria-pressed", "true");
+      expect(buttons[2]).toHaveAttribute("aria-pressed", "true");
+
+      resolvers[0]();
+      await waitFor(() => expect(mocks.setDoc).toHaveBeenCalledTimes(2));
+      // The queued taps are coalesced into one follow-up write carrying
+      // every mark, so nothing clobbers anything.
+      const second = mocks.setDoc.mock.calls[1][1] as { bingoMarked: boolean[] };
+      expect(second.bingoMarked.slice(0, 3)).toEqual([true, true, true]);
+    });
+
+    it("never disables a cell just because a write is in flight", async () => {
+      deferredSetDoc();
+      const user = userEvent.setup();
+      render(<BingoCardView slug="x" instanceId="i" uid="u1" title="B" />);
+      const buttons = screen.getAllByRole("button");
+      await user.click(buttons[0]);
+      await waitFor(() => expect(mocks.setDoc).toHaveBeenCalledTimes(1));
+      for (const b of buttons) expect(b).toBeEnabled();
+    });
+
+    it("rolls the card back and reports it when the write fails", async () => {
+      mocks.setDoc.mockRejectedValue(new Error("sin conexión"));
+      const user = userEvent.setup();
+      render(<BingoCardView slug="x" instanceId="i" uid="u1" title="B" />);
+      const buttons = screen.getAllByRole("button");
+      await user.click(buttons[0]);
+      await waitFor(() =>
+        expect(screen.getByRole("alert")).toHaveTextContent(/sin conexión/i)
+      );
+      // The mark is not left showing as if it had been saved.
+      expect(buttons[0]).toHaveAttribute("aria-pressed", "false");
+    });
+  });
+
   // Classic mode: an admin calls the balls, so a cell only opens once its
   // term has been called and the win goes through /bingo/claim rather
   // than a direct Firestore write.

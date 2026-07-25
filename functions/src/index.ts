@@ -140,6 +140,30 @@ const joinLimiter = rateLimit({
   },
 });
 
+// Calling bingo balls does not belong on writeLimiter. That limiter caps
+// an organizer at 30 writes/minute to protect the GitHub API quota for
+// the data repo, and a ball touches neither — it is one small update to
+// one Firestore doc. Sharing it meant an admin calling a 48-ball game at
+// any pace faster than one ball every two seconds got "slow down" partway
+// through, with the rest of the bag unreachable (caught in an end-to-end
+// run: it died on ball 25). The real ceiling is the bag itself: once the
+// sequence is exhausted the endpoint 400s, so an instance can never serve
+// more draws than it has terms.
+const ballLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const uid = (req as { user?: { uid?: string } }).user?.uid;
+    return uid ? `u:${uid}` : `ip:${ipKeyGenerator(req.ip ?? "unknown")}`;
+  },
+  message: {
+    success: false,
+    error: "Demasiadas bolas seguidas, espera un momento",
+  },
+});
+
 // Classic-bingo claims are public and anon-token-backed like /join, so
 // they are keyed by IP too — but on their own counter. A whole venue
 // usually shares one NAT address, and sharing joinLimiter would let the
@@ -426,7 +450,7 @@ app.post(
   requireRole("admin"),
   slugP,
   vid,
-  writeLimiter,
+  ballLimiter,
   minigameBingo.drawBall
 );
 // ...and participants claim the line themselves. The handler re-derives

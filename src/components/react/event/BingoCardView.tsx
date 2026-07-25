@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { getFirestore } from "@/lib/firebase";
 import {
@@ -32,18 +32,32 @@ export function BingoCardView({
     instanceId,
     uid
   );
-  const [pendingIndex, setPendingIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [claiming, setClaiming] = useState(false);
+
+  // What the player has tapped but the server has not confirmed yet, and
+  // the writer state that keeps those taps in order. See `toggle` for why
+  // this exists rather than a simple "one write at a time" lock.
+  const [optimistic, setOptimistic] = useState<boolean[] | null>(null);
+  const desiredRef = useRef<boolean[] | null>(null);
+  const writingRef = useRef(false);
 
   const isClassic = instance?.config?.classic === true;
   const prizes = (instance?.config?.prizes as number | undefined) ?? 3;
 
   const card = participant?.bingoCard ?? [];
-  const marked = useMemo(
-    () => participant?.bingoMarked ?? emptyMarked(),
-    [participant?.bingoMarked]
-  );
+  const serverMarked = useMemo(() => {
+    const stored = participant?.bingoMarked ?? emptyMarked();
+    if (stored.length === CELL_COUNT) return stored;
+    // Pad a short array rather than throwing in detectBingoWin below.
+    const padded = [...stored];
+    while (padded.length < CELL_COUNT) padded.push(false);
+    return padded.slice(0, CELL_COUNT);
+  }, [participant?.bingoMarked]);
+
+  // Render the player's own taps immediately; fall back to the server's
+  // record once there is nothing in flight.
+  const marked = optimistic ?? serverMarked;
 
   // Balls already called out loud. Only these may be marked in classic
   // mode — the server enforces the same rule when verifying a claim, so a
@@ -75,20 +89,39 @@ export function BingoCardView({
     );
   }, [isClassic, hasWonBefore, winningLines, called, card]);
 
-  async function toggle(index: number) {
-    if (pendingIndex !== null) return;
+  // Records a tap and schedules the write.
+  //
+  // Taps must never be dropped. The card lights up the moment the local
+  // Firestore cache echoes a write — before setDoc resolves against the
+  // server — so a player who taps a cell, sees it turn blue and moves on
+  // to the next one is tapping while the previous write is still in
+  // flight. A plain "one write at a time, ignore the rest" lock silently
+  // swallowed every other tap in that rhythm (measured in a browser: 51ms,
+  // stuck, 51ms, stuck) and gave no hint that half the marks were gone.
+  // Somebody joining a classic game late has a handful of already-called
+  // cells to catch up on and taps them in exactly that rhythm.
+  //
+  // So the intended card lives in a ref, every tap updates it, and a
+  // single writer drains it — coalescing a burst into one write. Writing
+  // the array wholesale is also why parallel writes are not the answer:
+  // two of them racing would each clobber the other's cell.
+  function toggle(index: number) {
     if (card.length !== CELL_COUNT) return;
     // Classic mode: a cell opens up only once its term has been called.
     if (isClassic && !called.has(card[index]) && marked[index] !== true) return;
 
-    const nextMarked = [...marked];
-    if (nextMarked.length !== CELL_COUNT) {
-      while (nextMarked.length < CELL_COUNT) nextMarked.push(false);
-    }
-    nextMarked[index] = !nextMarked[index];
-
-    setPendingIndex(index);
+    const base = desiredRef.current ?? marked;
+    const next = [...base];
+    next[index] = !next[index];
+    desiredRef.current = next;
+    setOptimistic(next);
     setError(null);
+    void flush();
+  }
+
+  async function flush() {
+    if (writingRef.current) return; // the running writer will pick this up
+    writingRef.current = true;
     try {
       const db = await getFirestore();
       const { doc, setDoc, serverTimestamp } =
@@ -97,19 +130,32 @@ export function BingoCardView({
         db,
         `events/${slug}/minigames/${instanceId}/participants/${uid}`
       );
-      // Conference mode has nobody calling terms, so completing a line is
-      // the win and the client records it (firestore.rules re-checks the
-      // line). Classic mode routes the win through /bingo/claim instead —
-      // the rules there reject a client-written bingoWonAt outright.
-      const justWon =
-        !isClassic && !hasWonBefore && detectBingoWin(nextMarked).length > 0;
-      const payload: Record<string, unknown> = { bingoMarked: nextMarked };
-      if (justWon) payload.bingoWonAt = serverTimestamp();
-      await setDoc(ref, payload, { merge: true });
+      while (desiredRef.current) {
+        const nextMarked = desiredRef.current;
+        // Conference mode has nobody calling terms, so completing a line is
+        // the win and the client records it (firestore.rules re-checks the
+        // line). Classic mode routes the win through /bingo/claim instead —
+        // the rules there reject a client-written bingoWonAt outright.
+        const justWon =
+          !isClassic && !hasWonBefore && detectBingoWin(nextMarked).length > 0;
+        const payload: Record<string, unknown> = { bingoMarked: nextMarked };
+        if (justWon) payload.bingoWonAt = serverTimestamp();
+        // Cleared before awaiting, so a tap that lands mid-write queues
+        // the next pass instead of being lost.
+        desiredRef.current = null;
+        await setDoc(ref, payload, { merge: true });
+      }
+      // Nothing queued any more: hand the card back to the server's own
+      // record so the two cannot drift apart.
+      setOptimistic(null);
     } catch (err) {
+      // Drop the optimistic view as well — the marks did not land, and
+      // showing them as though they had would be a lie.
+      desiredRef.current = null;
+      setOptimistic(null);
       setError(err instanceof Error ? err.message : "No pudimos guardar");
     } finally {
-      setPendingIndex(null);
+      writingRef.current = false;
     }
   }
 
@@ -196,7 +242,11 @@ export function BingoCardView({
               key={index}
               type="button"
               onClick={() => toggle(index)}
-              disabled={pendingIndex === index || isLocked}
+              // Only a cell whose ball has not been called is unusable.
+              // A write in flight no longer disables anything: the tap is
+              // queued, so blocking the cell would just make the player
+              // think the app missed them.
+              disabled={isLocked}
               aria-pressed={isMarked}
               aria-label={isLocked ? `${term} (aún no cantado)` : term}
               className={`flex aspect-square items-center justify-center rounded-lg border p-2 text-center text-xs font-medium transition disabled:opacity-50 sm:text-sm ${
