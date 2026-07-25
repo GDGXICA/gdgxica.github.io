@@ -1,5 +1,11 @@
 ---
 import Layout from "@/layouts/Layout.astro";
+import {
+  CONSENT_LINKS,
+  CONTACT_EMAIL,
+  PRIVACY_POLICY_DATE_LABEL,
+  PRIVACY_POLICY_VERSION,
+} from "@/lib/consent";
 
 const metadata = {
   title: "Políticas de privacidad - Google Developer Group Ica",
@@ -12,50 +18,201 @@ const metadata = {
 <Layout {...metadata}>
   <main class="prose mx-auto max-w-[1400px] px-4 py-20">
     <h1>Política de Privacidad</h1>
-    <p class="muted">Última actualización: 18 de septiembre de 2025</p>
+    <p class="muted">
+      Última actualización: {PRIVACY_POLICY_DATE_LABEL} (versión {
+        PRIVACY_POLICY_VERSION
+      })
+    </p>
+
     <p>
-      <strong>gdgica.com</strong> es un sitio informativo. En la actualidad <strong
-        >no recopilamos, almacenamos ni compartimos datos personales</strong
-      > de los visitantes.
+      <strong>gdgica.com</strong> es, en su mayor parte, un sitio informativo: puedes
+      navegar los eventos, el equipo y la galería sin entregarnos ningún dato. Hay
+      una excepción, y es la razón de esta política: cuando generas tu <strong
+        >credencial de asistente</strong
+      > para un evento, sí nos entregas datos personales y sí los almacenamos.
     </p>
 
     <section>
-      <h2>¿Qué datos recopilamos?</h2>
+      <h2>Qué datos recopilamos</h2>
       <p>
-        No recopilamos datos personales identificables (como nombre, correo,
-        dirección, IP asociada a un usuario, etc.). No existen formularios de
-        contacto, sistemas de registro ni suscripciones en este sitio (si los
-        añadimos en el futuro, actualizaremos esta política).
+        Solo recopilamos datos cuando completas de forma voluntaria el
+        formulario de credencial de un evento. En ese caso guardamos:
+      </p>
+      <ul>
+        <li>Nombre y apellido.</li>
+        <li>
+          Número de DNI. Lo pedimos para verificar tu identidad en la puerta el
+          día del evento y para no duplicar tu inscripción.
+        </li>
+        <li>Correo electrónico, para enviarte tu credencial.</li>
+        <li>Empresa u organización de la que formas parte.</li>
+        <li>Usuario de GitHub, si decides indicarlo. Es opcional.</li>
+        <li>
+          Una fotografía, si decides subirla. Es opcional: puedes elegir un
+          avatar ilustrado en su lugar.
+        </li>
+        <li>
+          Tus respuestas al cuestionario del evento: cómo te enteraste, tus años
+          de experiencia en desarrollo y tu familiaridad con las herramientas de
+          Google.
+        </li>
+        <li>
+          La fecha, la versión de esta política y el navegador desde el que
+          aceptaste las condiciones. Es el registro de tu consentimiento.
+        </li>
+      </ul>
+      <p>
+        No guardamos tu dirección IP junto a tu registro. La usamos de forma
+        transitoria para limitar envíos automatizados, pero no queda almacenada
+        con tus datos.
+      </p>
+    </section>
+
+    <section>
+      <h2>Para qué los usamos</h2>
+      <ul>
+        <li>Generar tu credencial y enviártela por correo.</li>
+        <li>
+          <strong>Trasladar tu inscripción al panel oficial del evento</strong>,
+          que administra Google a través de la plataforma Bevy. Ese panel es el
+          registro válido: generar la credencial en nuestro sitio no completa
+          por sí solo tu inscripción.
+        </li>
+        <li>
+          Organizar las dinámicas presenciales, como los grupos por letra que
+          aparecen en tu credencial.
+        </li>
+        <li>Verificar tu identidad durante el registro en puerta.</li>
+      </ul>
+      <p>
+        No usamos tus datos para publicidad ni para elaborar perfiles, y no
+        tomamos decisiones automatizadas sobre ti.
+      </p>
+    </section>
+
+    <section>
+      <h2>Con quién se comparten</h2>
+      <p>
+        Con <strong>Google</strong>, al trasladar tu inscripción al panel
+        oficial del evento. El tratamiento que Google hace de esos datos se rige
+        por su <a
+          href={CONSENT_LINKS.googlePrivacy}
+          target="_blank"
+          rel="noopener noreferrer">Política de Privacidad</a
+        >.
+      </p>
+      <p>
+        Además, usamos <strong>Google Cloud y Firebase</strong> como proveedores de
+        infraestructura para almacenar la información. Actúan como encargados del
+        tratamiento y solo procesan los datos por nuestra instrucción.
+      </p>
+      <p>
+        <strong>No vendemos, alquilamos ni cedemos tus datos</strong> a ningún tercero
+        con fines comerciales.
+      </p>
+    </section>
+
+    <section>
+      <h2>Sobre las fotografías</h2>
+      <p>
+        Queremos ser explícitos en esto: tu credencial <strong
+          >se compone en tu propio dispositivo</strong
+        >. Cuando la descargas o la compartes, esa copia es tuya y circula fuera
+        de nuestro alcance. <strong
+          >Una vez descargada o publicada, GDG Ica no puede recuperarla ni
+          eliminarla.</strong
+        >
+      </p>
+      <p>
+        Lo que sí controlamos es la copia que guardamos y lo que enviamos por
+        correo. Revisamos las fotografías subidas y podemos retirar las que no
+        correspondan al evento; en ese caso eliminamos la imagen de nuestro
+        almacenamiento, la reemplazamos por un avatar ilustrado y te avisamos.
+      </p>
+      <p>
+        Al reducir la imagen para la credencial se eliminan los metadatos EXIF
+        de la foto original, incluida la ubicación GPS si la tuviera. Esos datos
+        nunca llegan a nuestros servidores.
+      </p>
+    </section>
+
+    <section>
+      <h2>Cuánto tiempo los conservamos</h2>
+      <ul>
+        <li>
+          Datos de inscripción: hasta <strong>12 meses</strong> después de la fecha
+          del evento.
+        </li>
+        <li>
+          Fotografías: hasta <strong>90 días</strong> después del evento, o antes
+          si nos pides eliminarlas.
+        </li>
+      </ul>
+      <p>Cumplido el plazo, los eliminamos.</p>
+    </section>
+
+    <section>
+      <h2>Tus derechos</h2>
+      <p>
+        De acuerdo con la <strong
+          >Ley N.º 29733, Ley de Protección de Datos Personales</strong
+        > del Perú y su reglamento, puedes ejercer tus derechos de acceso, rectificación,
+        cancelación y oposición sobre los datos que hayas entregado.
+      </p>
+      <p>
+        Escríbenos a <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> indicando
+        tu solicitud. Responderemos en un plazo máximo de 20 días hábiles. Si eres
+        menor de edad, la solicitud debe venir de tu padre, madre o apoderado.
+      </p>
+    </section>
+
+    <section>
+      <h2>Menores de edad</h2>
+      <p>
+        Nuestros eventos están abiertos a estudiantes. Si eres menor de 18 años
+        necesitas la autorización de tu padre, madre o apoderado para
+        inscribirte, y así lo declaras al aceptar las condiciones del
+        formulario.
       </p>
     </section>
 
     <section>
       <h2>Cookies y herramientas de análisis</h2>
       <p>
-        Actualmente no utilizamos cookies de seguimiento ni servicios de
-        analítica que recolecten datos personales. Si en el futuro se integran
-        herramientas de terceros (por ejemplo, analytics), se informará de forma
-        explícita aquí y se detallará qué datos se recopilan y con qué
-        propósito.
+        No utilizamos cookies de seguimiento ni servicios de analítica que
+        elaboren perfiles de navegación.
       </p>
-    </section>
-
-    <section>
-      <h2>Enlaces a terceros</h2>
       <p>
-        El sitio puede contener enlaces a páginas externas. Esta política no
-        cubre las prácticas de privacidad de sitios externos: revisa sus propias
-        políticas de privacidad al visitarlos.
+        Sí existe una excepción técnica: al usar el formulario de credencial o
+        las dinámicas en vivo, Firebase Authentication guarda en tu navegador un
+        identificador de sesión anónimo. Sirve para que el sistema distinga una
+        sesión de otra, no está asociado a tu identidad y no se usa con fines
+        analíticos ni publicitarios.
       </p>
     </section>
 
     <section>
       <h2>Seguridad</h2>
       <p>
-        Al no gestionar datos personales, las medidas de seguridad relativas al
-        almacenamiento de datos personales no aplican por ahora. Aun así,
-        mantenemos buenas prácticas para proteger la integridad del sitio y su
-        contenido.
+        El acceso a los datos de inscripción está restringido al equipo
+        organizador de GDG Ica mediante cuentas autenticadas con permisos por
+        rol. La información viaja cifrada y se almacena en la infraestructura de
+        Google Cloud. En los listados internos el DNI aparece parcialmente
+        oculto y solo se revela cuando es necesario.
+      </p>
+      <p>
+        Ningún sistema es infalible. Si detectamos un incidente que afecte tus
+        datos, te lo comunicaremos.
+      </p>
+    </section>
+
+    <section>
+      <h2>Enlaces a terceros</h2>
+      <p>
+        El sitio contiene enlaces a páginas externas, entre ellas el panel
+        oficial de inscripción. Esta política no cubre las prácticas de
+        privacidad de sitios externos: revisa sus propias políticas al
+        visitarlos.
       </p>
     </section>
 
@@ -63,16 +220,18 @@ const metadata = {
       <h2>Cambios en la política</h2>
       <p>
         Si cambiamos la forma en que recopilamos o usamos datos, actualizaremos
-        esta página y se indicará la <em>fecha de última actualización</em>.
+        esta página junto con su <em>fecha de última actualización</em> y su número
+        de versión. El consentimiento que registramos queda ligado a la versión vigente
+        en el momento en que lo diste.
       </p>
     </section>
 
     <section>
       <h2>Contacto</h2>
       <p>
-        Si tienes preguntas sobre esta política, puedes contactarnos en: <a
-          href="mailto:aalvaropc@gmail.com">aalvaropc@gmail.com</a
-        >
+        Si tienes preguntas sobre esta política, escríbenos a <a
+          href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a
+        >.
       </p>
     </section>
   </main>
