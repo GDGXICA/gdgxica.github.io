@@ -1,0 +1,71 @@
+---
+import { getCollection } from "astro:content";
+import QRCode from "qrcode";
+import Layout from "@/layouts/Layout.astro";
+import { CredentialPage } from "@/components/react/credential/CredentialPage";
+
+// Only events that opt in via the `credential` block in gdg-ica-data get a
+// route at all. Filtering here rather than rendering a disabled page means
+// the URL simply 404s for every other event, which is the correct
+// behaviour on a static host with no catch-all rewrite.
+export async function getStaticPaths() {
+  const events = await getCollection("events");
+  return events
+    .filter((event) => event.data.credential?.enabled === true)
+    .map((event) => ({ params: { slug: event.id }, props: { event } }));
+}
+
+const { event } = Astro.props;
+const credential = event.data.credential!;
+
+// Built here, at build time, with the same `qrcode` dependency already used
+// in [slug].astro and [slug]/projector.astro. Passed to the island as a
+// data: URL so the canvas can draw it same-origin — a remote image would
+// taint the canvas and make toDataURL throw at export time.
+//
+// Printing the registration QR on the card itself is what makes every
+// shared credential carry the funnel back to the panel that actually
+// registers people.
+const qrDataUrl = event.data.registerFormLink
+  ? await QRCode.toDataURL(event.data.registerFormLink, {
+      errorCorrectionLevel: "M",
+      margin: 0,
+      width: 512,
+      color: { dark: "#111827", light: "#ffffff" },
+    })
+  : null;
+
+const eventInfo = {
+  slug: event.id,
+  eventName: event.data.name,
+  eventDateLabel: event.data.date,
+  headline: credential.headline,
+  registrationUrl: event.data.registerFormLink,
+  qrDataUrl,
+};
+
+const metadata = {
+  title: `Crea tu credencial · ${event.data.name}`,
+  description: `Genera tu credencial personalizada de ${event.data.name} y compártela en tus redes.`,
+  image: event.data.image,
+  url: `https://gdgica.com/events/${event.id}/credencial/`,
+};
+---
+
+<Layout {...metadata}>
+  <main class="container py-12 md:py-20">
+    <nav class="mb-8">
+      <a
+        href={`/events/${event.id}`}
+        class="text-secondary hover:text-google-blue text-sm"
+      >
+        ← Volver a {event.data.name}
+      </a>
+    </nav>
+
+    <!-- Astro serializes island props; a JSON string round-trips more
+         predictably than a nested object, the same workaround
+         SharedButton.jsx uses for its hashtags array. -->
+    <CredentialPage client:load event={JSON.stringify(eventInfo)} />
+  </main>
+</Layout>

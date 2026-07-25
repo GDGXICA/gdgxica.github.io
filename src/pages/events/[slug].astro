@@ -184,6 +184,17 @@ const whatsappQrSvg = whatsappGroupLink
           >
             <Ticket size={16} /> Registrarse Gratis
           </Button>
+          {
+            /* Only for events that opt into the credential block in
+               gdg-ica-data. The route does not exist otherwise — the page's
+               getStaticPaths filters on the same flag — so an
+               unconditional link would 404. */
+            event.data.credential?.enabled && (
+              <Button variant="white" href={`/events/${event.id}/credencial`}>
+                Crea tu credencial
+              </Button>
+            )
+          }
           <SharedButton
             client:visible
             title={event.data.name}
