@@ -16,6 +16,38 @@ interface ApiResponse<T> {
   message?: string;
 }
 
+/**
+ * Body of a public credential submission.
+ *
+ * Mirrors credentialCreateSchema in functions/src/schemas/credentials.ts.
+ * The consent flags are typed `true` rather than `boolean` because the
+ * server schema uses z.literal(true) — an unchecked box has to fail at the
+ * call site, not round-trip as a stored `false`.
+ */
+export interface CredentialCreatePayload {
+  firstName: string;
+  lastName: string;
+  dni: string;
+  email: string;
+  company: string;
+  githubUsername: string | null;
+  heardAbout:
+    "redes_sociales" | "amigo_colega" | "universidad" | "meetup" | "otro";
+  heardAboutOther: string;
+  yearsExperience: "menos_1" | "1_2" | "3_5" | "6_10" | "mas_10";
+  googleToolsLevel: "ninguna" | "basica" | "intermedia" | "avanzada";
+  consentGdgTerms: true;
+  consentGooglePrivacy: true;
+  consentCodeOfConduct: true;
+  consentDataProcessing: true;
+  consentAgeAttested: true;
+  consentPolicyVersion: string;
+  avatarKind: "photo" | "mascot";
+  mascotId: string | null;
+  photoDataUrl: string | null;
+  credentialImageDataUrl: string | null;
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -152,6 +184,18 @@ const realApi = {
         bingoCard?: string[];
       }[];
     }>("POST", `/events/${encodeURIComponent(slug)}/minigames/join`, data),
+
+  // Public credential submission (anon-friendly).
+  //
+  // Callers MUST await signInAnonymouslyIfNeeded() first: request() hard
+  // -returns { success: false, error: "Not authenticated" } with no token,
+  // which would surface as an English error string in a Spanish form.
+  createCredential: (slug: string, data: CredentialCreatePayload) =>
+    request<{
+      credentialId: string;
+      sequenceNumber: number;
+      groupLetter: string;
+    }>("POST", `/events/${encodeURIComponent(slug)}/credentials`, data),
 
   // Wordcloud moderation + bingo winners (admin-only)
   listEventMinigameWords: (slug: string, id: string) =>

@@ -22,6 +22,7 @@ import {
   minigameWordHiddenSchema,
   certificateSendSchema,
   checkinImportSchema,
+  credentialCreateSchema,
 } from "./schemas";
 import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
@@ -40,6 +41,7 @@ import * as minigameWords from "./handlers/minigameWords";
 import * as minigameRoulette from "./handlers/minigameRoulette";
 import * as certificates from "./handlers/certificates";
 import * as checkin from "./handlers/checkin";
+import * as credentials from "./handlers/credentials";
 
 admin.initializeApp();
 
@@ -136,6 +138,29 @@ const joinLimiter = rateLimit({
   message: {
     success: false,
     error: "Demasiados intentos, espera un momento",
+  },
+});
+
+// Public credential submissions. Same reasoning as joinLimiter: this
+// endpoint accepts anonymous Firebase tokens, which any client mints for
+// free, so a UID-based key is bypassable and the limit is pinned to the IP.
+//
+// 8/hour rather than something tighter because the realistic false positive
+// is a university or office NAT putting dozens of attendees behind one
+// address, and an actionable message matters more than the exact number.
+// Deliberately NOT keyed by DNI — that would reintroduce the lockout that
+// allowing duplicate DNIs exists to avoid.
+const credentialLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip ?? "unknown")}`,
+  message: {
+    success: false,
+    error:
+      "Demasiados intentos desde esta red. Si estás en una red compartida " +
+      "(universidad u oficina), escríbenos a hola@gdgica.com.",
   },
 });
 
@@ -388,6 +413,16 @@ app.post(
   joinLimiter,
   validateBody(minigameJoinSchema),
   minigameJoin.join
+);
+
+// Public credential submission — accepts any Firebase token (incl. anon).
+app.post(
+  "/api/events/:slug/credentials",
+  requireAuth(),
+  slugP,
+  credentialLimiter,
+  validateBody(credentialCreateSchema),
+  credentials.createCredential
 );
 
 // Roulette spin (admin-only)

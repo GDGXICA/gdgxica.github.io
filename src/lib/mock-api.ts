@@ -72,6 +72,15 @@ export const mockApi = {
   joinEventMinigames: (_slug: string, data: { alias: string }) =>
     ok({ alias: data.alias, instances: [] }),
 
+  // Without this entry api.createCredential is undefined on plain
+  // localhost, where isDevPreview swaps the entire client for this mock.
+  createCredential: () =>
+    ok({
+      credentialId: "mock-credential-1",
+      sequenceNumber: 42,
+      groupLetter: "Q",
+    }),
+
   listEventMinigameWords: () => ok([]),
   setMinigameWordHidden: (
     _slug: string,
