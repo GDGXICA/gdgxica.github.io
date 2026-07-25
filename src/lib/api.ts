@@ -197,6 +197,20 @@ const realApi = {
       groupLetter: string;
     }>("POST", `/events/${encodeURIComponent(slug)}/credentials`, data),
 
+  // Attaches the composed card after creation. A separate call because the
+  // group letter comes from a server-assigned sequence number, so the
+  // final card cannot exist until createCredential has returned.
+  attachCredentialImage: (
+    slug: string,
+    id: string,
+    data: { credentialImageDataUrl: string }
+  ) =>
+    request(
+      "PATCH",
+      `/events/${encodeURIComponent(slug)}/credentials/${id}/image`,
+      data
+    ),
+
   // Credential administration (organizer-level).
   setCredentialBevyStatus: (
     slug: string,

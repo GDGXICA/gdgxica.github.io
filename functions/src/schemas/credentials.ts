@@ -125,7 +125,25 @@ export const credentialPhotoModerationSchema = z
   })
   .strict();
 
+/**
+ * Attaches the composed card after creation.
+ *
+ * Needed because the group letter derives from a sequence number the
+ * SERVER assigns, so the client cannot know it until the create call
+ * returns. A card rendered before that gets stored and emailed with a
+ * placeholder where the letter belongs.
+ */
+export const credentialImageSchema = z
+  .object({
+    credentialImageDataUrl: z
+      .string()
+      .regex(JPEG_DATAURL_RE)
+      .max(MAX_CREDENTIAL_DATAURL_CHARS),
+  })
+  .strict();
+
 export type CredentialCreateInput = z.infer<typeof credentialCreateSchema>;
+export type CredentialImageInput = z.infer<typeof credentialImageSchema>;
 export type CredentialBevyStatusInput = z.infer<
   typeof credentialBevyStatusSchema
 >;

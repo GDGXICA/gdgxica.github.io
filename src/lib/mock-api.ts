@@ -80,6 +80,8 @@ export const mockApi = {
       sequenceNumber: 42,
       groupLetter: "Q",
     }),
+  attachCredentialImage: () => ok(null),
+
   setCredentialBevyStatus: () => ok(null),
   moderateCredentialPhoto: () => ok(null),
   retryCredentialEmail: () => ok(null),
