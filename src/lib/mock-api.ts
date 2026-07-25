@@ -81,6 +81,19 @@ export const mockApi = {
   ) => ok({ id: wordId, hidden }),
   listMinigameBingoWinners: () => ok([]),
 
+  spinRoulette: () =>
+    ok({ winnerId: "mock-uid", alias: "Alias", spinNumber: 1 }),
+  drawBingoBall: () => ok({ term: "Firebase", drawCount: 1, remaining: 47 }),
+  claimBingo: () =>
+    ok({
+      rank: 1,
+      winDraw: 1,
+      prizes: 3,
+      hasPrize: true,
+      lines: [[0, 1, 2, 3]],
+      alreadyWon: false,
+    }),
+
   sendCertificates: (data: unknown) => {
     const recipients =
       (data as { recipients?: { name: string; email: string }[] })

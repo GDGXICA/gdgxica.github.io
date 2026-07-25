@@ -126,6 +126,25 @@ export function EventMinigameManager({ initialSlug }: Props) {
     setBusyId(null);
   }
 
+  async function handleDrawBall(id: string) {
+    if (!slug) return;
+    setBusyId(id);
+    const res = await api.drawBingoBall(slug, id);
+    if (res.success && res.data) {
+      setToast({
+        message: `🎱 ${res.data.term} · bola ${res.data.drawCount} (quedan ${res.data.remaining})`,
+        type: "success",
+      });
+      await reload();
+    } else {
+      setToast({
+        message: res.error || "Error al cantar la bola",
+        type: "error",
+      });
+    }
+    setBusyId(null);
+  }
+
   async function handleDelete(id: string) {
     if (!slug) return;
     setBusyId(id);
@@ -233,6 +252,11 @@ export function EventMinigameManager({ initialSlug }: Props) {
               onSpin={
                 inst.type === "roulette" ? () => handleSpin(inst.id) : undefined
               }
+              onDrawBall={
+                inst.type === "bingo" && inst.config?.classic === true
+                  ? () => handleDrawBall(inst.id)
+                  : undefined
+              }
             />
           ))}
         </div>
@@ -252,6 +276,11 @@ export function EventMinigameManager({ initialSlug }: Props) {
           instanceId={moderationFor.id}
           title={moderationFor.title}
           onClose={() => setModerationFor(null)}
+          prizes={
+            moderationFor.config?.classic === true
+              ? ((moderationFor.config?.prizes as number | undefined) ?? 3)
+              : undefined
+          }
         />
       )}
       {moderationFor && moderationFor.type === "roulette" && (

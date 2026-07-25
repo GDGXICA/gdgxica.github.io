@@ -254,6 +254,7 @@ export function MiniGamesRoot({ slug }: Props) {
                     instanceId={inst.id}
                     uid={uid}
                     title={inst.title}
+                    instance={inst}
                   />
                 )}
                 {inst.type === "roulette" && (
