@@ -36,23 +36,32 @@ service cloud.firestore {
 
     // An assignment with no expiresAt never expires; one with a past date
     // stops granting on its own, so nobody has to remember to revoke it.
+    //
+    // A single get() rather than exists()+get(): a missing document comes
+    // back as null, and binding it to a local keeps this to one document
+    // access. On a roster subscribe this runs once per attendee doc, so the
+    // difference is a real bill, not a micro-optimisation.
     function isEventStaff(eventSlug) {
-      return exists(/databases/$(database)/documents/events/$(eventSlug)/staff/$(request.auth.uid))
-             && (
-               !('expiresAt' in get(/databases/$(database)/documents/events/$(eventSlug)/staff/$(request.auth.uid)).data)
-               || get(/databases/$(database)/documents/events/$(eventSlug)/staff/$(request.auth.uid)).data.expiresAt > request.time
-             );
+      let staff = get(/databases/$(database)/documents/events/$(eventSlug)/staff/$(request.auth.uid));
+      return staff != null
+             && (!('expiresAt' in staff.data)
+                 || staff.data.expiresAt == null
+                 || staff.data.expiresAt > request.time);
     }
 
-    // Permission for an action on a specific event. The cheap global check
-    // runs first so the staff lookup is only paid when it can change the
-    // answer.
+    // Permission for an action on a specific event. The caller's doc is read
+    // once and bound, and the cheap global check runs first so the staff
+    // lookup is only paid when it can still change the answer.
     function canOnEvent(perm, eventSlug) {
       return request.auth != null
-             && callerIsActive(callerDoc())
+             && canOnEventWith(callerDoc(), perm, eventSlug);
+    }
+
+    function canOnEventWith(caller, perm, eventSlug) {
+      return callerIsActive(caller)
              && (
-               roleHasGlobal(callerDoc().role, perm)
-               || (roleHasPerEvent(callerDoc().role, perm) && isEventStaff(eventSlug))
+               roleHasGlobal(caller.role, perm)
+               || (roleHasPerEvent(caller.role, perm) && isEventStaff(eventSlug))
              );
     }
 

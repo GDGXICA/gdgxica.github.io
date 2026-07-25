@@ -56,8 +56,26 @@ function hashesMatch(a: string, b: string): boolean {
   return timingSafeEqual(bufA, bufB);
 }
 
-function actorSubject(actor: AuthenticatedRequest["user"]) {
-  return { role: actor.role, status: actor.status };
+/**
+ * Estos dos endpoints los alcanza cualquiera con una sesión de Firebase,
+ * incluidas las anónimas que el /join de minijuegos crea sin coste. Una
+ * cuenta anónima no tiene correo, así que no hay a quién avisar ni con quién
+ * cotejar una invitación: se rechaza antes de tocar la base.
+ *
+ * Devuelve `true` si ya respondió.
+ */
+function rejectUnverified(
+  user: AuthenticatedRequest["user"],
+  res: Response
+): boolean {
+  if (!user.email || !user.emailVerified) {
+    res.status(403).json({
+      success: false,
+      error: "A verified email address is required",
+    });
+    return true;
+  }
+  return false;
 }
 
 // ─────────────────────────── Solicitudes ───────────────────────────
@@ -69,6 +87,8 @@ function actorSubject(actor: AuthenticatedRequest["user"]) {
 export async function createRequest(req: Request, res: Response) {
   try {
     const user = (req as AuthenticatedRequest).user;
+    if (rejectUnverified(user, res)) return;
+
     const body = req.body as {
       requestedRole?: unknown;
       motivo?: unknown;
@@ -238,7 +258,7 @@ export async function decideRequest(req: Request, res: Response) {
       }
       // Misma regla de no escalada que en la gestión de usuarios: aprobar
       // una solicitud no es una puerta trasera para repartir permisos.
-      if (!canAssignRole(actorSubject(performer), granted)) {
+      if (!canAssignRole(performer.permissions, granted)) {
         res.status(403).json({
           success: false,
           error: "Cannot grant a role that exceeds your own permissions",
@@ -336,7 +356,7 @@ export async function createInvitation(req: Request, res: Response) {
       return;
     }
 
-    if (!canAssignRole(actorSubject(performer), body.role)) {
+    if (!canAssignRole(performer.permissions, body.role)) {
       res.status(403).json({
         success: false,
         error: "Cannot invite to a role that exceeds your own permissions",
@@ -443,6 +463,10 @@ export async function revokeInvitation(req: Request, res: Response) {
 export async function redeemInvitation(req: Request, res: Response) {
   try {
     const user = (req as AuthenticatedRequest).user;
+    // El canje se decide comparando correos, así que uno sin verificar no
+    // vale: solo dice qué escribió quien se registró, no de quién es.
+    if (rejectUnverified(user, res)) return;
+
     const token = readText((req.body as { token?: unknown })?.token, 200);
 
     if (!token) {

@@ -15,6 +15,13 @@ import {
 export interface AuthenticatedUser {
   uid: string;
   email: string;
+  /**
+   * Del token, no del doc de usuario. Cualquier decisión que ate una
+   * identidad a una dirección de correo —canjear una invitación, sobre todo—
+   * tiene que mirar esto: un correo sin verificar solo dice qué escribió
+   * quien se registró.
+   */
+  emailVerified: boolean;
   displayName: string;
   photoURL: string;
   /** `null` cuando solo se verificó el token y no se cargó el doc de usuario. */
@@ -35,6 +42,7 @@ export interface AuthenticatedRequest extends Request {
 interface VerifiedToken {
   uid: string;
   email: string;
+  emailVerified: boolean;
   displayName: string;
   photoURL: string;
 }
@@ -64,6 +72,7 @@ async function verifyBearer(
     return {
       uid: decoded.uid,
       email: decoded.email || "",
+      emailVerified: decoded.email_verified === true,
       displayName: decoded.name || "",
       photoURL: decoded.picture || "",
     };
@@ -95,6 +104,9 @@ async function isActiveEventStaff(
   return isNotExpired(doc.data()?.expiresAt, nowMs);
 }
 
+/** Mismo formato que `safeId` en schemas: un slug de evento y nada más. */
+const SAFE_SCOPE = /^[a-zA-Z0-9_-]{1,100}$/;
+
 export interface RequirePermissionOptions {
   /**
    * Nombre del parámetro de ruta que lleva el slug del evento (p. ej.
@@ -116,6 +128,30 @@ export function requirePermission(
   return async (req: Request, res: Response, next: NextFunction) => {
     const token = await verifyBearer(req, res);
     if (!token) return;
+
+    const rawScope = options.scopeParam
+      ? req.params[options.scopeParam]
+      : undefined;
+
+    // El slug acaba en una ruta de Firestore más abajo, y este middleware
+    // corre ANTES que validateParamId en la cadena de la ruta. Se valida por
+    // su cuenta en vez de fiarse de ese orden: un id como `.` o `..` haría
+    // lanzar al SDK, y depender de que nadie reordene la cadena es una
+    // garantía demasiado fina para lo que hay en juego. Va antes de leer
+    // nada: una petición malformada no debe costar una lectura.
+    if (
+      typeof rawScope === "string" &&
+      rawScope.length > 0 &&
+      !SAFE_SCOPE.test(rawScope)
+    ) {
+      res.status(400).json({ success: false, error: "Invalid scope" });
+      return;
+    }
+
+    const scope =
+      typeof rawScope === "string" && rawScope.length > 0
+        ? rawScope
+        : GLOBAL_SCOPE;
 
     try {
       const userDoc = await admin
@@ -142,13 +178,6 @@ export function requirePermission(
       }
 
       const nowMs = Date.now();
-      const rawScope = options.scopeParam
-        ? req.params[options.scopeParam]
-        : undefined;
-      const scope =
-        typeof rawScope === "string" && rawScope.length > 0
-          ? rawScope
-          : GLOBAL_SCOPE;
 
       let permissions = effectivePermissions(data, { scope, nowMs });
 
@@ -187,6 +216,7 @@ export function requirePermission(
       (req as AuthenticatedRequest).user = {
         uid: token.uid,
         email: token.email || (data.email as string) || "",
+        emailVerified: token.emailVerified,
         displayName: token.displayName || (data.displayName as string) || "",
         photoURL: token.photoURL || (data.photoURL as string) || "",
         role: data.role,
@@ -221,6 +251,7 @@ export function requireAuth() {
     (req as AuthenticatedRequest).user = {
       uid: token.uid,
       email: token.email,
+      emailVerified: token.emailVerified,
       displayName: token.displayName,
       photoURL: token.photoURL,
       role: null,

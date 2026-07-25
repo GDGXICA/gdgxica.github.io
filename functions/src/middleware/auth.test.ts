@@ -300,6 +300,24 @@ describe("requirePermission — alcance por evento", () => {
     );
     expect(readPaths).toEqual(["users/u1"]);
   });
+
+  // El slug acaba en una ruta de Firestore, y este middleware corre antes que
+  // validateParamId en la cadena: se valida por su cuenta en vez de fiarse
+  // del orden de los middlewares.
+  it("rechaza un alcance con formato inválido", async () => {
+    docs.set("users/u1", { role: "volunteer" });
+    for (const bad of ["..", ".", "a/b", "a b", "x".repeat(101)]) {
+      const { res, passed } = await run(scoped(), buildReq({ slug: bad }));
+      expect(res.__status).toBe(400);
+      expect(passed).toBe(false);
+    }
+  });
+
+  it("no toca Firestore con un alcance inválido", async () => {
+    docs.set("users/u1", { role: "volunteer" });
+    await run(scoped(), buildReq({ slug: ".." }));
+    expect(readPaths).toEqual([]);
+  });
 });
 
 describe("requireAuth", () => {

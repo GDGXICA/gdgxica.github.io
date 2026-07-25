@@ -16,6 +16,7 @@ import {
 
 const MAX_NOTE = 500;
 const MAX_OPEN_PROPOSALS = 10;
+const MAX_LISTED = 200;
 
 type ProposalType = "event" | "speaker";
 
@@ -52,7 +53,12 @@ export async function listProposals(req: Request, res: Response) {
     const user = (req as AuthenticatedRequest).user;
     const canReview = user.permissions.has("proposals:review");
 
-    const collection = admin.firestore().collection("proposals");
+    // Tope duro: la cola de revisión crece con el tiempo y sin límite una
+    // sola petición acabaría leyendo —y facturando— la colección entera.
+    const collection = admin
+      .firestore()
+      .collection("proposals")
+      .limit(MAX_LISTED);
     const snapshot = canReview
       ? await collection.get()
       : await collection.where("createdBy", "==", user.uid).get();

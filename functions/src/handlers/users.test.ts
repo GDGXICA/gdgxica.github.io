@@ -366,8 +366,10 @@ describe("updateGrants", () => {
 
   it("no deja conceder un permiso que el actor no tiene", async () => {
     seed("t1", { role: "member" });
+    // Un organizador al que se le concedió gestionar usuarios: puede repartir
+    // lo que posee, pero `audit:read` no está entre sus permisos.
     const req = buildReq("organizer", "t1", {
-      grants: [{ permission: "users:role:write", scope: "*" }],
+      grants: [{ permission: "audit:read", scope: "*" }],
       revocations: [],
       reason: "x",
     });
@@ -377,9 +379,41 @@ describe("updateGrants", () => {
     ]);
     const res = buildRes();
     await handler.updateGrants(req, res);
-    // El actor es `organizer`; canGrant se evalúa sobre su ROL, no sobre el
-    // set inflado del request — si no, bastaría un permiso concedido para
-    // repartirlo a discreción.
+    expect(res.__status).toBe(403);
+    expect(updates).toHaveLength(0);
+  });
+
+  it("sí deja conceder un permiso que el actor sí posee", async () => {
+    seed("t1", { role: "member" });
+    const req = buildReq("organizer", "t1", {
+      grants: [{ permission: "roster:read", scope: "devfest-2026" }],
+      revocations: [],
+      reason: "Apoyo puntual",
+    });
+    (req as AuthenticatedRequest).user.permissions = new Set([
+      ...effectivePermissions({ role: "organizer" }),
+      "users:role:write",
+    ]);
+    const res = buildRes();
+    await handler.updateGrants(req, res);
+    expect(res.__body?.success).toBe(true);
+  });
+
+  // Un permiso retirado al actor no puede repartirlo: si no, bastaría
+  // concedérselo a un tercero para recuperarlo por la puerta de atrás.
+  it("una revocación del actor le impide conceder ese permiso", async () => {
+    seed("t1", { role: "member" });
+    const req = buildReq("admin", "t1", {
+      grants: [{ permission: "audit:read", scope: "*" }],
+      revocations: [],
+      reason: "x",
+    });
+    (req as AuthenticatedRequest).user.permissions = effectivePermissions({
+      role: "admin",
+      revocations: ["audit:read"],
+    });
+    const res = buildRes();
+    await handler.updateGrants(req, res);
     expect(res.__status).toBe(403);
     expect(updates).toHaveLength(0);
   });

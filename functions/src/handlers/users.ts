@@ -57,11 +57,7 @@ function actorDominates(
   role: unknown
 ): boolean {
   if (!isRole(role)) return true; // rol corrupto: no hay nada que dominar
-  return canAssignRole({ role: actor.role, status: actor.status }, role);
-}
-
-function actorSubject(actor: AuthenticatedRequest["user"]) {
-  return { role: actor.role, status: actor.status };
+  return canAssignRole(actor.permissions, role);
 }
 
 export async function listUsers(_req: Request, res: Response) {
@@ -313,7 +309,7 @@ export async function updateGrants(req: Request, res: Response) {
       }
 
       // La regla de no escalada, aplicada permiso a permiso.
-      if (!canGrant(actorSubject(performer), raw.permission)) {
+      if (!canGrant(performer.permissions, raw.permission)) {
         res.status(403).json({
           success: false,
           error: `You cannot grant a permission you do not hold: ${raw.permission}`,

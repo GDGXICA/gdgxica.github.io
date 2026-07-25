@@ -284,42 +284,65 @@ describe("rol desconocido", () => {
 });
 
 describe("no escalada", () => {
+  /** Permisos efectivos de un rol limpio, que es lo que reciben las guardas. */
+  const permsOf = (subject: object) => effectivePermissions(subject);
+
   it("un organizador no puede otorgar permisos que no tiene", () => {
-    const organizer = { role: "organizer" };
+    const organizer = permsOf({ role: "organizer" });
     expect(canGrant(organizer, "roster:read")).toBe(true);
     expect(canGrant(organizer, "users:role:write")).toBe(false);
     expect(canGrant(organizer, "audit:read")).toBe(false);
   });
 
   it("un organizador no puede nombrar admin", () => {
-    const organizer = { role: "organizer" };
-    expect(canAssignRole(organizer, "admin")).toBe(false);
+    expect(canAssignRole(permsOf({ role: "organizer" }), "admin")).toBe(false);
   });
 
   // `organizer` contiene a `contributor` y a `volunteer`, así que puede dar
   // de alta a ambos. Si no fuera así, la regla de no escalada le impediría
   // incorporar justo a los perfiles que más va a incorporar.
   it("un organizador sí puede nombrar contributor, volunteer y member", () => {
-    const organizer = { role: "organizer" };
+    const organizer = permsOf({ role: "organizer" });
     expect(canAssignRole(organizer, "contributor")).toBe(true);
     expect(canAssignRole(organizer, "volunteer")).toBe(true);
     expect(canAssignRole(organizer, "member")).toBe(true);
   });
 
   it("un voluntario no puede nombrar organizador", () => {
-    expect(canAssignRole({ role: "volunteer" }, "organizer")).toBe(false);
+    expect(canAssignRole(permsOf({ role: "volunteer" }), "organizer")).toBe(
+      false
+    );
   });
 
   it("un admin puede nombrar cualquier rol", () => {
-    const admin = { role: "admin" };
+    const admin = permsOf({ role: "admin" });
     for (const role of ROLES) {
       expect(canAssignRole(admin, role)).toBe(true);
     }
   });
 
   it("un admin suspendido no puede otorgar nada", () => {
-    const suspended = { role: "admin", status: "suspended" };
+    const suspended = permsOf({ role: "admin", status: "suspended" });
     expect(canGrant(suspended, "events:read")).toBe(false);
+    // `member` no otorga ningún permiso, así que asignarlo no exige poseer
+    // nada: degradar a alguien nunca es una escalada.
     expect(canAssignRole(suspended, "member")).toBe(true);
+  });
+
+  // El motivo del cambio de firma: derivar los permisos del ROL dentro de la
+  // guarda ignoraba las revocations del actor, y quien tuviera un permiso
+  // retirado podía concedérselo a otra persona y recuperarlo por ahí.
+  it("una revocación del actor le impide otorgar ese permiso", () => {
+    const admin = permsOf({ role: "admin", revocations: ["audit:read"] });
+    expect(canGrant(admin, "audit:read")).toBe(false);
+    expect(canGrant(admin, "users:read")).toBe(true);
+  });
+
+  it("un permiso concedido sí habilita a otorgarlo", () => {
+    const organizer = permsOf({
+      role: "organizer",
+      grants: [{ permission: "audit:read", scope: "*" }],
+    });
+    expect(canGrant(organizer, "audit:read")).toBe(true);
   });
 });

@@ -311,10 +311,11 @@ const accessLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => {
-    const uid = (req as { user?: { uid?: string } }).user?.uid;
-    return uid ? `u:${uid}` : `ip:${ipKeyGenerator(req.ip ?? "unknown")}`;
-  },
+  // Pinned to the IP, not the uid: these two routes accept any Firebase
+  // token, and anonymous ones can be minted for free — a per-uid bucket is
+  // bypassable by rotating accounts, which is exactly what a token-guessing
+  // client would do. Same reasoning as joinLimiter above.
+  keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip ?? "unknown")}`,
   message: {
     success: false,
     error: "Demasiados intentos, inténtalo más tarde",

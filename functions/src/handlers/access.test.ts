@@ -136,6 +136,7 @@ function buildReq(opts: {
   role?: Role | null;
   uid?: string;
   email?: string;
+  emailVerified?: boolean;
   body?: unknown;
   params?: Record<string, string>;
   query?: Record<string, string>;
@@ -148,6 +149,7 @@ function buildReq(opts: {
     user: {
       uid: opts.uid ?? "u1",
       email: opts.email ?? "persona@example.com",
+      emailVerified: opts.emailVerified ?? true,
       displayName: "Persona",
       photoURL: "",
       role,
@@ -234,6 +236,33 @@ describe("createRequest", () => {
       res
     );
     expect(res.__status).toBe(201);
+  });
+
+  // El /join de minijuegos crea sesiones anónimas sin coste; sin esta puerta
+  // llenarían la cola de solicitudes con documentos sin correo al que avisar.
+  it("rechaza una sesión sin correo verificado", async () => {
+    const res = buildRes();
+    await handler.createRequest(
+      buildReq({
+        emailVerified: false,
+        body: { requestedRole: "contributor", motivo: "hola" },
+      }),
+      res
+    );
+    expect(res.__status).toBe(403);
+    expect(docs.get("access_requests/u1")).toBeUndefined();
+  });
+
+  it("rechaza una sesión anónima (sin correo)", async () => {
+    const res = buildRes();
+    await handler.createRequest(
+      buildReq({
+        email: "",
+        body: { requestedRole: "contributor", motivo: "hola" },
+      }),
+      res
+    );
+    expect(res.__status).toBe(403);
   });
 });
 
@@ -580,6 +609,25 @@ describe("redeemInvitation", () => {
       res
     );
     expect(res.__status).toBe(400);
+  });
+
+  // El canje se decide comparando correos. Con uno sin verificar, bastaría
+  // registrarse escribiendo la dirección de la persona invitada para quedarse
+  // con su rol.
+  it("RECHAZA un correo sin verificar aunque coincida", async () => {
+    seedInvitation();
+    const res = buildRes();
+    await handler.redeemInvitation(
+      buildReq({
+        email: "invitada@example.com",
+        emailVerified: false,
+        body: { token: TOKEN },
+      }),
+      res
+    );
+    expect(res.__status).toBe(403);
+    expect(docs.get("users/u1")).toMatchObject({ role: "member" });
+    expect(docs.get("invitations/inv-1")).toMatchObject({ usedAt: null });
   });
 });
 

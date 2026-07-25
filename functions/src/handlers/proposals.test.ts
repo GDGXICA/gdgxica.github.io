@@ -25,6 +25,7 @@ function collectionRef(name: string) {
   ) => ({
     where: (field: string, _op: string, value: unknown) =>
       chain((d) => filter(d) && d[field] === value),
+    limit: () => chain(filter),
     get: async () => ({
       docs: [...docs.entries()]
         .filter(([path]) => path.startsWith(`${name}/`))
@@ -172,6 +173,65 @@ describe("createProposal", () => {
       buildReq("contributor", "ext", {
         type: "event",
         payload: { id: "sin-titulo" },
+      }),
+      res
+    );
+    expect(res.__status).toBe(400);
+  });
+
+  // El contenido lo escribe gente de fuera de la organización y acaba en el
+  // sitio público, así que las URLs no pueden ser cualquier cosa.
+  it("rechaza una URL con esquema javascript:", async () => {
+    const res = buildRes();
+    await handler.createProposal(
+      buildReq("contributor", "ext", {
+        type: "event",
+        payload: { ...EVENT, image_url: "javascript:alert(1)" },
+      }),
+      res
+    );
+    expect(res.__status).toBe(400);
+  });
+
+  // venue_map_embed se renderiza como src de un iframe en la página pública:
+  // un origen ajeno sería un marco controlado por quien propone.
+  it("rechaza un mapa embebido de un origen ajeno", async () => {
+    const res = buildRes();
+    await handler.createProposal(
+      buildReq("contributor", "ext", {
+        type: "event",
+        payload: { ...EVENT, venue_map_embed: "https://evil.example/maps/x" },
+      }),
+      res
+    );
+    expect(res.__status).toBe(400);
+  });
+
+  it("acepta un mapa embebido legítimo de Google", async () => {
+    const res = buildRes();
+    await handler.createProposal(
+      buildReq("contributor", "ext", {
+        type: "event",
+        payload: {
+          ...EVENT,
+          venue_map_embed: "https://www.google.com/maps/embed?pb=x",
+        },
+      }),
+      res
+    );
+    expect(res.__status).toBe(201);
+  });
+
+  it("rechaza social_links con javascript: en un speaker", async () => {
+    const res = buildRes();
+    await handler.createProposal(
+      buildReq("contributor", "ext", {
+        type: "speaker",
+        payload: {
+          id: "ana-perez",
+          name: "Ana Pérez",
+          social_links: { web: "javascript:alert(1)" },
+        },
       }),
       res
     );

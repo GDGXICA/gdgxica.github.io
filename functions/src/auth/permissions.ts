@@ -300,23 +300,31 @@ export function roleCanScopePermission(
 }
 
 /**
- * Permisos que alguien puede otorgar a otra persona: exactamente los que ya
- * tiene. Es la regla de no-escalada — sin ella, quien administre usuarios
- * podría concederse cualquier cosa por interpósita cuenta.
+ * Regla de no escalada: solo se reparte lo que uno tiene.
+ *
+ * Ambas funciones reciben el conjunto de permisos EFECTIVOS del actor, no su
+ * doc ni su rol. Derivarlo del rol dentro de la función dejaba fuera sus
+ * `revocations`: alguien a quien se le hubiera retirado un permiso seguía
+ * pudiendo concedérselo a otra persona, y de ahí recuperarlo. El middleware
+ * ya calcula ese conjunto una vez por petición, así que además se reutiliza.
  */
 export function canGrant(
-  actor: PermissionSubject,
+  actorPermissions: ReadonlySet<Permission>,
   permission: Permission
 ): boolean {
-  return effectivePermissions(actor).has(permission);
+  return actorPermissions.has(permission);
 }
 
 /**
  * `true` si el actor puede asignar el rol indicado, es decir, si posee todos
  * los permisos que ese rol otorga (globales y por evento).
  */
-export function canAssignRole(actor: PermissionSubject, role: Role): boolean {
-  const actorPerms = effectivePermissions(actor);
+export function canAssignRole(
+  actorPermissions: ReadonlySet<Permission>,
+  role: Role
+): boolean {
   const bundle = ROLE_BUNDLES[role];
-  return [...bundle.global, ...bundle.perEvent].every((p) => actorPerms.has(p));
+  return [...bundle.global, ...bundle.perEvent].every((p) =>
+    actorPermissions.has(p)
+  );
 }
