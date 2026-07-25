@@ -167,10 +167,21 @@ export function CredentialPage({ event: eventJson }: Props) {
 
   const fileName = `credencial-${event.slug}.jpg`;
 
+  // Built here rather than inside the preview because only this component
+  // knows whether the name on the card is real or the visual placeholder.
+  const typedName = `${card.firstName} ${card.lastName}`.trim();
+  const previewLabel = typedName
+    ? `Vista previa de la credencial de ${typedName}`
+    : "Vista previa de tu credencial";
+
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
       <div className="flex flex-col gap-4">
-        <CredentialPreview input={renderInput} fontsReady={fontsReady} />
+        <CredentialPreview
+          input={renderInput}
+          fontsReady={fontsReady}
+          label={previewLabel}
+        />
         {step === 2 && (
           <ShareBar
             imageDataUrl={exportedImage?.dataUrl ?? null}

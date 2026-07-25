@@ -6,6 +6,15 @@ interface Props {
   input: CredentialRenderInput;
   /** Blocks the first draw until the real typeface is loaded. */
   fontsReady: boolean;
+  /**
+   * Accessible name for the canvas.
+   *
+   * Supplied by the caller because `input.firstName` carries a visual
+   * placeholder ("Tu nombre") before anything is typed, and announcing
+   * that as though it were the attendee's name is wrong for a screen
+   * reader. The caller is the one that knows whether a real name exists.
+   */
+  label: string;
 }
 
 /**
@@ -14,7 +23,7 @@ interface Props {
  * Redraws on every state change through requestAnimationFrame so a burst
  * of keystrokes coalesces into one paint instead of one per character.
  */
-export function CredentialPreview({ input, fontsReady }: Props) {
+export function CredentialPreview({ input, fontsReady, label }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const frameRef = useRef<number | null>(null);
 
@@ -43,7 +52,7 @@ export function CredentialPreview({ input, fontsReady }: Props) {
         // The canvas is decorative here — the same information is in the
         // form beside it — but it must still announce what it shows.
         role="img"
-        aria-label={`Vista previa de la credencial de ${input.firstName} ${input.lastName}`}
+        aria-label={label}
         className="border-gray-custom w-full rounded-xl border shadow-sm"
       />
       {!fontsReady && (

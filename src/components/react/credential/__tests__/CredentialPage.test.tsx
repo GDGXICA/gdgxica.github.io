@@ -309,3 +309,27 @@ describe("CredentialPage — adjuntar la tarjeta", () => {
     }
   });
 });
+
+describe("CredentialPage — nombre accesible del preview", () => {
+  it("no anuncia el texto de relleno como si fuera un nombre", async () => {
+    // input.firstName lleva "Tu nombre" como placeholder visual antes de
+    // que se escriba nada; leerlo como el nombre del asistente seria
+    // incorrecto para un lector de pantalla.
+    render(<CredentialPage event={EVENT} />);
+    expect(
+      screen.getByRole("img", { name: "Vista previa de tu credencial" })
+    ).toBeInTheDocument();
+  });
+
+  it("usa el nombre real en cuanto se escribe", async () => {
+    const user = userEvent.setup();
+    render(<CredentialPage event={EVENT} />);
+    await user.type(screen.getByRole("textbox", { name: "Nombre" }), "Alvaro");
+    await user.type(screen.getByRole("textbox", { name: "Apellido" }), "Pena");
+    expect(
+      screen.getByRole("img", {
+        name: "Vista previa de la credencial de Alvaro Pena",
+      })
+    ).toBeInTheDocument();
+  });
+});
