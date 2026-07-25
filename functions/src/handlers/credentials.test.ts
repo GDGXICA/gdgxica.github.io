@@ -36,7 +36,7 @@ vi.mock("../services/credentialStorage", async (importOriginal) => {
   return { ...actual, saveCredentialImages: mocks.saveCredentialImagesMock };
 });
 
-import { createCredential } from "./credentials";
+import { attachCredentialImage, createCredential } from "./credentials";
 import type { AuthenticatedRequest } from "../middleware/auth";
 
 const {
@@ -471,5 +471,101 @@ describe("createCredential — failures", () => {
 
     expect(res.__status).toBe(500);
     expect(JSON.stringify(res.__body)).not.toContain("googleapis");
+  });
+});
+
+describe("attachCredentialImage", () => {
+  /** Wires a single credential document with the given owner. */
+  function setupCredential(createdByUid: string | null) {
+    const updates: Record<string, unknown>[] = [];
+    const docRef = {
+      get: vi.fn(() =>
+        Promise.resolve({
+          exists: createdByUid !== null,
+          data: () => (createdByUid ? { createdByUid } : undefined),
+        })
+      ),
+      update: vi.fn((data: Record<string, unknown>) => {
+        updates.push(data);
+        return Promise.resolve();
+      }),
+    };
+    collectionMock.mockImplementation(() => ({
+      doc: vi.fn(() => ({
+        collection: vi.fn(() => ({ doc: vi.fn(() => docRef) })),
+      })),
+    }));
+    return { updates, docRef };
+  }
+
+  function imageReq(uid = "anon-uid-1") {
+    return {
+      body: { credentialImageDataUrl: JPEG_DATA_URL },
+      params: { slug: "devfest-2026", id: "cred-abc123" },
+      user: { uid, role: "member" },
+      get: () => undefined,
+    } as unknown as Request;
+  }
+
+  it("stores the card and records its path", async () => {
+    saveCredentialImagesMock.mockResolvedValue({
+      photoPath: null,
+      credentialImagePath:
+        "credentials/devfest-2026/cred-abc123/credential.jpg",
+    });
+    const h = setupCredential("anon-uid-1");
+    const res = buildRes();
+    await attachCredentialImage(imageReq(), res);
+
+    expect(res.__body).toMatchObject({ success: true });
+    expect(h.updates[0]).toMatchObject({
+      credentialImagePath:
+        "credentials/devfest-2026/cred-abc123/credential.jpg",
+    });
+  });
+
+  it("rejects a caller that did not create the credential", async () => {
+    // Otherwise anyone knowing a document id could overwrite someone
+    // else's card with an image of their choosing.
+    setupCredential("anon-uid-1");
+    const res = buildRes();
+    await attachCredentialImage(imageReq("otro-anon"), res);
+
+    expect(res.__status).toBe(403);
+    expect(saveCredentialImagesMock).not.toHaveBeenCalled();
+  });
+
+  it("404s on a missing credential", async () => {
+    setupCredential(null);
+    const res = buildRes();
+    await attachCredentialImage(imageReq(), res);
+    expect(res.__status).toBe(404);
+  });
+
+  it("rejects a payload whose bytes are not really a JPEG", async () => {
+    setupCredential("anon-uid-1");
+    const res = buildRes();
+    await attachCredentialImage(
+      {
+        ...imageReq(),
+        body: { credentialImageDataUrl: NOT_JPEG_DATA_URL },
+      } as unknown as Request,
+      res
+    );
+    expect(res.__status).toBe(400);
+    expect(saveCredentialImagesMock).not.toHaveBeenCalled();
+  });
+
+  it("reports a failed upload instead of claiming success", async () => {
+    saveCredentialImagesMock.mockResolvedValue({
+      photoPath: null,
+      credentialImagePath: null,
+    });
+    const h = setupCredential("anon-uid-1");
+    const res = buildRes();
+    await attachCredentialImage(imageReq(), res);
+
+    expect(res.__status).toBe(500);
+    expect(h.updates).toHaveLength(0);
   });
 });
