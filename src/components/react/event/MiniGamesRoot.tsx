@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { signInAnonymouslyIfNeeded } from "@/lib/firebase";
 import type { PollConfig, QuizConfig } from "../admin/minigame-templates/types";
@@ -173,6 +173,22 @@ export function MiniGamesRoot({ slug }: Props) {
     [liveInstances]
   );
 
+  // The live-games section renders inline, wherever it falls in the page
+  // (after speakers, schedule, sponsors, etc.), so on first join we scroll
+  // it into view rather than making participants hunt for it.
+  const globalGamesRef = useRef<HTMLElement | null>(null);
+  const hasScrolledToGames = useRef(false);
+
+  useEffect(() => {
+    if (step !== "joined" || globalLive.length === 0) return;
+    if (hasScrolledToGames.current) return;
+    hasScrolledToGames.current = true;
+    globalGamesRef.current?.scrollIntoView?.({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [step, globalLive.length]);
+
   if (!authReady || loading || step === "init") return null;
   if (step === "no_live") return null;
 
@@ -202,6 +218,7 @@ export function MiniGamesRoot({ slug }: Props) {
 
       {step === "joined" && uid && globalLive.length > 0 && (
         <section
+          ref={globalGamesRef}
           className={`container my-8 ${
             realtimeLive.length > 0 ? "pb-[70vh]" : ""
           }`}
