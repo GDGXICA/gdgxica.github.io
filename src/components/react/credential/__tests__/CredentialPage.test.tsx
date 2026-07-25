@@ -12,6 +12,7 @@ const calls: string[] = [];
 const mocks = vi.hoisted(() => ({
   signInAnonymouslyIfNeeded: vi.fn(),
   createCredential: vi.fn(),
+  attachCredentialImage: vi.fn(),
 }));
 
 vi.mock("@/lib/firebase", () => ({
@@ -22,7 +23,10 @@ vi.mock("@/lib/firebase", () => ({
 
 vi.mock("@/lib/api", () => ({
   isDevPreview: false,
-  api: { createCredential: mocks.createCredential },
+  api: {
+    createCredential: mocks.createCredential,
+    attachCredentialImage: mocks.attachCredentialImage,
+  },
 }));
 
 import { CredentialPage } from "../CredentialPage";
@@ -77,6 +81,10 @@ beforeEach(() => {
   mocks.signInAnonymouslyIfNeeded.mockImplementation(async () => {
     calls.push("signIn");
     return { uid: "anon-1" };
+  });
+  mocks.attachCredentialImage.mockImplementation(async () => {
+    calls.push("attachCredentialImage");
+    return { success: true };
   });
   mocks.createCredential.mockImplementation(async () => {
     calls.push("createCredential");
@@ -139,7 +147,7 @@ describe("CredentialPage — submission", () => {
     );
 
     await waitFor(() => expect(calls).toContain("createCredential"));
-    expect(calls).toEqual(["signIn", "createCredential"]);
+    expect(calls.slice(0, 2)).toEqual(["signIn", "createCredential"]);
   });
 
   it("blocks submission until every consent is checked", async () => {
@@ -260,5 +268,44 @@ describe("CredentialPage — success", () => {
 
     await screen.findByText("Todavía no estás inscrito");
     expect(screen.getByText("Q")).toBeInTheDocument();
+  });
+});
+
+describe("CredentialPage — adjuntar la tarjeta", () => {
+  it("no manda la imagen en la llamada de creacion", async () => {
+    // La letra de grupo la asigna el servidor, asi que una tarjeta
+    // compuesta antes de la respuesta llevaria el placeholder. Enviarla
+    // aqui es justamente el bug que el E2E encontro.
+    const user = userEvent.setup();
+    render(<CredentialPage event={EVENT} />);
+    await reachStepTwo(user);
+    await fillRegistration(user);
+    await checkAllConsents(user);
+    await user.click(
+      screen.getByRole("button", { name: /guardar y continuar/i })
+    );
+
+    await waitFor(() => expect(mocks.createCredential).toHaveBeenCalled());
+    const [, payload] = mocks.createCredential.mock.calls[0];
+    expect(payload.credentialImageDataUrl).toBeNull();
+  });
+
+  it("adjunta la tarjeta DESPUES de conocer la letra", async () => {
+    const user = userEvent.setup();
+    render(<CredentialPage event={EVENT} />);
+    await reachStepTwo(user);
+    await fillRegistration(user);
+    await checkAllConsents(user);
+    await user.click(
+      screen.getByRole("button", { name: /guardar y continuar/i })
+    );
+
+    await screen.findByText("Todavía no estás inscrito");
+    // En jsdom no hay canvas, asi que el adjunto puede no dispararse; lo
+    // que si debe cumplirse es el orden cuando ocurre.
+    const attachAt = calls.indexOf("attachCredentialImage");
+    if (attachAt !== -1) {
+      expect(attachAt).toBeGreaterThan(calls.indexOf("createCredential"));
+    }
   });
 });

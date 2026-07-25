@@ -127,7 +127,10 @@ export function CredentialPage({ event: eventJson }: Props) {
       avatarKind: card.avatarKind,
       mascotId: card.avatarKind === "mascot" ? card.mascotId : null,
       photoDataUrl: card.avatarKind === "photo" ? card.photoDataUrl : null,
-      credentialImageDataUrl: exportedImage?.dataUrl ?? null,
+      // Always null here: the card is attached below, once the server
+      // has told us the group letter. Sending it now would store a copy
+      // with a placeholder in place of the letter.
+      credentialImageDataUrl: null,
     });
 
     setSubmitting(false);
@@ -136,7 +139,30 @@ export function CredentialPage({ event: eventJson }: Props) {
       setServerError(res.error ?? "No pudimos guardar tu inscripción.");
       return;
     }
-    setDone({ groupLetter: res.data?.groupLetter ?? "?" });
+    const groupLetter = res.data?.groupLetter ?? "?";
+    const credentialId = res.data?.credentialId;
+    setDone({ groupLetter });
+
+    // The card is attached in a SECOND call rather than sent with create.
+    // The group letter comes from a server-assigned sequence number, so a
+    // card rendered before the response carries a placeholder where the
+    // letter belongs — the first end-to-end run stored exactly that.
+    if (credentialId) {
+      try {
+        const canvas = renderToCanvas({ ...renderInput, groupLetter });
+        const encoded = encodeUnderBudget(canvas, MAX_CREDENTIAL_DATAURL_CHARS);
+        if (encoded) {
+          // Not awaited into the UI path: the attendee already has their
+          // credential on screen, and a failed attach must not turn a
+          // successful registration into an error message.
+          void api.attachCredentialImage(event.slug, credentialId, {
+            credentialImageDataUrl: encoded.dataUrl,
+          });
+        }
+      } catch {
+        // Same reasoning — the registration is the part that matters.
+      }
+    }
   };
 
   const fileName = `credencial-${event.slug}.jpg`;
