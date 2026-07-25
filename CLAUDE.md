@@ -6,7 +6,7 @@ Pre-commit hooks run automatically via Husky + lint-staged (ESLint + Prettier on
 
 ## Architecture
 
-**Astro 5 static site** for the GDG ICA community (Spanish-language content). TailwindCSS 4 for styling, React 19 only for interactive islands.
+**Astro 7 static site** (default `output: "static"` — no adapter, so there are no SSR routes) for the GDG ICA community (Spanish-language content). TailwindCSS 4 for styling, React 19 only for interactive islands.
 
 ### Routing & Pages
 
