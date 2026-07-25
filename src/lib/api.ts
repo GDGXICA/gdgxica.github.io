@@ -197,6 +197,20 @@ const realApi = {
       groupLetter: string;
     }>("POST", `/events/${encodeURIComponent(slug)}/credentials`, data),
 
+  // Attaches the composed card after creation. A separate call because the
+  // group letter comes from a server-assigned sequence number, so the
+  // final card cannot exist until createCredential has returned.
+  attachCredentialImage: (
+    slug: string,
+    id: string,
+    data: { credentialImageDataUrl: string }
+  ) =>
+    request(
+      "PATCH",
+      `/events/${encodeURIComponent(slug)}/credentials/${id}/image`,
+      data
+    ),
+
   // Wordcloud moderation + bingo winners (admin-only)
   listEventMinigameWords: (slug: string, id: string) =>
     request("GET", `/events/${encodeURIComponent(slug)}/minigames/${id}/words`),
