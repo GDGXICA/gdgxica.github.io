@@ -1,4 +1,6 @@
 ---
+import { cn } from "@/utils/cn";
+
 interface StatItem {
   value: string;
   label: string;
@@ -7,29 +9,53 @@ interface StatItem {
 
 interface Props {
   stats: StatItem[];
+  class?: string;
 }
 
-const { stats } = Astro.props;
+const { stats, class: className } = Astro.props;
 
-const colorMap: Record<string, string> = {
-  blue: "text-google-blue",
-  red: "text-google-red",
-  yellow: "text-google-yellow",
-  green: "text-google-green",
+// Contrast-safe text variants. The vivid brand yellow sits at 1.91:1 on white
+// and can never be used for text.
+const colorMap: Record<StatItem["color"], string> = {
+  blue: "text-brand-blue-text",
+  red: "text-brand-red-text",
+  yellow: "text-brand-yellow-text",
+  green: "text-brand-green-text",
+};
+
+const ruleMap: Record<StatItem["color"], string> = {
+  blue: "bg-brand-blue",
+  red: "bg-brand-red",
+  yellow: "bg-brand-yellow",
+  green: "bg-brand-green",
 };
 ---
 
-<div
-  class="grid grid-cols-2 place-items-center gap-10 md:flex md:justify-between"
+<dl
+  class={cn(
+    "grid grid-cols-2 gap-x-6 gap-y-10 text-center md:grid-cols-4 md:text-left",
+    className
+  )}
 >
   {
     stats.map((stat) => (
-      <div>
-        <p class={`${colorMap[stat.color]} text-[2rem] font-bold`}>
-          {stat.value}
-        </p>
-        <p class="text-secondary">{stat.label}</p>
+      <div class="flex flex-col items-center gap-2 md:items-start">
+        <span
+          class={cn("h-1 w-10 rounded-full", ruleMap[stat.color])}
+          aria-hidden="true"
+        />
+        <dt class="sr-only">{stat.label}</dt>
+        <dd class="contents">
+          <span
+            class={cn("text-h2 font-bold tabular-nums", colorMap[stat.color])}
+          >
+            {stat.value}
+          </span>
+          <span class="text-fg-muted text-sm" aria-hidden="true">
+            {stat.label}
+          </span>
+        </dd>
       </div>
     ))
   }
-</div>
+</dl>

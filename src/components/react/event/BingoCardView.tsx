@@ -54,9 +54,8 @@ export function BingoCardView({ slug, instanceId, uid, title }: Props) {
     setError(null);
     try {
       const db = await getFirestore();
-      const { doc, setDoc, serverTimestamp } = await import(
-        "firebase/firestore"
-      );
+      const { doc, setDoc, serverTimestamp } =
+        await import("firebase/firestore");
       const ref = doc(
         db,
         `events/${slug}/minigames/${instanceId}/participants/${uid}`
@@ -92,7 +91,7 @@ export function BingoCardView({ slug, instanceId, uid, title }: Props) {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-primary text-2xl font-semibold">{title}</h2>
+        <h2 className="text-fg text-2xl font-semibold">{title}</h2>
         {hasWonBefore && (
           <span className="rounded-full bg-yellow-100 px-3 py-1 text-sm font-semibold text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
             🎉 ¡Bingo!

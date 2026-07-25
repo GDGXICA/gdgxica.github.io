@@ -1,6 +1,8 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import SponsorCard from "@/components/SponsorCard.astro";
+import FeatureCard from "@/components/FeatureCard.astro";
+import SectionHeader from "@/components/SectionHeader.astro";
 import { Users, Target, Zap, Heart, BriefcaseBusiness } from "@lucide/astro";
 import CallToActionSection from "@/components/CallToActionSection.astro";
 import Button from "@/components/Button.astro";
@@ -13,8 +15,43 @@ import { buildSponsorsSchema } from "@/utils/schema";
 
 const sponsorsCollection = await getCollection("sponsors");
 const sponsors = sponsorsCollection.map((entry) => entry.data);
+const featuredSponsors = sponsors.filter((sponsor) => sponsor.featured);
+const otherSponsors = sponsors.filter((sponsor) => !sponsor.featured);
 const stats = await fetchStats();
 const links = await fetchLinks();
+
+// Previously four hand-duplicated <article> blocks, which is what the
+// leftover `benefitIconMap` comment in this file was reaching for.
+const benefits = [
+  {
+    Icon: Users,
+    title: "Acceso a talento",
+    tone: "text-brand-blue-text",
+    rule: "bg-brand-blue",
+    body: "Conecta directamente con desarrolladores talentosos y apasionados de la región.",
+  },
+  {
+    Icon: Target,
+    title: "Visibilidad de marca",
+    tone: "text-brand-red-text",
+    rule: "bg-brand-red",
+    body: "Aumenta la visibilidad de tu marca en la comunidad tech más activa de la región.",
+  },
+  {
+    Icon: Zap,
+    title: "Liderazgo de opinión",
+    tone: "text-brand-yellow-text",
+    rule: "bg-brand-yellow",
+    body: "Posiciona tu empresa como líder tecnológico compartiendo conocimiento y experiencia.",
+  },
+  {
+    Icon: Heart,
+    title: "Impacto en la comunidad",
+    tone: "text-brand-green-text",
+    rule: "bg-brand-green",
+    body: "Contribuye al crecimiento del ecosistema tecnológico y genera impacto social positivo.",
+  },
+];
 
 const metadata = {
   title: "Patrocinadores - Google Developer Group Ica",
@@ -27,160 +64,110 @@ const metadata = {
 ---
 
 <Layout {...metadata}>
-  <HeroPage>
-    <p
-      class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-red-500 to-green-600"
-    >
-      <BriefcaseBusiness stroke-width={1.5} size={64} color="#FFFFFF" />
-    </p>
-    <h1 class="mb-6 text-4xl font-bold md:text-5xl">
-      <span class="text-google-blue">Nuestros </span>
-      <span class="text-google-red">Patrocinadores</span>
-    </h1>
-    <p class="text-secondary mx-auto mb-12 max-w-3xl text-xl">
-      Agradecemos profundamente a las empresas y organizaciones que hacen
-      posible nuestra misión de democratizar el acceso al conocimiento
-      tecnológico. Su apoyo transforma vidas y construye el futuro digital.
-    </p>
-
+  <HeroPage
+    eyebrow="Patrocinadores"
+    title="Quienes hacen posible la comunidad"
+    description="Agradecemos a las empresas y organizaciones que hacen posible nuestra misión de democratizar el acceso al conocimiento tecnológico."
+  >
     <StatsBar
+      class="border-line mt-16 border-t pt-12"
       stats={[
         {
           value: `${stats.totalSponsors}+`,
-          label: "Patrocinadores Activos",
+          label: "Patrocinadores activos",
           color: "blue",
         },
         {
           value: stats.annualSupport,
-          label: "Apoyo Anual Total",
+          label: "Apoyo anual total",
           color: "red",
         },
         {
           value: `${stats.sponsoredEvents}+`,
-          label: "Eventos Patrocinados",
+          label: "Eventos patrocinados",
           color: "yellow",
         },
         {
           value: `${stats.developersReached}+`,
-          label: "Desarrolladores Alcanzados",
+          label: "Desarrolladores alcanzados",
           color: "green",
         },
       ]}
     />
   </HeroPage>
 
-  <section class="py-20">
-    <div class="container">
-      <div class="mx-auto max-w-2xl text-center">
-        <h2 class="mb-4 text-3xl font-bold">Patrocinadores Principales</h2>
-        <p class="text-secondary text-xl">
-          Nuestros socios estratégicos que impulsan la innovación y el
-          crecimiento de la comunidad
-        </p>
-      </div>
-      <div
-        class="mx-auto mt-12 grid max-w-4xl grid-cols-1 gap-8 md:grid-cols-2"
-      >
+  {
+    featuredSponsors.length > 0 && (
+      <section class="border-line bg-surface border-t">
+        <div class="section container">
+          <SectionHeader
+            eyebrow="Principales"
+            title="Socios estratégicos"
+            description="Impulsan la innovación y el crecimiento de la comunidad."
+          />
+          <div class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {featuredSponsors.map((sponsor) => (
+              <SponsorCard {...sponsor} />
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  {
+    otherSponsors.length > 0 && (
+      <section class="section container">
+        <SectionHeader
+          eyebrow="Todos"
+          title="Todos nuestros patrocinadores"
+          description="Cada empresa que nos apoya es fundamental para nuestro éxito."
+        />
+        <div class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {otherSponsors.map((sponsor) => (
+            <SponsorCard {...sponsor} />
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  <section class="border-line bg-surface border-t">
+    <div class="section container">
+      <SectionHeader
+        eyebrow="Beneficios"
+        title="¿Por qué patrocinar al GDG Ica?"
+        description="Los beneficios tangibles de asociarse con la comunidad de desarrolladores más activa de la región."
+      />
+      <div class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {
-          sponsors
-            .filter((sponsor) => sponsor.featured)
-            .map((sponsor) => <SponsorCard {...sponsor} />)
+          benefits.map(({ Icon, title, body, tone, rule }) => (
+            <FeatureCard interactive class="flex flex-col">
+              <span
+                class={`mb-5 block h-1 w-9 rounded-full ${rule}`}
+                aria-hidden="true"
+              />
+              <Icon size={28} stroke-width={1.75} class={tone} aria-hidden />
+              <h3 class="text-h4 text-fg mt-4">{title}</h3>
+              <p class="text-fg-muted mt-2 text-sm">{body}</p>
+            </FeatureCard>
+          ))
         }
       </div>
     </div>
   </section>
 
-  <section class="bg-section py-20">
-    <div class="container">
-      <div class="mx-auto max-w-2xl text-center">
-        <h2 class="mb-4 text-3xl font-bold">Todos Nuestros Patrocinadores</h2>
-        <p class="text-secondary text-xl">
-          Cada empresa que nos apoya es fundamental para nuestro éxito
-        </p>
-      </div>
-      <div
-        class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-      >
-        {
-          sponsors
-            .filter((sponsor) => !sponsor.featured)
-            .map((sponsor) => <SponsorCard {...sponsor} />)
-        }
-      </div>
-    </div>
-  </section>
-
-  <section class="py-20">
-    <div class="container">
-      <div class="mx-auto mb-14 max-w-[523px] text-center">
-        <h2 class="mb-6 text-4xl font-bold">¿Por Qué Patrocinar GDG?</h2>
-        <p class="text-secondary text-xl">
-          Los beneficios tangibles de asociarse con la comunidad de
-          desarrolladores más activa de la región
-        </p>
-      </div>
-      <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-        <!-- const benefitIconMap = { Users, Target, Zap, Heart }; -->
-        <article
-          class="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-200 p-6 text-center"
-        >
-          <Users stroke-width={1.5} class="h-8 w-8" color="#2563EB" />
-          <h3 class="text-primary text-2xl font-semibold">Acceso a talento</h3>
-          <p class="text-secondary text-sm">
-            Conecta directamente con desarrolladores talentosos y apasionados de
-            la región.
-          </p>
-        </article>
-        <article
-          class="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-200 p-6 text-center"
-        >
-          <Target stroke-width={1.5} class="h-8 w-8" color="#DC2626" />
-          <h3 class="text-primary text-2xl font-semibold">
-            Visibilidad de marca
-          </h3>
-          <p class="text-secondary text-sm">
-            Aumenta la visibilidad de tu marca en la comunidad tech más activa
-            de la región.
-          </p>
-        </article>
-        <article
-          class="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-200 p-6 text-center"
-        >
-          <Zap stroke-width={1.5} class="h-8 w-8" color="#F59E0B" />
-          <h3 class="text-primary text-2xl font-semibold">
-            Liderazgo de opinión
-          </h3>
-          <p class="text-secondary text-sm">
-            Posiciona tu empresa como líder tecnológico compartiendo
-            conocimiento y experiencia.
-          </p>
-        </article>
-        <article
-          class="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-200 p-6 text-center"
-        >
-          <Heart stroke-width={1.5} class="h-8 w-8" color="#16A34A" />
-          <h3 class="text-primary text-2xl font-semibold">
-            Impacto en la comunidad
-          </h3>
-          <p class="text-secondary text-sm">
-            Contribuye al crecimiento del ecosistema tecnológico y genera
-            impacto social positivo.
-          </p>
-        </article>
-      </div>
-    </div>
-  </section>
-  <CallToActionSection>
-    <h2 class="mb-6 text-3xl font-bold text-white md:text-4xl">
-      ¿Quieres Ser Nuestro Próximo Patrocinador?
-    </h2>
-    <p class="mb-8 text-xl text-white">
-      Únete a las empresas líderes que apoyan el crecimiento del ecosistema
-      tecnológico. Juntos podemos formar a los desarrolladores del futuro y
-      crear un impacto duradero en la industria.
-    </p>
-    <Button variant="white" href={links.forms.sponsor} target="_blank">
-      <BriefcaseBusiness />
+  <CallToActionSection
+    title="¿Quieres ser nuestro próximo patrocinador?"
+    description="Únete a las empresas que apoyan el crecimiento del ecosistema tecnológico y ayúdanos a formar a los desarrolladores del futuro."
+  >
+    <Button
+      href={links.forms.sponsor}
+      target="_blank"
+      variant="inverse"
+      size="lg"
+    >
+      <BriefcaseBusiness size={18} stroke-width={1.75} aria-hidden />
       Quiero ser patrocinador
     </Button>
   </CallToActionSection>

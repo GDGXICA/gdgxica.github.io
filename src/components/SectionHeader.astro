@@ -1,0 +1,48 @@
+---
+import { cn } from "@/utils/cn";
+
+interface Props {
+  /** Small label above the heading. */
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  align?: "left" | "center";
+  /** Heading level — keeps the document outline correct per page. */
+  as?: "h2" | "h3";
+  class?: string;
+}
+
+const {
+  eyebrow,
+  title,
+  description,
+  align = "left",
+  as: Heading = "h2",
+  class: className,
+} = Astro.props;
+
+const centered = align === "center";
+---
+
+<div
+  class={cn(
+    "flex flex-col gap-4",
+    centered ? "mx-auto max-w-2xl items-center text-center" : "max-w-3xl",
+    className
+  )}
+>
+  {
+    eyebrow && (
+      <p class="text-overline text-fg-subtle flex items-center gap-2 uppercase">
+        <span class="brand-rule h-1 w-8 rounded-full" aria-hidden="true" />
+        {eyebrow}
+      </p>
+    )
+  }
+  <Heading class="text-h2 text-fg text-balance">{title}</Heading>
+  {
+    description && (
+      <p class="text-lead text-fg-muted text-pretty">{description}</p>
+    )
+  }
+</div>

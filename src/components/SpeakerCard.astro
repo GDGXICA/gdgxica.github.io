@@ -1,9 +1,18 @@
 ---
-import { Globe } from "@lucide/astro";
-import GithubIcon from "./icons/GithubIcon.astro";
-import LinkedinIcon from "./icons/LinkedinIcon.astro";
-import TwitterIcon from "./icons/TwitterIcon.astro";
-import YoutubeIcon from "./icons/YoutubeIcon.astro";
+import SocialLinks from "./SocialLinks.astro";
+
+interface Props {
+  image?: string;
+  name: string;
+  role?: string;
+  description?: string;
+  linkedin?: string;
+  web?: string;
+  youtube?: string;
+  twitter?: string;
+  github?: string;
+}
+
 const {
   image,
   name,
@@ -15,70 +24,35 @@ const {
   twitter,
   github,
 } = Astro.props;
+
+// The speaker schema keeps its social URLs flat; SocialLinks takes them grouped
+// and does its own `http` filtering, so five hand-rolled anchors (each with a
+// hardcoded grey, no hover and no accessible name) collapse to one call.
+const links = { linkedin, twitter, github, youtube, web };
 ---
 
-<article class="flex flex-col items-start gap-5 sm:flex-row md:flex-row">
+<article class="card flex h-full flex-col gap-5 p-6 sm:flex-row">
   <img
     src={image || "/placeholder.svg"}
-    width={120}
-    height={120}
-    alt={`Foto del speaker ${name}`}
-    class="h-[120px] w-[120px] flex-shrink-0 rounded-md object-cover object-center"
+    width={112}
+    height={112}
+    alt=""
+    class="bg-inset h-28 w-28 shrink-0 rounded-lg object-cover object-center"
     loading="lazy"
     decoding="async"
   />
-  <div>
-    <h3 class="text-primary font-bold">{name}</h3>
-    <p class="text-google-blue mb-2 text-sm">{role}</p>
-    <ul class="mb-2 flex gap-2">
-      {
-        linkedin?.startsWith("http") && (
-          <li>
-            <a href={linkedin} target="_blank" rel="noopener noreferrer">
-              <LinkedinIcon size={16} color="#71717a" />
-            </a>
-          </li>
-        )
-      }
-      {
-        twitter?.startsWith("http") && (
-          <li>
-            <a href={twitter} target="_blank" rel="noopener noreferrer">
-              <TwitterIcon size={16} color="#71717a" />
-            </a>
-          </li>
-        )
-      }
-      {
-        github?.startsWith("http") && (
-          <li>
-            <a href={github} target="_blank" rel="noopener noreferrer">
-              <GithubIcon size={16} color="#71717a" />
-            </a>
-          </li>
-        )
-      }
-      {
-        youtube?.startsWith("http") && (
-          <li>
-            <a href={youtube} target="_blank" rel="noopener noreferrer">
-              <YoutubeIcon size={16} color="#71717a" />
-            </a>
-          </li>
-        )
-      }
-      {
-        web?.startsWith("http") && (
-          <li>
-            <a href={web} target="_blank" rel="noopener noreferrer">
-              <Globe size={16} color="#71717a" />
-            </a>
-          </li>
-        )
-      }
-    </ul>
-    <p class="text-secondary">
-      {description}
-    </p>
+  <div class="min-w-0">
+    <h3 class="text-h4 text-fg">{name}</h3>
+    {
+      role && (
+        <p class="text-brand-blue-text mt-1 text-sm font-medium">{role}</p>
+      )
+    }
+    <SocialLinks links={links} name={name} size={16} class="mt-2 -ml-2" />
+    {
+      description && (
+        <p class="text-fg-muted mt-2 text-sm text-pretty">{description}</p>
+      )
+    }
   </div>
 </article>

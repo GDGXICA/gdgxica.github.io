@@ -30,9 +30,8 @@ export function useLiveMinigames(slug: string | null): State {
     (async () => {
       try {
         const db = await getFirestore();
-        const { collection, query, where, onSnapshot, orderBy } = await import(
-          "firebase/firestore"
-        );
+        const { collection, query, where, onSnapshot, orderBy } =
+          await import("firebase/firestore");
         if (cancelled) return;
         const q = query(
           collection(db, `events/${slug}/minigames`),

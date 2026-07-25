@@ -1,0 +1,25 @@
+---
+import { cn } from "@/utils/cn";
+
+interface Props {
+  /** Lucide (or any) icon component rendered above the message. */
+  icon: unknown;
+  message: string;
+  class?: string;
+}
+
+// Three verbatim copies of this block lived in the event detail page, each
+// painted a grey that measured 2.60:1 on white — below the 4.5:1 floor.
+const { icon: Icon, message, class: className } = Astro.props;
+const IconComponent = Icon as never;
+---
+
+<div
+  class={cn(
+    "border-line text-fg-subtle flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed px-6 py-14 text-center",
+    className
+  )}
+>
+  <IconComponent size={40} stroke-width={1.25} aria-hidden />
+  <p class="max-w-sm text-sm text-pretty">{message}</p>
+</div>

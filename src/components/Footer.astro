@@ -3,127 +3,97 @@ import { fetchLinks } from "@/loaders/transform-site-config";
 
 const siteLinks = await fetchLinks();
 const year = new Date().getFullYear();
-const data = {
-  logo: "/logo.png",
-  description:
-    "Construir una comunidad de desarrolladores más fuerte a través de la colaboración y el aprendizaje.",
-  items: [
-    {
-      id: 1,
-      title: "Comunidad",
-      links: [
-        {
-          id: 1,
-          text: "Nosotros",
-          url: "/about",
-          target: "_self",
-        },
-        {
-          id: 2,
-          text: "Equipo",
-          url: "/team",
-          target: "_self",
-        },
-      ],
-    },
-    {
-      id: 2,
-      title: "Eventos",
-      links: [
-        {
-          id: 1,
-          text: "Todos los eventos",
-          url: "/events",
-          target: "_self",
-        },
-        {
-          id: 2,
-          text: "Patrocinadores",
-          url: "/sponsors",
-          target: "_self",
-        },
-      ],
-    },
-    {
-      id: 3,
-      title: "Conectar",
-      links: [
-        {
-          id: 1,
-          text: "Linkedin",
-          url: siteLinks.social.linkedin,
-          target: "_blank",
-        },
-        {
-          id: 2,
-          text: "Facebook",
-          url: siteLinks.social.facebook,
-          target: "_blank",
-        },
-        {
-          id: 3,
-          text: "Instagram",
-          url: siteLinks.social.instagram,
-          target: "_blank",
-        },
-      ],
-    },
-  ],
-  copyright: `©${year} Google Developer Groups ICA. All rights reserved.`,
-};
+
+const columns = [
+  {
+    title: "Comunidad",
+    links: [
+      { text: "Nosotros", url: "/about" },
+      { text: "Equipo", url: "/team" },
+      { text: "Voluntarios", url: "/volunteers" },
+    ],
+  },
+  {
+    title: "Eventos",
+    links: [
+      { text: "Todos los eventos", url: "/events" },
+      { text: "Patrocinadores", url: "/sponsors" },
+      { text: "RSS", url: "/rss.xml" },
+    ],
+  },
+  {
+    title: "Conectar",
+    links: [
+      { text: "LinkedIn", url: siteLinks.social.linkedin, external: true },
+      { text: "Facebook", url: siteLinks.social.facebook, external: true },
+      { text: "Instagram", url: siteLinks.social.instagram, external: true },
+    ],
+  },
+];
+
+const linkClass =
+  "text-fg-on-ink-muted hover:text-fg-on-ink rounded-xs text-sm transition-colors duration-200";
 ---
 
-<footer class="bg-primary py-12">
-  <div class="mx-auto max-w-[1400px] px-4">
-    <div class="flex flex-col gap-8 md:flex-row">
-      <div class="basis-1/4">
-        <div class="mb-4 flex items-center gap-3">
+<footer class="bg-ink relative">
+  <div class="brand-rule absolute inset-x-0 top-0 h-1" aria-hidden="true"></div>
+
+  <div class="container py-16">
+    <div class="grid gap-12 md:grid-cols-[1.5fr_repeat(3,1fr)]">
+      <div class="max-w-xs">
+        <div class="flex items-center gap-3">
           <img
             src="/gdg-logo.png"
-            alt="Logo del GDG ICA"
-            height={32}
-            width={32}
-            class="rounded-sm"
+            alt=""
+            height={36}
+            width={36}
+            class="h-9 w-9"
           />
-          <p class="text-lg font-bold text-white">GDG ICA</p>
+          <p class="text-fg-on-ink text-base font-bold tracking-tight">
+            GDG ICA
+          </p>
         </div>
-        <p class="text-[#9CA3AF]">{data.description}</p>
+        <p class="text-fg-on-ink-muted mt-4 text-sm">
+          Construir una comunidad de desarrolladores más fuerte a través de la
+          colaboración y el aprendizaje.
+        </p>
       </div>
+
       {
-        data.items.map((item) => (
-          <div class="grow">
-            <p class="mb-4 text-base font-bold text-white">{item.title}</p>
-            <ul class="flex flex-col gap-2">
-              {item.links.map((link) => (
+        columns.map((column) => (
+          <nav aria-label={column.title}>
+            <h2 class="text-fg-on-ink text-sm font-semibold">{column.title}</h2>
+            <ul class="mt-4 flex flex-col gap-3">
+              {column.links.map((link) => (
                 <li>
                   <a
-                    class="text-[#9CA3AF]"
+                    class={linkClass}
                     href={link.url}
-                    aria-label={`Enlace a ${link.text}`}
-                    target={link.target}
-                    rel={link.target === "_blank" ? "noopener noreferrer" : ""}
+                    target={link.external ? "_blank" : undefined}
+                    rel={link.external ? "noopener noreferrer" : undefined}
                   >
                     {link.text}
                   </a>
                 </li>
               ))}
             </ul>
-          </div>
+          </nav>
         ))
       }
     </div>
-    <hr class="my-6 text-[#1F2937]" />
-    <div class="flex flex-col items-center justify-between gap-4 md:flex-row">
-      <p class="text-center text-[#9CA3AF]">{data.copyright}</p>
-      <div
-        class="flex flex-wrap items-center justify-center gap-4 text-[#9CA3AF]"
-      >
+
+    <div
+      class="mt-14 flex flex-col items-center justify-between gap-6 border-t border-white/10 pt-8 md:flex-row"
+    >
+      <p class="text-fg-on-ink-muted text-center text-sm">
+        © {year} Google Developer Groups ICA. Todos los derechos reservados.
+      </p>
+      <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
         <a
           href="https://github.com/GDGXICA/gdgxica.github.io"
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Contribuye en GitHub"
-          class="inline-flex items-center gap-2 text-sm hover:text-white"
+          class={`${linkClass} inline-flex items-center gap-2`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -138,12 +108,10 @@ const data = {
           </svg>
           Contribuye en GitHub
         </a>
-        <a href="/terms-and-conditions" class="text-sm underline"
-          >Términos y Condiciones</a
-        >
-        <a href="/privacy-policy" class="text-sm underline"
-          >Política de Privacidad</a
-        >
+        <a href="/terms-and-conditions" class={linkClass}>
+          Términos y Condiciones
+        </a>
+        <a href="/privacy-policy" class={linkClass}>Política de Privacidad</a>
       </div>
     </div>
   </div>

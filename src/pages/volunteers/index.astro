@@ -1,7 +1,8 @@
 ---
 import Layout from "@/layouts/Layout.astro";
-import VolunteerCard from "@/components/VolunteerCard.astro";
+import PersonCard from "@/components/PersonCard.astro";
 import CallToActionSection from "@/components/CallToActionSection.astro";
+import SectionHeader from "@/components/SectionHeader.astro";
 import Button from "@/components/Button.astro";
 import HeroPage from "@/components/HeroPage.astro";
 import { HandshakeIcon } from "@lucide/astro";
@@ -28,24 +29,13 @@ const metadata = {
 ---
 
 <Layout {...metadata}>
-  <HeroPage>
-    <p
-      class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-red-500 to-green-600"
-    >
-      <HandshakeIcon stroke-width={1.5} size={64} color="#FFFFFF" />
-    </p>
-    <h1 class="mb-6 text-4xl font-bold md:text-5xl">
-      <span class="text-google-blue">Nuestros </span>
-      <span class="text-google-red">Voluntarios</span>
-    </h1>
-
-    <p class="text-secondary mx-auto mb-12 max-w-3xl text-xl">
-      El corazón de nuestra comunidad son las personas que generosamente dedican
-      su tiempo y talento para hacer que cada evento sea especial. Conoce a los
-      voluntarios que hacen posible la magia de GDG.
-    </p>
-
+  <HeroPage
+    eyebrow="Voluntarios"
+    title="El corazón de cada evento"
+    description="Personas que dedican su tiempo y talento para hacer que cada evento sea especial. Conoce a quienes hacen posible la magia del GDG Ica."
+  >
     <StatsBar
+      class="border-line mt-16 border-t pt-12"
       stats={[
         {
           value: `${stats.activeVolunteers}+`,
@@ -71,57 +61,49 @@ const metadata = {
     />
   </HeroPage>
 
-  <section class="py-20">
-    <div class="container">
-      <div class="mx-auto mb-14 max-w-lg text-center">
-        <h2 class="mb-4 text-4xl font-bold">Todos Nuestros Voluntarios</h2>
-        <p class="text-secondary text-xl">
-          Conoce a todas las personas increíbles que dedican su tiempo a nuestra
-          comunidad
-        </p>
-      </div>
+  {
+    volunteers.length > 0 && (
+      <section class="section container">
+        <SectionHeader
+          eyebrow="Equipo voluntario"
+          title="Todos nuestros voluntarios"
+          description="Conoce a las personas que dedican su tiempo a la comunidad."
+        />
+        <div class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {volunteers.map((volunteer) => (
+            <PersonCard person={volunteer} />
+          ))}
+        </div>
+      </section>
+    )
+  }
 
-      <!-- <div class="flex flex-wrap justify-center gap-2" id="filters">
-        <Button variant="solid" href="#" target="_blank"> Todos </Button>
-        <Button variant="outline" href="#" target="_blank"> Logística </Button>
-        <Button variant="outline" href="#" target="_blank"> Técnico </Button>
-      </div> -->
-
+  <section class="border-line bg-surface border-t">
+    <div class="section container">
+      <SectionHeader
+        eyebrow="Oportunidades"
+        title="Formas de contribuir"
+        description="Encuentra la forma perfecta de aportar a la comunidad según tus habilidades e intereses."
+      />
       <div
-        id="volunteers-grid"
-        class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
       >
-        {volunteers.map((volunteer) => <VolunteerCard volunteer={volunteer} />)}
-      </div>
-    </div>
-  </section>
-
-  <section class="bg-section py-20">
-    <div class="container">
-      <div class="mx-auto mb-14 max-w-2xl text-center">
-        <h2 class="mb-4 text-3xl font-bold">Oportunidades de Voluntariado</h2>
-        <p class="text-secondary text-xl">
-          Encuentra la forma perfecta de contribuir a nuestra comunidad según
-          tus habilidades e intereses
-        </p>
-      </div>
-
-      <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {roles.map((role) => <VolunteerRoleCard {...role} />)}
       </div>
     </div>
   </section>
-  <CallToActionSection>
-    <h2 class="mb-6 text-3xl font-bold text-white md:text-4xl">
-      ¿Quieres Ser Voluntario?
-    </h2>
-    <p class="mb-8 text-xl text-white">
-      Únete a nuestro increíble equipo de voluntarios y ayúdanos a crear
-      experiencias memorables para la comunidad. No importa cuánto tiempo tengas
-      disponible, ¡toda ayuda es valiosa!
-    </p>
-    <Button variant="white" href={links.forms.volunteer} target="_blank">
-      <HandshakeIcon />
+
+  <CallToActionSection
+    title="¿Quieres ser voluntario?"
+    description="Únete al equipo de voluntarios y ayúdanos a crear experiencias memorables. No importa cuánto tiempo tengas disponible, toda ayuda es valiosa."
+  >
+    <Button
+      href={links.forms.volunteer}
+      target="_blank"
+      variant="inverse"
+      size="lg"
+    >
+      <HandshakeIcon size={18} stroke-width={1.75} aria-hidden />
       Ser voluntario
     </Button>
   </CallToActionSection>

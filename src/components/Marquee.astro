@@ -1,268 +1,117 @@
 ---
-const col01 = [
-  {
-    url: "/carousel/01.webp",
-    alt: "",
-  },
-  {
-    url: "/carousel/02.webp",
-    alt: "",
-  },
-  {
-    url: "/carousel/03.webp",
-    alt: "",
-  },
-  {
-    url: "/carousel/04.webp",
-    alt: "",
-  },
-  {
-    url: "/carousel/05.webp",
-    alt: "",
-  },
-  {
-    url: "/carousel/06.webp",
-    alt: "",
-  },
-  {
-    url: "/carousel/07.webp",
-    alt: "",
-  },
-];
-const col02 = [
-  {
-    url: "/carousel/08.webp",
-    alt: "",
-  },
-  {
-    url: "/carousel/09.webp",
-    alt: "",
-  },
-  {
-    url: "/carousel/10.webp",
-    alt: "",
-  },
-  {
-    url: "/carousel/11.webp",
-    alt: "",
-  },
-  {
-    url: "/carousel/12.webp",
-    alt: "",
-  },
-  {
-    url: "/carousel/13.webp",
-    alt: "",
-  },
-  {
-    url: "/carousel/14.webp",
-    alt: "",
-  },
-];
-const col03 = [
-  {
-    url: "/carousel/15.webp",
-    alt: "",
-  },
-  {
-    url: "/carousel/16.webp",
-    alt: "",
-  },
-  {
-    url: "/carousel/01.webp",
-    alt: "",
-  },
-  {
-    url: "/carousel/02.webp",
-    alt: "",
-  },
-  {
-    url: "/carousel/10.webp",
-    alt: "",
-  },
-  {
-    url: "/carousel/11.webp",
-    alt: "",
-  },
-  {
-    url: "/carousel/07.webp",
-    alt: "",
-  },
+// Purely decorative community photos. The whole block is aria-hidden, which is
+// more honest than shipping empty-alt images into the accessibility tree.
+// Horizontal strip: this now runs as a full-width band, where the previous
+// two-column vertical scroll turned into two enormous columns.
+const rows = [
+  [
+    "/carousel/01.webp",
+    "/carousel/02.webp",
+    "/carousel/03.webp",
+    "/carousel/04.webp",
+    "/carousel/05.webp",
+    "/carousel/06.webp",
+    "/carousel/07.webp",
+    "/carousel/08.webp",
+  ],
+  [
+    "/carousel/09.webp",
+    "/carousel/10.webp",
+    "/carousel/11.webp",
+    "/carousel/12.webp",
+    "/carousel/13.webp",
+    "/carousel/14.webp",
+    "/carousel/15.webp",
+    "/carousel/16.webp",
+  ],
 ];
 ---
 
+<div class="marquee-root" aria-hidden="true">
+  {
+    rows.map((images, index) => (
+      <div class:list={["marquee", index % 2 === 1 && "marquee--reverse"]}>
+        {/* Two identical groups back to back — the loop is only seamless if
+            both render the same sequence in the same order. */}
+        {[0, 1].map(() => (
+          <div class="marquee__group">
+            {images.map((url) => (
+              <img
+                src={url}
+                alt=""
+                width={480}
+                height={360}
+                loading="lazy"
+                decoding="async"
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    ))
+  }
+</div>
+
 <style>
   .marquee-root {
-    --size: clamp(10rem, 1rem + 40vmin, 30rem);
-    --gap: calc(var(--size) / 14);
-    --duration: 60s;
-    --scroll-start: 0;
-    --scroll-end: calc(-100% - var(--gap));
-    --mask-direction: to bottom;
+    --gap: 0.75rem;
+    --duration: 70s;
     display: flex;
-    flex-direction: row;
-    height: 50vh;
+    flex-direction: column;
     gap: var(--gap);
+    overflow: hidden;
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 8%,
+      black 92%,
+      transparent
+    );
   }
 
   .marquee {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    gap: var(--gap);
     overflow: hidden;
     user-select: none;
-    gap: var(--gap);
-    mask-image: linear-gradient(
-      var(--mask-direction, to right),
-      hsl(0 0% 0% / 0),
-      hsl(0 0% 0% / 1) 20%,
-      hsl(0 0% 0% / 1) 80%,
-      hsl(0 0% 0% / 0)
-    );
   }
 
   .marquee__group {
-    flex-shrink: 0;
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-around;
+    flex-direction: row;
+    flex-shrink: 0;
     gap: var(--gap);
-    min-width: 100%;
-    animation: scroll-y var(--duration) linear infinite forwards;
+    animation: marquee-scroll var(--duration) linear infinite;
   }
 
   .marquee--reverse .marquee__group {
     animation-direction: reverse;
-    animation-delay: -3s;
   }
 
   .marquee img {
-    border-radius: 0.5rem;
-    aspect-ratio: 1;
+    height: clamp(8rem, 16vw, 13rem);
+    width: auto;
+    aspect-ratio: 4 / 3;
     object-fit: cover;
-    width: calc(var(--size) / 1.5);
+    border-radius: var(--radius-md);
+    background-color: var(--inset);
+    filter: saturate(0.92) contrast(1.06) brightness(0.99) sepia(0.06);
   }
 
-  @keyframes scroll-y {
+  @keyframes marquee-scroll {
     from {
-      transform: translateY(var(--scroll-start));
+      transform: translateX(0);
     }
     to {
-      transform: translateY(var(--scroll-end));
+      /* One full group plus the gap that follows it. */
+      transform: translateX(calc(-100% - var(--gap)));
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .marquee__group {
-      animation-play-state: paused;
-    }
-  }
-
-  @media (width>=992px) {
-    .marquee-root {
-      height: 100vh;
+      animation: none;
     }
   }
 </style>
-
-<article class="marquee-root">
-  <!-- col01 -->
-  <div class="marquee">
-    <div class="marquee__group">
-      {
-        col01.map((image) => (
-          <img
-            src={image.url}
-            alt={image.alt}
-            width={400}
-            height={400}
-            loading="lazy"
-            decoding="async"
-          />
-        ))
-      }
-    </div>
-    <div aria-hidden="true" class="marquee__group">
-      {
-        col01
-          .reverse()
-          .map((image) => (
-            <img
-              src={image.url}
-              alt={image.alt}
-              width={400}
-              height={400}
-              loading="lazy"
-              decoding="async"
-            />
-          ))
-      }
-    </div>
-  </div>
-  <!-- col02 -->
-  <div class="marquee marquee--reverse">
-    <div class="marquee__group">
-      {
-        col02
-          .reverse()
-          .map((image) => (
-            <img
-              src={image.url}
-              alt={image.alt}
-              width={400}
-              height={400}
-              loading="lazy"
-              decoding="async"
-            />
-          ))
-      }
-    </div>
-    <div aria-hidden="true" class="marquee__group">
-      {
-        col02.map((image) => (
-          <img
-            src={image.url}
-            alt={image.alt}
-            width={400}
-            height={400}
-            loading="lazy"
-            decoding="async"
-          />
-        ))
-      }
-    </div>
-  </div>
-  <!-- col03 -->
-  <div class="marquee">
-    <div class="marquee__group">
-      {
-        col03.map((image) => (
-          <img
-            src={image.url}
-            alt={image.alt}
-            width={400}
-            height={400}
-            loading="lazy"
-            decoding="async"
-          />
-        ))
-      }
-    </div>
-    <div aria-hidden="true" class="marquee__group">
-      {
-        col03
-          .reverse()
-          .map((image) => (
-            <img
-              src={image.url}
-              alt={image.alt}
-              width={400}
-              height={400}
-              loading="lazy"
-              decoding="async"
-            />
-          ))
-      }
-    </div>
-  </div>
-</article>

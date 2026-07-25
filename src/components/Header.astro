@@ -1,86 +1,78 @@
 ---
 import Button from "./Button.astro";
-import { Menu } from "@lucide/astro";
+import ThemeToggle from "./ThemeToggle.astro";
+import { Menu, X } from "@lucide/astro";
 import { fetchLinks } from "@/loaders/transform-site-config";
 
 const siteLinks = await fetchLinks();
 
-const data = {
-  logo: {
-    image: "/gdg-logo.png",
-    imageAlt: "Logo del GDG ICA",
-    name: "GDG ICA",
-    description: "Google Developer Group Ica",
-  },
-  links: [
-    {
-      id: 1,
-      text: "Nosotros",
-      url: "/about",
-      target: "_self",
-    },
-    {
-      id: 2,
-      text: "Equipo",
-      url: "/team",
-      target: "_self",
-    },
-    {
-      id: 3,
-      text: "Eventos",
-      url: "/events",
-      target: "_self",
-    },
-    {
-      id: 4,
-      text: "Patrocinadores",
-      url: "/sponsors",
-      target: "_self",
-    },
-  ],
-  buttonMember: {
-    text: "¡Quiero ser miembro!",
-    url: siteLinks.forms.joinCommunity,
-    target: "_blank",
-  },
-  buttonContact: {
-    text: "Contactanos",
-    url: siteLinks.forms.contact,
-    target: "_blank",
-  },
+const logo = {
+  image: "/gdg-logo.png",
+  imageAlt: "",
+  name: "GDG ICA",
+  description: "Google Developer Group Ica",
 };
+
+const links = [
+  { text: "Nosotros", url: "/about" },
+  { text: "Equipo", url: "/team" },
+  { text: "Eventos", url: "/events" },
+  { text: "Patrocinadores", url: "/sponsors" },
+];
+
+const actions = {
+  member: { text: "Únete", url: siteLinks.forms.joinCommunity },
+  contact: { text: "Contáctanos", url: siteLinks.forms.contact },
+};
+
+const path = Astro.url.pathname.replace(/\/+$/, "") || "/";
+const isActive = (url: string) => path === url || path.startsWith(`${url}/`);
 ---
 
-<header class="border-gray-custom border-b bg-white py-4">
-  <div class="mx-auto max-w-[1400px] px-4">
-    <div class="flex items-center justify-between">
-      <a href="/" class="flex items-center gap-3 lg:basis-1/3">
-        <img
-          src={data.logo.image}
-          class="h-[40px] w-[40px] lg:h-[64px] lg:w-[64px]"
-          width={64}
-          height={64}
-          alt={data.logo.imageAlt}
-        />
-        <div>
-          <p class="text-primary text-lg font-bold">{data.logo.name}</p>
-          <p class="text-secondary text-xs">{data.logo.description}</p>
-        </div>
-      </a>
-      <nav
-        id="navigation"
-        aria-label="Navegación principal"
-        class="fixed inset-0 top-[77px] z-10 flex grow translate-x-full flex-col justify-start gap-6 bg-white px-4 py-10 transition-all md:gap-0 lg:static lg:translate-0 lg:flex-row lg:items-center lg:justify-between lg:py-0"
+<header
+  class="border-line bg-bg/85 sticky top-0 z-50 border-b backdrop-blur-md"
+>
+  <div class="container">
+    <div class="flex h-18 items-center justify-between gap-4">
+      <a
+        href="/"
+        class="group flex shrink-0 items-center gap-3"
+        aria-label="GDG ICA — ir al inicio"
       >
-        <ul class="flex flex-col gap-6 lg:flex-row">
+        <img
+          src={logo.image}
+          class="h-10 w-10"
+          width={40}
+          height={40}
+          alt={logo.imageAlt}
+        />
+        <span class="flex flex-col leading-none">
+          <span class="text-fg text-base font-bold tracking-tight"
+            >{logo.name}</span
+          >
+          <span class="text-fg-subtle mt-0.5 hidden text-xs sm:block"
+            >{logo.description}</span
+          >
+        </span>
+      </a>
+
+      <!-- Desktop navigation -->
+      <nav aria-label="Navegación principal" class="hidden lg:block">
+        <ul class="flex items-center gap-1">
           {
-            data.links.map((link) => (
+            links.map((link) => (
               <li>
                 <a
                   href={link.url}
-                  target={link.target}
-                  class="text-secondary text-base font-medium"
-                  aria-label={`Enlace a ${link.text}`}
+                  aria-current={isActive(link.url) ? "page" : undefined}
+                  class:list={[
+                    "text-ui relative rounded-md px-3 py-2 font-medium transition-colors duration-200",
+                    "hover:text-fg hover:bg-inset",
+                    "after:bg-accent after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:origin-left after:scale-x-0 after:transition-transform after:duration-200",
+                    isActive(link.url)
+                      ? "text-fg after:scale-x-100"
+                      : "text-fg-muted",
+                  ]}
                 >
                   {link.text}
                 </a>
@@ -88,52 +80,209 @@ const data = {
             ))
           }
         </ul>
-        <div class="flex flex-col gap-3 lg:flex-row">
-          <Button
-            variant="solid"
-            href={data.buttonMember.url}
-            target={data.buttonMember.target}
-          >
-            {data.buttonMember.text}
-          </Button>
-          <Button
-            variant="outline"
-            href={data.buttonContact.url}
-            target={data.buttonContact.target}
-          >
-            {data.buttonContact.text}
-          </Button>
-        </div>
       </nav>
-      <button id="hamburgerButton" class="lg:hidden" aria-label="Abrir menú">
-        <Menu stroke-width={1.5} />
-      </button>
+
+      <div class="flex items-center gap-2">
+        <ThemeToggle />
+        <Button
+          href={actions.contact.url}
+          target="_blank"
+          variant="secondary"
+          size="sm"
+          class="hidden xl:inline-flex"
+        >
+          {actions.contact.text}
+        </Button>
+        <Button
+          href={actions.member.url}
+          target="_blank"
+          size="sm"
+          class="hidden sm:inline-flex"
+        >
+          {actions.member.text}
+        </Button>
+
+        <button
+          type="button"
+          id="menu-trigger"
+          class="border-line text-fg-muted hover:border-line-strong hover:bg-inset hover:text-fg inline-flex h-10 w-10 items-center justify-center rounded-md border transition-colors duration-200 lg:hidden"
+          aria-label="Abrir menú"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+        >
+          <Menu stroke-width={1.75} size={20} aria-hidden />
+        </button>
+      </div>
     </div>
   </div>
+
+  <!-- Mobile menu. `hidden` (not an off-screen transform) keeps the links out
+       of the tab order and the accessibility tree while closed. -->
+  <div
+    id="mobile-menu"
+    hidden
+    class="bg-bg fixed inset-0 top-18 z-40 overflow-y-auto lg:hidden"
+  >
+    <nav aria-label="Navegación principal" class="container py-8">
+      <ul class="flex flex-col">
+        {
+          links.map((link) => (
+            <li class="border-line border-b">
+              <a
+                href={link.url}
+                aria-current={isActive(link.url) ? "page" : undefined}
+                class:list={[
+                  "flex items-center justify-between py-4 text-xl font-semibold transition-colors",
+                  isActive(link.url) ? "text-accent" : "text-fg",
+                ]}
+              >
+                {link.text}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+      <div class="mt-8 flex flex-col gap-3">
+        <Button href={actions.member.url} target="_blank" size="lg">
+          {actions.member.text}
+        </Button>
+        <Button
+          href={actions.contact.url}
+          target="_blank"
+          variant="secondary"
+          size="lg"
+        >
+          {actions.contact.text}
+        </Button>
+      </div>
+    </nav>
+  </div>
+
+  <div hidden id="menu-close-icon-source">
+    <X stroke-width={1.75} size={20} aria-hidden />
+  </div>
 </header>
+
 <script is:inline>
-  function initMenu() {
-    const menuButton = document.querySelector("#hamburgerButton");
-    const menuNavigation = document.querySelector("#navigation");
+  (function () {
+    const FOCUSABLE =
+      'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    let trigger, menu, openIcon, closeIcon, lastScrollY;
 
-    if (!menuButton || !menuNavigation) return;
+    function isOpen() {
+      return trigger && trigger.getAttribute("aria-expanded") === "true";
+    }
 
-    // Toggle menú
-    menuButton.onclick = () => {
-      menuNavigation.classList.toggle("translate-x-full");
-    };
+    function setIcon(open) {
+      if (!trigger || !openIcon || !closeIcon) return;
+      trigger.innerHTML = open ? closeIcon : openIcon;
+    }
 
-    // Cerrar menú al hacer click en un link
-    menuNavigation.querySelectorAll("a").forEach((link) => {
-      link.onclick = () => {
-        menuNavigation.classList.add("translate-x-full");
-      };
+    function open() {
+      if (!trigger || !menu) return;
+      menu.hidden = false;
+      trigger.setAttribute("aria-expanded", "true");
+      trigger.setAttribute("aria-label", "Cerrar menú");
+      setIcon(true);
+
+      // Scroll lock without losing position.
+      lastScrollY = window.scrollY;
+      document.body.style.position = "fixed";
+      document.body.style.top = -lastScrollY + "px";
+      document.body.style.width = "100%";
+
+      const first = menu.querySelector(FOCUSABLE);
+      if (first) first.focus();
+    }
+
+    function close(returnFocus) {
+      if (!trigger || !menu) return;
+      menu.hidden = true;
+      trigger.setAttribute("aria-expanded", "false");
+      trigger.setAttribute("aria-label", "Abrir menú");
+      setIcon(false);
+
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      if (typeof lastScrollY === "number") window.scrollTo(0, lastScrollY);
+
+      if (returnFocus) trigger.focus();
+    }
+
+    function onTriggerClick() {
+      if (isOpen()) {
+        close(false);
+      } else {
+        open();
+      }
+    }
+
+    function onKeydown(e) {
+      if (!isOpen()) return;
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close(true);
+        return;
+      }
+
+      if (e.key !== "Tab") return;
+
+      // Focus trap.
+      const items = Array.prototype.filter.call(
+        menu.querySelectorAll(FOCUSABLE),
+        function (el) {
+          return el.offsetParent !== null;
+        }
+      );
+      if (!items.length) return;
+
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+
+      if (e.shiftKey && (active === first || active === trigger)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+
+    function onResize() {
+      // Desktop nav takes over at lg; leaving the panel open would trap focus.
+      if (isOpen() && window.innerWidth >= 1024) close(false);
+    }
+
+    function init() {
+      trigger = document.getElementById("menu-trigger");
+      menu = document.getElementById("mobile-menu");
+      if (!trigger || !menu) return;
+
+      openIcon = trigger.innerHTML;
+      const closeSource = document.getElementById("menu-close-icon-source");
+      closeIcon = closeSource ? closeSource.innerHTML : openIcon;
+
+      trigger.addEventListener("click", onTriggerClick);
+      menu.querySelectorAll("a").forEach(function (a) {
+        a.addEventListener("click", function () {
+          close(false);
+        });
+      });
+
+      document.addEventListener("keydown", onKeydown);
+      window.addEventListener("resize", onResize);
+    }
+
+    init();
+    document.addEventListener("astro:after-swap", function () {
+      // Body styles survive the swap if a navigation happened while open.
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      init();
     });
-  }
-
-  // Ejecutar al cargar
-  initMenu();
-
-  // Ejecutar después de cada transición de página
-  document.addEventListener("astro:after-swap", initMenu);
+  })();
 </script>

@@ -86,9 +86,8 @@ export function WordCloudView({
     setError(null);
     try {
       const db = await getFirestore();
-      const { doc, increment, serverTimestamp, setDoc } = await import(
-        "firebase/firestore"
-      );
+      const { doc, increment, serverTimestamp, setDoc } =
+        await import("firebase/firestore");
       const ref = doc(
         db,
         `events/${slug}/minigames/${instanceId}/words/${normalized}`
@@ -118,8 +117,8 @@ export function WordCloudView({
   return (
     <div>
       <div className="mb-4">
-        <h2 className="text-primary text-2xl font-semibold">{title}</h2>
-        <p className="text-secondary mt-1 text-sm">{prompt}</p>
+        <h2 className="text-fg text-2xl font-semibold">{title}</h2>
+        <p className="text-fg-muted mt-1 text-sm">{prompt}</p>
       </div>
 
       <form

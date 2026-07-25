@@ -1,9 +1,23 @@
 ---
-const { className } = Astro.props;
+import { cn } from "@/utils/cn";
+
+interface Props {
+  class?: string;
+  className?: string;
+  interactive?: boolean;
+}
+
+// `className` is accepted for backwards compatibility with existing call sites.
+const { class: classProp, className, interactive = false } = Astro.props;
 ---
 
 <article
-  class={`border-gray-custom bg-white rounded-lg border p-6 shadow-sm ${className}`}
+  class={cn(
+    "card p-6",
+    interactive && "card-interactive",
+    classProp,
+    className
+  )}
 >
   <slot />
 </article>

@@ -5,10 +5,12 @@ import Button from "@/components/Button.astro";
 import Marquee from "@/components/Marquee.astro";
 import FeatureCard from "@/components/FeatureCard.astro";
 import EventCard from "@/components/EventCard.astro";
+import SectionHeader from "@/components/SectionHeader.astro";
+import StatsBar from "@/components/StatsBar.astro";
+import DuneDivider from "@/components/DuneDivider.astro";
 import { getCollection } from "astro:content";
 import { parseSpanishDate } from "@/utils/parseSpanishDate";
 import { fetchStats, fetchLinks } from "@/loaders/transform-site-config";
-import StatsBar from "@/components/StatsBar.astro";
 import {
   Users,
   ArrowRight,
@@ -16,7 +18,7 @@ import {
   Lightbulb,
   HeartHandshake,
   Sprout,
-  Calendar,
+  CalendarPlus,
 } from "@lucide/astro";
 
 const allEvents = await getCollection("events");
@@ -28,15 +30,52 @@ const upcomingEvents = allEvents
     return dateA.getTime() - dateB.getTime();
   });
 
-const gridClasses =
-  upcomingEvents.length === 1
-    ? "mx-auto grid max-w-md"
-    : upcomingEvents.length === 2
-      ? "grid grid-cols-1 gap-8 sm:grid-cols-2 justify-center"
-      : "grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3";
-
 const stats = await fetchStats();
 const links = await fetchLinks();
+
+// Real venues, straight from the event data. The site named "Ica" exactly once
+// before this; the places the community actually meets are the most authentic
+// identity available and need no illustration.
+const venueCounts = new Map<string, number>();
+for (const event of allEvents) {
+  if (event.data.isVirtual) continue;
+  const name = event.data.location?.name?.trim();
+  if (name) venueCounts.set(name, (venueCounts.get(name) ?? 0) + 1);
+}
+const venues = [...venueCounts.entries()]
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, 6);
+
+const benefits = [
+  {
+    Icon: UsersRound,
+    title: "Conectar",
+    tone: "text-brand-blue-text",
+    rule: "bg-brand-blue",
+    body: "Hacer networking con profesionales, estudiantes y otros apasionados por la tecnología de Ica y alrededores.",
+  },
+  {
+    Icon: Lightbulb,
+    title: "Aprender",
+    tone: "text-brand-red-text",
+    rule: "bg-brand-red",
+    body: "Participar en charlas técnicas, workshops y study jams sobre Android, Google Cloud, Web, AI/ML, Firebase, Flutter y mucho más.",
+  },
+  {
+    Icon: HeartHandshake,
+    title: "Compartir",
+    tone: "text-brand-yellow-text",
+    rule: "bg-brand-yellow",
+    body: "Presentar tus propios proyectos, compartir tus conocimientos y convertirte en un referente para otros.",
+  },
+  {
+    Icon: Sprout,
+    title: "Crecer",
+    tone: "text-brand-green-text",
+    rule: "bg-brand-green",
+    body: "Desarrollar tus habilidades técnicas y blandas, y dar un impulso a tu trayectoria profesional con el apoyo de una red activa.",
+  },
+];
 
 const metadata = {
   title: "GDG ICA - Google Developer Group Ica",
@@ -67,38 +106,96 @@ const metadata = {
 ---
 
 <Layout {...metadata}>
-  <section class="py-10">
-    <div class="container">
-      <div class="flex flex-col-reverse items-center gap-10 md:flex-row">
-        <div class="md:basis-1/2">
-          <h1 class="text-primary mb-6 text-[2rem] font-bold lg:text-6xl">
-            <span class="text-google-blue">Conecta. </span><span
-              class="text-google-red"
-              >Aprende.
-            </span><span class="text-google-yellow">Construye. </span>
-            <span class="text-google-green">Crece</span> con el GDG ICA
-          </h1>
-          <p class="text-secondary mb-10 text-xl font-medium">
-            Somos una comunidad de jóvenes apasionados por la tecnología en ICA.
-            Únete a nuestros eventos, comparte conocimiento y lleva tus
-            habilidades al siguiente nivel.
-          </p>
-          <div class="flex flex-col gap-4 lg:flex-row">
-            <Button variant="solid" href={links.community} target="_blank">
-              Unete a GDG hoy
-              <ArrowRight stroke-width={1.5} />
-            </Button>
-            <Button variant="outline" href="/events"> Ver eventos </Button>
-          </div>
-        </div>
-        <div class="md:basis-1/2">
-          <Marquee />
+  {
+    /* Hero — text comes first in source order so mobile leads with the
+      headline instead of a wall of photos. */
+  }
+  <section
+    class="relative isolate flex min-h-[34rem] items-end overflow-hidden lg:min-h-[42rem]"
+  >
+    <img
+      src="/events/devfest-2025.webp"
+      alt=""
+      width={1920}
+      height={1080}
+      fetchpriority="high"
+      decoding="async"
+      class="absolute inset-0 -z-20 h-full w-full object-cover object-center"
+    />
+
+    {
+      /*
+      ONE diagonal scrim, not two stacked ones. Two scrims multiply their
+      transmission — 0.92 over 0.82 left only ~2% of the photo showing, which
+      defeated the point of using a photo at all. This darkens the bottom-left
+      where the copy sits and clears out toward the top-right so the crowd
+      stays visible.
+    */
+    }
+    <div
+      class="absolute inset-0 -z-10"
+      style="background: linear-gradient(to top right, color-mix(in srgb, var(--ink) 88%, transparent) 0%, color-mix(in srgb, var(--ink) 62%, transparent) 30%, color-mix(in srgb, var(--ink) 22%, transparent) 62%, transparent 85%);"
+      aria-hidden="true"
+    >
+    </div>
+
+    {
+      /* Localised pool behind the copy only. Measured: the diagonal scrim alone
+        left the lead paragraph at 3.06:1, under the 4.5:1 floor for body text,
+        while the headline was fine. Confining the extra darkening here keeps
+        the photo readable everywhere else. */
+    }
+    <div
+      class="absolute inset-0 -z-10"
+      style="background: radial-gradient(120% 95% at 0% 100%, color-mix(in srgb, var(--ink) 78%, transparent) 0%, color-mix(in srgb, var(--ink) 45%, transparent) 42%, transparent 72%);"
+      aria-hidden="true"
+    >
+    </div>
+
+    <div class="section relative container">
+      <div class="animate-fade-up max-w-3xl">
+        <p
+          class="text-overline text-fg-on-ink mb-6 flex items-center gap-3 uppercase"
+        >
+          <span class="brand-rule h-1 w-10 rounded-full" aria-hidden="true"
+          ></span>
+          Comunidad tech · Ica, Perú
+        </p>
+
+        <h1 class="text-display text-fg-on-ink text-balance">
+          Conecta, aprende y construye.
+        </h1>
+
+        <p class="text-lead text-fg-on-ink mt-7 max-w-xl text-pretty">
+          Somos una comunidad de jóvenes apasionados por la tecnología en Ica.
+          Únete a nuestros eventos, comparte conocimiento y lleva tus
+          habilidades al siguiente nivel.
+        </p>
+
+        <div class="mt-9 flex flex-col gap-3 sm:flex-row">
+          <Button
+            href={links.community}
+            target="_blank"
+            variant="inverse"
+            size="lg"
+          >
+            Únete a GDG hoy
+            <ArrowRight size={18} stroke-width={2} aria-hidden />
+          </Button>
+          <Button href="/events" variant="inverse-outline" size="lg">
+            Ver eventos
+          </Button>
         </div>
       </div>
     </div>
   </section>
-  <section class="bg-section py-20">
-    <div class="container">
+
+  {/* Dune crest instead of a hard rule into the stats band. */}
+  <DuneDivider class="text-surface" />
+
+  {/* Stats */}
+  <section class="border-line bg-surface grain border-b">
+    <div class="section-tight container">
       <StatsBar
         stats={[
           {
@@ -113,7 +210,7 @@ const metadata = {
             color: "yellow",
           },
           {
-            value: `${stats.yearsActive}`,
+            value: `${stats.yearsActive}+`,
             label: "Años activos",
             color: "green",
           },
@@ -121,159 +218,151 @@ const metadata = {
       />
     </div>
   </section>
-  <section class="py-10 md:py-20">
-    <div class="container">
-      <div class="mx-auto mb-16 max-w-[500px] text-center">
-        <h2 class="text-primary mb-4 text-4xl font-bold">
-          ¿Por qué unirte al GDG ICA?
-        </h2>
-        <p class="text-secondary text-xl">
-          Descubra los beneficios de ser parte de nuestra vibrante comunidad de
-          desarrolladores
-        </p>
-      </div>
-      <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-        <FeatureCard className="border-t-google-blue border-t-4">
-          <UsersRound
-            stroke-width={1.5}
-            size={48}
-            class="text-google-blue mb-4"
-          />
-          <p class="text-primary mb-4 text-2xl font-bold">Conectar</p>
-          <p class="text-secondary text-sm">
-            Hacer networking con profesionales, estudiantes y otros apasionados
-            por la tecnología de Ica y alrededores.
-          </p>
-        </FeatureCard>
-        <FeatureCard className="border-t-google-red border-t-4">
-          <Lightbulb
-            stroke-width={1.5}
-            size={48}
-            class="text-google-red mb-4"
-          />
-          <p class="text-primary mb-4 text-2xl font-bold">Aprender</p>
-          <p class="text-secondary text-sm">
-            Participar en charlas técnicas, workshops y study jams sobre
-            Android, Google Cloud, Web, AI/ML, Firebase, Flutter y mucho más.
-          </p>
-        </FeatureCard>
-        <FeatureCard className="border-t-google-yellow border-t-4">
-          <HeartHandshake
-            stroke-width={1.5}
-            size={48}
-            class="text-google-yellow mb-4"
-          />
-          <p class="text-primary mb-4 text-2xl font-bold">Compartir</p>
-          <p class="text-secondary text-sm">
-            Presentar tus propios proyectos, compartir tus conocimientos y
-            convertirte en un referente para otros.
-          </p>
-        </FeatureCard>
-        <FeatureCard className="border-t-google-green border-t-4">
-          <Sprout stroke-width={1.5} size={48} class="text-google-green mb-4" />
-          <p class="text-primary mb-4 text-2xl font-bold">Crecer</p>
-          <p class="text-secondary text-sm">
-            Desarrollar tus habilidades técnicas y blandas, y dar un impulso a
-            tu trayectoria profesional con el apoyo de una red activa.
-          </p>
-        </FeatureCard>
-      </div>
+
+  {/* Benefits */}
+  <section class="section container">
+    <SectionHeader
+      eyebrow="Por qué unirte"
+      title="Una comunidad que te impulsa"
+      description="Descubre los beneficios de ser parte de nuestra comunidad de desarrolladores."
+    />
+
+    <div class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      {
+        benefits.map(({ Icon, title, body, tone, rule }) => (
+          <FeatureCard interactive class="flex flex-col">
+            <span
+              class={`mb-5 block h-1 w-9 rounded-full ${rule}`}
+              aria-hidden="true"
+            />
+            <Icon size={28} stroke-width={1.75} class={tone} aria-hidden />
+            <h3 class="text-h4 text-fg mt-4">{title}</h3>
+            <p class="text-fg-muted mt-2 text-sm">{body}</p>
+          </FeatureCard>
+        ))
+      }
     </div>
   </section>
-  <section class="bg-section py-10 md:py-20">
-    <div class="container">
-      <div class="mx-auto mb-16 max-w-[540px] text-center">
-        <h2 class="text-primary mb-4 text-4xl font-bold">Próximos eventos</h2>
-        <p class="text-secondary text-xl">
-          No te pierdas nuestros emocionantes próximos eventos
-        </p>
-      </div>
+
+  {/* Upcoming events */}
+  <section class="border-line bg-surface border-t">
+    <div class="section container">
+      <SectionHeader
+        eyebrow="Agenda"
+        title="Próximos eventos"
+        description="No te pierdas lo que viene en la comunidad."
+      />
+
       {
         upcomingEvents.length > 0 ? (
-          <div class={gridClasses}>
+          <div
+            class:list={[
+              "mt-14 grid gap-6",
+              upcomingEvents.length === 1
+                ? "max-w-2xl"
+                : upcomingEvents.length === 2
+                  ? "sm:grid-cols-2"
+                  : "sm:grid-cols-2 lg:grid-cols-3",
+            ]}
+          >
             {upcomingEvents.map((event) => (
               <EventCard slug={event.id} {...event.data} />
             ))}
           </div>
         ) : (
-          <div class="flex justify-center">
-            <article class="border-gray-custom relative max-w-md rounded-lg border bg-white">
-              <div class="relative h-[192px] w-full overflow-hidden rounded-t-lg bg-gradient-to-br from-blue-50 via-purple-50 to-red-50">
-                <div class="absolute inset-0 flex items-center justify-center">
-                  <div class="text-center">
-                    <div class="mb-3 inline-flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-lg">
-                      <Calendar
-                        stroke-width={1.5}
-                        size={40}
-                        class="text-google-blue"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="absolute top-4 left-6">
-                <div class="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1">
-                  <span class="relative flex h-2 w-2">
-                    <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
-                    <span class="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
-                  </span>
-                  <span class="text-sm font-medium text-blue-700">
-                    Próximamente
-                  </span>
-                </div>
-              </div>
-              <div class="p-6">
-                <p class="text-primary mb-1 text-2xl font-bold">
-                  Nuevos eventos muy pronto
+          <div class="card mt-14 flex flex-col items-center gap-6 p-10 text-center md:flex-row md:justify-between md:text-left">
+            <div class="flex items-center gap-5">
+              <span
+                class="bg-brand-blue-soft text-brand-blue-text hidden h-14 w-14 shrink-0 items-center justify-center rounded-full sm:inline-flex"
+                aria-hidden="true"
+              >
+                <CalendarPlus size={24} stroke-width={1.75} />
+              </span>
+              <div>
+                <h3 class="text-h3 text-fg">Nuevos eventos muy pronto</h3>
+                <p class="text-fg-muted mt-2 max-w-md text-pretty">
+                  Estamos preparando la siguiente tanda de workshops y charlas.
+                  Únete a la comunidad para enterarte primero.
                 </p>
-                <p class="text-secondary mb-6">
-                  Estamos preparando experiencias increíbles para la comunidad
-                </p>
-                <ul class="text-secondary mb-4 flex flex-col gap-3">
-                  <li class="flex items-center gap-3">
-                    <Lightbulb stroke-width={1.5} size={16} color="#2463EB" />
-                    Workshops y charlas técnicas
-                  </li>
-                  <li class="flex items-center gap-3">
-                    <UsersRound stroke-width={1.5} size={16} color="#EF4444" />
-                    Networking con la comunidad
-                  </li>
-                  <li class="flex items-center gap-3">
-                    <Sprout stroke-width={1.5} size={16} color="#16A34A" />
-                    Aprendizaje y crecimiento
-                  </li>
-                </ul>
-                <div class="grid gap-2">
-                  <Button
-                    variant="solid"
-                    href={links.community}
-                    target="_blank"
-                  >
-                    <Users stroke-width={1.5} />
-                    Únete a la comunidad
-                  </Button>
-                  <Button variant="outline" href="/events">
-                    Ver eventos pasados
-                  </Button>
-                </div>
               </div>
-            </article>
+            </div>
+            <div class="flex shrink-0 flex-col gap-3 sm:flex-row">
+              <Button href={links.community} target="_blank">
+                <Users size={18} stroke-width={1.75} aria-hidden />
+                Únete
+              </Button>
+              <Button href="/events" variant="secondary">
+                Ver eventos pasados
+              </Button>
+            </div>
           </div>
         )
       }
     </div>
   </section>
-  <CallToActionSection>
-    <h2 class="mb-6 text-3xl font-bold text-white md:text-4xl">
-      ¿Listo para unirte a nuestra comunidad?
-    </h2>
-    <p class="mb-8 text-xl text-white">
-      Conéctese con desarrolladores, aprenda nuevas tecnologías y construyan
-      proyectos increíbles juntos.
-    </p>
-    <Button variant="white" href={links.community} target="_blank">
-      <Users />
-      Unete a GDG hoy
+
+  {
+    /* Real places in Ica. The site named the city exactly once before this;
+      the venues the community actually meets in are the most authentic
+      identity available, and need no illustration. */
+  }
+  {
+    venues.length > 0 && (
+      <section class="section container">
+        <SectionHeader
+          eyebrow="Dónde nos reunimos"
+          title="Sedes de la comunidad en Ica"
+          description="Nos juntamos en universidades e institutos de la región. Estas son las que más nos han acogido."
+        />
+        <ul class="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {venues.map(([name, count], i) => (
+            <li class="card card-interactive flex items-start gap-4 p-5">
+              <span
+                class="text-brand-blue-text bg-brand-blue-soft flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-sm font-bold tabular-nums"
+                aria-hidden="true"
+              >
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <div class="min-w-0">
+                <h3 class="text-h4 text-fg text-balance">{name}</h3>
+                <p class="text-fg-subtle mt-1 text-sm">
+                  {count} {count === 1 ? "evento" : "eventos"} · Ica, Perú
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  {
+    /* Community photo band — the marquee moved out of the hero, where the
+      full-bleed photo now carries that job, into a section of its own. */
+  }
+  <section class="border-line bg-bg overflow-hidden border-t">
+    <div class="section-tight container">
+      <SectionHeader
+        eyebrow="La comunidad"
+        title="Así se ve un evento del GDG Ica"
+        description="Fotos de nuestros meetups, workshops y DevFests."
+      />
+    </div>
+    <div class="mt-4">
+      <Marquee />
+    </div>
+  </section>
+
+  <CallToActionSection
+    title="¿Listo para unirte a nuestra comunidad?"
+    description="Conéctate con desarrolladores, aprende nuevas tecnologías y construyan proyectos increíbles juntos."
+  >
+    <Button href={links.community} target="_blank" variant="inverse" size="lg">
+      <Users size={18} stroke-width={1.75} aria-hidden />
+      Únete a GDG hoy
+    </Button>
+    <Button href="/events" variant="inverse-outline" size="lg">
+      Ver eventos
     </Button>
   </CallToActionSection>
 </Layout>

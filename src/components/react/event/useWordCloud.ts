@@ -41,9 +41,8 @@ export function useWordCloud(
     (async () => {
       try {
         const db = await getFirestore();
-        const { collection, query, orderBy, limit, onSnapshot } = await import(
-          "firebase/firestore"
-        );
+        const { collection, query, orderBy, limit, onSnapshot } =
+          await import("firebase/firestore");
         if (cancelled) return;
         const q = query(
           collection(db, `events/${slug}/minigames/${instanceId}/words`),

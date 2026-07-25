@@ -1,0 +1,59 @@
+---
+import { Globe } from "@lucide/astro";
+import GithubIcon from "./icons/GithubIcon.astro";
+import LinkedinIcon from "./icons/LinkedinIcon.astro";
+import TwitterIcon from "./icons/TwitterIcon.astro";
+import YoutubeIcon from "./icons/YoutubeIcon.astro";
+import { cn } from "@/utils/cn";
+
+interface Props {
+  links?: {
+    linkedin?: string;
+    twitter?: string;
+    github?: string;
+    youtube?: string;
+    web?: string;
+  };
+  /** Included in each label so screen readers can tell repeated cards apart. */
+  name?: string;
+  size?: number;
+  class?: string;
+}
+
+const { links = {}, name, size = 18, class: className } = Astro.props;
+
+const suffix = name ? ` de ${name}` : "";
+const isUrl = (value?: string) => Boolean(value && /^https?:\/\//.test(value));
+
+const entries = [
+  { key: "linkedin", href: links.linkedin, label: "LinkedIn", Icon: null },
+  { key: "twitter", href: links.twitter, label: "Twitter", Icon: null },
+  { key: "github", href: links.github, label: "GitHub", Icon: null },
+  { key: "youtube", href: links.youtube, label: "YouTube", Icon: null },
+  { key: "web", href: links.web, label: "Sitio web", Icon: null },
+].filter((entry) => isUrl(entry.href));
+---
+
+{
+  entries.length > 0 && (
+    <ul class={cn("flex items-center gap-1", className)}>
+      {entries.map(({ key, href, label }) => (
+        <li>
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`${label}${suffix}`}
+            class="text-fg-subtle hover:text-accent hover:bg-inset inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors duration-200"
+          >
+            {key === "linkedin" && <LinkedinIcon size={size} />}
+            {key === "twitter" && <TwitterIcon size={size} />}
+            {key === "github" && <GithubIcon size={size} />}
+            {key === "youtube" && <YoutubeIcon size={size} />}
+            {key === "web" && <Globe size={size} stroke-width={1.75} />}
+          </a>
+        </li>
+      ))}
+    </ul>
+  )
+}
