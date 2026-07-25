@@ -1,6 +1,12 @@
 import { afterAll, afterEach, beforeAll, describe, it } from "vitest";
 import { assertFails, assertSucceeds } from "@firebase/rules-unit-testing";
-import { deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
+import {
+  deleteDoc,
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
 import { cleanup, clearAll, getTestEnv } from "./setup";
 
 const SLUG = "devfest-2025";
@@ -292,10 +298,13 @@ describe("firestore.rules — PR5 bingo marking", () => {
     );
   });
 
-  it("allows setting bingoWonAt alongside bingoMarked", async () => {
+  it("allows setting bingoWonAt on a completed line with the server time", async () => {
     const env = await getTestEnv();
     await seedBingoState(env);
     const auth = env.authenticatedContext("user-1").firestore();
+    // A completed top row. The win must carry serverTimestamp(): the rule
+    // pins bingoWonAt to request.time so a win cannot be self-reported or
+    // backdated. Deeper coverage of that boundary lives in bingo-win.test.ts.
     const win = Array.from({ length: 16 }, (_, i) => i < 4);
     await assertSucceeds(
       setDoc(
@@ -303,7 +312,7 @@ describe("firestore.rules — PR5 bingo marking", () => {
           auth,
           `events/${SLUG}/minigames/${BINGO_INSTANCE_ID}/participants/user-1`
         ),
-        { bingoMarked: win, bingoWonAt: new Date() },
+        { bingoMarked: win, bingoWonAt: serverTimestamp() },
         { merge: true }
       )
     );
