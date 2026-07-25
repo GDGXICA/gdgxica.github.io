@@ -112,6 +112,14 @@ const realApi = {
     return request("GET", `/audit${qs ? `?${qs}` : ""}`);
   },
 
+  // Equipo por evento
+  listEventStaff: (slug: string) => request("GET", `/events/${slug}/staff`),
+  assignEventStaff: (slug: string, uid: string, data: unknown) =>
+    request("PUT", `/events/${slug}/staff/${uid}`, data),
+  removeEventStaff: (slug: string, uid: string) =>
+    request("DELETE", `/events/${slug}/staff/${uid}`),
+  listMyEvents: () => request("GET", "/me/events"),
+
   // Access — solicitudes e invitaciones
   getMyAccessRequest: () => request("GET", "/access/requests/me"),
   createAccessRequest: (data: unknown) =>

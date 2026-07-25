@@ -32,6 +32,7 @@ import * as stats from "./handlers/stats";
 import * as users from "./handlers/users";
 import * as audit from "./handlers/audit";
 import * as access from "./handlers/access";
+import * as eventStaff from "./handlers/eventStaff";
 import * as forms from "./handlers/forms";
 import { triggerRebuild } from "./handlers/rebuild";
 import * as locations from "./handlers/locations";
@@ -143,6 +144,7 @@ const joinLimiter = rateLimit({
 
 const vid = validateParamId("id");
 const vuid = validateParamId("uid");
+const slugP = validateParamId("slug");
 
 // Auth
 app.post("/api/auth/register", requireAuth(), register);
@@ -318,6 +320,36 @@ const accessLimiter = rateLimit({
   },
 });
 
+// Asignaciones de staff por evento. Gestionarlas exige `users:role:write`:
+// asignar a alguien a un evento es concederle permisos, aunque acotados, y
+// debe pesar lo mismo que cambiar un rol.
+app.get(
+  "/api/events/:slug/staff",
+  requirePermission("roster:read", { scopeParam: "slug" }),
+  slugP,
+  eventStaff.listStaff
+);
+app.put(
+  "/api/events/:slug/staff/:uid",
+  requirePermission("users:role:write"),
+  slugP,
+  vuid,
+  writeLimiter,
+  eventStaff.assignStaff
+);
+app.delete(
+  "/api/events/:slug/staff/:uid",
+  requirePermission("users:role:write"),
+  slugP,
+  vuid,
+  writeLimiter,
+  eventStaff.removeStaff
+);
+
+// Eventos asignados a quien llama. Solo necesita sesión: devuelve
+// exclusivamente las asignaciones propias, nunca las de otra persona.
+app.get("/api/me/events", requireAuth(), eventStaff.listMyEvents);
+
 app.get("/api/access/requests/me", requireAuth(), access.getMyRequest);
 app.post(
   "/api/access/requests",
@@ -449,7 +481,6 @@ app.delete(
 
 // Minigame Instances — acotadas al evento: `scopeParam` permite que un
 // voluntario asignado a ESE evento las opere, sin darle los demás.
-const slugP = validateParamId("slug");
 const minigamesOfEvent = () =>
   requirePermission("minigames:operate", { scopeParam: "slug" });
 

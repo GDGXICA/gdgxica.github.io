@@ -21,6 +21,7 @@ import { CheckinPanel } from "./checkin/CheckinPanel";
 import { RoleMatrix } from "./roles/RoleMatrix";
 import { AuditLog } from "./audit/AuditLog";
 import { AccessReview } from "./access/AccessReview";
+import { EventStaffPanel } from "./event-staff/EventStaffPanel";
 import { ROLE_BUNDLES, isRole, type Permission } from "@/lib/permissions";
 
 interface Props {
@@ -58,6 +59,9 @@ const PAGE_PERMISSIONS: Record<string, Permission> = {
   locations: "locations:read",
   "minigame-templates": "minigames:template:read",
   "event-minigames": "minigames:operate",
+  // Ver quién opera un evento va con poder ver su roster; asignar exige
+  // `users:role:write` y lo comprueba el endpoint.
+  "event-staff": "roster:read",
   certificates: "certificates:send",
   checkin: "roster:read",
 };
@@ -96,6 +100,8 @@ function pageContent(page: string) {
       return <MinigameTemplateList />;
     case "event-minigames":
       return <EventMinigameManager />;
+    case "event-staff":
+      return <EventStaffPanel />;
     case "certificates":
       return <CertificateSender />;
     case "checkin":
@@ -129,7 +135,7 @@ function renderPage(page: string, guards: Guards | null) {
 }
 
 /** Páginas cuyo permiso un rol puede obtener por asignación a un evento. */
-const SCOPED_PAGES = new Set(["checkin", "event-minigames"]);
+const SCOPED_PAGES = new Set(["checkin", "event-minigames", "event-staff"]);
 
 function canReachByAssignment(page: string, guards: Guards): boolean {
   if (!SCOPED_PAGES.has(page)) return false;

@@ -184,6 +184,25 @@ export const MOCK_USERS = [
   },
 ];
 
+export const MOCK_EVENT_STAFF = [
+  {
+    uid: "dev-volunteer",
+    role: "volunteer",
+    assignedBy: "dev-admin",
+    expiresAt: new Date(Date.now() + 2 * 86400_000).toISOString(),
+    reason: "Apoyo en puerta",
+    active: true,
+  },
+  {
+    uid: "dev-volunteer-antiguo",
+    role: "volunteer",
+    assignedBy: "dev-admin",
+    expiresAt: new Date(Date.now() - 30 * 86400_000).toISOString(),
+    reason: "Edición anterior",
+    active: false,
+  },
+];
+
 export const MOCK_ACCESS_REQUESTS = [
   {
     uid: "req-1",

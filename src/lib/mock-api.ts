@@ -8,6 +8,7 @@ import {
   MOCK_AUDIT,
   MOCK_ACCESS_REQUESTS,
   MOCK_INVITATIONS,
+  MOCK_EVENT_STAFF,
   MOCK_FORMS,
   MOCK_FORM_RESPONSES,
   MOCK_LOCATIONS,
@@ -51,6 +52,11 @@ export const mockApi = {
   updateUserGrants: () => ok({ uid: "dev", grants: [], revocations: [] }),
 
   listAudit: () => ok({ entries: MOCK_AUDIT, nextCursor: null }),
+
+  listEventStaff: () => ok(MOCK_EVENT_STAFF),
+  assignEventStaff: () => ok({ uid: "dev-volunteer" }),
+  removeEventStaff: () => ok(null),
+  listMyEvents: () => ok([{ eventSlug: "devfest-2026", role: "volunteer" }]),
 
   getMyAccessRequest: () => ok(null),
   createAccessRequest: () => ok({ status: "pending" }),

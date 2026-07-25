@@ -1,0 +1,8 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { AdminApp } from "@/components/react/admin/AdminApp";
+---
+
+<AdminLayout title="Equipo del evento">
+  <AdminApp client:load page="event-staff" currentPath="/admin/events/staff" />
+</AdminLayout>

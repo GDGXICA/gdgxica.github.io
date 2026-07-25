@@ -141,6 +141,12 @@ export function EventList() {
                     >
                       🎮 Mini-juegos
                     </a>
+                    <a
+                      href={`/admin/events/staff?slug=${encodeURIComponent(event.id)}`}
+                      className="rounded px-3 py-1 text-sm text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20"
+                    >
+                      👥 Equipo
+                    </a>
                     <button
                       onClick={() => handleDelete(event.id)}
                       disabled={deleting === event.id}
