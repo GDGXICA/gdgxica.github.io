@@ -38,6 +38,7 @@ import * as minigameInstances from "./handlers/minigameInstances";
 import * as minigameJoin from "./handlers/minigameJoin";
 import * as minigameWords from "./handlers/minigameWords";
 import * as minigameRoulette from "./handlers/minigameRoulette";
+import * as minigameBingo from "./handlers/minigameBingo";
 import * as certificates from "./handlers/certificates";
 import * as checkin from "./handlers/checkin";
 
@@ -130,6 +131,25 @@ const writeLimiter = rateLimit({
 const joinLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip ?? "unknown")}`,
+  message: {
+    success: false,
+    error: "Demasiados intentos, espera un momento",
+  },
+});
+
+// Classic-bingo claims are public and anon-token-backed like /join, so
+// they are keyed by IP too — but on their own counter. A whole venue
+// usually shares one NAT address, and sharing joinLimiter would let the
+// scan-the-QR rush use up the budget and then throttle the first winner
+// at the exact moment they press ¡BINGO!. The cap is comfortable because
+// the staggered card dealing keeps genuine claims minutes apart, and the
+// handler verifies each one against the balls it actually called.
+const claimLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip ?? "unknown")}`,
@@ -398,6 +418,27 @@ app.post(
   vid,
   writeLimiter,
   minigameRoulette.spin
+);
+
+// Classic bingo: the admin calls one ball at a time...
+app.post(
+  "/api/events/:slug/minigames/:id/bingo/draw",
+  requireRole("admin"),
+  slugP,
+  vid,
+  writeLimiter,
+  minigameBingo.drawBall
+);
+// ...and participants claim the line themselves. The handler re-derives
+// the win from the server's own record of called balls, so a flood of
+// bogus claims cannot manufacture a winner.
+app.post(
+  "/api/events/:slug/minigames/:id/bingo/claim",
+  requireAuth(),
+  slugP,
+  vid,
+  claimLimiter,
+  minigameBingo.claim
 );
 
 // Word cloud moderation + bingo winners (admin-only)

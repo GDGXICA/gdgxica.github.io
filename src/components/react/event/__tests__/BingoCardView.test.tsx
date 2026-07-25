@@ -8,6 +8,11 @@ const mocks = vi.hoisted(() => ({
   getFirestore: vi.fn(),
   doc: vi.fn(() => ({ __ref: true })),
   useParticipantDoc: vi.fn(),
+  claimBingo: vi.fn(),
+}));
+
+vi.mock("@/lib/api", () => ({
+  api: { claimBingo: mocks.claimBingo },
 }));
 
 vi.mock("@/lib/firebase", () => ({
@@ -43,6 +48,7 @@ beforeEach(() => {
   mocks.getFirestore.mockResolvedValue({});
   mocks.doc.mockImplementation(() => ({ __ref: true }));
   mocks.setDoc.mockResolvedValue(undefined);
+  mocks.claimBingo.mockResolvedValue({ success: true, data: { rank: 1 } });
 });
 
 afterEach(() => cleanup());
@@ -155,5 +161,220 @@ describe("BingoCardView", () => {
     });
     render(<BingoCardView slug="x" instanceId="i" uid="u1" title="B" />);
     expect(screen.getByText(/¡Bingo!/i)).toBeInTheDocument();
+  });
+
+  // Classic mode: an admin calls the balls, so a cell only opens once its
+  // term has been called and the win goes through /bingo/claim rather
+  // than a direct Firestore write.
+  describe("classic mode", () => {
+    const classicInstance = (drawnTerms: string[]) =>
+      ({
+        id: "i",
+        type: "bingo",
+        mode: "global",
+        state: "live",
+        title: "B",
+        order: 0,
+        config: { classic: true, prizes: 3 },
+        drawnTerms,
+        drawCount: drawnTerms.length,
+        lastDrawnTerm: drawnTerms[drawnTerms.length - 1] ?? null,
+      }) as never;
+
+    function joined(marked: boolean[] = Array(16).fill(false), extra = {}) {
+      mocks.useParticipantDoc.mockReturnValue({
+        doc: {
+          uid: "u1",
+          alias: "Ana",
+          bingoCard: card(),
+          bingoMarked: marked,
+          ...extra,
+        },
+        loading: false,
+        error: null,
+      });
+    }
+
+    it("shows the last ball called", () => {
+      joined();
+      render(
+        <BingoCardView
+          slug="x"
+          instanceId="i"
+          uid="u1"
+          title="B"
+          // "Firebase" is in the bank but not on this card, which is the
+          // normal case and keeps the assertion unambiguous.
+          instance={classicInstance(["term-1", "Firebase"])}
+        />
+      );
+      expect(screen.getByText("Última bola")).toBeInTheDocument();
+      expect(screen.getByText("Firebase")).toBeInTheDocument();
+      expect(screen.getByText(/2 bolas cantadas/i)).toBeInTheDocument();
+    });
+
+    it("locks cells whose term has not been called", async () => {
+      joined();
+      const user = userEvent.setup();
+      render(
+        <BingoCardView
+          slug="x"
+          instanceId="i"
+          uid="u1"
+          title="B"
+          instance={classicInstance(["term-1"])}
+        />
+      );
+      const locked = screen.getByRole("button", {
+        name: /term-5 \(aún no cantado\)/i,
+      });
+      expect(locked).toBeDisabled();
+      await user.click(locked);
+      expect(mocks.setDoc).not.toHaveBeenCalled();
+    });
+
+    it("lets a called cell be marked", async () => {
+      joined();
+      const user = userEvent.setup();
+      render(
+        <BingoCardView
+          slug="x"
+          instanceId="i"
+          uid="u1"
+          title="B"
+          instance={classicInstance(["term-1"])}
+        />
+      );
+      await user.click(screen.getByRole("button", { name: "term-1" }));
+      await waitFor(() => expect(mocks.setDoc).toHaveBeenCalledTimes(1));
+      const payload = mocks.setDoc.mock.calls[0][1] as Record<string, unknown>;
+      expect((payload.bingoMarked as boolean[])[0]).toBe(true);
+      // The win is the server's call here, never the client's.
+      expect(payload.bingoWonAt).toBeUndefined();
+    });
+
+    it("never writes bingoWonAt itself, even on a completed line", async () => {
+      const marked = Array(16).fill(false);
+      marked[1] = marked[2] = marked[3] = true;
+      joined(marked);
+      const user = userEvent.setup();
+      render(
+        <BingoCardView
+          slug="x"
+          instanceId="i"
+          uid="u1"
+          title="B"
+          instance={classicInstance(["term-1", "term-2", "term-3", "term-4"])}
+        />
+      );
+      await user.click(screen.getByRole("button", { name: "term-1" }));
+      await waitFor(() => expect(mocks.setDoc).toHaveBeenCalledTimes(1));
+      const payload = mocks.setDoc.mock.calls[0][1] as Record<string, unknown>;
+      expect(payload.bingoWonAt).toBeUndefined();
+    });
+
+    it("offers the BINGO button once a called line is complete", async () => {
+      joined(Array.from({ length: 16 }, (_, i) => i < 4));
+      const user = userEvent.setup();
+      render(
+        <BingoCardView
+          slug="x"
+          instanceId="i"
+          uid="u1"
+          title="B"
+          instance={classicInstance(["term-1", "term-2", "term-3", "term-4"])}
+        />
+      );
+      const claim = screen.getByRole("button", { name: /¡BINGO!/i });
+      await user.click(claim);
+      await waitFor(() =>
+        expect(mocks.claimBingo).toHaveBeenCalledWith("x", "i")
+      );
+    });
+
+    it("hides the BINGO button when the line rests on uncalled cells", () => {
+      // The card says row 0 is marked, but only two of those balls were
+      // called — a leftover from an earlier state, or a tampered doc.
+      joined(Array.from({ length: 16 }, (_, i) => i < 4));
+      render(
+        <BingoCardView
+          slug="x"
+          instanceId="i"
+          uid="u1"
+          title="B"
+          instance={classicInstance(["term-1", "term-2"])}
+        />
+      );
+      expect(
+        screen.queryByRole("button", { name: /¡BINGO!/i })
+      ).not.toBeInTheDocument();
+    });
+
+    it("surfaces a rejected claim to the player", async () => {
+      mocks.claimBingo.mockResolvedValue({
+        success: false,
+        error: "Todavía no tienes una línea completa",
+      });
+      joined(Array.from({ length: 16 }, (_, i) => i < 4));
+      const user = userEvent.setup();
+      render(
+        <BingoCardView
+          slug="x"
+          instanceId="i"
+          uid="u1"
+          title="B"
+          instance={classicInstance(["term-1", "term-2", "term-3", "term-4"])}
+        />
+      );
+      await user.click(screen.getByRole("button", { name: /¡BINGO!/i }));
+      await waitFor(() =>
+        expect(screen.getByRole("alert")).toHaveTextContent(/línea completa/i)
+      );
+    });
+
+    it("shows the placing and prize status once crowned", () => {
+      joined(
+        Array.from({ length: 16 }, (_, i) => i < 4),
+        {
+          bingoWonAt: { seconds: 9 },
+          bingoRank: 2,
+        }
+      );
+      render(
+        <BingoCardView
+          slug="x"
+          instanceId="i"
+          uid="u1"
+          title="B"
+          instance={classicInstance(["term-1", "term-2", "term-3", "term-4"])}
+        />
+      );
+      expect(screen.getByText(/Puesto 2 · premio/i)).toBeInTheDocument();
+      // Already won — no second claim to make.
+      expect(
+        screen.queryByRole("button", { name: /¡BINGO!/i })
+      ).not.toBeInTheDocument();
+    });
+
+    it("labels a winner past the prize count as a mention", () => {
+      joined(
+        Array.from({ length: 16 }, (_, i) => i < 4),
+        {
+          bingoWonAt: { seconds: 9 },
+          bingoRank: 5,
+        }
+      );
+      render(
+        <BingoCardView
+          slug="x"
+          instanceId="i"
+          uid="u1"
+          title="B"
+          instance={classicInstance(["term-1", "term-2", "term-3", "term-4"])}
+        />
+      );
+      expect(screen.getByText(/Puesto 5/i)).toBeInTheDocument();
+      expect(screen.queryByText(/premio/i)).not.toBeInTheDocument();
+    });
   });
 });

@@ -182,6 +182,27 @@ const realApi = {
       `/events/${encodeURIComponent(slug)}/minigames/${id}/roulette/spin`
     ),
 
+  // Classic bingo: the admin calls a ball (admin-only)...
+  drawBingoBall: (slug: string, id: string) =>
+    request<{ term: string; drawCount: number; remaining: number }>(
+      "POST",
+      `/events/${encodeURIComponent(slug)}/minigames/${id}/bingo/draw`
+    ),
+  // ...and the participant claims the line. Verified server-side against
+  // the balls actually called, so nothing here is taken on trust.
+  claimBingo: (slug: string, id: string) =>
+    request<{
+      rank: number;
+      winDraw: number;
+      prizes: number;
+      hasPrize: boolean;
+      lines: number[][];
+      alreadyWon: boolean;
+    }>(
+      "POST",
+      `/events/${encodeURIComponent(slug)}/minigames/${id}/bingo/claim`
+    ),
+
   // Certificates (generated on the fly + emailed; nothing is stored)
   sendCertificates: (data: unknown) =>
     request<{
