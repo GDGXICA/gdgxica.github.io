@@ -72,16 +72,18 @@ export const CREDENTIAL_LAYOUT = {
   eventDate: {
     x: 268,
     y: 1108,
-    size: 32,
+    // 30px over 560 fits a full Spanish long date ("sabado, 21 de
+    // noviembre de 2026") without ellipsis; at 32/480 it lost the year.
+    size: 30,
     color: "#111827",
-    maxWidth: 480,
+    maxWidth: 560,
   },
   cta: {
     x: 268,
     y: 1158,
     size: 25,
     color: "#4b5563",
-    maxWidth: 480,
+    maxWidth: 560,
   },
   qr: {
     x: 856,
