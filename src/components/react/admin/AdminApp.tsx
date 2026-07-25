@@ -18,25 +18,43 @@ import { MinigameTemplateList } from "./minigame-templates/MinigameTemplateList"
 import { EventMinigameManager } from "./event-minigames/EventMinigameManager";
 import { CertificateSender } from "./certificates/CertificateSender";
 import { CheckinPanel } from "./checkin/CheckinPanel";
+import { ROLE_BUNDLES, isRole, type Permission } from "@/lib/permissions";
 
 interface Props {
   page: string;
   currentPath: string;
 }
 
-function renderPage(
-  page: string,
-  guards: { isAdmin: boolean; role: string | null; signOut: () => void } | null
-) {
-  const adminPage = (component: React.ReactNode) => {
-    if (!guards) return component;
-    return guards.isAdmin ? (
-      component
-    ) : (
-      <AccessDenied role={guards.role} signOut={guards.signOut} />
-    );
-  };
+interface Guards {
+  can: (permission: Permission) => boolean;
+  role: string | null;
+  signOut: () => void;
+}
 
+/**
+ * Permiso mínimo para abrir cada página. Es la segunda barrera después del
+ * menú: entrar por URL directa a una sección que no corresponde da la
+ * pantalla de acceso restringido, no la página. La tercera y definitiva es
+ * el endpoint.
+ */
+const PAGE_PERMISSIONS: Record<string, Permission> = {
+  events: "events:read",
+  "event-form": "events:write",
+  team: "team:read",
+  speakers: "speakers:read",
+  sponsors: "sponsors:read",
+  stats: "stats:read",
+  users: "users:read",
+  forms: "forms:read",
+  "form-viewer": "forms:responses:read",
+  locations: "locations:read",
+  "minigame-templates": "minigames:template:read",
+  "event-minigames": "minigames:operate",
+  certificates: "certificates:send",
+  checkin: "roster:read",
+};
+
+function pageContent(page: string) {
   switch (page) {
     case "dashboard":
       return <Dashboard />;
@@ -51,13 +69,13 @@ function renderPage(
     case "sponsors":
       return <SponsorList />;
     case "stats":
-      return adminPage(<StatsEditor />);
+      return <StatsEditor />;
     case "users":
-      return adminPage(<UserDirectory />);
+      return <UserDirectory />;
     case "forms":
-      return adminPage(<FormRegistry />);
+      return <FormRegistry />;
     case "form-viewer":
-      return adminPage(<FormViewer />);
+      return <FormViewer />;
     case "locations":
       return <LocationList />;
     case "minigame-templates":
@@ -77,8 +95,36 @@ function renderPage(
   }
 }
 
+function renderPage(page: string, guards: Guards | null) {
+  const content = pageContent(page);
+  if (!guards) return content;
+
+  const required = PAGE_PERMISSIONS[page];
+  // Las páginas acotadas a un evento (check-in, minijuegos) las puede abrir
+  // quien tenga el permiso globalmente O quien pueda alcanzarlo estando
+  // asignado — de ahí que el voluntario pase esta puerta y sea el servidor
+  // quien decida sobre el evento concreto.
+  if (
+    required &&
+    !guards.can(required) &&
+    !canReachByAssignment(page, guards)
+  ) {
+    return <AccessDenied role={guards.role} signOut={guards.signOut} />;
+  }
+  return content;
+}
+
+/** Páginas cuyo permiso un rol puede obtener por asignación a un evento. */
+const SCOPED_PAGES = new Set(["checkin", "event-minigames"]);
+
+function canReachByAssignment(page: string, guards: Guards): boolean {
+  if (!SCOPED_PAGES.has(page)) return false;
+  const bundle = ROLE_BUNDLES[isRole(guards.role) ? guards.role : "member"];
+  return bundle.perEvent.length > 0;
+}
+
 function AdminContent({ page, currentPath }: Props) {
-  const { user, role, loading, isOrganizer, isAdmin, signOut } = useAuth();
+  const { user, role, loading, canAccessPanel, can, signOut } = useAuth();
 
   if (loading) {
     return (
@@ -92,7 +138,7 @@ function AdminContent({ page, currentPath }: Props) {
     return <LoginScreen />;
   }
 
-  if (!isOrganizer) {
+  if (!canAccessPanel) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="max-w-md rounded-xl bg-white p-8 text-center shadow-lg dark:bg-gray-800">
@@ -101,8 +147,9 @@ function AdminContent({ page, currentPath }: Props) {
             Acceso restringido
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Solo organizadores y administradores pueden acceder al panel de
-            administracion.
+            Tu cuenta no tiene permisos para operar la plataforma. Si formas
+            parte del GDG o quieres colaborar, solicita acceso y un
+            administrador lo revisara.
           </p>
           <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">
             Sesion: {user.email} (rol: {role})
@@ -128,7 +175,7 @@ function AdminContent({ page, currentPath }: Props) {
 
   return (
     <AdminShell currentPage={currentPath}>
-      {renderPage(page, { isAdmin, role, signOut })}
+      {renderPage(page, { can, role, signOut })}
     </AdminShell>
   );
 }

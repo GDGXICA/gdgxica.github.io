@@ -50,7 +50,16 @@ All content is sourced from the external repo [`GDGXICA/gdg-ica-data`](https://g
 
 ### Admin Panel
 
-Protected admin UI at `/admin/*` using React islands (`client:load`). Firebase Auth (Google Sign-In) with role-based access (admin/organizer/member).
+Protected admin UI at `/admin/*` using React islands (`client:load`). Firebase Auth (Google Sign-In) with **permission-based** access control.
+
+**Permissions model** — `functions/src/auth/permissions.ts` is the single authority; `src/lib/permissions.ts` mirrors it for the UI, and `functions/src/auth/permissions.test.ts` fails if the two drift.
+
+- **Permissions**, not role levels, gate every route: `requirePermission("events:write")` in `functions/src/middleware/auth.ts`. There is no role hierarchy — a ranking cannot express "check-in for this one event".
+- **Roles** are named bundles of permissions: `member` (no panel access, the default for anyone who signs in), `contributor` (external people; proposes content for review), `volunteer` (per-event operations), `organizer`, `admin`.
+- **Per-event scope**: a bundle's `perEvent` permissions only apply inside events where the user is listed in `events/{slug}/staff/{uid}` with an unexpired assignment. The staff lookup is only paid when it can change the answer.
+- **Per-user overrides**: `users/{uid}.grants` (additive, each with a `scope` and optional `expiresAt`) and `.revocations` (subtractive). Effective = `bundle(role) ∪ active grants − revocations`, and empty when `status === "suspended"`.
+- Enforced in three layers: the API middleware, `firestore.rules` (`canOnEvent()`), and the UI (`can()` from `useAuth()`). The UI layer is cosmetic — hiding a button protects nothing.
+- Roles and grants are never client-writable; `users/{uid}` self-create is pinned to a bare `member` doc with no grants.
 
 **Architecture:** Static HTML shells + React islands → Cloud Functions API (`/api/*` via Hosting rewrite) → GitHub API writes to `gdg-ica-data` → triggers site rebuild.
 
@@ -69,7 +78,7 @@ Protected admin UI at `/admin/*` using React islands (`client:load`). Firebase A
 
 **Admin pages:** `/admin` (dashboard), `/admin/events`, `/admin/team`, `/admin/speakers`, `/admin/sponsors`, `/admin/stats`, `/admin/users`
 
-**Firestore collections:** `users` (roles), `audit_log` (write history)
+**Firestore collections:** `users` (role, status, grants, revocations), `audit_log` (write history), `events/{slug}/staff` (per-event assignments)
 
 ### Deployment
 

@@ -5,7 +5,7 @@ import express from "express";
 import cors from "cors";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { GITHUB_TOKEN, GMAIL_USER, GMAIL_APP_PASSWORD } from "./config";
-import { requireRole, requireAuth } from "./middleware/auth";
+import { requirePermission, requireAuth } from "./middleware/auth";
 import { isAllowedOrigin, rejectDisallowedOrigin } from "./middleware/cors";
 import { validateParamId } from "./middleware/validate";
 import { validateBody } from "./middleware/validateBody";
@@ -146,18 +146,23 @@ const vuid = validateParamId("uid");
 app.post("/api/auth/register", requireAuth(), register);
 
 // Events
-app.get("/api/events", requireRole("organizer"), events.listEvents);
-app.get("/api/events/:id", requireRole("organizer"), vid, events.getEvent);
+app.get("/api/events", requirePermission("events:read"), events.listEvents);
+app.get(
+  "/api/events/:id",
+  requirePermission("events:read"),
+  vid,
+  events.getEvent
+);
 app.post(
   "/api/events",
-  requireRole("organizer"),
+  requirePermission("events:write"),
   writeLimiter,
   validateBody(eventSchema),
   events.createEvent
 );
 app.put(
   "/api/events/:id",
-  requireRole("organizer"),
+  requirePermission("events:write"),
   vid,
   writeLimiter,
   validateBody(eventSchema),
@@ -165,24 +170,24 @@ app.put(
 );
 app.delete(
   "/api/events/:id",
-  requireRole("admin"),
+  requirePermission("events:delete"),
   vid,
   writeLimiter,
   events.deleteEvent
 );
 
 // Team
-app.get("/api/team", requireRole("organizer"), team.listTeam);
+app.get("/api/team", requirePermission("team:read"), team.listTeam);
 app.post(
   "/api/team",
-  requireRole("admin"),
+  requirePermission("team:write"),
   writeLimiter,
   validateBody(teamMemberSchema),
   team.addTeamMember
 );
 app.put(
   "/api/team/:id",
-  requireRole("admin"),
+  requirePermission("team:write"),
   vid,
   writeLimiter,
   validateBody(teamMemberSchema),
@@ -190,24 +195,28 @@ app.put(
 );
 app.delete(
   "/api/team/:id",
-  requireRole("admin"),
+  requirePermission("team:write"),
   vid,
   writeLimiter,
   team.deleteTeamMember
 );
 
 // Speakers
-app.get("/api/speakers", requireRole("organizer"), speakers.listSpeakers);
+app.get(
+  "/api/speakers",
+  requirePermission("speakers:read"),
+  speakers.listSpeakers
+);
 app.post(
   "/api/speakers",
-  requireRole("organizer"),
+  requirePermission("speakers:write"),
   writeLimiter,
   validateBody(speakerSchema),
   speakers.addSpeaker
 );
 app.put(
   "/api/speakers/:id",
-  requireRole("organizer"),
+  requirePermission("speakers:write"),
   vid,
   writeLimiter,
   validateBody(speakerSchema),
@@ -215,24 +224,28 @@ app.put(
 );
 app.delete(
   "/api/speakers/:id",
-  requireRole("admin"),
+  requirePermission("speakers:delete"),
   vid,
   writeLimiter,
   speakers.deleteSpeaker
 );
 
 // Sponsors
-app.get("/api/sponsors", requireRole("admin"), sponsors.listSponsors);
+app.get(
+  "/api/sponsors",
+  requirePermission("sponsors:read"),
+  sponsors.listSponsors
+);
 app.post(
   "/api/sponsors",
-  requireRole("admin"),
+  requirePermission("sponsors:write"),
   writeLimiter,
   validateBody(sponsorSchema),
   sponsors.addSponsor
 );
 app.put(
   "/api/sponsors/:id",
-  requireRole("admin"),
+  requirePermission("sponsors:write"),
   vid,
   writeLimiter,
   validateBody(sponsorSchema),
@@ -240,62 +253,72 @@ app.put(
 );
 app.delete(
   "/api/sponsors/:id",
-  requireRole("admin"),
+  requirePermission("sponsors:delete"),
   vid,
   writeLimiter,
   sponsors.deleteSponsor
 );
 
 // Stats
-app.get("/api/stats", requireRole("organizer"), stats.getStats);
-app.put("/api/stats", requireRole("admin"), writeLimiter, stats.updateStats);
+app.get("/api/stats", requirePermission("stats:read"), stats.getStats);
+app.put(
+  "/api/stats",
+  requirePermission("stats:write"),
+  writeLimiter,
+  stats.updateStats
+);
 
 // Users
-app.get("/api/users", requireRole("admin"), users.listUsers);
+app.get("/api/users", requirePermission("users:read"), users.listUsers);
 app.patch(
   "/api/users/:uid/role",
-  requireRole("admin"),
+  requirePermission("users:role:write"),
   vuid,
   writeLimiter,
   users.updateRole
 );
 
 // Forms
-app.get("/api/forms", requireRole("organizer"), forms.listForms);
-app.post("/api/forms", requireRole("admin"), writeLimiter, forms.addForm);
+app.get("/api/forms", requirePermission("forms:read"), forms.listForms);
+app.post(
+  "/api/forms",
+  requirePermission("forms:write"),
+  writeLimiter,
+  forms.addForm
+);
 app.put(
   "/api/forms/:id",
-  requireRole("admin"),
+  requirePermission("forms:write"),
   vid,
   writeLimiter,
   forms.updateForm
 );
 app.delete(
   "/api/forms/:id",
-  requireRole("admin"),
+  requirePermission("forms:write"),
   vid,
   writeLimiter,
   forms.deleteForm
 );
 app.get(
   "/api/forms/:id/responses",
-  requireRole("organizer"),
+  requirePermission("forms:responses:read"),
   vid,
   forms.getFormResponses
 );
 
 // Locations
-app.get("/api/locations", requireRole("organizer"), locations.list);
+app.get("/api/locations", requirePermission("locations:read"), locations.list);
 app.post(
   "/api/locations",
-  requireRole("organizer"),
+  requirePermission("locations:write"),
   writeLimiter,
   validateBody(locationSchema),
   locations.create
 );
 app.put(
   "/api/locations/:id",
-  requireRole("organizer"),
+  requirePermission("locations:write"),
   vid,
   writeLimiter,
   validateBody(locationSchema),
@@ -303,28 +326,29 @@ app.put(
 );
 app.delete(
   "/api/locations/:id",
-  requireRole("admin"),
+  requirePermission("locations:delete"),
   vid,
   writeLimiter,
   locations.remove
 );
 
-// Minigame Templates (admin-only — full CRUD)
+// Minigame Templates — la plantilla es global, no cuelga de ningún evento,
+// así que su permiso nunca se acota por alcance.
 app.get(
   "/api/minigame-templates",
-  requireRole("admin"),
+  requirePermission("minigames:template:read"),
   minigameTemplates.list
 );
 app.post(
   "/api/minigame-templates",
-  requireRole("admin"),
+  requirePermission("minigames:template:write"),
   writeLimiter,
   validateBody(minigameTemplateSchema),
   minigameTemplates.create
 );
 app.put(
   "/api/minigame-templates/:id",
-  requireRole("admin"),
+  requirePermission("minigames:template:write"),
   vid,
   writeLimiter,
   validateBody(minigameTemplateSchema),
@@ -332,23 +356,27 @@ app.put(
 );
 app.delete(
   "/api/minigame-templates/:id",
-  requireRole("admin"),
+  requirePermission("minigames:template:write"),
   vid,
   writeLimiter,
   minigameTemplates.remove
 );
 
-// Minigame Instances (admin-only — attach templates to events)
+// Minigame Instances — acotadas al evento: `scopeParam` permite que un
+// voluntario asignado a ESE evento las opere, sin darle los demás.
 const slugP = validateParamId("slug");
+const minigamesOfEvent = () =>
+  requirePermission("minigames:operate", { scopeParam: "slug" });
+
 app.get(
   "/api/events/:slug/minigames",
-  requireRole("admin"),
+  minigamesOfEvent(),
   slugP,
   minigameInstances.list
 );
 app.post(
   "/api/events/:slug/minigames",
-  requireRole("admin"),
+  minigamesOfEvent(),
   slugP,
   writeLimiter,
   validateBody(minigameInstanceCreateSchema),
@@ -356,7 +384,7 @@ app.post(
 );
 app.patch(
   "/api/events/:slug/minigames/:id/state",
-  requireRole("admin"),
+  minigamesOfEvent(),
   slugP,
   vid,
   writeLimiter,
@@ -365,7 +393,7 @@ app.patch(
 );
 app.post(
   "/api/events/:slug/minigames/:id/quiz/advance",
-  requireRole("admin"),
+  minigamesOfEvent(),
   slugP,
   vid,
   writeLimiter,
@@ -373,7 +401,7 @@ app.post(
 );
 app.delete(
   "/api/events/:slug/minigames/:id",
-  requireRole("admin"),
+  minigamesOfEvent(),
   slugP,
   vid,
   writeLimiter,
@@ -390,28 +418,28 @@ app.post(
   minigameJoin.join
 );
 
-// Roulette spin (admin-only)
+// Roulette spin
 app.post(
   "/api/events/:slug/minigames/:id/roulette/spin",
-  requireRole("admin"),
+  minigamesOfEvent(),
   slugP,
   vid,
   writeLimiter,
   minigameRoulette.spin
 );
 
-// Word cloud moderation + bingo winners (admin-only)
+// Word cloud moderation + bingo winners
 const vwid = validateParamId("wordId");
 app.get(
   "/api/events/:slug/minigames/:id/words",
-  requireRole("admin"),
+  minigamesOfEvent(),
   slugP,
   vid,
   minigameWords.listWords
 );
 app.patch(
   "/api/events/:slug/minigames/:id/words/:wordId/hidden",
-  requireRole("admin"),
+  minigamesOfEvent(),
   slugP,
   vid,
   vwid,
@@ -421,7 +449,7 @@ app.patch(
 );
 app.get(
   "/api/events/:slug/minigames/:id/winners",
-  requireRole("admin"),
+  minigamesOfEvent(),
   slugP,
   vid,
   minigameWords.listWinners
@@ -430,7 +458,7 @@ app.get(
 // Certificates — generate per recipient and email; nothing is stored.
 app.post(
   "/api/certificates/send",
-  requireRole("organizer"),
+  requirePermission("certificates:send"),
   writeLimiter,
   validateBody(certificateSendSchema),
   certificates.sendCertificates
@@ -441,7 +469,7 @@ app.post(
 // Firestore so the write can be queued when venue wifi drops.
 app.post(
   "/api/events/:slug/checkin/import",
-  requireRole("organizer"),
+  requirePermission("checkin:import", { scopeParam: "slug" }),
   slugP,
   writeLimiter,
   validateBody(checkinImportSchema),
@@ -449,7 +477,12 @@ app.post(
 );
 
 // Rebuild
-app.post("/api/rebuild", requireRole("admin"), writeLimiter, triggerRebuild);
+app.post(
+  "/api/rebuild",
+  requirePermission("rebuild:trigger"),
+  writeLimiter,
+  triggerRebuild
+);
 
 export const api = onRequest(
   {

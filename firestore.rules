@@ -1,16 +1,59 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Reads the caller's role from users/{uid}. Costs one billed document
-    // read per rule evaluation, so on a roster subscribe it is ~1 extra
-    // read per attendee doc. Fine at event scale; if the roster ever
-    // reaches thousands, move role into a custom auth claim
-    // (request.auth.token.role), which is free.
-    function callerRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    // Reads the caller's user doc from users/{uid}. Costs one billed
+    // document read per rule evaluation, so on a roster subscribe it is ~1
+    // extra read per attendee doc. Fine at event scale; if the roster ever
+    // reaches thousands, move the role into a custom auth claim
+    // (request.auth.token.role), which is free — at the cost of revocation
+    // no longer being immediate.
+    function callerDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
-    function isOrganizer() {
-      return request.auth != null && callerRole() in ['organizer', 'admin'];
+
+    // Mirrors ROLE_BUNDLES in functions/src/auth/permissions.ts. Rules have
+    // no imports, so the two must be kept in step by hand; only the
+    // permissions actually enforced here are spelled out.
+    //
+    // Deliberately NOT a role hierarchy: `volunteer` holds roster/check-in
+    // only inside events it is assigned to, which a ranking cannot express.
+    function callerIsActive(u) {
+      return !('status' in u) || u.status != 'suspended';
+    }
+
+    // Global (non-event-scoped) holders of a permission.
+    function roleHasGlobal(role, perm) {
+      return role == 'admin'
+          || (role == 'organizer'
+              && perm in ['roster:read', 'checkin:operate']);
+    }
+
+    // Roles whose permission only applies inside an assigned event.
+    function roleHasPerEvent(role, perm) {
+      return role == 'volunteer'
+          && perm in ['roster:read', 'checkin:operate'];
+    }
+
+    // An assignment with no expiresAt never expires; one with a past date
+    // stops granting on its own, so nobody has to remember to revoke it.
+    function isEventStaff(eventSlug) {
+      return exists(/databases/$(database)/documents/events/$(eventSlug)/staff/$(request.auth.uid))
+             && (
+               !('expiresAt' in get(/databases/$(database)/documents/events/$(eventSlug)/staff/$(request.auth.uid)).data)
+               || get(/databases/$(database)/documents/events/$(eventSlug)/staff/$(request.auth.uid)).data.expiresAt > request.time
+             );
+    }
+
+    // Permission for an action on a specific event. The cheap global check
+    // runs first so the staff lookup is only paid when it can change the
+    // answer.
+    function canOnEvent(perm, eventSlug) {
+      return request.auth != null
+             && callerIsActive(callerDoc())
+             && (
+               roleHasGlobal(callerDoc().role, perm)
+               || (roleHasPerEvent(callerDoc().role, perm) && isEventStaff(eventSlug))
+             );
     }
 
     // True when the 16-cell bingo card `m` (row-major) has a fully marked
@@ -33,10 +76,36 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
+
+      // Self-registration fallback for the client (the normal path is
+      // /api/auth/register via the Admin SDK). Pinned to a bare `member`
+      // doc: without the grants/revocations clauses a caller could sign up
+      // handing themselves `users:role:write` in the same write, since
+      // grants are additive over the role. `role == "member"` alone stopped
+      // being sufficient the moment per-user grants existed.
       allow create: if request.auth != null
                     && request.auth.uid == userId
-                    && request.resource.data.role == "member";
+                    && request.resource.data.role == "member"
+                    && (!('status' in request.resource.data)
+                        || request.resource.data.status == 'active')
+                    && (!('grants' in request.resource.data)
+                        || request.resource.data.grants.size() == 0)
+                    && (!('revocations' in request.resource.data)
+                        || request.resource.data.revocations.size() == 0);
+
+      // Roles, grants, suspension and staff assignments are changed only
+      // through the API, which enforces the no-escalation and last-admin
+      // guards. Nothing about access control is client-writable.
       allow update, delete: if false;
+    }
+
+    // Per-event staff assignments. Readable by the assignee so the panel can
+    // show which events they may operate; written only by Cloud Functions.
+    match /events/{eventSlug}/staff/{staffUid} {
+      allow read: if request.auth != null
+                  && (request.auth.uid == staffUid
+                      || canOnEvent('roster:read', eventSlug));
+      allow write: if false;
     }
 
     match /audit_log/{logId} {
@@ -139,7 +208,10 @@ service cloud.firestore {
       // inherit through recursive wildcards — but we state the restriction
       // explicitly so a later refactor cannot widen it by accident.
       match /roster/{attendeeId} {
-        allow read: if isOrganizer();
+        // Scoped to THIS event: a volunteer assigned to one event no longer
+        // reads the attendee PII of every other event, which is what the
+        // old blanket isOrganizer() check allowed.
+        allow read: if canOnEvent('roster:read', eventSlug);
 
         // Import and removal run through Cloud Functions with the Admin
         // SDK, which bypasses these rules.
@@ -150,7 +222,7 @@ service cloud.firestore {
         // queued in the local cache and replayed when venue wifi drops.
         // hasOnly() pins them to the check-in fields, so a volunteer
         // cannot rewrite an attendee's email, name or bevyCheckinAt.
-        allow update: if isOrganizer()
+        allow update: if canOnEvent('checkin:operate', eventSlug)
                       && request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['checkedIn', 'checkedInAt', 'checkedInBy',
                                    'checkedInByName', 'note',
@@ -190,7 +262,7 @@ service cloud.firestore {
       // Import metadata (last import id, roster count, last Bevy sync).
       // Written only by Cloud Functions.
       match /checkinMeta/{docId} {
-        allow read: if isOrganizer();
+        allow read: if canOnEvent('roster:read', eventSlug);
         allow write: if false;
       }
     }

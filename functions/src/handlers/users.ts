@@ -4,9 +4,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
-import { Role } from "../types/users";
-
-const VALID_ROLES: Role[] = ["admin", "organizer", "member"];
+import { ROLES, isRole } from "../auth/permissions";
 
 export async function listUsers(_req: Request, res: Response) {
   try {
@@ -29,10 +27,10 @@ export async function updateRole(req: Request, res: Response) {
     const { role } = req.body;
     const performer = (req as AuthenticatedRequest).user;
 
-    if (!VALID_ROLES.includes(role)) {
+    if (!isRole(role)) {
       res.status(400).json({
         success: false,
-        error: `Invalid role. Must be: ${VALID_ROLES.join(", ")}`,
+        error: `Invalid role. Must be: ${ROLES.join(", ")}`,
       });
       return;
     }

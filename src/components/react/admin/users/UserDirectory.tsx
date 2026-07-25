@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Toast } from "../ui/Toast";
 import { useAuth } from "../AuthProvider";
+import { ROLES, ROLE_LABELS } from "@/lib/permissions";
 
 interface UserEntry {
   uid: string;
@@ -12,10 +13,9 @@ interface UserEntry {
   lastLoginAt: { _seconds: number };
 }
 
-const ROLES = ["member", "organizer", "admin"] as const;
-
 export function UserDirectory() {
-  const { isAdmin } = useAuth();
+  const { can } = useAuth();
+  const canChangeRoles = can("users:role:write");
   const [users, setUsers] = useState<UserEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -138,7 +138,7 @@ export function UserDirectory() {
                   {user.email}
                 </td>
                 <td className="px-6 py-4">
-                  {isAdmin ? (
+                  {canChangeRoles ? (
                     <select
                       value={user.role}
                       onChange={(e) =>
@@ -149,7 +149,7 @@ export function UserDirectory() {
                     >
                       {ROLES.map((r) => (
                         <option key={r} value={r}>
-                          {r}
+                          {ROLE_LABELS[r]}
                         </option>
                       ))}
                     </select>

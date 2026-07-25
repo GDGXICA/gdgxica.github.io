@@ -18,12 +18,18 @@ export async function register(req: Request, res: Response) {
       return;
     }
 
+    // `member` no da ningún permiso de panel: es solo "alguien que inició
+    // sesión". Subir de ahí exige una solicitud aprobada o una invitación,
+    // nunca el simple hecho de haber entrado con Google.
     const newUser = {
       uid: user.uid,
       email: user.email || "",
       displayName: user.displayName || "",
       photoURL: user.photoURL || "",
       role: "member",
+      status: "active",
+      grants: [],
+      revocations: [],
       createdAt: FieldValue.serverTimestamp(),
       lastLoginAt: FieldValue.serverTimestamp(),
     };
