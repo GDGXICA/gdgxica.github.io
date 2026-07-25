@@ -13,6 +13,24 @@ service cloud.firestore {
       return request.auth != null && callerRole() in ['organizer', 'admin'];
     }
 
+    // True when the 16-cell bingo card `m` (row-major) has a fully marked
+    // row, column or diagonal. Mirrors ALL_LINES in src/lib/bingo.ts.
+    // Rules cannot loop, so the ten lines are spelled out. Only reached
+    // when bingoMarked is already asserted to be a 16-element list, so the
+    // fixed indexing is safe.
+    function bingoHasLine(m) {
+      return (m[0] && m[1] && m[2] && m[3])
+          || (m[4] && m[5] && m[6] && m[7])
+          || (m[8] && m[9] && m[10] && m[11])
+          || (m[12] && m[13] && m[14] && m[15])
+          || (m[0] && m[4] && m[8] && m[12])
+          || (m[1] && m[5] && m[9] && m[13])
+          || (m[2] && m[6] && m[10] && m[14])
+          || (m[3] && m[7] && m[11] && m[15])
+          || (m[0] && m[5] && m[10] && m[15])
+          || (m[3] && m[6] && m[9] && m[12]);
+    }
+
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow create: if request.auth != null
@@ -61,7 +79,21 @@ service cloud.firestore {
                                      'quizScore', 'quizAnsweredQuestions'])
                         && (!('bingoMarked' in request.resource.data)
                             || (request.resource.data.bingoMarked is list
-                                && request.resource.data.bingoMarked.size() == 16));
+                                && request.resource.data.bingoMarked.size() == 16))
+                        // A win is server-verified, not self-reported. Only
+                        // gate the write that actually SETS bingoWonAt (it
+                        // is in affectedKeys then); later marking that keeps
+                        // the same win value passes untouched. Without this,
+                        // any participant could open the console and write
+                        // bingoWonAt with an empty card.
+                        && (!request.resource.data.diff(resource.data)
+                              .affectedKeys().hasAny(['bingoWonAt'])
+                            || (request.resource.data.bingoMarked is list
+                                && request.resource.data.bingoMarked.size() == 16
+                                && bingoHasLine(request.resource.data.bingoMarked)
+                                // Pin to server time so a cheater cannot
+                                // backdate the win to jump the winners queue.
+                                && request.resource.data.bingoWonAt == request.time));
           allow delete: if false;
         }
         match /responses/{responseId} {
