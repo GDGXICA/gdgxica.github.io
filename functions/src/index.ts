@@ -499,3 +499,6 @@ export const api = onRequest(
 // Firestore trigger: incrementally maintains aggregates/current per
 // minigame instance whenever a participant response is created.
 export { onMinigameResponseWritten } from "./triggers/recomputeAggregates";
+// Deploying this creates a Cloud Scheduler job. It declares the Gmail
+// secrets itself; the `api` function's secrets array does not extend here.
+export { drainCredentialEmails } from "./triggers/drainCredentialEmails";
