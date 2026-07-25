@@ -4,16 +4,38 @@ import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
-import { letterForSequence } from "../services/credentialSequence";
+import {
+  letterForSequence,
+  mascotForCredentialId,
+} from "../services/credentialSequence";
 import {
   buildCredentialSearchTokens,
   normalizeDni,
 } from "../services/credentialSearch";
 import {
   decodeJpegDataUrl,
+  deleteCredentialImages,
   saveCredentialImages,
 } from "../services/credentialStorage";
-import type { CredentialCreateInput } from "../schemas/credentials";
+import type {
+  CredentialCreateInput,
+  CredentialBevyStatusInput,
+  CredentialPhotoModerationInput,
+} from "../schemas/credentials";
+
+// Kept in sync with src/components/react/credential/mascots.ts, which is
+// the manifest the picker renders from. Only used to pick a replacement
+// avatar when a photo is taken down.
+const MASCOT_IDS = [
+  "gdg-blue-a",
+  "gdg-red-a",
+  "gdg-yellow-a",
+  "gdg-green-a",
+  "gdg-blue-b",
+  "gdg-red-b",
+  "gdg-yellow-b",
+  "gdg-green-b",
+];
 
 // Decoded-byte ceilings matching the character caps in the Zod schema.
 // The schema bounds the string it receives; these bound the bytes it
@@ -238,4 +260,191 @@ function singleLineHeader(value: string | undefined): string {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 200);
+}
+
+/**
+ * PATCH /api/events/:slug/credentials/:id/bevy
+ *
+ * Records where a record stands in the manual load into Bevy. This is the
+ * reconciliation ledger that keeps the transcription from being a silent
+ * black hole: "pendiente" is the panel's headline metric precisely so a
+ * pile of unloaded registrations cannot go unnoticed.
+ */
+export async function setBevyStatus(req: Request, res: Response) {
+  try {
+    const { slug, id } = req.params as { slug: string; id: string };
+    const user = (req as AuthenticatedRequest).user;
+    const body = req.body as CredentialBevyStatusInput;
+
+    const ref = credentialRef(slug, id);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      res
+        .status(404)
+        .json({ success: false, error: "Credencial no encontrada" });
+      return;
+    }
+
+    const loaded = body.status === "loaded";
+    await ref.update({
+      bevyStatus: body.status,
+      bevyTicketNumber: body.ticketNumber,
+      bevyNote: body.note,
+      // Attribution only for a positive claim; clearing the status back to
+      // pending should not leave a stale "loaded by" behind.
+      bevyLoadedAt: loaded ? FieldValue.serverTimestamp() : null,
+      bevyLoadedBy: loaded ? user.uid : null,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    await writeAuditLog({
+      action: "credential.bevy_status",
+      performedBy: user.uid,
+      targetId: id,
+      targetType: "credential",
+      details: { eventSlug: slug, status: body.status },
+      timestamp: FieldValue.serverTimestamp(),
+    });
+
+    res.json({ success: true, data: { id, status: body.status } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: safeError(err) });
+  }
+}
+
+/**
+ * PATCH /api/events/:slug/credentials/:id/photo
+ *
+ * Photo moderation is REACTIVE take-down, not pre-publication gating. The
+ * credential is composed on the attendee's device and downloaded before
+ * anything is submitted, so a bad photo already exists on their phone no
+ * matter what we do here. What this controls is what GDG ICA stores and
+ * what GDG ICA re-sends — which is the part we are actually responsible
+ * for, and what the privacy policy promises.
+ */
+export async function moderatePhoto(req: Request, res: Response) {
+  try {
+    const { slug, id } = req.params as { slug: string; id: string };
+    const user = (req as AuthenticatedRequest).user;
+    const body = req.body as CredentialPhotoModerationInput;
+
+    const ref = credentialRef(slug, id);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      res
+        .status(404)
+        .json({ success: false, error: "Credencial no encontrada" });
+      return;
+    }
+
+    if (body.action === "approve") {
+      await ref.update({
+        photoStatus: "approved",
+        photoReviewedAt: FieldValue.serverTimestamp(),
+        photoReviewedBy: user.uid,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    } else {
+      // Delete the objects first: if the status flip succeeded and the
+      // delete did not, the panel would show a moderated record while the
+      // image stayed readable.
+      await deleteCredentialImages(slug, id);
+      await ref.update({
+        photoStatus: "removed",
+        photoPath: null,
+        credentialImagePath: null,
+        photoRemovedReason: body.reason,
+        photoReviewedAt: FieldValue.serverTimestamp(),
+        photoReviewedBy: user.uid,
+        // Swap to a deterministic mascot so the attendee is shown the same
+        // replacement every time, and re-queue the notification.
+        avatarKind: "mascot",
+        mascotId: mascotForCredentialId(id, MASCOT_IDS),
+        emailStatus: "queued",
+        emailTemplate: "photo_removed",
+        emailAttempts: 0,
+        emailNextAttemptAt: FieldValue.serverTimestamp(),
+        emailLastError: null,
+        // bevyStatus is deliberately untouched: the registration data is
+        // independent of the photo, and a take-down must not un-load
+        // someone a volunteer already transcribed.
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+
+    await writeAuditLog({
+      action: "credential.moderate_photo",
+      performedBy: user.uid,
+      targetId: id,
+      targetType: "credential",
+      details: { eventSlug: slug, action: body.action },
+      timestamp: FieldValue.serverTimestamp(),
+    });
+
+    res.json({ success: true, data: { id, action: body.action } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: safeError(err) });
+  }
+}
+
+/**
+ * POST /api/events/:slug/credentials/:id/email/retry
+ *
+ * Re-queues a credential the drain parked as `failed` after exhausting its
+ * attempts. Resets the counter so the backoff ladder starts over.
+ */
+export async function retryEmail(req: Request, res: Response) {
+  try {
+    const { slug, id } = req.params as { slug: string; id: string };
+    const user = (req as AuthenticatedRequest).user;
+
+    const ref = credentialRef(slug, id);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      res
+        .status(404)
+        .json({ success: false, error: "Credencial no encontrada" });
+      return;
+    }
+
+    // Only a parked send may be re-queued by hand. Re-queueing something
+    // mid-flight would race the drain's lease and could double-send.
+    if (snap.data()?.emailStatus !== "failed") {
+      res.status(409).json({
+        success: false,
+        error: "Solo se puede reintentar un envío marcado como fallido",
+      });
+      return;
+    }
+
+    await ref.update({
+      emailStatus: "queued",
+      emailAttempts: 0,
+      emailNextAttemptAt: FieldValue.serverTimestamp(),
+      emailLastError: null,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    await writeAuditLog({
+      action: "credential.email_retry",
+      performedBy: user.uid,
+      targetId: id,
+      targetType: "credential",
+      details: { eventSlug: slug },
+      timestamp: FieldValue.serverTimestamp(),
+    });
+
+    res.json({ success: true, data: { id } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: safeError(err) });
+  }
+}
+
+function credentialRef(slug: string, id: string) {
+  return admin
+    .firestore()
+    .collection("events")
+    .doc(slug)
+    .collection("credentials")
+    .doc(id);
 }

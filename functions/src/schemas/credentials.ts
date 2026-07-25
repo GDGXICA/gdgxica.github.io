@@ -126,3 +126,9 @@ export const credentialPhotoModerationSchema = z
   .strict();
 
 export type CredentialCreateInput = z.infer<typeof credentialCreateSchema>;
+export type CredentialBevyStatusInput = z.infer<
+  typeof credentialBevyStatusSchema
+>;
+export type CredentialPhotoModerationInput = z.infer<
+  typeof credentialPhotoModerationSchema
+>;

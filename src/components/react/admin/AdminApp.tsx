@@ -18,6 +18,7 @@ import { MinigameTemplateList } from "./minigame-templates/MinigameTemplateList"
 import { EventMinigameManager } from "./event-minigames/EventMinigameManager";
 import { CertificateSender } from "./certificates/CertificateSender";
 import { CheckinPanel } from "./checkin/CheckinPanel";
+import { CredentialsPanel } from "./credentials/CredentialsPanel";
 
 interface Props {
   page: string;
@@ -68,6 +69,11 @@ function renderPage(
       return <CertificateSender />;
     case "checkin":
       return <CheckinPanel />;
+    // Deliberately NOT wrapped in adminPage(): loading records into Bevy
+    // and reviewing photos is desk work for whoever is organising, and
+    // gating it behind the admin role would funnel it to one person.
+    case "credentials":
+      return <CredentialsPanel />;
     default:
       return (
         <p className="text-gray-500 dark:text-gray-400">

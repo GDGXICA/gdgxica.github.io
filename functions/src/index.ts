@@ -23,6 +23,8 @@ import {
   certificateSendSchema,
   checkinImportSchema,
   credentialCreateSchema,
+  credentialBevyStatusSchema,
+  credentialPhotoModerationSchema,
 } from "./schemas";
 import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
@@ -423,6 +425,35 @@ app.post(
   credentialLimiter,
   validateBody(credentialCreateSchema),
   credentials.createCredential
+);
+
+// Credential administration. Organizer-level: loading records into Bevy and
+// reviewing photos is the job of whoever is at the desk, not admins only.
+app.patch(
+  "/api/events/:slug/credentials/:id/bevy",
+  requireRole("organizer"),
+  slugP,
+  vid,
+  writeLimiter,
+  validateBody(credentialBevyStatusSchema),
+  credentials.setBevyStatus
+);
+app.patch(
+  "/api/events/:slug/credentials/:id/photo",
+  requireRole("organizer"),
+  slugP,
+  vid,
+  writeLimiter,
+  validateBody(credentialPhotoModerationSchema),
+  credentials.moderatePhoto
+);
+app.post(
+  "/api/events/:slug/credentials/:id/email/retry",
+  requireRole("organizer"),
+  slugP,
+  vid,
+  writeLimiter,
+  credentials.retryEmail
 );
 
 // Roulette spin (admin-only)
