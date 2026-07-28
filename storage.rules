@@ -1,0 +1,72 @@
+rules_version = '2';
+
+// Cloud Storage for attendee credential images.
+//
+// Storage was not configured on this project before this feature: there was
+// no storage.rules file and no "storage" key in firebase.json, only an
+// inert storageBucket in the client config. This file is therefore the
+// whole policy, and it starts closed.
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Reading the role from Firestore is what lets the moderation panel
+    // render an image with getDownloadURL() instead of needing a
+    // signed-URL endpoint in the API.
+    function userPath() {
+      return /databases/(default)/documents/users/$(request.auth.uid);
+    }
+    // exists() before get(): a signed-in caller with no users/{uid}
+    // document makes get() return null, and reading .data.role off null
+    // raises an evaluation error. The request still ends up denied, but by
+    // crashing the rule rather than evaluating it — which floods the logs
+    // and would silently swallow a genuine misconfiguration.
+    function callerRole() {
+      return firestore.get(userPath()).data.get('role', '');
+    }
+
+    // La suspensión es la palanca de emergencia del modelo de permisos:
+    // corta todo de golpe sin deshacer rol y grants uno a uno. Si Storage no
+    // la mirase, un organizador suspendido seguiría descargando fotos y DNI
+    // por aquí mientras Firestore ya se lo niega, y la palanca no serviría.
+    function callerIsActive() {
+      return firestore.get(userPath()).data.get('status', 'active') != 'suspended';
+    }
+
+    function staffPath(eventSlug) {
+      return /databases/(default)/documents/events/$(eventSlug)/staff/$(request.auth.uid);
+    }
+
+    // Espejo de `canOnEvent('roster:read', …)` en firestore.rules: estas
+    // imágenes son la misma clase de dato personal que el roster, así que
+    // se rigen igual. Un voluntario solo ve las del evento que tiene
+    // asignado; organizadores y admins, todas.
+    function canReadCredentials(eventSlug) {
+      return request.auth != null
+        && firestore.exists(userPath())
+        && callerIsActive()
+        && (
+          callerRole() in ['organizer', 'admin']
+          || (callerRole() == 'volunteer' && firestore.exists(staffPath(eventSlug)))
+        );
+    }
+
+    // credentials/{eventSlug}/{credentialId}/photo.jpg
+    // credentials/{eventSlug}/{credentialId}/credential.jpg
+    match /credentials/{eventSlug}/{credentialId}/{fileName} {
+      allow read: if canReadCredentials(eventSlug);
+
+      // Written EXCLUSIVELY by the Admin SDK, which bypasses these rules.
+      // Images arrive as base64 in the request body and the Cloud Function
+      // is the only thing that puts bytes in this bucket, so no anonymous
+      // principal ever holds a write grant. Direct client upload was
+      // considered and rejected: it would need a reservation collection for
+      // these rules to check against, an abandoned-object sweep, and a real
+      // write grant for anonymous users — all to save a round trip the
+      // client spends downscaling for the canvas anyway.
+      allow write: if false;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -22,6 +22,8 @@ import {
   minigameWordHiddenSchema,
   certificateSendSchema,
   checkinImportSchema,
+  credentialCreateSchema,
+  credentialImageSchema,
 } from "./schemas";
 import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
@@ -45,6 +47,7 @@ import * as minigameRoulette from "./handlers/minigameRoulette";
 import * as minigameBingo from "./handlers/minigameBingo";
 import * as certificates from "./handlers/certificates";
 import * as checkin from "./handlers/checkin";
+import * as credentials from "./handlers/credentials";
 
 admin.initializeApp();
 
@@ -184,6 +187,33 @@ const claimLimiter = rateLimit({
   message: {
     success: false,
     error: "Demasiados intentos, espera un momento",
+  },
+});
+
+// Public credential submissions. Same reasoning as joinLimiter: this
+// endpoint accepts anonymous Firebase tokens, which any client mints for
+// free, so a UID-based key is bypassable and the limit is pinned to the IP.
+//
+// 8/hour rather than something tighter because the realistic false positive
+// is a university or office NAT putting dozens of attendees behind one
+// address, and an actionable message matters more than the exact number.
+// Deliberately NOT keyed by DNI — that would reintroduce the lockout that
+// allowing duplicate DNIs exists to avoid.
+//
+// Counter propio, no compartido con claimLimiter: son públicos los dos y
+// van por IP, pero mezclarlos dejaría que la avalancha de credenciales
+// agotara el cupo de quien canta bingo, y al revés.
+const credentialLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip ?? "unknown")}`,
+  message: {
+    success: false,
+    error:
+      "Demasiados intentos desde esta red. Si estás en una red compartida " +
+      "(universidad u oficina), escríbenos a hola@gdgica.com.",
   },
 });
 
@@ -616,6 +646,30 @@ app.post(
   joinLimiter,
   validateBody(minigameJoinSchema),
   minigameJoin.join
+);
+
+// Public credential submission — accepts any Firebase token (incl. anon).
+app.post(
+  "/api/events/:slug/credentials",
+  requireAuth(),
+  slugP,
+  credentialLimiter,
+  validateBody(credentialCreateSchema),
+  credentials.createCredential
+);
+
+// Attaching the composed card is a SECOND public call, not part of create:
+// the group letter comes from a server-assigned sequence number, so the
+// client cannot render the final card until create has returned. The
+// handler pins the write to the anonymous UID that created the record.
+app.patch(
+  "/api/events/:slug/credentials/:id/image",
+  requireAuth(),
+  slugP,
+  vid,
+  credentialLimiter,
+  validateBody(credentialImageSchema),
+  credentials.attachCredentialImage
 );
 
 // Roulette spin

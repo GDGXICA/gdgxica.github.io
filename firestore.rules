@@ -345,6 +345,45 @@ service cloud.firestore {
         allow read: if canOnEvent('roster:read', eventSlug);
         allow write: if false;
       }
+
+      // Self-declared pre-registration records from the public credential
+      // page. Holds DNI, email and Storage object paths, so like roster it
+      // is organizer-only — and for the same reason the roster block spells
+      // out: the `allow read: if true` on the parent event document does
+      // NOT cascade into subcollections.
+      match /credentials/{credentialId} {
+        // `isOrganizer()` ya no existe: el modelo de permisos la sustituyó
+        // por `canOnEvent`. La conversión es la que pide el comentario de
+        // arriba — "like roster" —, y trae lo mismo que el roster ganó:
+        // esto queda acotado a ESTE evento, así que quien opera uno no lee
+        // los DNI y las fotos de los demás.
+        allow read: if canOnEvent('roster:read', eventSlug);
+
+        // Unlike roster, EVERY mutation goes through a Cloud Function.
+        // Roster check-in writes go direct so they can queue in the local
+        // cache and replay when venue wifi drops; that justification does
+        // not transfer here. The Bevy load queue is desk work on a decent
+        // connection, and photo take-down has to delete a Storage object in
+        // the same operation as the status flip — only the Admin SDK can do
+        // both, and a client that could do one without the other would
+        // leave an orphaned image behind.
+        allow write: if false;
+      }
+
+      // Per-event credential counter (nextSequence). The sequence has to be
+      // gapless for the "first N attendees" draw, so it is assigned inside
+      // a server-side transaction and never touched by a client.
+      match /credentialMeta/{docId} {
+        allow read: if canOnEvent('roster:read', eventSlug);
+        allow write: if false;
+      }
+    }
+
+    // Daily cap on credential emails, maintained by the scheduled drain.
+    // Nothing outside Cloud Functions has any business reading or writing
+    // it, so it stays fully closed.
+    match /credential_email_budget/{day} {
+      allow read, write: if false;
     }
 
     match /{document=**} {
