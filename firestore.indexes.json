@@ -39,6 +39,30 @@
         { "fieldPath": "order", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "credentials",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "bevyStatus", "order": "ASCENDING" },
+        { "fieldPath": "sequenceNumber", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "credentials",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "photoStatus", "order": "ASCENDING" },
+        { "fieldPath": "photoUploadedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "credentials",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "emailStatus", "order": "ASCENDING" },
+        { "fieldPath": "emailNextAttemptAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [

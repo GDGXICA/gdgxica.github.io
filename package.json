@@ -13,7 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:functions": "cd functions && npm test",
-    "test:rules": "firebase --project demo-gdgica emulators:exec --only firestore,auth \"vitest run --config tests/rules/vitest.config.ts\"",
+    "test:rules": "firebase --project demo-gdgica emulators:exec --only firestore,auth,storage \"vitest run --config tests/rules/vitest.config.ts\"",
     "test:all": "pnpm test && pnpm test:functions && pnpm test:rules"
   },
   "dependencies": {
