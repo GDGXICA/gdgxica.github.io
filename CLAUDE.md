@@ -50,7 +50,16 @@ All content is sourced from the external repo [`GDGXICA/gdg-ica-data`](https://g
 
 ### Admin Panel
 
-Protected admin UI at `/admin/*` using React islands (`client:load`). Firebase Auth (Google Sign-In) with role-based access (admin/organizer/member).
+Protected admin UI at `/admin/*` using React islands (`client:load`). Firebase Auth (Google Sign-In) with **permission-based** access control.
+
+**Permissions model** — `functions/src/auth/permissions.ts` is the single authority; `src/lib/permissions.ts` mirrors it for the UI, and `functions/src/auth/permissions.test.ts` fails if the two drift.
+
+- **Permissions**, not role levels, gate every route: `requirePermission("events:write")` in `functions/src/middleware/auth.ts`. There is no role hierarchy — a ranking cannot express "check-in for this one event".
+- **Roles** are named bundles of permissions: `member` (no panel access, the default for anyone who signs in), `contributor` (external people; proposes content for review), `volunteer` (per-event operations), `organizer`, `admin`.
+- **Per-event scope**: a bundle's `perEvent` permissions only apply inside events where the user is listed in `events/{slug}/staff/{uid}` with an unexpired assignment. The staff lookup is only paid when it can change the answer.
+- **Per-user overrides**: `users/{uid}.grants` (additive, each with a `scope` and optional `expiresAt`) and `.revocations` (subtractive). Effective = `bundle(role) ∪ active grants − revocations`, and empty when `status === "suspended"`.
+- Enforced in three layers: the API middleware, `firestore.rules` (`canOnEvent()`), and the UI (`can()` from `useAuth()`). The UI layer is cosmetic — hiding a button protects nothing.
+- Roles and grants are never client-writable; `users/{uid}` self-create is pinned to a bare `member` doc with no grants.
 
 **Architecture:** Static HTML shells + React islands → Cloud Functions API (`/api/*` via Hosting rewrite) → GitHub API writes to `gdg-ica-data` → triggers site rebuild.
 
@@ -67,9 +76,19 @@ Protected admin UI at `/admin/*` using React islands (`client:load`). Firebase A
 - `auth.ts` — Google Sign-In, token management
 - `api.ts` — fetch wrapper with automatic ID token
 
-**Admin pages:** `/admin` (dashboard), `/admin/events`, `/admin/team`, `/admin/speakers`, `/admin/sponsors`, `/admin/stats`, `/admin/users`
+**Admin pages:** `/admin` (dashboard), `/admin/events`, `/admin/team`, `/admin/speakers`, `/admin/sponsors`, `/admin/stats`, `/admin/users`, `/admin/roles` (read-only permission matrix), `/admin/audit` (audit log viewer)
 
-**Firestore collections:** `users` (roles), `audit_log` (write history)
+**Testing the rules:** `pnpm test:rules` boots the Firestore emulator on port 8080. If another checkout of this project is already running one, set `FIRESTORE_EMULATOR_PORT` (and optionally `FIRESTORE_EMULATOR_HOST_ADDR`) and point the emulator at the same port — `tests/rules/setup.ts` reads both — so two worktrees can run their suites concurrently.
+
+**Content proposals:** external `contributor`s draft events and speakers in the `proposals` collection at `/admin/proposals`; reviewers with `proposals:review` approve, request changes, or reject, then publish as a separate explicit step (accepting content and writing it to the public data repo are different decisions). `POST /api/proposals/:id/publish` re-validates the payload against the same Zod schema used on submit — days may pass between the two — refuses ids that would overwrite existing content, and runs under the publisher's identity, never the proposer's. The GitHub writes live in `functions/src/services/publish.ts`, shared with `handlers/events.ts` and `handlers/speakers.ts` so the two paths into the data repo cannot drift.
+
+**Per-event staff:** `PUT/DELETE /api/events/:slug/staff/:uid` (requires `users:role:write` — assigning someone to an event grants permissions, so it weighs the same as a role change) manage `events/{slug}/staff/{uid}`, editable from `/admin/events/staff?slug=…`. Assignment is refused for roles whose bundle has no `perEvent` permissions, since the document would grant nothing while appearing to. Expired assignments stay in the collection but stop granting, and are shown as such. `GET /api/me/events` returns the caller's own active assignments — a volunteer has no global permissions, so without it their panel would look empty.
+
+**Onboarding:** two ways in, both in `functions/src/handlers/access.ts`. A signed-in `member` submits a request at `/admin/solicitar` (doc id = their uid, so requests cannot pile up); reviewers with `access:review` approve or reject at `/admin/access`, and the granted role may differ from the one requested. Alternatively a reviewer sends an invitation: a 32-byte token is emailed, and only its SHA-256 hash is stored, so the `invitations` collection cannot be used to redeem anything. Redemption at `/admin/invitacion` requires the redeemer's verified email to match the invitee — without that check a forwarded link would hand over the role. Both paths refuse to grant beyond the actor's own permissions, and the failure message for a bad redemption is deliberately identical across "wrong token", "expired", "revoked" and "not yours" so the endpoint cannot be used to probe other people's invitations.
+
+**Access-control admin:** role, status and per-user grants are changed only through `PATCH /api/users/:uid/role`, `PATCH /api/users/:uid/status` and `PUT /api/users/:uid/grants`. All three require a written reason (stored in `audit_log`) and enforce two guards in `functions/src/handlers/users.ts`: no-escalation (you cannot assign, remove or grant beyond your own permissions) and last-admin (the final active admin cannot be demoted or suspended). `GET /api/audit` is paginated by document cursor and accepts at most one filter at a time — each filter has its own composite index in `firestore.indexes.json`.
+
+**Firestore collections:** `users` (role, status, grants, revocations), `audit_log` (write history), `events/{slug}/staff` (per-event assignments)
 
 ### Deployment
 

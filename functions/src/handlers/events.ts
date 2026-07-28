@@ -8,24 +8,12 @@ import {
   validateMapEmbedUrl,
 } from "../middleware/validate";
 import { GitHubService } from "../services/github";
+import {
+  publishEvent,
+  toEventIndexEntry,
+  type EventIndexEntry,
+} from "../services/publish";
 import { GITHUB_TOKEN } from "../config";
-
-interface EventIndexEntry {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  end_time: string;
-  venue: string;
-  venue_address: string;
-  venue_map_url: string;
-  image_url: string;
-  topics: string[];
-  speaker_ids: string[];
-  registration_url: string | null;
-  materials: Record<string, string>;
-  agenda: { time: string; title: string; speaker: string }[];
-}
 
 function validateEventUrls(
   event: Record<string, unknown>,
@@ -52,27 +40,6 @@ function validateEventUrls(
     return false;
   }
   return true;
-}
-
-function toIndexEntry(event: Record<string, unknown>): EventIndexEntry {
-  return {
-    id: event.id as string,
-    title: event.title as string,
-    description: event.description as string,
-    date: event.date as string,
-    end_time: event.end_time as string,
-    venue: (event.venue as string) || "",
-    venue_address: (event.venue_address as string) || "",
-    venue_map_url: (event.venue_map_url as string) || "",
-    image_url: (event.image_url as string) || "",
-    topics: (event.topics as string[]) || [],
-    speaker_ids: (event.speaker_ids as string[]) || [],
-    registration_url: (event.registration_url as string) || null,
-    materials: (event.materials as Record<string, string>) || {},
-    agenda:
-      (event.agenda as { time: string; title: string; speaker: string }[]) ||
-      [],
-  };
 }
 
 export async function listEvents(_req: Request, res: Response) {
@@ -114,23 +81,10 @@ export async function createEvent(req: Request, res: Response) {
     const github = new GitHubService(GITHUB_TOKEN.value());
     const user = (req as AuthenticatedRequest).user;
 
-    // Create event file
-    await github.putFile(
-      `events/${event.id}.json`,
-      JSON.stringify(event, null, 2),
-      `feat(events): add ${event.id}`
-    );
-
-    // Update index.json
-    const { data: index, sha: indexSha } =
-      await github.getFileContent<EventIndexEntry[]>("events/index.json");
-    index.push(toIndexEntry(event));
-    await github.putFile(
-      "events/index.json",
-      JSON.stringify(index, null, 2),
-      `feat(events): add ${event.id} to index`,
-      indexSha
-    );
+    // Fichero del evento + entrada en el índice. La escritura vive en
+    // services/publish.ts porque la comparte con la publicación de una
+    // propuesta aprobada.
+    await publishEvent(github, event);
 
     // Trigger rebuild
     triggerRebuildAndLog(github);
@@ -178,7 +132,7 @@ export async function updateEvent(req: Request, res: Response) {
     const { data: index, sha: indexSha } =
       await github.getFileContent<EventIndexEntry[]>("events/index.json");
     const updatedIndex = index.map((e) =>
-      e.id === eventId ? toIndexEntry(event) : e
+      e.id === eventId ? toEventIndexEntry(event) : e
     );
     await github.putFile(
       "events/index.json",

@@ -1,10 +1,28 @@
 import { z } from "zod";
+import { validateUrl, validateMapEmbedUrl } from "../middleware/validate";
 
 // Reused primitives ---------------------------------------------------------
 
 const safeId = z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/);
 const shortText = (max: number) => z.string().max(max);
 const longText = (max: number) => z.string().max(max);
+
+// URL validation lives in the SCHEMA, not in each handler, so every path that
+// parses one of these gets it — including the publication of a proposal
+// written by someone outside the organisation. When it only lived in
+// events.ts, `publishProposal` bypassed it and untrusted `javascript:` URLs
+// reached the public site.
+const urlText = (max: number) =>
+  shortText(max).refine(validateUrl, {
+    message: "must be an http(s) URL",
+  });
+
+// Rendered as an iframe `src` on the public event page, so it is pinned to
+// Google Maps: any other origin would be an attacker-controlled frame.
+const mapEmbedText = (max: number) =>
+  shortText(max).refine(validateMapEmbedUrl, {
+    message: "must be a https://www.google.com/maps/... URL",
+  });
 
 // Schemas -------------------------------------------------------------------
 
@@ -61,15 +79,15 @@ export const eventSchema = z
     end_time: shortText(50).default(""),
     venue: shortText(500).default(""),
     venue_address: shortText(1000).default(""),
-    venue_map_url: shortText(2000).default(""),
-    venue_map_embed: shortText(2000).default(""),
-    image_url: shortText(2000).default(""),
+    venue_map_url: urlText(2000).default(""),
+    venue_map_embed: mapEmbedText(2000).default(""),
+    image_url: urlText(2000).default(""),
     topics: z.array(shortText(200)).max(50).default([]),
     technologies: z.array(shortText(200)).max(50).default([]),
     speaker_ids: z.array(shortText(200)).max(100).default([]),
     speaker_names: z.array(shortText(500)).max(100).default([]),
-    registration_url: shortText(2000).default(""),
-    whatsapp_group_link: shortText(2000).default(""),
+    registration_url: urlText(2000).default(""),
+    whatsapp_group_link: urlText(2000).default(""),
     is_virtual: z.boolean().default(false),
     is_highlight: z.boolean().default(false),
     participants: z.number().int().min(0).max(1_000_000).default(0),
@@ -93,11 +111,14 @@ export const speakerSchema = z
     id: safeId,
     name: shortText(500).min(1),
     bio: longText(20000).default(""),
-    photo_url: shortText(2000).default(""),
+    photo_url: urlText(2000).default(""),
     company: shortText(500).default(""),
     role: shortText(500).default(""),
     topics: z.array(shortText(200)).max(50).default([]),
-    social_links: z.record(shortText(50), shortText(2000)).default({}),
+    // Se pintan como enlaces en la ficha pública. Nunca se validaron porque
+    // solo los creaban organizadores; ahora los puede proponer gente de
+    // fuera, así que el esquema los acota a http(s).
+    social_links: z.record(shortText(50), urlText(2000)).default({}),
     talk_ids: z.array(shortText(200)).max(100).default([]),
   })
   .strict();

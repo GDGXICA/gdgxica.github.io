@@ -5,7 +5,7 @@ import express from "express";
 import cors from "cors";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { GITHUB_TOKEN, GMAIL_USER, GMAIL_APP_PASSWORD } from "./config";
-import { requireRole, requireAuth } from "./middleware/auth";
+import { requirePermission, requireAuth } from "./middleware/auth";
 import { isAllowedOrigin, rejectDisallowedOrigin } from "./middleware/cors";
 import { validateParamId } from "./middleware/validate";
 import { validateBody } from "./middleware/validateBody";
@@ -30,6 +30,10 @@ import * as speakers from "./handlers/speakers";
 import * as sponsors from "./handlers/sponsors";
 import * as stats from "./handlers/stats";
 import * as users from "./handlers/users";
+import * as audit from "./handlers/audit";
+import * as access from "./handlers/access";
+import * as eventStaff from "./handlers/eventStaff";
+import * as proposals from "./handlers/proposals";
 import * as forms from "./handlers/forms";
 import { triggerRebuild } from "./handlers/rebuild";
 import * as locations from "./handlers/locations";
@@ -185,23 +189,29 @@ const claimLimiter = rateLimit({
 
 const vid = validateParamId("id");
 const vuid = validateParamId("uid");
+const slugP = validateParamId("slug");
 
 // Auth
 app.post("/api/auth/register", requireAuth(), register);
 
 // Events
-app.get("/api/events", requireRole("organizer"), events.listEvents);
-app.get("/api/events/:id", requireRole("organizer"), vid, events.getEvent);
+app.get("/api/events", requirePermission("events:read"), events.listEvents);
+app.get(
+  "/api/events/:id",
+  requirePermission("events:read"),
+  vid,
+  events.getEvent
+);
 app.post(
   "/api/events",
-  requireRole("organizer"),
+  requirePermission("events:write"),
   writeLimiter,
   validateBody(eventSchema),
   events.createEvent
 );
 app.put(
   "/api/events/:id",
-  requireRole("organizer"),
+  requirePermission("events:write"),
   vid,
   writeLimiter,
   validateBody(eventSchema),
@@ -209,24 +219,24 @@ app.put(
 );
 app.delete(
   "/api/events/:id",
-  requireRole("admin"),
+  requirePermission("events:delete"),
   vid,
   writeLimiter,
   events.deleteEvent
 );
 
 // Team
-app.get("/api/team", requireRole("organizer"), team.listTeam);
+app.get("/api/team", requirePermission("team:read"), team.listTeam);
 app.post(
   "/api/team",
-  requireRole("admin"),
+  requirePermission("team:write"),
   writeLimiter,
   validateBody(teamMemberSchema),
   team.addTeamMember
 );
 app.put(
   "/api/team/:id",
-  requireRole("admin"),
+  requirePermission("team:write"),
   vid,
   writeLimiter,
   validateBody(teamMemberSchema),
@@ -234,24 +244,28 @@ app.put(
 );
 app.delete(
   "/api/team/:id",
-  requireRole("admin"),
+  requirePermission("team:write"),
   vid,
   writeLimiter,
   team.deleteTeamMember
 );
 
 // Speakers
-app.get("/api/speakers", requireRole("organizer"), speakers.listSpeakers);
+app.get(
+  "/api/speakers",
+  requirePermission("speakers:read"),
+  speakers.listSpeakers
+);
 app.post(
   "/api/speakers",
-  requireRole("organizer"),
+  requirePermission("speakers:write"),
   writeLimiter,
   validateBody(speakerSchema),
   speakers.addSpeaker
 );
 app.put(
   "/api/speakers/:id",
-  requireRole("organizer"),
+  requirePermission("speakers:write"),
   vid,
   writeLimiter,
   validateBody(speakerSchema),
@@ -259,24 +273,28 @@ app.put(
 );
 app.delete(
   "/api/speakers/:id",
-  requireRole("admin"),
+  requirePermission("speakers:delete"),
   vid,
   writeLimiter,
   speakers.deleteSpeaker
 );
 
 // Sponsors
-app.get("/api/sponsors", requireRole("admin"), sponsors.listSponsors);
+app.get(
+  "/api/sponsors",
+  requirePermission("sponsors:read"),
+  sponsors.listSponsors
+);
 app.post(
   "/api/sponsors",
-  requireRole("admin"),
+  requirePermission("sponsors:write"),
   writeLimiter,
   validateBody(sponsorSchema),
   sponsors.addSponsor
 );
 app.put(
   "/api/sponsors/:id",
-  requireRole("admin"),
+  requirePermission("sponsors:write"),
   vid,
   writeLimiter,
   validateBody(sponsorSchema),
@@ -284,62 +302,224 @@ app.put(
 );
 app.delete(
   "/api/sponsors/:id",
-  requireRole("admin"),
+  requirePermission("sponsors:delete"),
   vid,
   writeLimiter,
   sponsors.deleteSponsor
 );
 
 // Stats
-app.get("/api/stats", requireRole("organizer"), stats.getStats);
-app.put("/api/stats", requireRole("admin"), writeLimiter, stats.updateStats);
+app.get("/api/stats", requirePermission("stats:read"), stats.getStats);
+app.put(
+  "/api/stats",
+  requirePermission("stats:write"),
+  writeLimiter,
+  stats.updateStats
+);
 
 // Users
-app.get("/api/users", requireRole("admin"), users.listUsers);
+app.get("/api/users", requirePermission("users:read"), users.listUsers);
 app.patch(
   "/api/users/:uid/role",
-  requireRole("admin"),
+  requirePermission("users:role:write"),
   vuid,
   writeLimiter,
   users.updateRole
 );
+app.patch(
+  "/api/users/:uid/status",
+  requirePermission("users:role:write"),
+  vuid,
+  writeLimiter,
+  users.updateStatus
+);
+app.put(
+  "/api/users/:uid/grants",
+  requirePermission("users:role:write"),
+  vuid,
+  writeLimiter,
+  users.updateGrants
+);
+
+// Audit log — de solo lectura, y solo para quien tenga `audit:read`.
+app.get("/api/audit", requirePermission("audit:read"), audit.listAudit);
+
+// Access — solicitudes e invitaciones.
+//
+// Crear una solicitud y canjear una invitación son las dos únicas rutas que
+// puede llamar alguien SIN permisos (solo con sesión iniciada), así que
+// llevan un limitador propio y estrecho: son la superficie que ve cualquiera
+// con una cuenta de Google.
+const accessLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Pinned to the IP, not the uid: these two routes accept any Firebase
+  // token, and anonymous ones can be minted for free — a per-uid bucket is
+  // bypassable by rotating accounts, which is exactly what a token-guessing
+  // client would do. Same reasoning as joinLimiter above.
+  keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip ?? "unknown")}`,
+  message: {
+    success: false,
+    error: "Demasiados intentos, inténtalo más tarde",
+  },
+});
+
+// Propuestas de contenido. `proposals:create` basta para crear y listar —el
+// handler filtra a las propias de quien no revisa—, mientras que revisar y
+// publicar exigen `proposals:review`. Publicar es un paso aparte de aprobar:
+// aceptar el contenido y escribirlo en el repo público son decisiones
+// distintas.
+app.get(
+  "/api/proposals",
+  requirePermission("proposals:create"),
+  proposals.listProposals
+);
+app.post(
+  "/api/proposals",
+  requirePermission("proposals:create"),
+  writeLimiter,
+  proposals.createProposal
+);
+app.put(
+  "/api/proposals/:id",
+  requirePermission("proposals:create"),
+  vid,
+  writeLimiter,
+  proposals.updateProposal
+);
+app.post(
+  "/api/proposals/:id/review",
+  requirePermission("proposals:review"),
+  vid,
+  writeLimiter,
+  proposals.reviewProposal
+);
+app.post(
+  "/api/proposals/:id/publish",
+  requirePermission("proposals:review"),
+  vid,
+  writeLimiter,
+  proposals.publishProposal
+);
+
+// Asignaciones de staff por evento. Gestionarlas exige `users:role:write`:
+// asignar a alguien a un evento es concederle permisos, aunque acotados, y
+// debe pesar lo mismo que cambiar un rol.
+app.get(
+  "/api/events/:slug/staff",
+  requirePermission("roster:read", { scopeParam: "slug" }),
+  slugP,
+  eventStaff.listStaff
+);
+app.put(
+  "/api/events/:slug/staff/:uid",
+  requirePermission("users:role:write"),
+  slugP,
+  vuid,
+  writeLimiter,
+  eventStaff.assignStaff
+);
+app.delete(
+  "/api/events/:slug/staff/:uid",
+  requirePermission("users:role:write"),
+  slugP,
+  vuid,
+  writeLimiter,
+  eventStaff.removeStaff
+);
+
+// Eventos asignados a quien llama. Solo necesita sesión: devuelve
+// exclusivamente las asignaciones propias, nunca las de otra persona.
+app.get("/api/me/events", requireAuth(), eventStaff.listMyEvents);
+
+app.get("/api/access/requests/me", requireAuth(), access.getMyRequest);
+app.post(
+  "/api/access/requests",
+  requireAuth(),
+  accessLimiter,
+  access.createRequest
+);
+app.post(
+  "/api/access/invitations/redeem",
+  requireAuth(),
+  accessLimiter,
+  access.redeemInvitation
+);
+
+app.get(
+  "/api/access/requests",
+  requirePermission("access:review"),
+  access.listRequests
+);
+app.post(
+  "/api/access/requests/:uid/decide",
+  requirePermission("access:review"),
+  vuid,
+  writeLimiter,
+  access.decideRequest
+);
+app.get(
+  "/api/access/invitations",
+  requirePermission("access:review"),
+  access.listInvitations
+);
+app.post(
+  "/api/access/invitations",
+  requirePermission("access:review"),
+  writeLimiter,
+  access.createInvitation
+);
+app.delete(
+  "/api/access/invitations/:id",
+  requirePermission("access:review"),
+  vid,
+  writeLimiter,
+  access.revokeInvitation
+);
 
 // Forms
-app.get("/api/forms", requireRole("organizer"), forms.listForms);
-app.post("/api/forms", requireRole("admin"), writeLimiter, forms.addForm);
+app.get("/api/forms", requirePermission("forms:read"), forms.listForms);
+app.post(
+  "/api/forms",
+  requirePermission("forms:write"),
+  writeLimiter,
+  forms.addForm
+);
 app.put(
   "/api/forms/:id",
-  requireRole("admin"),
+  requirePermission("forms:write"),
   vid,
   writeLimiter,
   forms.updateForm
 );
 app.delete(
   "/api/forms/:id",
-  requireRole("admin"),
+  requirePermission("forms:write"),
   vid,
   writeLimiter,
   forms.deleteForm
 );
 app.get(
   "/api/forms/:id/responses",
-  requireRole("organizer"),
+  requirePermission("forms:responses:read"),
   vid,
   forms.getFormResponses
 );
 
 // Locations
-app.get("/api/locations", requireRole("organizer"), locations.list);
+app.get("/api/locations", requirePermission("locations:read"), locations.list);
 app.post(
   "/api/locations",
-  requireRole("organizer"),
+  requirePermission("locations:write"),
   writeLimiter,
   validateBody(locationSchema),
   locations.create
 );
 app.put(
   "/api/locations/:id",
-  requireRole("organizer"),
+  requirePermission("locations:write"),
   vid,
   writeLimiter,
   validateBody(locationSchema),
@@ -347,28 +527,29 @@ app.put(
 );
 app.delete(
   "/api/locations/:id",
-  requireRole("admin"),
+  requirePermission("locations:delete"),
   vid,
   writeLimiter,
   locations.remove
 );
 
-// Minigame Templates (admin-only — full CRUD)
+// Minigame Templates — la plantilla es global, no cuelga de ningún evento,
+// así que su permiso nunca se acota por alcance.
 app.get(
   "/api/minigame-templates",
-  requireRole("admin"),
+  requirePermission("minigames:template:read"),
   minigameTemplates.list
 );
 app.post(
   "/api/minigame-templates",
-  requireRole("admin"),
+  requirePermission("minigames:template:write"),
   writeLimiter,
   validateBody(minigameTemplateSchema),
   minigameTemplates.create
 );
 app.put(
   "/api/minigame-templates/:id",
-  requireRole("admin"),
+  requirePermission("minigames:template:write"),
   vid,
   writeLimiter,
   validateBody(minigameTemplateSchema),
@@ -376,23 +557,26 @@ app.put(
 );
 app.delete(
   "/api/minigame-templates/:id",
-  requireRole("admin"),
+  requirePermission("minigames:template:write"),
   vid,
   writeLimiter,
   minigameTemplates.remove
 );
 
-// Minigame Instances (admin-only — attach templates to events)
-const slugP = validateParamId("slug");
+// Minigame Instances — acotadas al evento: `scopeParam` permite que un
+// voluntario asignado a ESE evento las opere, sin darle los demás.
+const minigamesOfEvent = () =>
+  requirePermission("minigames:operate", { scopeParam: "slug" });
+
 app.get(
   "/api/events/:slug/minigames",
-  requireRole("admin"),
+  minigamesOfEvent(),
   slugP,
   minigameInstances.list
 );
 app.post(
   "/api/events/:slug/minigames",
-  requireRole("admin"),
+  minigamesOfEvent(),
   slugP,
   writeLimiter,
   validateBody(minigameInstanceCreateSchema),
@@ -400,7 +584,7 @@ app.post(
 );
 app.patch(
   "/api/events/:slug/minigames/:id/state",
-  requireRole("admin"),
+  minigamesOfEvent(),
   slugP,
   vid,
   writeLimiter,
@@ -409,7 +593,7 @@ app.patch(
 );
 app.post(
   "/api/events/:slug/minigames/:id/quiz/advance",
-  requireRole("admin"),
+  minigamesOfEvent(),
   slugP,
   vid,
   writeLimiter,
@@ -417,7 +601,7 @@ app.post(
 );
 app.delete(
   "/api/events/:slug/minigames/:id",
-  requireRole("admin"),
+  minigamesOfEvent(),
   slugP,
   vid,
   writeLimiter,
@@ -434,20 +618,26 @@ app.post(
   minigameJoin.join
 );
 
-// Roulette spin (admin-only)
+// Roulette spin
 app.post(
   "/api/events/:slug/minigames/:id/roulette/spin",
-  requireRole("admin"),
+  minigamesOfEvent(),
   slugP,
   vid,
   writeLimiter,
   minigameRoulette.spin
 );
 
-// Classic bingo: the admin calls one ball at a time...
+// Classic bingo: whoever runs the event calls one ball at a time...
+//
+// Llegó de main como `requireRole("admin")`, que esta rama elimina. Cantar
+// bolas es operar los minijuegos DE ESE evento, igual que girar la ruleta o
+// avanzar el quiz, así que va con el mismo permiso acotado: un voluntario
+// asignado al evento puede llevarlo, y nadie puede tocar el bingo de un
+// evento que no es suyo.
 app.post(
   "/api/events/:slug/minigames/:id/bingo/draw",
-  requireRole("admin"),
+  minigamesOfEvent(),
   slugP,
   vid,
   ballLimiter,
@@ -465,18 +655,18 @@ app.post(
   minigameBingo.claim
 );
 
-// Word cloud moderation + bingo winners (admin-only)
+// Word cloud moderation + bingo winners
 const vwid = validateParamId("wordId");
 app.get(
   "/api/events/:slug/minigames/:id/words",
-  requireRole("admin"),
+  minigamesOfEvent(),
   slugP,
   vid,
   minigameWords.listWords
 );
 app.patch(
   "/api/events/:slug/minigames/:id/words/:wordId/hidden",
-  requireRole("admin"),
+  minigamesOfEvent(),
   slugP,
   vid,
   vwid,
@@ -486,7 +676,7 @@ app.patch(
 );
 app.get(
   "/api/events/:slug/minigames/:id/winners",
-  requireRole("admin"),
+  minigamesOfEvent(),
   slugP,
   vid,
   minigameWords.listWinners
@@ -495,7 +685,7 @@ app.get(
 // Certificates — generate per recipient and email; nothing is stored.
 app.post(
   "/api/certificates/send",
-  requireRole("organizer"),
+  requirePermission("certificates:send"),
   writeLimiter,
   validateBody(certificateSendSchema),
   certificates.sendCertificates
@@ -506,7 +696,7 @@ app.post(
 // Firestore so the write can be queued when venue wifi drops.
 app.post(
   "/api/events/:slug/checkin/import",
-  requireRole("organizer"),
+  requirePermission("checkin:import", { scopeParam: "slug" }),
   slugP,
   writeLimiter,
   validateBody(checkinImportSchema),
@@ -514,7 +704,12 @@ app.post(
 );
 
 // Rebuild
-app.post("/api/rebuild", requireRole("admin"), writeLimiter, triggerRebuild);
+app.post(
+  "/api/rebuild",
+  requirePermission("rebuild:trigger"),
+  writeLimiter,
+  triggerRebuild
+);
 
 export const api = onRequest(
   {

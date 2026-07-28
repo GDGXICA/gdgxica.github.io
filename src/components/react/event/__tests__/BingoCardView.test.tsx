@@ -213,7 +213,9 @@ describe("BingoCardView", () => {
       await waitFor(() => expect(mocks.setDoc).toHaveBeenCalledTimes(2));
       // The queued taps are coalesced into one follow-up write carrying
       // every mark, so nothing clobbers anything.
-      const second = mocks.setDoc.mock.calls[1][1] as { bingoMarked: boolean[] };
+      const second = mocks.setDoc.mock.calls[1][1] as {
+        bingoMarked: boolean[];
+      };
       expect(second.bingoMarked.slice(0, 3)).toEqual([true, true, true]);
     });
 
