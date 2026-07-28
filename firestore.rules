@@ -70,6 +70,24 @@ service cloud.firestore {
     // Rules cannot loop, so the ten lines are spelled out. Only reached
     // when bingoMarked is already asserted to be a 16-element list, so the
     // fixed indexing is safe.
+    // True when this instance is a classic bingo — the mode where an
+    // admin calls the terms out loud. There, a win is not something a
+    // client may assert at all: the Cloud Function recomputes the card
+    // against the balls it actually called and writes bingoWonAt itself
+    // with the Admin SDK, which bypasses these rules. Conference-mode
+    // bingo has nobody calling, so self-reported marks are all there is
+    // and the line check below is the only guard available.
+    // Defaults to false in two ways, both deliberate: an instance written
+    // before classic mode existed has no `classic` key, and a participant
+    // whose parent instance is missing entirely would otherwise make the
+    // get() error out and deny a legitimate conference-mode win. Neither
+    // case is a classic bingo, so neither should block one.
+    function isClassicBingo(eventSlug, instanceId) {
+      return exists(/databases/$(database)/documents/events/$(eventSlug)/minigames/$(instanceId))
+          && get(/databases/$(database)/documents/events/$(eventSlug)/minigames/$(instanceId))
+               .data.get('config', {}).get('classic', false) == true;
+    }
+
     function bingoHasLine(m) {
       return (m[0] && m[1] && m[2] && m[3])
           || (m[4] && m[5] && m[6] && m[7])
@@ -200,8 +218,32 @@ service cloud.firestore {
                                 && bingoHasLine(request.resource.data.bingoMarked)
                                 // Pin to server time so a cheater cannot
                                 // backdate the win to jump the winners queue.
-                                && request.resource.data.bingoWonAt == request.time));
+                                && request.resource.data.bingoWonAt == request.time
+                                // In classic mode the line check is not
+                                // enough: marks are only legitimate for
+                                // balls that were actually called, and
+                                // rules cannot cross-reference the card
+                                // against the called list. So the client
+                                // is shut out entirely and /bingo/claim
+                                // does the verifying.
+                                && !isClassicBingo(eventSlug, instanceId)));
           allow delete: if false;
+        }
+
+        // Classic-bingo bookkeeping, both server-only and both secret by
+        // design rather than by omission:
+        //   secret/draw  — the full calling sequence. Readable would mean
+        //     every attendee knows every ball in advance.
+        //   slots/{uid}  — which ball each card wins on. Participant docs
+        //     are world-readable, so this is the one place that can hold
+        //     the reservation without spoiling the surprise.
+        // The root catch-all already denies both; stated here so a later
+        // refactor cannot widen them by accident.
+        match /secret/{docId} {
+          allow read, write: if false;
+        }
+        match /slots/{participantUid} {
+          allow read, write: if false;
         }
         match /responses/{responseId} {
           allow read: if true;

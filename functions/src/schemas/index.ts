@@ -237,6 +237,19 @@ export const minigameTemplateSchema = z.discriminatedUnion("type", [
           terms: z.array(shortText(120).min(1)).min(16).max(200),
           cardSize: z.literal(4).default(4),
           freeCenter: z.boolean().default(false),
+          // Classic mode: an admin calls the terms out loud one at a
+          // time and participants may only mark what has been called.
+          // Off means conference mode, where the speakers do the calling
+          // without knowing it and every card marks freely.
+          classic: z.boolean().default(false),
+          // How many prizes are on the table. The projector marks the
+          // first `prizes` winners as prize-winners and the rest as
+          // honourable mentions.
+          prizes: z.number().int().min(1).max(20).default(3),
+          // Cards are dealt so that at most this many of them win on the
+          // same ball. 1 means wins arrive strictly one announcement at
+          // a time — the whole point of the classic mode.
+          maxWinnersPerDraw: z.number().int().min(1).max(10).default(1),
         })
         .strict(),
     })

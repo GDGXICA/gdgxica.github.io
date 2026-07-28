@@ -30,11 +30,34 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-export function generateBingoCard(terms: string[], seed: string): string[] {
-  // De-dupe input first — admins can be sloppy. Preserve first-seen order.
-  const unique = Array.from(
-    new Set(terms.map((t) => t.trim())).values()
-  ).filter((t) => t.length > 0);
+// The term bank as the game actually sees it: trimmed, de-duped (admins
+// are sloppy) and stripped of blanks, in first-seen order. Both the card
+// dealer and the classic-mode draw order run through this, which is what
+// guarantees every card term also appears in the draw sequence.
+export function normalizeTerms(terms: readonly string[]): string[] {
+  return Array.from(new Set(terms.map((t) => t.trim())).values()).filter(
+    (t) => t.length > 0
+  );
+}
+
+// Fisher–Yates with a seeded RNG. Same seed → same permutation.
+export function seededShuffle<T>(items: readonly T[], seed: string): T[] {
+  const rand = mulberry32(hashSeed(seed));
+  const arr = items.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    const tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+  }
+  return arr;
+}
+
+export function generateBingoCard(
+  terms: readonly string[],
+  seed: string
+): string[] {
+  const unique = normalizeTerms(terms);
 
   if (unique.length < CARD_SIZE) {
     throw new Error(
@@ -42,14 +65,5 @@ export function generateBingoCard(terms: string[], seed: string): string[] {
     );
   }
 
-  const rand = mulberry32(hashSeed(seed));
-  const arr = unique.slice();
-  // Fisher–Yates with seeded RNG.
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(rand() * (i + 1));
-    const tmp = arr[i];
-    arr[i] = arr[j];
-    arr[j] = tmp;
-  }
-  return arr.slice(0, CARD_SIZE);
+  return seededShuffle(unique, seed).slice(0, CARD_SIZE);
 }

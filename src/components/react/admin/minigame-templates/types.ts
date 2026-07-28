@@ -33,6 +33,14 @@ export interface BingoConfig {
   terms: string[];
   cardSize: 4;
   freeCenter: boolean;
+  // Classic mode: an admin calls the terms out loud one at a time and
+  // participants may only mark what has been called. Off means
+  // conference mode, where the speakers do the calling without knowing
+  // it and every card marks freely.
+  classic: boolean;
+  prizes: number;
+  // Cards are dealt so that at most this many win on the same ball.
+  maxWinnersPerDraw: number;
 }
 
 export interface RouletteConfig {
@@ -141,6 +149,9 @@ export function emptyForType(type: MinigameType): Template {
           terms: [],
           cardSize: 4,
           freeCenter: false,
+          classic: false,
+          prizes: 3,
+          maxWinnersPerDraw: 1,
         },
       };
     case "roulette":

@@ -15,6 +15,12 @@ export interface MinigameInstance {
   order: number;
   config?: Record<string, unknown>;
   currentQuestionIndex?: number;
+  // Classic-bingo runtime state, written by the Cloud Function on every
+  // called ball.
+  drawCount?: number;
+  drawnTerms?: string[];
+  lastDrawnTerm?: string | null;
+  bingoWinnerCount?: number;
 }
 
 export const STATE_LABELS: Record<InstanceState, string> = {
