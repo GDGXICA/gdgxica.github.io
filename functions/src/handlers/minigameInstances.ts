@@ -4,6 +4,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
+import { ensureDrawOrder } from "../services/bingoDrawStore";
 import type { MinigameTemplate, MinigameTemplateType } from "../schemas";
 
 interface AuditDetails {
@@ -122,8 +123,28 @@ export async function attach(req: Request, res: Response) {
       baseInstance.lastSpinWinnerId = null;
       baseInstance.lastSpinAt = null;
     }
+    // Non-null only for a classic bingo, which needs a sealed calling
+    // sequence before the first participant can be dealt a card.
+    // Optional chaining because `tpl` is raw Firestore data wearing the
+    // schema type, not something zod has parsed.
+    let classicTerms: string[] | null = null;
+    if (tpl.type === "bingo" && tpl.bingo?.classic === true) {
+      classicTerms = tpl.bingo.terms ?? [];
+      baseInstance.drawCount = 0;
+      baseInstance.drawnTerms = [];
+      baseInstance.lastDrawnTerm = null;
+      baseInstance.lastDrawAt = null;
+      baseInstance.bingoWinnerCount = 0;
+    }
 
     const ref = await instancesCol(slug).add(baseInstance);
+
+    if (classicTerms) {
+      // Seal it now, before anyone can join: cards are scored against
+      // this sequence so that no two of them win on the same ball, and
+      // that scoring is impossible until the sequence exists.
+      await ensureDrawOrder(ref, classicTerms);
+    }
 
     await writeAuditLog(
       auditEntry("minigame_instance.attach", user.uid, ref.id, {

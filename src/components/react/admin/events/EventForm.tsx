@@ -110,6 +110,16 @@ interface EventData {
   agenda: AgendaItem[];
   tracks: TrackDef[];
   track_sessions: Record<string, TrackSession[]>;
+  // Configured in the data repo, not editable here. Declared so the
+  // load/save round-trip preserves it deliberately rather than by
+  // accident of the `{ ...data }` / `{ ...form }` spreads — dropping it
+  // on save would silently disable the credential page for that event.
+  // Deliberately absent from EMPTY_EVENT so new events omit the key.
+  credential?: {
+    enabled: boolean;
+    headline: string;
+    group_letters: string[];
+  };
 }
 
 const EMPTY_EVENT: EventData = {

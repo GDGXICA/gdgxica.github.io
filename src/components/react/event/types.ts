@@ -23,6 +23,14 @@ export interface LiveInstance {
   spinCount?: number;
   lastSpinWinnerId?: string | null;
   lastSpinAt?: { seconds: number; nanoseconds?: number } | null;
+  // Classic-bingo runtime fields (written by Cloud Function on each ball).
+  // `drawnTerms` is only what has already been called out loud — the rest
+  // of the sequence stays server-side so nobody can read ahead.
+  drawCount?: number;
+  drawnTerms?: string[];
+  lastDrawnTerm?: string | null;
+  lastDrawAt?: { seconds: number; nanoseconds?: number } | null;
+  bingoWinnerCount?: number;
 }
 
 export const LOCAL_STORAGE_ALIAS_KEY = (slug: string) =>

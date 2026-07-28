@@ -27,3 +27,65 @@ body {
 .container {
   @apply mx-auto max-w-[1400px] px-4;
 }
+
+/* Classic-bingo projector. A ball is called every minute or two, so the
+   reveal has to read from the back of the room: it drops in, overshoots,
+   settles. The tumbler balls idle underneath while nothing is happening
+   so the screen never looks frozen. */
+@keyframes bingo-ball-drop {
+  0% {
+    transform: translateY(-140%) scale(0.4) rotate(-25deg);
+    opacity: 0;
+  }
+  55% {
+    transform: translateY(8%) scale(1.12) rotate(6deg);
+    opacity: 1;
+  }
+  75% {
+    transform: translateY(-4%) scale(0.97) rotate(-2deg);
+  }
+  100% {
+    transform: translateY(0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes bingo-ball-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(255 255 255 / 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 1.5rem rgb(255 255 255 / 0);
+  }
+}
+
+@keyframes bingo-tumble {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-38%) rotate(180deg);
+  }
+}
+
+.animate-bingo-ball-drop {
+  animation: bingo-ball-drop 900ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.animate-bingo-ball-pulse {
+  animation: bingo-ball-pulse 2s ease-out infinite;
+}
+
+.animate-bingo-tumble {
+  animation: bingo-tumble 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-bingo-ball-drop,
+  .animate-bingo-ball-pulse,
+  .animate-bingo-tumble {
+    animation: none;
+  }
+}

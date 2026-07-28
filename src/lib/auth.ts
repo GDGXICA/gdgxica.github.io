@@ -38,9 +38,24 @@ export async function getIdToken(): Promise<string | null> {
 }
 
 export async function getUserRole(uid: string): Promise<string | null> {
+  const profile = await getUserProfile(uid);
+  return (profile?.role as string) ?? null;
+}
+
+/**
+ * Doc completo de `users/{uid}`: rol, estado, grants y revocations. La UI lo
+ * necesita entero para decidir qué pintar — con el rol solo no se pueden
+ * resolver los permisos concedidos a una persona concreta.
+ *
+ * Es únicamente para pintar: el permiso real lo vuelven a comprobar la API y
+ * las reglas de Firestore en cada operación.
+ */
+export async function getUserProfile(
+  uid: string
+): Promise<Record<string, unknown> | null> {
   const db = await getFirestore();
   const { doc, getDoc } = await import("firebase/firestore");
   const userDoc = await getDoc(doc(db, "users", uid));
   if (!userDoc.exists()) return null;
-  return userDoc.data().role as string;
+  return userDoc.data() as Record<string, unknown>;
 }

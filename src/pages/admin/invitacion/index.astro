@@ -1,0 +1,8 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { AccessGateway } from "@/components/react/admin/access/AccessGateway";
+---
+
+<AdminLayout title="Aceptar invitación">
+  <AccessGateway client:load mode="redeem" />
+</AdminLayout>

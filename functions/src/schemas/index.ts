@@ -1,10 +1,28 @@
 import { z } from "zod";
+import { validateUrl, validateMapEmbedUrl } from "../middleware/validate";
 
 // Reused primitives ---------------------------------------------------------
 
 const safeId = z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/);
 const shortText = (max: number) => z.string().max(max);
 const longText = (max: number) => z.string().max(max);
+
+// URL validation lives in the SCHEMA, not in each handler, so every path that
+// parses one of these gets it — including the publication of a proposal
+// written by someone outside the organisation. When it only lived in
+// events.ts, `publishProposal` bypassed it and untrusted `javascript:` URLs
+// reached the public site.
+const urlText = (max: number) =>
+  shortText(max).refine(validateUrl, {
+    message: "must be an http(s) URL",
+  });
+
+// Rendered as an iframe `src` on the public event page, so it is pinned to
+// Google Maps: any other origin would be an attacker-controlled frame.
+const mapEmbedText = (max: number) =>
+  shortText(max).refine(validateMapEmbedUrl, {
+    message: "must be a https://www.google.com/maps/... URL",
+  });
 
 // Schemas -------------------------------------------------------------------
 
@@ -51,6 +69,14 @@ export const trackSessionSchema = z
   })
   .strict();
 
+export const credentialConfigSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    headline: shortText(200).default(""),
+    group_letters: z.array(shortText(2).min(1)).max(26).default([]),
+  })
+  .strict();
+
 export const eventSchema = z
   .object({
     id: safeId,
@@ -61,15 +87,15 @@ export const eventSchema = z
     end_time: shortText(50).default(""),
     venue: shortText(500).default(""),
     venue_address: shortText(1000).default(""),
-    venue_map_url: shortText(2000).default(""),
-    venue_map_embed: shortText(2000).default(""),
-    image_url: shortText(2000).default(""),
+    venue_map_url: urlText(2000).default(""),
+    venue_map_embed: mapEmbedText(2000).default(""),
+    image_url: urlText(2000).default(""),
     topics: z.array(shortText(200)).max(50).default([]),
     technologies: z.array(shortText(200)).max(50).default([]),
     speaker_ids: z.array(shortText(200)).max(100).default([]),
     speaker_names: z.array(shortText(500)).max(100).default([]),
-    registration_url: shortText(2000).default(""),
-    whatsapp_group_link: shortText(2000).default(""),
+    registration_url: urlText(2000).default(""),
+    whatsapp_group_link: urlText(2000).default(""),
     is_virtual: z.boolean().default(false),
     is_highlight: z.boolean().default(false),
     participants: z.number().int().min(0).max(1_000_000).default(0),
@@ -85,6 +111,16 @@ export const eventSchema = z
     track_sessions: z
       .record(shortText(100), z.array(trackSessionSchema).max(200))
       .default({}),
+    // Opt-in for the shareable attendee credential page. This schema is
+    // .strict() and updateEvent writes { ...req.body } straight to the
+    // data repo, while EventForm loads with { ...EMPTY_EVENT, ...data }
+    // and submits { ...form } — a runtime spread, so an unknown key read
+    // from the JSON survives into form state and back out on save.
+    // Without this entry the first event whose JSON carries `credential`
+    // becomes uneditable in /admin/events with a 400. Optional, not
+    // defaulted: a default would write the key into every event the
+    // admin panel touches.
+    credential: credentialConfigSchema.optional(),
   })
   .strict();
 
@@ -93,11 +129,14 @@ export const speakerSchema = z
     id: safeId,
     name: shortText(500).min(1),
     bio: longText(20000).default(""),
-    photo_url: shortText(2000).default(""),
+    photo_url: urlText(2000).default(""),
     company: shortText(500).default(""),
     role: shortText(500).default(""),
     topics: z.array(shortText(200)).max(50).default([]),
-    social_links: z.record(shortText(50), shortText(2000)).default({}),
+    // Se pintan como enlaces en la ficha pública. Nunca se validaron porque
+    // solo los creaban organizadores; ahora los puede proponer gente de
+    // fuera, así que el esquema los acota a http(s).
+    social_links: z.record(shortText(50), urlText(2000)).default({}),
     talk_ids: z.array(shortText(200)).max(100).default([]),
   })
   .strict();
@@ -216,6 +255,19 @@ export const minigameTemplateSchema = z.discriminatedUnion("type", [
           terms: z.array(shortText(120).min(1)).min(16).max(200),
           cardSize: z.literal(4).default(4),
           freeCenter: z.boolean().default(false),
+          // Classic mode: an admin calls the terms out loud one at a
+          // time and participants may only mark what has been called.
+          // Off means conference mode, where the speakers do the calling
+          // without knowing it and every card marks freely.
+          classic: z.boolean().default(false),
+          // How many prizes are on the table. The projector marks the
+          // first `prizes` winners as prize-winners and the rest as
+          // honourable mentions.
+          prizes: z.number().int().min(1).max(20).default(3),
+          // Cards are dealt so that at most this many of them win on the
+          // same ball. 1 means wins arrive strictly one announcement at
+          // a time — the whole point of the classic mode.
+          maxWinnersPerDraw: z.number().int().min(1).max(10).default(1),
         })
         .strict(),
     })

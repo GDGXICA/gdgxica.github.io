@@ -23,7 +23,8 @@ const EMPTY_FORM: FormEntry = {
 };
 
 export function FormRegistry() {
-  const { isAdmin } = useAuth();
+  const { can } = useAuth();
+  const canManageForms = can("forms:write");
   const [forms, setForms] = useState<FormEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -214,7 +215,7 @@ export function FormRegistry() {
         <p className="text-sm text-gray-500 dark:text-gray-400">
           {forms.length} formulario{forms.length !== 1 && "s"}
         </p>
-        {isAdmin && (
+        {canManageForms && (
           <button
             onClick={() => setCreating(true)}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
@@ -261,7 +262,7 @@ export function FormRegistry() {
                   Ver respuestas
                 </a>
               )}
-              {isAdmin && (
+              {canManageForms && (
                 <button
                   onClick={() => handleDelete(f.id)}
                   disabled={deleting === f.id}

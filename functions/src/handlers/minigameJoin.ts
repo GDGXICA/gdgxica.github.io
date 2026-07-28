@@ -1,14 +1,25 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
+import type { DocumentReference } from "firebase-admin/firestore";
 import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import { isCleanAlias } from "../services/profanity";
 import { generateBingoCard } from "../services/bingo";
+import {
+  buildCardCandidates,
+  candidateWinIndices,
+  earliestWinFloor,
+  pickStaggeredCard,
+  type CardCandidate,
+} from "../services/bingoClassic";
+import { ensureDrawOrder, winSlotsCol } from "../services/bingoDrawStore";
 
 interface BingoConfig {
   terms?: string[];
+  classic?: boolean;
+  maxWinnersPerDraw?: number;
 }
 
 interface InstanceData {
@@ -22,6 +33,48 @@ interface JoinedInstanceSummary {
   type: string;
   joined: boolean;
   bingoCard?: string[];
+}
+
+// Everything the classic-mode dealer needs that can be computed before
+// the transaction opens: a handful of scored candidate cards and the
+// balls they would win on. The sealed sequence never changes, so this is
+// safe to do outside.
+interface ClassicDealPlan {
+  candidates: CardCandidate[];
+  winIndices: number[];
+  maxWinnersPerDraw: number;
+}
+
+async function prepareClassicDeal(
+  instanceRef: DocumentReference,
+  instanceId: string,
+  config: BingoConfig,
+  uid: string
+): Promise<ClassicDealPlan | null> {
+  const terms = config.terms ?? [];
+  try {
+    const order = await ensureDrawOrder(instanceRef, terms);
+    if (order.length === 0) return null;
+
+    const candidates = buildCardCandidates(
+      terms,
+      order,
+      `${uid}:${instanceId}`,
+      undefined,
+      earliestWinFloor(order.length)
+    );
+    if (candidates.length === 0) return null;
+
+    return {
+      candidates,
+      winIndices: candidateWinIndices(candidates),
+      maxWinnersPerDraw: Math.max(1, config.maxWinnersPerDraw ?? 1),
+    };
+  } catch {
+    // Malformed bank (fewer than 16 usable terms). Same tolerance as
+    // conference mode: hand out no card rather than fail the whole join.
+    return null;
+  }
 }
 
 // POST /api/events/:slug/minigames/join
@@ -77,6 +130,22 @@ export async function join(req: Request, res: Response) {
           joined: false,
         };
 
+        const isClassicBingo =
+          instanceData.type === "bingo" &&
+          instanceData.config?.classic === true;
+
+        // Scoring candidate cards needs the sealed calling sequence, so
+        // it happens before the transaction opens — a transaction may
+        // not read anything after its first write.
+        const deal = isClassicBingo
+          ? await prepareClassicDeal(
+              instanceDoc.ref,
+              instanceId,
+              instanceData.config ?? {},
+              user.uid
+            )
+          : null;
+
         await db.runTransaction(async (tx) => {
           const existing = await tx.get(participantRef);
           if (existing.exists) {
@@ -99,7 +168,46 @@ export async function join(req: Request, res: Response) {
             joinedAt: FieldValue.serverTimestamp(),
           };
 
-          if (instanceData.type === "bingo") {
+          if (deal) {
+            // Classic mode. Which ball each card wins on is already
+            // decided by the sealed sequence, so we look at what is
+            // taken and deal a card that wins on a free ball. That is
+            // what stops five people from claiming at once when there
+            // are three prizes.
+            const slots = winSlotsCol(instanceDoc.ref);
+            const takenSnap = await tx.get(
+              slots.where("winIndex", "in", deal.winIndices)
+            );
+            const occupancy: Record<number, number> = {};
+            for (const doc of takenSnap.docs) {
+              const idx = (doc.data() as { winIndex?: number }).winIndex;
+              if (typeof idx === "number") {
+                occupancy[idx] = (occupancy[idx] ?? 0) + 1;
+              }
+            }
+
+            const pick = pickStaggeredCard(
+              deal.candidates,
+              occupancy,
+              deal.maxWinnersPerDraw
+            );
+            if (pick) {
+              participantDoc.bingoCard = pick.card;
+              summary.bingoCard = pick.card;
+              // The reservation lives in a private collection: the
+              // participant doc is world-readable, and "you win on ball
+              // 31" would spoil the game for everyone who looked.
+              tx.set(slots.doc(user.uid), {
+                uid: user.uid,
+                winIndex: pick.winIndex,
+                deal: pick.attempt,
+                relaxed: pick.relaxed,
+                createdAt: FieldValue.serverTimestamp(),
+              });
+            } else {
+              participantDoc.bingoCard = [];
+            }
+          } else if (instanceData.type === "bingo") {
             const terms = instanceData.config?.terms ?? [];
             // generateBingoCard validates length and dedupes; if the
             // template is somehow short we surface a clean error

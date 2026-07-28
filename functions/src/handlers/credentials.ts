@@ -24,6 +24,17 @@ import type {
   CredentialPhotoModerationInput,
 } from "../schemas/credentials";
 
+// Decoded-byte ceilings matching the character caps in the Zod schema.
+// The schema bounds the string it receives; these bound the bytes it
+// decodes to, which is what actually reaches the bucket.
+const MAX_PHOTO_BYTES = 230_000;
+const MAX_CREDENTIAL_BYTES = 480_000;
+
+// Fallback when the event JSON carries no letter set. The loader already
+// substitutes defaults, so reaching this means something upstream is
+// misconfigured — and a degraded letter beats a rejected registration.
+const DEFAULT_GROUP_LETTERS = ["A", "B", "C", "D"];
+
 // Kept in sync with src/components/react/credential/mascots.ts, which is
 // the manifest the picker renders from. Only used to pick a replacement
 // avatar when a photo is taken down.
@@ -37,17 +48,6 @@ const MASCOT_IDS = [
   "gdg-yellow-b",
   "gdg-green-b",
 ];
-
-// Decoded-byte ceilings matching the character caps in the Zod schema.
-// The schema bounds the string it receives; these bound the bytes it
-// decodes to, which is what actually reaches the bucket.
-const MAX_PHOTO_BYTES = 230_000;
-const MAX_CREDENTIAL_BYTES = 480_000;
-
-// Fallback when the event JSON carries no letter set. The loader already
-// substitutes defaults, so reaching this means something upstream is
-// misconfigured — and a degraded letter beats a rejected registration.
-const DEFAULT_GROUP_LETTERS = ["A", "B", "C", "D"];
 
 interface EventCredentialConfig {
   enabled?: boolean;
@@ -264,6 +264,76 @@ function singleLineHeader(value: string | undefined): string {
 }
 
 /**
+ * PATCH /api/events/:slug/credentials/:id/image
+ *
+ * Public, on the same anonymous token as create.
+ *
+ * Exists because the group letter derives from a server-assigned sequence
+ * number: the client cannot render the final card until create returns,
+ * so the card is attached in a second step rather than baked in
+ * beforehand. Without this, the stored and emailed copy carries a
+ * placeholder where the letter belongs.
+ *
+ * Pinned to the anonymous UID that created the record, so one visitor
+ * cannot overwrite another's card even knowing the document id.
+ */
+export async function attachCredentialImage(req: Request, res: Response) {
+  try {
+    const { slug, id } = req.params as { slug: string; id: string };
+    const user = (req as AuthenticatedRequest).user;
+    const body = req.body as CredentialImageInput;
+
+    const ref = admin
+      .firestore()
+      .collection("events")
+      .doc(slug)
+      .collection("credentials")
+      .doc(id);
+
+    const snap = await ref.get();
+    if (!snap.exists) {
+      res
+        .status(404)
+        .json({ success: false, error: "Credencial no encontrada" });
+      return;
+    }
+
+    if (snap.data()?.createdByUid !== user.uid) {
+      res.status(403).json({ success: false, error: "No autorizado" });
+      return;
+    }
+
+    const image = decodeJpegDataUrl(
+      body.credentialImageDataUrl,
+      MAX_CREDENTIAL_BYTES
+    );
+    if (!image) {
+      res
+        .status(400)
+        .json({ success: false, error: "No pudimos procesar la imagen" });
+      return;
+    }
+
+    const paths = await saveCredentialImages(slug, id, { credential: image });
+    if (!paths.credentialImagePath) {
+      res
+        .status(500)
+        .json({ success: false, error: "No pudimos guardar la imagen" });
+      return;
+    }
+
+    await ref.update({
+      credentialImagePath: paths.credentialImagePath,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    res.json({ success: true, data: { id } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: safeError(err) });
+  }
+}
+
+/**
  * PATCH /api/events/:slug/credentials/:id/bevy
  *
  * Records where a record stands in the manual load into Bevy. This is the
@@ -448,68 +518,4 @@ function credentialRef(slug: string, id: string) {
     .doc(slug)
     .collection("credentials")
     .doc(id);
-}
-
-/**
- * PATCH /api/events/:slug/credentials/:id/image
- *
- * Public, on the same anonymous token as create.
- *
- * Exists because the group letter derives from a server-assigned sequence
- * number: the client cannot render the final card until create returns, so
- * the card is attached in a second step rather than baked in beforehand.
- * Without this, the stored and emailed copy carries a placeholder where
- * the letter belongs.
- *
- * Pinned to the anonymous UID that created the record, so one visitor
- * cannot overwrite another's card even knowing the document id.
- */
-export async function attachCredentialImage(req: Request, res: Response) {
-  try {
-    const { slug, id } = req.params as { slug: string; id: string };
-    const user = (req as AuthenticatedRequest).user;
-    const body = req.body as CredentialImageInput;
-
-    const ref = credentialRef(slug, id);
-    const snap = await ref.get();
-    if (!snap.exists) {
-      res
-        .status(404)
-        .json({ success: false, error: "Credencial no encontrada" });
-      return;
-    }
-
-    if (snap.data()?.createdByUid !== user.uid) {
-      res.status(403).json({ success: false, error: "No autorizado" });
-      return;
-    }
-
-    const image = decodeJpegDataUrl(
-      body.credentialImageDataUrl,
-      MAX_CREDENTIAL_BYTES
-    );
-    if (!image) {
-      res
-        .status(400)
-        .json({ success: false, error: "No pudimos procesar la imagen" });
-      return;
-    }
-
-    const paths = await saveCredentialImages(slug, id, { credential: image });
-    if (!paths.credentialImagePath) {
-      res
-        .status(500)
-        .json({ success: false, error: "No pudimos guardar la imagen" });
-      return;
-    }
-
-    await ref.update({
-      credentialImagePath: paths.credentialImagePath,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-
-    res.json({ success: true, data: { id } });
-  } catch (err) {
-    res.status(500).json({ success: false, error: safeError(err) });
-  }
 }
