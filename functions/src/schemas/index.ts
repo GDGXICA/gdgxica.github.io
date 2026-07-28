@@ -69,6 +69,14 @@ export const trackSessionSchema = z
   })
   .strict();
 
+export const credentialConfigSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    headline: shortText(200).default(""),
+    group_letters: z.array(shortText(2).min(1)).max(26).default([]),
+  })
+  .strict();
+
 export const eventSchema = z
   .object({
     id: safeId,
@@ -103,6 +111,16 @@ export const eventSchema = z
     track_sessions: z
       .record(shortText(100), z.array(trackSessionSchema).max(200))
       .default({}),
+    // Opt-in for the shareable attendee credential page. This schema is
+    // .strict() and updateEvent writes { ...req.body } straight to the
+    // data repo, while EventForm loads with { ...EMPTY_EVENT, ...data }
+    // and submits { ...form } — a runtime spread, so an unknown key read
+    // from the JSON survives into form state and back out on save.
+    // Without this entry the first event whose JSON carries `credential`
+    // becomes uneditable in /admin/events with a 400. Optional, not
+    // defaulted: a default would write the key into every event the
+    // admin panel touches.
+    credential: credentialConfigSchema.optional(),
   })
   .strict();
 
