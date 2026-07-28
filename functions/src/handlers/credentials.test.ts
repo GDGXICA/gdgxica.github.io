@@ -127,6 +127,7 @@ interface Harness {
 function setupFirestore(
   options: {
     groupLetters?: string[] | undefined;
+    maxCredentials?: number;
     counterValues?: (number | undefined)[];
     attempts?: number;
   } = {}
@@ -156,7 +157,11 @@ function setupFirestore(
           credential:
             options.groupLetters === undefined
               ? undefined
-              : { enabled: true, group_letters: options.groupLetters },
+              : {
+                  enabled: true,
+                  group_letters: options.groupLetters,
+                  max_credentials: options.maxCredentials,
+                },
         }),
       })
     ),
@@ -567,5 +572,104 @@ describe("attachCredentialImage", () => {
 
     expect(res.__status).toBe(500);
     expect(h.updates).toHaveLength(0);
+  });
+});
+
+describe("createCredential — per-event cap", () => {
+  it("issues normally while below the cap", async () => {
+    const h = setupFirestore({
+      groupLetters: ["A", "Q"],
+      maxCredentials: 5,
+      counterValues: [3],
+    });
+    const res = buildRes();
+    await createCredential(buildReq(VALID_BODY), res);
+
+    expect(res.__body).toMatchObject({ success: true });
+    expect(h.created[0].sequenceNumber).toBe(4);
+  });
+
+  it("issues the very last credential allowed", async () => {
+    // Boundary: with a cap of 5 and 4 already issued, the next one is
+    // number 5 and must go through.
+    const h = setupFirestore({
+      groupLetters: ["A"],
+      maxCredentials: 5,
+      counterValues: [4],
+    });
+    const res = buildRes();
+    await createCredential(buildReq(VALID_BODY), res);
+
+    expect(res.__body).toMatchObject({ success: true });
+    expect(h.created[0].sequenceNumber).toBe(5);
+  });
+
+  it("refuses with 409 once the cap is full", async () => {
+    const h = setupFirestore({
+      groupLetters: ["A"],
+      maxCredentials: 5,
+      counterValues: [5],
+    });
+    const res = buildRes();
+    await createCredential(buildReq(VALID_BODY), res);
+
+    expect(res.__status).toBe(409);
+    expect(h.created).toHaveLength(0);
+    expect(h.counterWrites).toHaveLength(0);
+  });
+
+  it("explains the refusal in Spanish rather than leaking an error", async () => {
+    // 409 is a state the attendee can act on, so it must not be dressed
+    // up as the generic 500 message.
+    setupFirestore({
+      groupLetters: ["A"],
+      maxCredentials: 1,
+      counterValues: [1],
+    });
+    const res = buildRes();
+    await createCredential(buildReq(VALID_BODY), res);
+
+    const body = res.__body as { error: string };
+    expect(body.error).toMatch(/credenciales disponibles/i);
+    expect(body.error).not.toMatch(/internal error/i);
+  });
+
+  it("does not write the counter when refusing", async () => {
+    // A refused attempt must not consume a sequence number, or the cap
+    // would shrink every time someone hits a full event.
+    const h = setupFirestore({
+      groupLetters: ["A"],
+      maxCredentials: 2,
+      counterValues: [2],
+    });
+    await createCredential(buildReq(VALID_BODY), buildRes());
+    expect(h.counterWrites).toHaveLength(0);
+  });
+
+  it("treats an absent cap as unlimited", async () => {
+    const h = setupFirestore({
+      groupLetters: ["A"],
+      counterValues: [99999],
+    });
+    const res = buildRes();
+    await createCredential(buildReq(VALID_BODY), res);
+
+    expect(res.__body).toMatchObject({ success: true });
+    expect(h.created[0].sequenceNumber).toBe(100000);
+  });
+
+  it("treats a zero cap as unlimited, not as closed", async () => {
+    // A missing field and a zero must not mean opposite things; zero
+    // reading as "issue nothing" would silently close registration.
+    const h = setupFirestore({
+      groupLetters: ["A"],
+      maxCredentials: 0,
+      counterValues: [10],
+    });
+    const res = buildRes();
+    await createCredential(buildReq(VALID_BODY), res);
+
+    expect(res.__body).toMatchObject({ success: true });
+    expect(h.created).toHaveLength(1);
   });
 });
