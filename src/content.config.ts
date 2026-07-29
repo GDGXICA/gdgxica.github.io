@@ -103,6 +103,21 @@ const events = defineCollection({
         alt: z.string(),
       })
     ),
+    // Opt-in per event for the shareable attendee credential page at
+    // /events/{slug}/credencial. Optional rather than defaulted: every
+    // event published before this feature lacks the key entirely, and a
+    // default would claim the feature exists where it does not — the
+    // page's getStaticPaths reads `enabled` to decide the route exists
+    // at all.
+    credential: z
+      .object({
+        enabled: z.boolean(),
+        headline: z.string(),
+        // Cycled round-robin over the registration sequence to split
+        // attendees into on-site groups.
+        groupLetters: z.array(z.string().min(1).max(2)).min(1).max(26),
+      })
+      .optional(),
   }),
 });
 

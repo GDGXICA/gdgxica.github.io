@@ -19,6 +19,16 @@ interface Props {
   onOpenModeration?: () => void;
   // Roulette-specific: spin the wheel.
   onSpin?: () => Promise<void> | void;
+  // Classic-bingo-specific: call the next ball.
+  onDrawBall?: () => Promise<void> | void;
+}
+
+function isClassicBingo(instance: MinigameInstance): boolean {
+  return instance.type === "bingo" && instance.config?.classic === true;
+}
+
+function bankSize(instance: MinigameInstance): number {
+  return (instance.config?.terms as string[] | undefined)?.length ?? 0;
 }
 
 function questionCount(instance: MinigameInstance): number {
@@ -35,6 +45,7 @@ export function InstanceCard({
   busy,
   onOpenModeration,
   onSpin,
+  onDrawBall,
 }: Props) {
   const moderationLabel =
     instance.type === "wordcloud"
@@ -49,6 +60,10 @@ export function InstanceCard({
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const isQuiz = instance.type === "quiz";
+  const classic = isClassicBingo(instance);
+  const totalBalls = bankSize(instance);
+  const calledBalls = instance.drawCount ?? 0;
+  const allBallsCalled = totalBalls > 0 && calledBalls >= totalBalls;
   const totalQuestions = questionCount(instance);
   const currentQ =
     instance.currentQuestionIndex !== undefined &&
@@ -83,6 +98,19 @@ export function InstanceCard({
           {isQuiz && (
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               Pregunta {currentQ} de {totalQuestions}
+            </p>
+          )}
+          {classic && (
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Bola {calledBalls} de {totalBalls}
+              {instance.lastDrawnTerm && (
+                <>
+                  {" · última: "}
+                  <span className="font-medium text-gray-700 dark:text-gray-200">
+                    {instance.lastDrawnTerm}
+                  </span>
+                </>
+              )}
             </p>
           )}
         </div>
@@ -152,6 +180,16 @@ export function InstanceCard({
                 className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
               >
                 ⏭ Avanzar pregunta
+              </button>
+            )}
+            {classic && onDrawBall && (
+              <button
+                type="button"
+                onClick={() => onDrawBall()}
+                disabled={busy || allBallsCalled}
+                className="bg-google-green rounded-lg px-3 py-1.5 text-sm font-medium text-white hover:brightness-110 disabled:opacity-50"
+              >
+                {allBallsCalled ? "Sin bolas" : "🎱 Cantar bola"}
               </button>
             )}
             {instance.type === "roulette" && onSpin && (

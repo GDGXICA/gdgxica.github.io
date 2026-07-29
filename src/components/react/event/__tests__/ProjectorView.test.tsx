@@ -232,6 +232,104 @@ describe("ProjectorView", () => {
     expect(screen.getByText("Bingo!")).toBeInTheDocument();
     expect(screen.getByText("Ana")).toBeInTheDocument();
     expect(screen.getByText("Bea")).toBeInTheDocument();
+    // Conference mode has no ball count, so no prize/mention split.
+    expect(screen.queryByText(/Premio/i)).not.toBeInTheDocument();
+  });
+
+  describe("classic bingo", () => {
+    function liveClassic(overrides: Record<string, unknown> = {}) {
+      mocks.useLiveMinigames.mockReturnValue({
+        loading: false,
+        liveInstances: [
+          {
+            id: "i-bingo",
+            type: "bingo",
+            mode: "global",
+            state: "live",
+            title: "Bingo de tecnologías",
+            order: 0,
+            config: {
+              classic: true,
+              prizes: 2,
+              terms: Array.from({ length: 40 }, (_, i) => `t${i}`),
+            },
+            drawnTerms: [],
+            drawCount: 0,
+            lastDrawnTerm: null,
+            ...overrides,
+          },
+        ],
+        error: null,
+      });
+    }
+
+    it("idles with tumbling balls before the first is called", () => {
+      liveClassic();
+      renderProjector();
+      expect(screen.getByText("Bingo de tecnologías")).toBeInTheDocument();
+      // The badge names the mode, separately from the instance title.
+      expect(screen.getByText("Bingo clásico")).toBeInTheDocument();
+      expect(
+        screen.getByText(/Esperando la primera bola/i)
+      ).toBeInTheDocument();
+      expect(screen.getByText(/0 \/ 40 bolas/)).toBeInTheDocument();
+    });
+
+    it("shows the ball just called, and the earlier ones behind it", () => {
+      liveClassic({
+        drawnTerms: ["Firebase", "Flutter", "Gemini"],
+        drawCount: 3,
+        lastDrawnTerm: "Gemini",
+        lastDrawAt: { seconds: 1700000200 },
+      });
+      renderProjector();
+      expect(screen.getByText("Gemini")).toBeInTheDocument();
+      expect(screen.getByText("Firebase")).toBeInTheDocument();
+      expect(screen.getByText("Flutter")).toBeInTheDocument();
+      expect(screen.getByText(/Ya cantadas/i)).toBeInTheDocument();
+      expect(screen.getByText(/3 \/ 40 bolas/)).toBeInTheDocument();
+    });
+
+    it("replays the drop animation on the newly called ball", () => {
+      liveClassic({
+        drawnTerms: ["Firebase"],
+        drawCount: 1,
+        lastDrawnTerm: "Firebase",
+        lastDrawAt: { seconds: 1700000100 },
+      });
+      renderProjector();
+      const ball = screen.getByText("Firebase").parentElement;
+      expect(ball?.className).toContain("animate-bingo-ball-drop");
+    });
+
+    it("splits winners into prizes and mentions", () => {
+      liveClassic({ drawnTerms: ["a"], drawCount: 1, lastDrawnTerm: "a" });
+      mocks.useBingoWinners.mockReturnValue({
+        loading: false,
+        error: null,
+        winners: [
+          { uid: "u1", alias: "Ana", bingoWonAt: { seconds: 1700000000 } },
+          { uid: "u2", alias: "Bea", bingoWonAt: { seconds: 1700000060 } },
+          { uid: "u3", alias: "Cid", bingoWonAt: { seconds: 1700000120 } },
+        ],
+      });
+      renderProjector();
+      // prizes: 2 → first two are prizes, the third a mention.
+      expect(screen.getAllByText("Premio")).toHaveLength(2);
+      expect(screen.getAllByText("Mención")).toHaveLength(1);
+    });
+
+    it("stays read-only — the presenter's QR toggle is the only button", () => {
+      liveClassic({
+        drawnTerms: ["Firebase", "Flutter"],
+        drawCount: 2,
+        lastDrawnTerm: "Flutter",
+      });
+      renderProjector();
+      const buttons = screen.queryAllByRole("button");
+      expect(buttons).toHaveLength(1);
+      expect(buttons[0]).toHaveAttribute("aria-label", "Agrandar QR");
+    });
   });
 
   it("shows a small QR + URL footer when there are live games", () => {

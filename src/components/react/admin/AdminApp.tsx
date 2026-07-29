@@ -18,25 +18,58 @@ import { MinigameTemplateList } from "./minigame-templates/MinigameTemplateList"
 import { EventMinigameManager } from "./event-minigames/EventMinigameManager";
 import { CertificateSender } from "./certificates/CertificateSender";
 import { CheckinPanel } from "./checkin/CheckinPanel";
+import { RoleMatrix } from "./roles/RoleMatrix";
+import { AuditLog } from "./audit/AuditLog";
+import { AccessReview } from "./access/AccessReview";
+import { EventStaffPanel } from "./event-staff/EventStaffPanel";
+import { ProposalsPanel } from "./proposals/ProposalsPanel";
+import { ROLE_BUNDLES, isRole, type Permission } from "@/lib/permissions";
 
 interface Props {
   page: string;
   currentPath: string;
 }
 
-function renderPage(
-  page: string,
-  guards: { isAdmin: boolean; role: string | null; signOut: () => void } | null
-) {
-  const adminPage = (component: React.ReactNode) => {
-    if (!guards) return component;
-    return guards.isAdmin ? (
-      component
-    ) : (
-      <AccessDenied role={guards.role} signOut={guards.signOut} />
-    );
-  };
+interface Guards {
+  can: (permission: Permission) => boolean;
+  role: string | null;
+  signOut: () => void;
+}
 
+/**
+ * Permiso mínimo para abrir cada página. Es la segunda barrera después del
+ * menú: entrar por URL directa a una sección que no corresponde da la
+ * pantalla de acceso restringido, no la página. La tercera y definitiva es
+ * el endpoint.
+ */
+const PAGE_PERMISSIONS: Record<string, Permission> = {
+  events: "events:read",
+  "event-form": "events:write",
+  team: "team:read",
+  speakers: "speakers:read",
+  sponsors: "sponsors:read",
+  stats: "stats:read",
+  users: "users:read",
+  // La matriz solo enseña lo que ya está en el código del cliente; basta con
+  // poder ver el directorio para consultarla.
+  roles: "users:read",
+  audit: "audit:read",
+  access: "access:review",
+  // Basta con poder proponer: el panel enseña las propias a quien no revisa.
+  proposals: "proposals:create",
+  forms: "forms:read",
+  "form-viewer": "forms:responses:read",
+  locations: "locations:read",
+  "minigame-templates": "minigames:template:read",
+  "event-minigames": "minigames:operate",
+  // Ver quién opera un evento va con poder ver su roster; asignar exige
+  // `users:role:write` y lo comprueba el endpoint.
+  "event-staff": "roster:read",
+  certificates: "certificates:send",
+  checkin: "roster:read",
+};
+
+function pageContent(page: string) {
   switch (page) {
     case "dashboard":
       return <Dashboard />;
@@ -51,19 +84,29 @@ function renderPage(
     case "sponsors":
       return <SponsorList />;
     case "stats":
-      return adminPage(<StatsEditor />);
+      return <StatsEditor />;
     case "users":
-      return adminPage(<UserDirectory />);
+      return <UserDirectory />;
+    case "roles":
+      return <RoleMatrix />;
+    case "audit":
+      return <AuditLog />;
+    case "access":
+      return <AccessReview />;
     case "forms":
-      return adminPage(<FormRegistry />);
+      return <FormRegistry />;
     case "form-viewer":
-      return adminPage(<FormViewer />);
+      return <FormViewer />;
     case "locations":
       return <LocationList />;
     case "minigame-templates":
       return <MinigameTemplateList />;
     case "event-minigames":
       return <EventMinigameManager />;
+    case "event-staff":
+      return <EventStaffPanel />;
+    case "proposals":
+      return <ProposalsPanel />;
     case "certificates":
       return <CertificateSender />;
     case "checkin":
@@ -77,8 +120,36 @@ function renderPage(
   }
 }
 
+function renderPage(page: string, guards: Guards | null) {
+  const content = pageContent(page);
+  if (!guards) return content;
+
+  const required = PAGE_PERMISSIONS[page];
+  // Las páginas acotadas a un evento (check-in, minijuegos) las puede abrir
+  // quien tenga el permiso globalmente O quien pueda alcanzarlo estando
+  // asignado — de ahí que el voluntario pase esta puerta y sea el servidor
+  // quien decida sobre el evento concreto.
+  if (
+    required &&
+    !guards.can(required) &&
+    !canReachByAssignment(page, guards)
+  ) {
+    return <AccessDenied role={guards.role} signOut={guards.signOut} />;
+  }
+  return content;
+}
+
+/** Páginas cuyo permiso un rol puede obtener por asignación a un evento. */
+const SCOPED_PAGES = new Set(["checkin", "event-minigames", "event-staff"]);
+
+function canReachByAssignment(page: string, guards: Guards): boolean {
+  if (!SCOPED_PAGES.has(page)) return false;
+  const bundle = ROLE_BUNDLES[isRole(guards.role) ? guards.role : "member"];
+  return bundle.perEvent.length > 0;
+}
+
 function AdminContent({ page, currentPath }: Props) {
-  const { user, role, loading, isOrganizer, isAdmin, signOut } = useAuth();
+  const { user, role, loading, canAccessPanel, can, signOut } = useAuth();
 
   if (loading) {
     return (
@@ -92,7 +163,7 @@ function AdminContent({ page, currentPath }: Props) {
     return <LoginScreen />;
   }
 
-  if (!isOrganizer) {
+  if (!canAccessPanel) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="max-w-md rounded-xl bg-white p-8 text-center shadow-lg dark:bg-gray-800">
@@ -101,13 +172,14 @@ function AdminContent({ page, currentPath }: Props) {
             Acceso restringido
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Solo organizadores y administradores pueden acceder al panel de
-            administracion.
+            Tu cuenta no tiene permisos para operar la plataforma. Si formas
+            parte del GDG o quieres colaborar, solicita acceso y un
+            administrador lo revisara.
           </p>
           <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">
             Sesion: {user.email} (rol: {role})
           </p>
-          <div className="mt-6 flex justify-center gap-3">
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
             <button
               onClick={signOut}
               className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -115,8 +187,14 @@ function AdminContent({ page, currentPath }: Props) {
               Cerrar sesion
             </button>
             <a
-              href="/"
+              href="/admin/solicitar"
               className="inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              Solicitar acceso
+            </a>
+            <a
+              href="/"
+              className="inline-block rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               Volver al sitio
             </a>
@@ -128,7 +206,7 @@ function AdminContent({ page, currentPath }: Props) {
 
   return (
     <AdminShell currentPage={currentPath}>
-      {renderPage(page, { isAdmin, role, signOut })}
+      {renderPage(page, { can, role, signOut })}
     </AdminShell>
   );
 }

@@ -16,6 +16,38 @@ interface ApiResponse<T> {
   message?: string;
 }
 
+/**
+ * Body of a public credential submission.
+ *
+ * Mirrors credentialCreateSchema in functions/src/schemas/credentials.ts.
+ * The consent flags are typed `true` rather than `boolean` because the
+ * server schema uses z.literal(true) — an unchecked box has to fail at the
+ * call site, not round-trip as a stored `false`.
+ */
+export interface CredentialCreatePayload {
+  firstName: string;
+  lastName: string;
+  dni: string;
+  email: string;
+  company: string;
+  githubUsername: string | null;
+  heardAbout:
+    "redes_sociales" | "amigo_colega" | "universidad" | "meetup" | "otro";
+  heardAboutOther: string;
+  yearsExperience: "menos_1" | "1_2" | "3_5" | "6_10" | "mas_10";
+  googleToolsLevel: "ninguna" | "basica" | "intermedia" | "avanzada";
+  consentGdgTerms: true;
+  consentGooglePrivacy: true;
+  consentCodeOfConduct: true;
+  consentDataProcessing: true;
+  consentAgeAttested: true;
+  consentPolicyVersion: string;
+  avatarKind: "photo" | "mascot";
+  mascotId: string | null;
+  photoDataUrl: string | null;
+  credentialImageDataUrl: string | null;
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -95,8 +127,61 @@ const realApi = {
 
   // Users
   listUsers: () => request("GET", "/users"),
-  updateUserRole: (uid: string, role: string) =>
-    request("PATCH", `/users/${uid}/role`, { role }),
+  updateUserRole: (uid: string, role: string, reason: string) =>
+    request("PATCH", `/users/${uid}/role`, { role, reason }),
+  updateUserStatus: (uid: string, status: string, reason: string) =>
+    request("PATCH", `/users/${uid}/status`, { status, reason }),
+  updateUserGrants: (
+    uid: string,
+    grants: unknown[],
+    revocations: string[],
+    reason: string
+  ) => request("PUT", `/users/${uid}/grants`, { grants, revocations, reason }),
+
+  // Audit
+  listAudit: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request("GET", `/audit${qs ? `?${qs}` : ""}`);
+  },
+
+  // Propuestas de contenido
+  listProposals: () => request("GET", "/proposals"),
+  createProposal: (type: string, payload: unknown) =>
+    request("POST", "/proposals", { type, payload }),
+  updateProposal: (id: string, payload: unknown) =>
+    request("PUT", `/proposals/${id}`, { payload }),
+  reviewProposal: (id: string, decision: string, note?: string) =>
+    request("POST", `/proposals/${id}/review`, { decision, note }),
+  publishProposal: (id: string) => request("POST", `/proposals/${id}/publish`),
+
+  // Equipo por evento
+  listEventStaff: (slug: string) => request("GET", `/events/${slug}/staff`),
+  assignEventStaff: (slug: string, uid: string, data: unknown) =>
+    request("PUT", `/events/${slug}/staff/${uid}`, data),
+  removeEventStaff: (slug: string, uid: string) =>
+    request("DELETE", `/events/${slug}/staff/${uid}`),
+  listMyEvents: () => request("GET", "/me/events"),
+
+  // Access — solicitudes e invitaciones
+  getMyAccessRequest: () => request("GET", "/access/requests/me"),
+  createAccessRequest: (data: unknown) =>
+    request("POST", "/access/requests", data),
+  listAccessRequests: (status = "pending") =>
+    request("GET", `/access/requests?status=${encodeURIComponent(status)}`),
+  decideAccessRequest: (
+    uid: string,
+    approve: boolean,
+    note: string,
+    role?: string
+  ) =>
+    request("POST", `/access/requests/${uid}/decide`, { approve, note, role }),
+  listInvitations: () => request("GET", "/access/invitations"),
+  createInvitation: (email: string, role: string) =>
+    request("POST", "/access/invitations", { email, role }),
+  revokeInvitation: (id: string) =>
+    request("DELETE", `/access/invitations/${id}`),
+  redeemInvitation: (token: string) =>
+    request("POST", "/access/invitations/redeem", { token }),
 
   // Forms
   listForms: () => request("GET", "/forms"),
@@ -153,6 +238,32 @@ const realApi = {
       }[];
     }>("POST", `/events/${encodeURIComponent(slug)}/minigames/join`, data),
 
+  // Public credential submission (anon-friendly).
+  //
+  // Callers MUST await signInAnonymouslyIfNeeded() first: request() hard
+  // -returns { success: false, error: "Not authenticated" } with no token,
+  // which would surface as an English error string in a Spanish form.
+  createCredential: (slug: string, data: CredentialCreatePayload) =>
+    request<{
+      credentialId: string;
+      sequenceNumber: number;
+      groupLetter: string;
+    }>("POST", `/events/${encodeURIComponent(slug)}/credentials`, data),
+
+  // Attaches the composed card after creation. A separate call because the
+  // group letter comes from a server-assigned sequence number, so the
+  // final card cannot exist until createCredential has returned.
+  attachCredentialImage: (
+    slug: string,
+    id: string,
+    data: { credentialImageDataUrl: string }
+  ) =>
+    request(
+      "PATCH",
+      `/events/${encodeURIComponent(slug)}/credentials/${id}/image`,
+      data
+    ),
+
   // Wordcloud moderation + bingo winners (admin-only)
   listEventMinigameWords: (slug: string, id: string) =>
     request("GET", `/events/${encodeURIComponent(slug)}/minigames/${id}/words`),
@@ -180,6 +291,27 @@ const realApi = {
     request<{ winnerId: string; alias: string; spinNumber: number }>(
       "POST",
       `/events/${encodeURIComponent(slug)}/minigames/${id}/roulette/spin`
+    ),
+
+  // Classic bingo: the admin calls a ball (admin-only)...
+  drawBingoBall: (slug: string, id: string) =>
+    request<{ term: string; drawCount: number; remaining: number }>(
+      "POST",
+      `/events/${encodeURIComponent(slug)}/minigames/${id}/bingo/draw`
+    ),
+  // ...and the participant claims the line. Verified server-side against
+  // the balls actually called, so nothing here is taken on trust.
+  claimBingo: (slug: string, id: string) =>
+    request<{
+      rank: number;
+      winDraw: number;
+      prizes: number;
+      hasPrize: boolean;
+      lines: number[][];
+      alreadyWon: boolean;
+    }>(
+      "POST",
+      `/events/${encodeURIComponent(slug)}/minigames/${id}/bingo/claim`
     ),
 
   // Certificates (generated on the fly + emailed; nothing is stored)
