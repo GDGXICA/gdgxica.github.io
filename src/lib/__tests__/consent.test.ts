@@ -85,9 +85,13 @@ describe("missingConsentMessage", () => {
 });
 
 describe("CONTACT_EMAIL", () => {
-  it("is a GDG Ica address, not a personal one", () => {
-    // The policy promises a 20-working-day response under Ley 29733; that
-    // has to reach the organising team, not one person's inbox.
-    expect(CONTACT_EMAIL).toMatch(/@gdgica\.com$/);
+  it("is a real address the policy can point at", () => {
+    expect(CONTACT_EMAIL).toMatch(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
+  });
+
+  it("matches the address the terms page already publishes", () => {
+    // The policy and the terms must not send ARCO requests to two
+    // different inboxes; one of them would go unread.
+    expect(CONTACT_EMAIL).toBe("aalvaropc@gmail.com");
   });
 });

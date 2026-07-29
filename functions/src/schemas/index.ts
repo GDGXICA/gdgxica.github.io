@@ -74,6 +74,10 @@ export const credentialConfigSchema = z
     enabled: z.boolean().default(false),
     headline: shortText(200).default(""),
     group_letters: z.array(shortText(2).min(1)).max(26).default([]),
+    // Hard ceiling on how many credentials this event will issue.
+    // Optional: absent means no cap, so events published before this
+    // existed keep their current behaviour.
+    max_credentials: z.number().int().min(1).max(100_000).optional(),
   })
   .strict();
 
