@@ -1,4 +1,5 @@
 import { getIdToken } from "./auth";
+import { getAppCheckToken } from "./firebase";
 import { mockApi } from "./mock-api";
 
 const USE_EMULATOR = import.meta.env.PUBLIC_USE_FIREBASE_EMULATOR === "true";
@@ -59,11 +60,17 @@ async function request<T>(
   }
 
   try {
+    // Proves the call came from this web app rather than a script that
+    // minted an anonymous token elsewhere. Omitted when unavailable; the
+    // server decides what that means.
+    const appCheckToken = await getAppCheckToken();
+
     const res = await fetch(`${API_BASE}${path}`, {
       method,
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
+        ...(appCheckToken ? { "X-Firebase-AppCheck": appCheckToken } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,
     });

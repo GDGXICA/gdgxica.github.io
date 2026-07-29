@@ -30,6 +30,65 @@ function getApp() {
 }
 
 const USE_EMULATOR = import.meta.env.PUBLIC_USE_FIREBASE_EMULATOR === "true";
+
+// reCAPTCHA v3 site key. Public by design: it ships in the page source,
+// and it is the SECRET key — held only by Firebase — that makes a token
+// verifiable. Enterprise was offered in the console and declined; v3 is
+// still supported and enough to tell our web app from a script.
+const RECAPTCHA_SITE_KEY = "6Le5ls8rAAAAAIOb9XYqVolbR3_LriaUektHq5Nl";
+
+let _appCheckPromise: Promise<import("firebase/app-check").AppCheck> | null =
+  null;
+
+/**
+ * Initializes App Check, once per page.
+ *
+ * Skipped against the emulator suite: reCAPTCHA cannot verify localhost,
+ * and the API accepts unverified traffic while enforcement is off anyway.
+ *
+ * Failure is swallowed on purpose — see getAppCheckToken.
+ */
+async function getAppCheck() {
+  if (!_appCheckPromise) {
+    _appCheckPromise = (async () => {
+      const app = await getApp();
+      const { initializeAppCheck, ReCaptchaV3Provider } =
+        await import("firebase/app-check");
+      return initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY),
+        // Firebase refreshes the token before it expires, so a long
+        // session does not start failing halfway through.
+        isTokenAutoRefreshEnabled: true,
+      });
+    })();
+
+    _appCheckPromise.catch(() => {
+      _appCheckPromise = null;
+    });
+  }
+  return _appCheckPromise;
+}
+
+/**
+ * App Check token for the current page, or null.
+ *
+ * Null on any failure — reCAPTCHA blocked by an extension, a corporate
+ * proxy, the emulator — and the caller simply omits the header. The server
+ * decides what an unverified request means; the browser refusing to send
+ * anything would take that decision away from it and turn a blocked script
+ * into a lost registration.
+ */
+export async function getAppCheckToken(): Promise<string | null> {
+  if (USE_EMULATOR) return null;
+  try {
+    const appCheck = await getAppCheck();
+    const { getToken } = await import("firebase/app-check");
+    const result = await getToken(appCheck, /* forceRefresh */ false);
+    return result.token;
+  } catch {
+    return null;
+  }
+}
 let _authEmulatorConnected = false;
 let _dbPromise: Promise<import("firebase/firestore").Firestore> | null = null;
 
