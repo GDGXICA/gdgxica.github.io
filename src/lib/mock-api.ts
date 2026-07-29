@@ -113,6 +113,13 @@ export const mockApi = {
 
   setCredentialBevyStatus: () => ok(null),
   moderateCredentialPhoto: () => ok(null),
+  reconcileCredentials: () =>
+    ok({
+      matched: 0,
+      unmatchedCredentials: 0,
+      unmatchedRoster: 0,
+      ambiguous: 0,
+    }),
   sendCredentialReminders: () => ok({ queued: 0, skipped: 0 }),
   retryCredentialEmail: () => ok(null),
 

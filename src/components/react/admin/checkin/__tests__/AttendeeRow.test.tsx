@@ -25,6 +25,7 @@ const attendee = (over: Partial<Attendee> = {}): Attendee => ({
   checkedInByName: null,
   note: null,
   dniVerified: false,
+  dni: null,
   pending: false,
   ...over,
 });
@@ -40,7 +41,9 @@ describe("AttendeeRow", () => {
 
   it("offers to mark someone who is not checked in", async () => {
     const onToggle = vi.fn();
-    render(<AttendeeRow attendee={attendee()} stale={false} onToggle={onToggle} />);
+    render(
+      <AttendeeRow attendee={attendee()} stale={false} onToggle={onToggle} />
+    );
     const button = screen.getByRole("button", { name: "Marcar" });
     expect(button).toHaveAttribute("aria-pressed", "false");
     await userEvent.click(button);
@@ -96,6 +99,29 @@ describe("AttendeeRow", () => {
       />
     );
     expect(screen.getByText("ya marcado en Bevy")).toBeVisible();
+  });
+
+  it("shows the DNI once reconciliation has stamped it", () => {
+    // The point of collecting the DNI: at the door the volunteer reads it
+    // off the screen and compares it against the document, instead of
+    // eyeing a name.
+    render(
+      <AttendeeRow
+        attendee={attendee({ dni: "12345678" })}
+        stale={false}
+        onToggle={vi.fn()}
+      />
+    );
+    expect(screen.getByText("DNI 12345678")).toBeVisible();
+  });
+
+  it("shows no DNI badge before reconciliation has run", () => {
+    // Null for every row until the roster is imported and matched, which
+    // is most of the event's lifetime.
+    render(
+      <AttendeeRow attendee={attendee()} stale={false} onToggle={vi.fn()} />
+    );
+    expect(screen.queryByText(/^DNI /)).not.toBeInTheDocument();
   });
 
   it("does not flag a normal attendee", () => {

@@ -714,6 +714,13 @@ app.post(
   validateBody(credentialReminderSchema),
   credentials.sendReminders
 );
+app.post(
+  "/api/events/:slug/credentials/reconcile",
+  requirePermission("credentials:operate", { scopeParam: "slug" }),
+  slugP,
+  writeLimiter,
+  credentials.reconcileCredentials
+);
 
 // Roulette spin
 app.post(

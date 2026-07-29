@@ -21,6 +21,7 @@ const attendee = (over: Partial<Attendee> = {}): Attendee => ({
   checkedInByName: null,
   note: null,
   dniVerified: false,
+  dni: null,
   pending: false,
   ...over,
 });

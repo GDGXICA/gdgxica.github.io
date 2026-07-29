@@ -43,6 +43,15 @@ export function AttendeeRow({ attendee, stale, onToggle }: Props) {
               ya no está en el CSV
             </span>
           )}
+          {/* The whole reason the DNI is collected: the volunteer compares
+              the number on the document against this one instead of
+              eyeing a name. Shown in full, not masked — at the door the
+              point is to read it. */}
+          {attendee.dni && (
+            <span className="rounded bg-gray-900 px-1.5 py-0.5 font-mono text-xs text-white dark:bg-gray-100 dark:text-gray-900">
+              DNI {attendee.dni}
+            </span>
+          )}
           {attendee.bevyCheckinAt && (
             <span className="rounded bg-blue-100 px-1.5 py-0.5 text-xs text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
               ya marcado en Bevy
