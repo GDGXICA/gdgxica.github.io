@@ -31,6 +31,7 @@ export function EmailTransportSetting({ onError }: Props) {
   const { can } = useAuth();
   const [transport, setTransport] = useState<Transport | null>(null);
   const [dailyCap, setDailyCap] = useState<number | null>(null);
+  const [resendReady, setResendReady] = useState(true);
   const [busy, setBusy] = useState(false);
 
   const allowed = can("email:transport");
@@ -44,6 +45,7 @@ export function EmailTransportSetting({ onError }: Props) {
       if (res.success && res.data) {
         setTransport(res.data.transport);
         setDailyCap(res.data.dailyCap);
+        setResendReady(res.data.resendConfigured);
       }
     })();
     return () => {
@@ -94,6 +96,12 @@ export function EmailTransportSetting({ onError }: Props) {
         {LABELS[transport].sender}
         {dailyCap !== null && ` · hasta ${dailyCap} correos al día`}
       </p>
+      {!resendReady && (
+        <p className="mt-2 rounded bg-[#FEF3C7] px-2 py-1 text-xs text-[#92400E]">
+          Resend todavía no tiene una clave válida configurada. Si lo eliges,
+          los envíos quedarán en cola reintentando hasta que se configure.
+        </p>
+      )}
       <p className="text-tertiary mt-1 text-xs">
         Las respuestas llegan a tu correo con cualquiera de los dos. Al pasar el
         límite diario la cola continúa al día siguiente; nadie se queda sin

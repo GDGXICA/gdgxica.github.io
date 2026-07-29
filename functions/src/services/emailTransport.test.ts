@@ -4,6 +4,7 @@ import {
   EMAIL_TRANSPORTS,
   dailyCapFor,
   isEmailTransport,
+  isResendConfigured,
 } from "./emailTransport";
 
 describe("isEmailTransport", () => {
@@ -53,5 +54,16 @@ describe("dailyCapFor", () => {
       expect(dailyCapFor(t)).toBeGreaterThan(0);
       expect(Number.isInteger(dailyCapFor(t))).toBe(true);
     }
+  });
+});
+
+describe("isResendConfigured", () => {
+  it("is exported so the panel can warn before the switch is flipped", () => {
+    // The value itself depends on the deployed secret, so what is pinned
+    // here is that the check exists and answers a boolean. Its job is to
+    // tell a real key from the filler value a project without a Resend
+    // account must still carry — firebase-functions has no optional
+    // secret, so a declared one blocks the deploy until it has some value.
+    expect(typeof isResendConfigured).toBe("function");
   });
 });

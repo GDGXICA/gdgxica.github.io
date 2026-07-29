@@ -11,6 +11,7 @@ import {
   DEFAULT_TRANSPORT,
   dailyCapFor,
   isEmailTransport,
+  isResendConfigured,
 } from "../services/emailTransport";
 import type { EmailTransportInput } from "../schemas/credentials";
 
@@ -32,6 +33,9 @@ export async function getEmailSettings(req: Request, res: Response) {
       data: {
         transport,
         dailyCap: dailyCapFor(transport),
+        // So the panel can warn BEFORE the switch is flipped rather than
+        // leaving the operator to discover it through failed sends.
+        resendConfigured: isResendConfigured(),
         updatedAt: snap.data()?.updatedAt ?? null,
       },
     });
