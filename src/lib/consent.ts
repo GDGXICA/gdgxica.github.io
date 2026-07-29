@@ -14,7 +14,7 @@ export const PRIVACY_POLICY_VERSION = "2026-08-01";
 /** Human-readable form of the version above, for rendering. */
 export const PRIVACY_POLICY_DATE_LABEL = "1 de agosto de 2026";
 
-export const CONTACT_EMAIL = "hola@gdgica.com";
+export const CONTACT_EMAIL = "aalvaropc@gmail.com";
 
 export const CONSENT_LINKS = {
   // TODO(gdg-ica): confirmar la URL exacta desde el panel oficial de Bevy
