@@ -156,7 +156,21 @@ export const credentialReminderSchema = z
   })
   .strict();
 
+/**
+ * Which service sends credential email.
+ *
+ * The sender address is not a separate field on purpose: it is determined
+ * by the transport, because email authentication forbids sending as a
+ * gmail.com address through a third party.
+ */
+export const emailTransportSchema = z
+  .object({
+    transport: z.enum(["gmail", "resend"]),
+  })
+  .strict();
+
 export type CredentialCreateInput = z.infer<typeof credentialCreateSchema>;
+export type EmailTransportInput = z.infer<typeof emailTransportSchema>;
 export type CredentialReminderInput = z.infer<typeof credentialReminderSchema>;
 export type CredentialImageInput = z.infer<typeof credentialImageSchema>;
 export type CredentialBevyStatusInput = z.infer<

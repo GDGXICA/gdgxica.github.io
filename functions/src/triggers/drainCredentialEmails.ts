@@ -2,15 +2,21 @@ import * as admin from "firebase-admin";
 import { logger } from "firebase-functions";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { GMAIL_USER, GMAIL_APP_PASSWORD } from "../config";
+import {
+  GMAIL_USER,
+  GMAIL_APP_PASSWORD,
+  RESEND_API_KEY,
+  RESEND_FROM,
+} from "../config";
 import { writeAuditLog } from "../utils/audit";
 import { sendCredentialEmail } from "../services/credentialEmail";
 import { readCredentialImage } from "../services/credentialStorage";
+import { readEmailTransport } from "../services/emailSettings";
+import { dailyCapFor } from "../services/emailTransport";
 import {
   BATCH,
   budgetDocId,
   computeBackoff,
-  DAILY_CAP,
   hasAttemptsLeft,
   isLeaseStale,
   remainingBudget,
@@ -41,7 +47,9 @@ export const drainCredentialEmails = onSchedule(
   {
     schedule: "*/5 * * * *",
     timeZone: "America/Lima",
-    secrets: [GMAIL_USER, GMAIL_APP_PASSWORD],
+    // Both transports declare their secrets: which one is used is a
+    // runtime setting, so the function must be able to reach either.
+    secrets: [GMAIL_USER, GMAIL_APP_PASSWORD, RESEND_API_KEY, RESEND_FROM],
     timeoutSeconds: 540,
     memory: "512MiB",
   },
@@ -52,14 +60,21 @@ export const drainCredentialEmails = onSchedule(
     const budgetRef = db
       .collection("credential_email_budget")
       .doc(budgetDocId(now));
+    const transport = await readEmailTransport();
+    // The ceiling belongs to the transport, not to us: Resend's free tier
+    // stops at 100 messages a day, Gmail tolerates far more. Reading it
+    // here means flipping the switch in the panel also moves the budget.
+    const cap = dailyCapFor(transport);
+
     const budgetSnap = await budgetRef.get();
     const sentToday = (budgetSnap.data()?.sent as number | undefined) ?? 0;
 
-    let remaining = remainingBudget(sentToday);
+    let remaining = remainingBudget(sentToday, cap);
     if (remaining === 0) {
       logger.warn("Credential email budget exhausted for today", {
         sentToday,
-        cap: DAILY_CAP,
+        cap,
+        transport,
       });
       return;
     }
@@ -119,6 +134,7 @@ export const drainCredentialEmails = onSchedule(
                 ? "reminder"
                 : "credential",
           credentialPageUrl: `${SITE_ORIGIN}/events/${eventSlug}/credencial`,
+          transport,
         });
 
         await ref.update({
@@ -168,7 +184,15 @@ export const drainCredentialEmails = onSchedule(
       performedBy: "system",
       targetId: budgetDocId(now),
       targetType: "credential_email_budget",
-      details: { due: due.size, claimed, sent, failed, parked, remaining },
+      details: {
+        due: due.size,
+        claimed,
+        sent,
+        failed,
+        parked,
+        remaining,
+        transport,
+      },
       timestamp: FieldValue.serverTimestamp(),
     });
   }

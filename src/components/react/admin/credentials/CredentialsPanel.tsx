@@ -6,6 +6,7 @@ import { BevyQueue } from "./BevyQueue";
 import { PhotoModerationQueue } from "./PhotoModerationQueue";
 import { ReminderButton } from "./ReminderButton";
 import { ReconcileButton } from "./ReconcileButton";
+import { EmailTransportSetting } from "./EmailTransportSetting";
 import {
   buildCredentialBevyCsv,
   credentialCsvFilename,
@@ -153,6 +154,8 @@ export function CredentialsPanel({ initialSlug }: { initialSlug?: string }) {
           {error}
         </p>
       )}
+
+      <EmailTransportSetting onError={setError} />
 
       <nav className="border-gray-custom flex gap-1 border-b">
         <TabButton active={tab === "bevy"} onClick={() => setTab("bevy")}>

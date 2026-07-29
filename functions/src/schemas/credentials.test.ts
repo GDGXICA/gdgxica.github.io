@@ -3,6 +3,7 @@ import {
   credentialBevyStatusSchema,
   credentialCreateSchema,
   credentialPhotoModerationSchema,
+  emailTransportSchema,
   MAX_PHOTO_DATAURL_CHARS,
 } from "./credentials";
 
@@ -244,6 +245,31 @@ describe("credentialPhotoModerationSchema", () => {
   it("rejects an unknown action", () => {
     expect(
       credentialPhotoModerationSchema.safeParse({ action: "delete" }).success
+    ).toBe(false);
+  });
+});
+
+describe("emailTransportSchema", () => {
+  it.each(["gmail", "resend"])("accepts %s", (transport) => {
+    expect(emailTransportSchema.safeParse({ transport }).success).toBe(true);
+  });
+
+  it("rejects an unknown provider", () => {
+    // The handler passes this straight to the sender, so an unrecognised
+    // value must never reach it.
+    expect(
+      emailTransportSchema.safeParse({ transport: "sendgrid" }).success
+    ).toBe(false);
+  });
+
+  it("rejects an extra key", () => {
+    // Notably a `from` field: the sender follows the transport, and
+    // accepting one here would imply it can be chosen separately.
+    expect(
+      emailTransportSchema.safeParse({
+        transport: "resend",
+        from: "otro@example.com",
+      }).success
     ).toBe(false);
   });
 });

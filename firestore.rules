@@ -379,6 +379,14 @@ service cloud.firestore {
       }
     }
 
+    // Which service sends credential email. Read and written only through
+    // the API, which gates it on the admin-only `email:transport`
+    // permission — a client that could flip this would redirect every
+    // credential email through a provider of its choosing.
+    match /settings/{docId} {
+      allow read, write: if false;
+    }
+
     // Daily cap on credential emails, maintained by the scheduled drain.
     // Nothing outside Cloud Functions has any business reading or writing
     // it, so it stays fully closed.

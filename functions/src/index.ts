@@ -27,6 +27,7 @@ import {
   credentialBevyStatusSchema,
   credentialPhotoModerationSchema,
   credentialReminderSchema,
+  emailTransportSchema,
 } from "./schemas";
 import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
@@ -51,6 +52,7 @@ import * as minigameBingo from "./handlers/minigameBingo";
 import * as certificates from "./handlers/certificates";
 import * as checkin from "./handlers/checkin";
 import * as credentials from "./handlers/credentials";
+import * as emailSettings from "./handlers/emailSettings";
 
 admin.initializeApp();
 
@@ -726,6 +728,23 @@ app.post(
   slugP,
   writeLimiter,
   credentials.reconcileCredentials
+);
+
+// Which service sends credential email. Global configuration rather than a
+// per-event operation, so it carries its own admin-only permission — and
+// it is read on every drain run, which is what lets a failing provider be
+// swapped out mid-event without a deploy.
+app.get(
+  "/api/settings/email",
+  requirePermission("email:transport"),
+  emailSettings.getEmailSettings
+);
+app.put(
+  "/api/settings/email",
+  requirePermission("email:transport"),
+  writeLimiter,
+  validateBody(emailTransportSchema),
+  emailSettings.setEmailSettings
 );
 
 // Roulette spin
