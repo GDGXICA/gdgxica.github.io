@@ -1,5 +1,9 @@
-import { GMAIL_USER } from "../config";
-import { getTransporter, htmlEscape, singleLine } from "./email";
+import { htmlEscape, singleLine } from "./email";
+import {
+  DEFAULT_TRANSPORT,
+  sendEmail,
+  type EmailTransport,
+} from "./emailTransport";
 
 // The credential email.
 //
@@ -28,6 +32,8 @@ export interface CredentialEmail {
   template: CredentialEmailTemplate;
   /** Page to regenerate the credential, used by the take-down notice. */
   credentialPageUrl: string;
+  /** Which service puts the message on the wire. */
+  transport?: EmailTransport;
 }
 
 /** ASCII slug for the attachment filename, as in sendCertificateEmail. */
@@ -65,8 +71,7 @@ export async function sendCredentialEmail(
         ? reminderBody(mail, eventName, firstName)
         : credentialBody(mail, eventName, firstName);
 
-  await getTransporter().sendMail({
-    from: `"GDG ICA" <${GMAIL_USER.value()}>`,
+  await sendEmail(mail.transport ?? DEFAULT_TRANSPORT, {
     to: mail.to,
     subject,
     text: body.text,

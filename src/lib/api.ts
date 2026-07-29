@@ -289,6 +289,17 @@ const realApi = {
       `/events/${encodeURIComponent(slug)}/credentials/${id}/photo`,
       data
     ),
+  getEmailSettings: () =>
+    request<{ transport: "gmail" | "resend"; dailyCap: number }>(
+      "GET",
+      "/settings/email"
+    ),
+  setEmailTransport: (transport: "gmail" | "resend") =>
+    request<{ transport: "gmail" | "resend"; dailyCap: number }>(
+      "PUT",
+      "/settings/email",
+      { transport }
+    ),
   reconcileCredentials: (slug: string) =>
     request<{
       matched: number;

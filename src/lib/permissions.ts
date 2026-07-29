@@ -34,6 +34,7 @@ export const PERMISSIONS = [
   "checkin:import",
   "credentials:operate",
   "credentials:moderate",
+  "email:transport",
   "certificates:send",
   "minigames:template:read",
   "minigames:template:write",
