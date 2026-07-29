@@ -68,6 +68,7 @@ interface ExternalEvent {
     enabled?: boolean;
     headline?: string;
     group_letters?: string[];
+    max_credentials?: number;
   };
 }
 
@@ -183,6 +184,7 @@ function buildCredential(event: ExternalEvent) {
     groupLetters: event.credential.group_letters?.length
       ? event.credential.group_letters
       : ["A", "B", "C", "D"],
+    maxCredentials: event.credential.max_credentials,
   };
 }
 
