@@ -57,6 +57,24 @@ describe("CONSENT_LINKS", () => {
     expect(CONSENT_LINKS.gdgIcaPrivacy).toBe("/privacy-policy");
   });
 
+  it("points at the real GDG documents, not a placeholder", () => {
+    // These are what the attendee accepts. Pointing them at a stand-in
+    // means storing a consent against the wrong document, which makes the
+    // whole consentAt / consentPolicyVersion record worthless as evidence.
+    expect(CONSENT_LINKS.gdgEventTerms).toBe(
+      "https://gdg.community.dev/participation-terms/"
+    );
+    expect(CONSENT_LINKS.codeOfConduct).toBe(
+      "https://www.google.com/events/policy/anti-harassmentpolicy.html"
+    );
+  });
+
+  it("does not reuse one URL for two different consents", () => {
+    // They were briefly the same placeholder. Two checkboxes linking to
+    // one document reads as a copy-paste slip and weakens both.
+    expect(CONSENT_LINKS.gdgEventTerms).not.toBe(CONSENT_LINKS.codeOfConduct);
+  });
+
   it("uses absolute https URLs for third-party documents", () => {
     for (const key of [
       "gdgEventTerms",

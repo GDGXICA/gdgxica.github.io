@@ -17,13 +17,18 @@ export const PRIVACY_POLICY_DATE_LABEL = "1 de agosto de 2026";
 export const CONTACT_EMAIL = "aalvaropc@gmail.com";
 
 export const CONSENT_LINKS = {
-  // TODO(gdg-ica): confirmar la URL exacta desde el panel oficial de Bevy
-  // antes de publicar. Es el enlace que el asistente acepta, asi que debe
-  // apuntar al mismo documento que veria al registrarse alli.
-  gdgEventTerms: "https://developers.google.com/community-guidelines",
+  // The agreement between the attendee and Google that governs taking part
+  // in any GDG event — recording rights, liability, and how RSVP data is
+  // shared with the local chapter. This is the document the official Bevy
+  // panel links from its first checkbox.
+  gdgEventTerms: "https://gdg.community.dev/participation-terms/",
   googlePrivacy: "https://policies.google.com/privacy",
-  // TODO(gdg-ica): idem — confirmar contra el codigo de conducta vigente.
-  codeOfConduct: "https://developers.google.com/community-guidelines",
+  // Google's event community guidelines and anti-harassment policy. The
+  // developers.google.com/community-guidelines address redirects here; the
+  // canonical target is used directly so the link cannot break if that
+  // redirect is ever retired.
+  codeOfConduct:
+    "https://www.google.com/events/policy/anti-harassmentpolicy.html",
   gdgIcaPrivacy: "/privacy-policy",
 } as const;
 
