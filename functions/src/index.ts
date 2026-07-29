@@ -8,6 +8,7 @@ import { GITHUB_TOKEN, GMAIL_USER, GMAIL_APP_PASSWORD } from "./config";
 import { requirePermission, requireAuth } from "./middleware/auth";
 import { isAllowedOrigin, rejectDisallowedOrigin } from "./middleware/cors";
 import { validateParamId } from "./middleware/validate";
+import { verifyAppCheck } from "./middleware/appCheck";
 import { validateBody } from "./middleware/validateBody";
 import {
   eventSchema,
@@ -656,6 +657,7 @@ app.post(
 // Public credential submission — accepts any Firebase token (incl. anon).
 app.post(
   "/api/events/:slug/credentials",
+  verifyAppCheck(),
   requireAuth(),
   slugP,
   credentialLimiter,
@@ -669,6 +671,7 @@ app.post(
 // handler pins the write to the anonymous UID that created the record.
 app.patch(
   "/api/events/:slug/credentials/:id/image",
+  verifyAppCheck(),
   requireAuth(),
   slugP,
   vid,
