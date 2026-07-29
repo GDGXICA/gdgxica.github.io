@@ -689,9 +689,15 @@ app.patch(
   validateBody(credentialBevyStatusSchema),
   credentials.setBevyStatus
 );
+// Photo moderation is admin-only, unlike the rest of this block. Taking a
+// photo down is a judgement call about what appears over GDG branding, and
+// it is irreversible: the Storage objects are deleted, not archived. That
+// weighs differently from marking a row loaded into Bevy, which is
+// bookkeeping a volunteer can correct. `credentials:moderate` is in no
+// role bundle, so only `admin` — which holds every permission — has it.
 app.patch(
   "/api/events/:slug/credentials/:id/photo",
-  requirePermission("credentials:operate", { scopeParam: "slug" }),
+  requirePermission("credentials:moderate", { scopeParam: "slug" }),
   slugP,
   vid,
   writeLimiter,

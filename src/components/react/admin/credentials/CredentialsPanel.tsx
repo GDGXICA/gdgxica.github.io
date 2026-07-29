@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { isDevPreview } from "@/lib/api";
+import { useAuth } from "../AuthProvider";
 import { useCredentials } from "./useCredentials";
 import { BevyQueue } from "./BevyQueue";
 import { PhotoModerationQueue } from "./PhotoModerationQueue";
@@ -24,6 +25,12 @@ function slugFromUrl(): string | null {
 type Tab = "bevy" | "photos" | "all";
 
 export function CredentialsPanel({ initialSlug }: { initialSlug?: string }) {
+  const { can } = useAuth();
+  // Taking a photo down is admin-only and irreversible. Hiding the tab is
+  // cosmetic — the API is the real gate — but showing a queue whose every
+  // button 403s is worse than not showing it.
+  const canModerate = can("credentials:moderate");
+
   const [slug] = useState<string | null>(initialSlug ?? slugFromUrl());
   const [tab, setTab] = useState<Tab>("bevy");
   const [error, setError] = useState<string | null>(null);
@@ -151,15 +158,17 @@ export function CredentialsPanel({ initialSlug }: { initialSlug?: string }) {
         <TabButton active={tab === "bevy"} onClick={() => setTab("bevy")}>
           Cola Bevy ({stats.pending})
         </TabButton>
-        <TabButton active={tab === "photos"} onClick={() => setTab("photos")}>
-          Fotos ({stats.photos})
-        </TabButton>
+        {canModerate && (
+          <TabButton active={tab === "photos"} onClick={() => setTab("photos")}>
+            Fotos ({stats.photos})
+          </TabButton>
+        )}
         <TabButton active={tab === "all"} onClick={() => setTab("all")}>
           Todos ({stats.total})
         </TabButton>
       </nav>
 
-      {tab === "photos" ? (
+      {tab === "photos" && canModerate ? (
         <PhotoModerationQueue
           slug={slug}
           credentials={credentials}
