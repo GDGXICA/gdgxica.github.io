@@ -6,7 +6,10 @@ import { GMAIL_USER, GMAIL_APP_PASSWORD } from "../config";
 // happens (and so importing this module never throws at deploy time).
 let transporter: nodemailer.Transporter | null = null;
 
-function getTransporter(): nodemailer.Transporter {
+// Exported so credentialEmail.ts sends through the SAME pooled connection.
+// A second transport would authenticate separately and reintroduce exactly
+// the "454-4.7.0 Too many login attempts" failure the pool exists to avoid.
+export function getTransporter(): nodemailer.Transporter {
   if (transporter) return transporter;
   // Pool a single authenticated connection across messages. Without
   // pooling, every sendMail opens TCP+TLS+AUTH from scratch; with the
@@ -36,15 +39,19 @@ export interface CertificateEmail {
 
 // Collapse any control characters (CR/LF included) to a space so a
 // crafted event/recipient name can't inject extra email headers.
-function singleLine(s: string): string {
+// Exported for credentialEmail.ts, which interpolates attendee-supplied
+// names into headers and needs exactly this hardening. Kept here rather
+// than moved to a shared module to keep the diff minimal.
+export function singleLine(s: string): string {
   // eslint-disable-next-line no-control-regex
   return s.replace(/[\u0000-\u001F\u007F]+/g, " ").trim();
 }
 
 // HTML-escape values interpolated into the message body so a name like
 // `<a href="...">` from an imported CSV can't smuggle markup/links into
-// the email and abuse the GDG sender reputation.
-function htmlEscape(s: string): string {
+// the email and abuse the GDG sender reputation. Exported for the same
+// reason as singleLine above.
+export function htmlEscape(s: string): string {
   return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

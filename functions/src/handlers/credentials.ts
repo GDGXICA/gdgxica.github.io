@@ -53,6 +53,20 @@ const MASCOT_IDS = [
 interface EventCredentialConfig {
   enabled?: boolean;
   group_letters?: string[];
+  max_credentials?: number;
+}
+
+/**
+ * Thrown inside the credential transaction when the event's cap is full.
+ *
+ * A sentinel rather than a plain Error so the catch below can tell "we are
+ * full" (a 409 the attendee can act on) apart from a genuine failure (a
+ * 500 they cannot).
+ */
+class CredentialCapReached extends Error {
+  constructor(readonly cap: number) {
+    super("credential cap reached");
+  }
 }
 
 /**
@@ -78,7 +92,7 @@ export async function createCredential(req: Request, res: Response) {
     const db = admin.firestore();
     const eventRef = db.collection("events").doc(slug);
 
-    const letters = await readGroupLetters(eventRef);
+    const { letters, maxCredentials } = await readCredentialConfig(eventRef);
 
     // Decode before the transaction so a malformed image is rejected
     // without burning a sequence number. We only verify the container's
@@ -113,6 +127,14 @@ export async function createCredential(req: Request, res: Response) {
       const counterSnap = await tx.get(counterRef);
       const next =
         ((counterSnap.data()?.nextSequence as number | undefined) ?? 0) + 1;
+
+      // Checked HERE rather than before the transaction because the
+      // counter is already being read under the same lock. A pre-flight
+      // read would let two concurrent requests both pass the check and
+      // overshoot the cap.
+      if (maxCredentials !== undefined && next > maxCredentials) {
+        throw new CredentialCapReached(maxCredentials);
+      }
 
       sequenceNumber = next;
       groupLetter = letterForSequence(next, letters);
@@ -229,24 +251,41 @@ export async function createCredential(req: Request, res: Response) {
       },
     });
   } catch (err) {
+    if (err instanceof CredentialCapReached) {
+      res.status(409).json({
+        success: false,
+        error:
+          "Ya se emitieron todas las credenciales disponibles para este " +
+          "evento. Escríbenos si crees que es un error.",
+      });
+      return;
+    }
     res.status(500).json({ success: false, error: safeError(err) });
   }
 }
 
 /**
- * Group letters configured on the event document in the data repo.
+ * Credential settings configured on the event document in the data repo.
  *
  * A missing event or a missing block is not an error here: the route only
  * exists for events whose page was built with the feature enabled, and
  * falling back keeps a misconfiguration from rejecting registrations.
  */
-async function readGroupLetters(
+async function readCredentialConfig(
   eventRef: admin.firestore.DocumentReference
-): Promise<string[]> {
+): Promise<{ letters: string[]; maxCredentials: number | undefined }> {
   const snap = await eventRef.get();
   const config = snap.data()?.credential as EventCredentialConfig | undefined;
   const letters = config?.group_letters;
-  return letters && letters.length > 0 ? letters : DEFAULT_GROUP_LETTERS;
+
+  // An absent or non-positive cap means unlimited. A zero would otherwise
+  // read as "issue nothing", which is never what a missing field means and
+  // would silently close registration.
+  const cap = config?.max_credentials;
+  return {
+    letters: letters && letters.length > 0 ? letters : DEFAULT_GROUP_LETTERS,
+    maxCredentials: typeof cap === "number" && cap > 0 ? cap : undefined,
+  };
 }
 
 /**

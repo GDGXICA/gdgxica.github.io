@@ -116,6 +116,9 @@ const events = defineCollection({
         // Cycled round-robin over the registration sequence to split
         // attendees into on-site groups.
         groupLetters: z.array(z.string().min(1).max(2)).min(1).max(26),
+        // Absent means unlimited. Only the API enforces it; the page does
+        // not render differently when the cap is reached.
+        maxCredentials: z.number().int().positive().optional(),
       })
       .optional(),
   }),
