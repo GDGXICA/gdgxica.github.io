@@ -113,7 +113,8 @@ export const mockApi = {
 
   setCredentialBevyStatus: () => ok(null),
   moderateCredentialPhoto: () => ok(null),
-  getEmailSettings: () => ok({ transport: "gmail", dailyCap: 350 }),
+  getEmailSettings: () =>
+    ok({ transport: "gmail", dailyCap: 350, resendConfigured: false }),
   setEmailTransport: (transport: "gmail" | "resend") =>
     ok({ transport, dailyCap: transport === "resend" ? 90 : 350 }),
   reconcileCredentials: () =>

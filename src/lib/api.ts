@@ -297,10 +297,11 @@ const realApi = {
       data
     ),
   getEmailSettings: () =>
-    request<{ transport: "gmail" | "resend"; dailyCap: number }>(
-      "GET",
-      "/settings/email"
-    ),
+    request<{
+      transport: "gmail" | "resend";
+      dailyCap: number;
+      resendConfigured: boolean;
+    }>("GET", "/settings/email"),
   setEmailTransport: (transport: "gmail" | "resend") =>
     request<{ transport: "gmail" | "resend"; dailyCap: number }>(
       "PUT",

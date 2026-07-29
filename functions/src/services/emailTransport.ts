@@ -85,14 +85,32 @@ export async function sendEmail(
   });
 }
 
+/**
+ * Whether the Resend credentials are real rather than a placeholder.
+ *
+ * The secrets have to EXIST for the project to deploy — firebase-functions
+ * has no notion of an optional secret, so a declared one blocks the deploy
+ * until it has some value. That means a project with no Resend account
+ * still carries a filler value here, and it must not be mistaken for a
+ * working key: sending with it would fail as an opaque 401 from the API
+ * instead of a message naming what is missing.
+ *
+ * Resend issues keys prefixed `re_`, which makes the distinction checkable
+ * rather than a guess about magic words.
+ */
+export function isResendConfigured(): boolean {
+  return RESEND_API_KEY.value().trim().startsWith("re_");
+}
+
 async function sendViaResend(mail: OutgoingEmail): Promise<void> {
-  const key = RESEND_API_KEY.value();
-  if (!key) {
+  const key = RESEND_API_KEY.value().trim();
+  if (!isResendConfigured()) {
     // A clearer failure than whatever the API returns for an empty bearer
     // token, and it names the fix.
     throw new Error(
-      "RESEND_API_KEY is not set; configure it or switch the transport back " +
-        "to gmail in the admin panel"
+      "RESEND_API_KEY is not configured (it should start with re_). Set it " +
+        "with `firebase functions:secrets:set RESEND_API_KEY`, or switch the " +
+        "transport back to gmail in the admin panel."
     );
   }
 
