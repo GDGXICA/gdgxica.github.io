@@ -24,6 +24,9 @@ import {
   checkinImportSchema,
   credentialCreateSchema,
   credentialImageSchema,
+  credentialBevyStatusSchema,
+  credentialPhotoModerationSchema,
+  credentialReminderSchema,
 } from "./schemas";
 import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
@@ -670,6 +673,53 @@ app.patch(
   credentialLimiter,
   validateBody(credentialImageSchema),
   credentials.attachCredentialImage
+);
+
+// Credential administration. Scoped with `scopeParam: "slug"` so a
+// volunteer assigned to one event works that event's queue and nothing
+// else — the same shape check-in already uses. Reading the list is gated
+// by `roster:read` in firestore.rules, since a credential is attendee PII
+// exactly like a roster row; these three are the write side.
+app.patch(
+  "/api/events/:slug/credentials/:id/bevy",
+  requirePermission("credentials:operate", { scopeParam: "slug" }),
+  slugP,
+  vid,
+  writeLimiter,
+  validateBody(credentialBevyStatusSchema),
+  credentials.setBevyStatus
+);
+app.patch(
+  "/api/events/:slug/credentials/:id/photo",
+  requirePermission("credentials:operate", { scopeParam: "slug" }),
+  slugP,
+  vid,
+  writeLimiter,
+  validateBody(credentialPhotoModerationSchema),
+  credentials.moderatePhoto
+);
+app.post(
+  "/api/events/:slug/credentials/:id/email/retry",
+  requirePermission("credentials:operate", { scopeParam: "slug" }),
+  slugP,
+  vid,
+  writeLimiter,
+  credentials.retryEmail
+);
+app.post(
+  "/api/events/:slug/credentials/reminders",
+  requirePermission("credentials:operate", { scopeParam: "slug" }),
+  slugP,
+  writeLimiter,
+  validateBody(credentialReminderSchema),
+  credentials.sendReminders
+);
+app.post(
+  "/api/events/:slug/credentials/reconcile",
+  requirePermission("credentials:operate", { scopeParam: "slug" }),
+  slugP,
+  writeLimiter,
+  credentials.reconcileCredentials
 );
 
 // Roulette spin

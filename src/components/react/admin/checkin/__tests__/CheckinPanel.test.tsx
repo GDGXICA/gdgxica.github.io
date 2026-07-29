@@ -38,7 +38,13 @@ const attendee = (over: Partial<Attendee> = {}): Attendee => ({
   company: "",
   title: "",
   ticketTitle: "General Admission",
-  searchTokens: ["alex", "alberto", "quintanilla", "garcia", "wcandry@gmail.com"],
+  searchTokens: [
+    "alex",
+    "alberto",
+    "quintanilla",
+    "garcia",
+    "wcandry@gmail.com",
+  ],
   bevyCheckinAt: null,
   lastImportId: "imp_1",
   checkedIn: false,
@@ -47,6 +53,7 @@ const attendee = (over: Partial<Attendee> = {}): Attendee => ({
   checkedInByName: null,
   note: null,
   dniVerified: false,
+  dni: null,
   pending: false,
   ...over,
 });
@@ -55,7 +62,12 @@ const attendee = (over: Partial<Attendee> = {}): Attendee => ({
 function rosterState(over: Record<string, unknown> = {}) {
   return {
     attendees: [attendee()],
-    meta: { lastImportId: "imp_1", lastImportAt: null, lastImportByName: null, rosterCount: 1 },
+    meta: {
+      lastImportId: "imp_1",
+      lastImportAt: null,
+      lastImportByName: null,
+      rosterCount: 1,
+    },
     loading: false,
     error: null,
     offline: false,

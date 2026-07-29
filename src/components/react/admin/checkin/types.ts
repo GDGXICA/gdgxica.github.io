@@ -22,6 +22,13 @@ export interface Attendee {
 
   dniVerified: boolean;
 
+  /**
+   * Stamped by the reconciliation, not by the Bevy import — Bevy has no
+   * DNI field. Null until reconciliation matches this row to a credential,
+   * which is most of them right up until the roster is imported.
+   */
+  dni: string | null;
+
   /** True while this row's write is still queued in the local cache. */
   pending: boolean;
 }

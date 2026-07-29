@@ -264,6 +264,50 @@ const realApi = {
       data
     ),
 
+  // Credential administration (organizer-level).
+  setCredentialBevyStatus: (
+    slug: string,
+    id: string,
+    data: {
+      status: "pending" | "loaded" | "not_found" | "discarded";
+      ticketNumber: string | null;
+      note: string | null;
+    }
+  ) =>
+    request(
+      "PATCH",
+      `/events/${encodeURIComponent(slug)}/credentials/${id}/bevy`,
+      data
+    ),
+  moderateCredentialPhoto: (
+    slug: string,
+    id: string,
+    data: { action: "approve" | "remove"; reason: string }
+  ) =>
+    request(
+      "PATCH",
+      `/events/${encodeURIComponent(slug)}/credentials/${id}/photo`,
+      data
+    ),
+  reconcileCredentials: (slug: string) =>
+    request<{
+      matched: number;
+      unmatchedCredentials: number;
+      unmatchedRoster: number;
+      ambiguous: number;
+    }>("POST", `/events/${encodeURIComponent(slug)}/credentials/reconcile`),
+  sendCredentialReminders: (slug: string, credentialIds: string[]) =>
+    request<{ queued: number; skipped: number }>(
+      "POST",
+      `/events/${encodeURIComponent(slug)}/credentials/reminders`,
+      { credentialIds }
+    ),
+  retryCredentialEmail: (slug: string, id: string) =>
+    request(
+      "POST",
+      `/events/${encodeURIComponent(slug)}/credentials/${id}/email/retry`
+    ),
+
   // Wordcloud moderation + bingo winners (admin-only)
   listEventMinigameWords: (slug: string, id: string) =>
     request("GET", `/events/${encodeURIComponent(slug)}/minigames/${id}/words`),

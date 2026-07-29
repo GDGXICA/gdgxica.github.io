@@ -111,6 +111,18 @@ export const mockApi = {
     }),
   attachCredentialImage: () => ok(null),
 
+  setCredentialBevyStatus: () => ok(null),
+  moderateCredentialPhoto: () => ok(null),
+  reconcileCredentials: () =>
+    ok({
+      matched: 0,
+      unmatchedCredentials: 0,
+      unmatchedRoster: 0,
+      ambiguous: 0,
+    }),
+  sendCredentialReminders: () => ok({ queued: 0, skipped: 0 }),
+  retryCredentialEmail: () => ok(null),
+
   listEventMinigameWords: () => ok([]),
   setMinigameWordHidden: (
     _slug: string,

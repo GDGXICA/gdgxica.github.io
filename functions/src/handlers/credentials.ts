@@ -4,18 +4,30 @@ import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
-import { letterForSequence } from "../services/credentialSequence";
+import {
+  letterForSequence,
+  mascotForCredentialId,
+} from "../services/credentialSequence";
 import {
   buildCredentialSearchTokens,
   normalizeDni,
 } from "../services/credentialSearch";
 import {
+  reconcile,
+  type ReconcileAttendee,
+  type ReconcileCredential,
+} from "../services/credentialReconcile";
+import {
   decodeJpegDataUrl,
+  deleteCredentialImages,
   saveCredentialImages,
 } from "../services/credentialStorage";
 import type {
   CredentialCreateInput,
   CredentialImageInput,
+  CredentialBevyStatusInput,
+  CredentialPhotoModerationInput,
+  CredentialReminderInput,
 } from "../schemas/credentials";
 
 // Decoded-byte ceilings matching the character caps in the Zod schema.
@@ -28,6 +40,20 @@ const MAX_CREDENTIAL_BYTES = 480_000;
 // substitutes defaults, so reaching this means something upstream is
 // misconfigured — and a degraded letter beats a rejected registration.
 const DEFAULT_GROUP_LETTERS = ["A", "B", "C", "D"];
+
+// Kept in sync with src/components/react/credential/mascots.ts, which is
+// the manifest the picker renders from. Only used to pick a replacement
+// avatar when a photo is taken down.
+const MASCOT_IDS = [
+  "gdg-blue-a",
+  "gdg-red-a",
+  "gdg-yellow-a",
+  "gdg-green-a",
+  "gdg-blue-b",
+  "gdg-red-b",
+  "gdg-yellow-b",
+  "gdg-green-b",
+];
 
 interface EventCredentialConfig {
   enabled?: boolean;
@@ -347,6 +373,395 @@ export async function attachCredentialImage(req: Request, res: Response) {
     });
 
     res.json({ success: true, data: { id } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: safeError(err) });
+  }
+}
+
+/**
+ * PATCH /api/events/:slug/credentials/:id/bevy
+ *
+ * Records where a record stands in the manual load into Bevy. This is the
+ * reconciliation ledger that keeps the transcription from being a silent
+ * black hole: "pendiente" is the panel's headline metric precisely so a
+ * pile of unloaded registrations cannot go unnoticed.
+ */
+export async function setBevyStatus(req: Request, res: Response) {
+  try {
+    const { slug, id } = req.params as { slug: string; id: string };
+    const user = (req as AuthenticatedRequest).user;
+    const body = req.body as CredentialBevyStatusInput;
+
+    const ref = credentialRef(slug, id);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      res
+        .status(404)
+        .json({ success: false, error: "Credencial no encontrada" });
+      return;
+    }
+
+    const loaded = body.status === "loaded";
+    await ref.update({
+      bevyStatus: body.status,
+      bevyTicketNumber: body.ticketNumber,
+      bevyNote: body.note,
+      // Attribution only for a positive claim; clearing the status back to
+      // pending should not leave a stale "loaded by" behind.
+      bevyLoadedAt: loaded ? FieldValue.serverTimestamp() : null,
+      bevyLoadedBy: loaded ? user.uid : null,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    await writeAuditLog({
+      action: "credential.bevy_status",
+      performedBy: user.uid,
+      targetId: id,
+      targetType: "credential",
+      details: { eventSlug: slug, status: body.status },
+      timestamp: FieldValue.serverTimestamp(),
+    });
+
+    res.json({ success: true, data: { id, status: body.status } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: safeError(err) });
+  }
+}
+
+/**
+ * PATCH /api/events/:slug/credentials/:id/photo
+ *
+ * Photo moderation is REACTIVE take-down, not pre-publication gating. The
+ * credential is composed on the attendee's device and downloaded before
+ * anything is submitted, so a bad photo already exists on their phone no
+ * matter what we do here. What this controls is what GDG ICA stores and
+ * what GDG ICA re-sends — which is the part we are actually responsible
+ * for, and what the privacy policy promises.
+ */
+export async function moderatePhoto(req: Request, res: Response) {
+  try {
+    const { slug, id } = req.params as { slug: string; id: string };
+    const user = (req as AuthenticatedRequest).user;
+    const body = req.body as CredentialPhotoModerationInput;
+
+    const ref = credentialRef(slug, id);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      res
+        .status(404)
+        .json({ success: false, error: "Credencial no encontrada" });
+      return;
+    }
+
+    if (body.action === "approve") {
+      await ref.update({
+        photoStatus: "approved",
+        photoReviewedAt: FieldValue.serverTimestamp(),
+        photoReviewedBy: user.uid,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    } else {
+      // Delete the objects first: if the status flip succeeded and the
+      // delete did not, the panel would show a moderated record while the
+      // image stayed readable.
+      await deleteCredentialImages(slug, id);
+      await ref.update({
+        photoStatus: "removed",
+        photoPath: null,
+        credentialImagePath: null,
+        photoRemovedReason: body.reason,
+        photoReviewedAt: FieldValue.serverTimestamp(),
+        photoReviewedBy: user.uid,
+        // Swap to a deterministic mascot so the attendee is shown the same
+        // replacement every time, and re-queue the notification.
+        avatarKind: "mascot",
+        mascotId: mascotForCredentialId(id, MASCOT_IDS),
+        emailStatus: "queued",
+        emailTemplate: "photo_removed",
+        emailAttempts: 0,
+        emailNextAttemptAt: FieldValue.serverTimestamp(),
+        emailLastError: null,
+        // bevyStatus is deliberately untouched: the registration data is
+        // independent of the photo, and a take-down must not un-load
+        // someone a volunteer already transcribed.
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+
+    await writeAuditLog({
+      action: "credential.moderate_photo",
+      performedBy: user.uid,
+      targetId: id,
+      targetType: "credential",
+      details: { eventSlug: slug, action: body.action },
+      timestamp: FieldValue.serverTimestamp(),
+    });
+
+    res.json({ success: true, data: { id, action: body.action } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: safeError(err) });
+  }
+}
+
+/**
+ * POST /api/events/:slug/credentials/:id/email/retry
+ *
+ * Re-queues a credential the drain parked as `failed` after exhausting its
+ * attempts. Resets the counter so the backoff ladder starts over.
+ */
+export async function retryEmail(req: Request, res: Response) {
+  try {
+    const { slug, id } = req.params as { slug: string; id: string };
+    const user = (req as AuthenticatedRequest).user;
+
+    const ref = credentialRef(slug, id);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      res
+        .status(404)
+        .json({ success: false, error: "Credencial no encontrada" });
+      return;
+    }
+
+    // Only a parked send may be re-queued by hand. Re-queueing something
+    // mid-flight would race the drain's lease and could double-send.
+    if (snap.data()?.emailStatus !== "failed") {
+      res.status(409).json({
+        success: false,
+        error: "Solo se puede reintentar un envío marcado como fallido",
+      });
+      return;
+    }
+
+    await ref.update({
+      emailStatus: "queued",
+      emailAttempts: 0,
+      emailNextAttemptAt: FieldValue.serverTimestamp(),
+      emailLastError: null,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    await writeAuditLog({
+      action: "credential.email_retry",
+      performedBy: user.uid,
+      targetId: id,
+      targetType: "credential",
+      details: { eventSlug: slug },
+      timestamp: FieldValue.serverTimestamp(),
+    });
+
+    res.json({ success: true, data: { id } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: safeError(err) });
+  }
+}
+
+function credentialRef(slug: string, id: string) {
+  return admin
+    .firestore()
+    .collection("events")
+    .doc(slug)
+    .collection("credentials")
+    .doc(id);
+}
+
+// Firestore caps a WriteBatch at 500 operations; 400 leaves headroom, the
+// same margin handlers/checkin.ts uses.
+const REMINDER_BATCH_SIZE = 400;
+
+/**
+ * POST /api/events/:slug/credentials/reminders
+ *
+ * Re-queues the "you are not registered yet" email for a hand-picked set
+ * of credentials.
+ *
+ * Manual rather than scheduled on purpose. `bevyStatus` only becomes
+ * `loaded` when someone marks it or reconciliation matches it, so an
+ * automatic sweep would email people who registered on the official panel
+ * themselves. Telling someone they are not registered when they are is
+ * worse than saying nothing: it costs trust and generates support.
+ *
+ * The ids come from the panel so the operator sends exactly the list they
+ * previewed, and the handler re-checks each one so a stale tab cannot mail
+ * somebody who was loaded in the meantime.
+ */
+export async function sendReminders(req: Request, res: Response) {
+  try {
+    const slug = req.params.slug as string;
+    const user = (req as AuthenticatedRequest).user;
+    const { credentialIds } = req.body as CredentialReminderInput;
+
+    const db = admin.firestore();
+    const base = db.collection("events").doc(slug).collection("credentials");
+
+    // Deduped: the panel should not send repeats, but a repeated id would
+    // otherwise put two operations on the same document in one batch,
+    // which Firestore rejects outright.
+    const ids = [...new Set(credentialIds)];
+    const snaps = await db.getAll(...ids.map((id) => base.doc(id)));
+
+    const eligible = snaps.filter((snap) => {
+      const data = snap.data();
+      if (!snap.exists || !data) return false;
+      // Only people who are still missing from the official panel, and
+      // only if we already managed to reach them once — re-queuing a send
+      // that never succeeded belongs to the retry path, not here.
+      return data.bevyStatus === "pending" && data.emailStatus === "sent";
+    });
+
+    let queued = 0;
+    for (let i = 0; i < eligible.length; i += REMINDER_BATCH_SIZE) {
+      const batch = db.batch();
+      for (const snap of eligible.slice(i, i + REMINDER_BATCH_SIZE)) {
+        batch.update(snap.ref, {
+          emailStatus: "queued",
+          emailTemplate: "reminder",
+          // Reset so the backoff ladder starts clean; this is a fresh
+          // message, not a retry of the credential email.
+          emailAttempts: 0,
+          emailNextAttemptAt: FieldValue.serverTimestamp(),
+          emailLastError: null,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        queued++;
+      }
+      await batch.commit();
+    }
+
+    await writeAuditLog({
+      action: "credential.reminders",
+      performedBy: user.uid,
+      targetId: slug,
+      targetType: "event",
+      details: { requested: ids.length, queued, skipped: ids.length - queued },
+      timestamp: FieldValue.serverTimestamp(),
+    });
+
+    res.json({
+      success: true,
+      data: { queued, skipped: ids.length - queued },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: safeError(err) });
+  }
+}
+
+/**
+ * POST /api/events/:slug/credentials/reconcile
+ *
+ * Cross-references the self-declared credentials with the Bevy roster and
+ * writes the result to both sides.
+ *
+ * Two things depend on this:
+ *
+ * The DNI reaches the door. A matched roster row gets `dni` and
+ * `credentialId` stamped on it, so at check-in a volunteer compares the
+ * number on the document against the number on screen instead of eyeing a
+ * name. That is the entire reason the DNI is collected.
+ *
+ * `pending` starts meaning what it says. Until now `bevyStatus` only moved
+ * when a human clicked, so someone who registered on the official panel
+ * themselves still looked pending — which made the panel's headline metric,
+ * and any reminder built on it, wrong.
+ *
+ * Run it after each roster import. It is idempotent: rows already `loaded`
+ * are left alone.
+ */
+export async function reconcileCredentials(req: Request, res: Response) {
+  try {
+    const slug = req.params.slug as string;
+    const user = (req as AuthenticatedRequest).user;
+
+    const db = admin.firestore();
+    const eventRef = db.collection("events").doc(slug);
+
+    const [credentialSnap, rosterSnap] = await Promise.all([
+      eventRef.collection("credentials").get(),
+      eventRef.collection("roster").get(),
+    ]);
+
+    const credentials: ReconcileCredential[] = credentialSnap.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        email: (data.email as string) ?? "",
+        dni: (data.dni as string) ?? "",
+        dniNormalized: (data.dniNormalized as string) ?? "",
+        bevyStatus: (data.bevyStatus as string) ?? "pending",
+      };
+    });
+
+    const attendees: ReconcileAttendee[] = rosterSnap.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        email: (data.email as string) ?? "",
+        ticketNumber: (data.ticketNumber as string) ?? "",
+      };
+    });
+
+    const result = reconcile(credentials, attendees);
+
+    // Two writes per match, so the batch ceiling is halved. Firestore caps
+    // a WriteBatch at 500 operations.
+    const MATCHES_PER_BATCH = 200;
+    for (let i = 0; i < result.matches.length; i += MATCHES_PER_BATCH) {
+      const batch = db.batch();
+      for (const match of result.matches.slice(i, i + MATCHES_PER_BATCH)) {
+        batch.update(
+          eventRef.collection("credentials").doc(match.credentialId),
+          {
+            bevyStatus: "loaded",
+            bevyTicketNumber: match.ticketNumber,
+            bevyLoadedAt: FieldValue.serverTimestamp(),
+            // Attributed to the person who ran the reconciliation, not left
+            // blank: someone has to own the claim that this record is in the
+            // official panel.
+            bevyLoadedBy: user.uid,
+            updatedAt: FieldValue.serverTimestamp(),
+          }
+        );
+
+        // Stamped through the Admin SDK, which bypasses the rules. The
+        // client-side `allow update` on roster is pinned to the check-in
+        // fields by an affectedKeys() diff, so a volunteer still cannot
+        // write these from the browser.
+        batch.update(eventRef.collection("roster").doc(match.attendeeId), {
+          dni: match.dni,
+          dniNormalized: match.dniNormalized,
+          credentialId: match.credentialId,
+        });
+      }
+      await batch.commit();
+    }
+
+    await writeAuditLog({
+      action: "credential.reconcile",
+      performedBy: user.uid,
+      targetId: slug,
+      targetType: "event",
+      details: {
+        credentials: credentials.length,
+        roster: attendees.length,
+        matched: result.matches.length,
+        unmatchedCredentials: result.unmatchedCredentialIds.length,
+        unmatchedRoster: result.unmatchedAttendeeIds.length,
+        ambiguous: result.ambiguousEmails.length,
+      },
+      timestamp: FieldValue.serverTimestamp(),
+    });
+
+    res.json({
+      success: true,
+      data: {
+        matched: result.matches.length,
+        unmatchedCredentials: result.unmatchedCredentialIds.length,
+        unmatchedRoster: result.unmatchedAttendeeIds.length,
+        // Counted, not listed: the addresses themselves are PII and the
+        // panel already holds the rows they belong to.
+        ambiguous: result.ambiguousEmails.length,
+      },
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: safeError(err) });
   }

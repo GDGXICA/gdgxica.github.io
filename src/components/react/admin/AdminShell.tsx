@@ -29,6 +29,15 @@ const NAV_ITEMS: {
     icon: "✅",
     permission: "roster:read",
   },
+  {
+    label: "Credenciales",
+    href: "/admin/credentials",
+    icon: "🎫",
+    // Same gate as check-in: a credential is attendee PII, and the panel
+    // shows the DNI. The write actions inside are gated separately by
+    // `credentials:operate` on the API.
+    permission: "roster:read",
+  },
   { label: "Equipo", href: "/admin/team", icon: "👥", permission: "team:read" },
   {
     label: "Speakers",
