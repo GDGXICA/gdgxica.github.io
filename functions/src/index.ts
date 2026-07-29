@@ -213,7 +213,7 @@ const credentialLimiter = rateLimit({
     success: false,
     error:
       "Demasiados intentos desde esta red. Si estás en una red compartida " +
-      "(universidad u oficina), escríbenos a hola@gdgica.com.",
+      "(universidad u oficina), escríbenos a aalvaropc@gmail.com.",
   },
 });
 
