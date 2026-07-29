@@ -117,6 +117,42 @@ export async function getFirestore() {
   return _dbPromise;
 }
 
+let _storagePromise: Promise<
+  import("firebase/storage").FirebaseStorage
+> | null = null;
+
+/**
+ * Cloud Storage, used only by the credential photo moderation panel.
+ *
+ * Same memoized-promise-with-rejection-reset shape as getFirestore above,
+ * and for the same reason: memoizing a promise memoizes its rejection, so
+ * one chunk that fails to load on flaky wifi would otherwise leave the
+ * panel permanently unable to render an image.
+ *
+ * Reads are gated by storage.rules to organizer/admin. Nothing on the
+ * public side imports this — the credential form sends its images as
+ * base64 through the API, and no client holds a write grant on the bucket.
+ */
+export async function getStorage() {
+  if (!_storagePromise) {
+    _storagePromise = (async () => {
+      const app = await getApp();
+      const { getStorage: firebaseGetStorage, connectStorageEmulator } =
+        await import("firebase/storage");
+      const storage = firebaseGetStorage(app);
+      if (USE_EMULATOR) {
+        connectStorageEmulator(storage, "127.0.0.1", 9199);
+      }
+      return storage;
+    })();
+
+    _storagePromise.catch(() => {
+      _storagePromise = null;
+    });
+  }
+  return _storagePromise;
+}
+
 // Used by the public event island in PR4. No-ops when there is already
 // a signed-in user (e.g. an admin opening the participant page in the
 // same browser as their Google session) so we never clobber that.

@@ -32,6 +32,7 @@ export const PERMISSIONS = [
   "roster:read",
   "checkin:operate",
   "checkin:import",
+  "credentials:operate",
   "certificates:send",
   "minigames:template:read",
   "minigames:template:write",
@@ -90,6 +91,7 @@ const ORGANIZER_GLOBAL: readonly Permission[] = [
   "roster:read",
   "checkin:operate",
   "checkin:import",
+  "credentials:operate",
   "certificates:send",
   // Operar los minijuegos de un evento es parte de llevar el evento. Las
   // PLANTILLAS siguen siendo de admin: son configuración global, no
@@ -117,7 +119,12 @@ export const ROLE_BUNDLES: Record<Role, RoleBundle> = {
   // Opera un evento concreto, y solo mientras esté asignado a él.
   volunteer: {
     global: [],
-    perEvent: ["roster:read", "checkin:operate", "minigames:operate"],
+    perEvent: [
+      "roster:read",
+      "checkin:operate",
+      "minigames:operate",
+      "credentials:operate",
+    ],
   },
 
   organizer: { global: ORGANIZER_GLOBAL, perEvent: [] },

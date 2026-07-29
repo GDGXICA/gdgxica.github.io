@@ -18,6 +18,7 @@ import { MinigameTemplateList } from "./minigame-templates/MinigameTemplateList"
 import { EventMinigameManager } from "./event-minigames/EventMinigameManager";
 import { CertificateSender } from "./certificates/CertificateSender";
 import { CheckinPanel } from "./checkin/CheckinPanel";
+import { CredentialsPanel } from "./credentials/CredentialsPanel";
 import { RoleMatrix } from "./roles/RoleMatrix";
 import { AuditLog } from "./audit/AuditLog";
 import { AccessReview } from "./access/AccessReview";
@@ -111,6 +112,8 @@ function pageContent(page: string) {
       return <CertificateSender />;
     case "checkin":
       return <CheckinPanel />;
+    case "credentials":
+      return <CredentialsPanel />;
     default:
       return (
         <p className="text-gray-500 dark:text-gray-400">
