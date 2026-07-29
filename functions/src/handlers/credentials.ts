@@ -13,6 +13,11 @@ import {
   normalizeDni,
 } from "../services/credentialSearch";
 import {
+  reconcile,
+  type ReconcileAttendee,
+  type ReconcileCredential,
+} from "../services/credentialReconcile";
+import {
   decodeJpegDataUrl,
   deleteCredentialImages,
   saveCredentialImages,
@@ -635,6 +640,127 @@ export async function sendReminders(req: Request, res: Response) {
     res.json({
       success: true,
       data: { queued, skipped: ids.length - queued },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: safeError(err) });
+  }
+}
+
+/**
+ * POST /api/events/:slug/credentials/reconcile
+ *
+ * Cross-references the self-declared credentials with the Bevy roster and
+ * writes the result to both sides.
+ *
+ * Two things depend on this:
+ *
+ * The DNI reaches the door. A matched roster row gets `dni` and
+ * `credentialId` stamped on it, so at check-in a volunteer compares the
+ * number on the document against the number on screen instead of eyeing a
+ * name. That is the entire reason the DNI is collected.
+ *
+ * `pending` starts meaning what it says. Until now `bevyStatus` only moved
+ * when a human clicked, so someone who registered on the official panel
+ * themselves still looked pending — which made the panel's headline metric,
+ * and any reminder built on it, wrong.
+ *
+ * Run it after each roster import. It is idempotent: rows already `loaded`
+ * are left alone.
+ */
+export async function reconcileCredentials(req: Request, res: Response) {
+  try {
+    const slug = req.params.slug as string;
+    const user = (req as AuthenticatedRequest).user;
+
+    const db = admin.firestore();
+    const eventRef = db.collection("events").doc(slug);
+
+    const [credentialSnap, rosterSnap] = await Promise.all([
+      eventRef.collection("credentials").get(),
+      eventRef.collection("roster").get(),
+    ]);
+
+    const credentials: ReconcileCredential[] = credentialSnap.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        email: (data.email as string) ?? "",
+        dni: (data.dni as string) ?? "",
+        dniNormalized: (data.dniNormalized as string) ?? "",
+        bevyStatus: (data.bevyStatus as string) ?? "pending",
+      };
+    });
+
+    const attendees: ReconcileAttendee[] = rosterSnap.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        email: (data.email as string) ?? "",
+        ticketNumber: (data.ticketNumber as string) ?? "",
+      };
+    });
+
+    const result = reconcile(credentials, attendees);
+
+    // Two writes per match, so the batch ceiling is halved. Firestore caps
+    // a WriteBatch at 500 operations.
+    const MATCHES_PER_BATCH = 200;
+    for (let i = 0; i < result.matches.length; i += MATCHES_PER_BATCH) {
+      const batch = db.batch();
+      for (const match of result.matches.slice(i, i + MATCHES_PER_BATCH)) {
+        batch.update(
+          eventRef.collection("credentials").doc(match.credentialId),
+          {
+            bevyStatus: "loaded",
+            bevyTicketNumber: match.ticketNumber,
+            bevyLoadedAt: FieldValue.serverTimestamp(),
+            // Attributed to the person who ran the reconciliation, not left
+            // blank: someone has to own the claim that this record is in the
+            // official panel.
+            bevyLoadedBy: user.uid,
+            updatedAt: FieldValue.serverTimestamp(),
+          }
+        );
+
+        // Stamped through the Admin SDK, which bypasses the rules. The
+        // client-side `allow update` on roster is pinned to the check-in
+        // fields by an affectedKeys() diff, so a volunteer still cannot
+        // write these from the browser.
+        batch.update(eventRef.collection("roster").doc(match.attendeeId), {
+          dni: match.dni,
+          dniNormalized: match.dniNormalized,
+          credentialId: match.credentialId,
+        });
+      }
+      await batch.commit();
+    }
+
+    await writeAuditLog({
+      action: "credential.reconcile",
+      performedBy: user.uid,
+      targetId: slug,
+      targetType: "event",
+      details: {
+        credentials: credentials.length,
+        roster: attendees.length,
+        matched: result.matches.length,
+        unmatchedCredentials: result.unmatchedCredentialIds.length,
+        unmatchedRoster: result.unmatchedAttendeeIds.length,
+        ambiguous: result.ambiguousEmails.length,
+      },
+      timestamp: FieldValue.serverTimestamp(),
+    });
+
+    res.json({
+      success: true,
+      data: {
+        matched: result.matches.length,
+        unmatchedCredentials: result.unmatchedCredentialIds.length,
+        unmatchedRoster: result.unmatchedAttendeeIds.length,
+        // Counted, not listed: the addresses themselves are PII and the
+        // panel already holds the rows they belong to.
+        ambiguous: result.ambiguousEmails.length,
+      },
     });
   } catch (err) {
     res.status(500).json({ success: false, error: safeError(err) });

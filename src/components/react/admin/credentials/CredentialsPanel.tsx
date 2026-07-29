@@ -4,6 +4,7 @@ import { useCredentials } from "./useCredentials";
 import { BevyQueue } from "./BevyQueue";
 import { PhotoModerationQueue } from "./PhotoModerationQueue";
 import { ReminderButton } from "./ReminderButton";
+import { ReconcileButton } from "./ReconcileButton";
 import {
   buildCredentialBevyCsv,
   credentialCsvFilename,
@@ -105,6 +106,7 @@ export function CredentialsPanel({ initialSlug }: { initialSlug?: string }) {
           Credenciales · {slug}
         </h1>
         <div className="flex flex-wrap items-start gap-2">
+          <ReconcileButton slug={slug} onError={setError} />
           <ReminderButton
             slug={slug}
             credentials={credentials}

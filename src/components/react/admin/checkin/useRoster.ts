@@ -67,9 +67,8 @@ export function useRoster(slug: string | null): State {
     (async () => {
       try {
         const db = await getFirestore();
-        const { collection, doc, onSnapshot } = await import(
-          "firebase/firestore"
-        );
+        const { collection, doc, onSnapshot } =
+          await import("firebase/firestore");
         if (cancelled) return;
 
         unsubRoster = onSnapshot(
@@ -105,6 +104,7 @@ export function useRoster(slug: string | null): State {
                 checkedInByName: data.checkedInByName ?? null,
                 note: data.note ?? null,
                 dniVerified: data.dniVerified === true,
+                dni: (data.dni as string | undefined) ?? null,
                 pending: d.metadata.hasPendingWrites,
               } satisfies Attendee;
             });
@@ -139,7 +139,8 @@ export function useRoster(slug: string | null): State {
                 loading: false,
                 error: null,
                 syncedOnce,
-                offline: snap.metadata.fromCache && (syncedOnce || disconnected),
+                offline:
+                  snap.metadata.fromCache && (syncedOnce || disconnected),
                 pendingCount: attendees.filter((a) => a.pending).length,
               };
             });
@@ -229,9 +230,8 @@ export async function setCheckedIn(
 ): Promise<void> {
   try {
     const db = await getFirestore();
-    const { doc, updateDoc, serverTimestamp } = await import(
-      "firebase/firestore"
-    );
+    const { doc, updateDoc, serverTimestamp } =
+      await import("firebase/firestore");
     void updateDoc(doc(db, `events/${slug}/roster/${attendeeId}`), {
       checkedIn,
       checkedInAt: checkedIn ? serverTimestamp() : null,

@@ -289,6 +289,13 @@ const realApi = {
       `/events/${encodeURIComponent(slug)}/credentials/${id}/photo`,
       data
     ),
+  reconcileCredentials: (slug: string) =>
+    request<{
+      matched: number;
+      unmatchedCredentials: number;
+      unmatchedRoster: number;
+      ambiguous: number;
+    }>("POST", `/events/${encodeURIComponent(slug)}/credentials/reconcile`),
   sendCredentialReminders: (slug: string, credentialIds: string[]) =>
     request<{ queued: number; skipped: number }>(
       "POST",
