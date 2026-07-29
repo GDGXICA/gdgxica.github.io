@@ -142,7 +142,22 @@ export const credentialImageSchema = z
   })
   .strict();
 
+/**
+ * Re-queues the reminder for a hand-picked set of credentials.
+ *
+ * The ids come from the panel rather than being recomputed server-side, so
+ * the operator sends exactly the list they were shown. The handler still
+ * filters them to those genuinely pending, which is what stops a stale tab
+ * from emailing someone who registered in the meantime.
+ */
+export const credentialReminderSchema = z
+  .object({
+    credentialIds: z.array(z.string().min(1).max(200)).min(1).max(500),
+  })
+  .strict();
+
 export type CredentialCreateInput = z.infer<typeof credentialCreateSchema>;
+export type CredentialReminderInput = z.infer<typeof credentialReminderSchema>;
 export type CredentialImageInput = z.infer<typeof credentialImageSchema>;
 export type CredentialBevyStatusInput = z.infer<
   typeof credentialBevyStatusSchema

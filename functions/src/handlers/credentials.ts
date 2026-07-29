@@ -22,6 +22,7 @@ import type {
   CredentialImageInput,
   CredentialBevyStatusInput,
   CredentialPhotoModerationInput,
+  CredentialReminderInput,
 } from "../schemas/credentials";
 
 // Decoded-byte ceilings matching the character caps in the Zod schema.
@@ -518,4 +519,85 @@ function credentialRef(slug: string, id: string) {
     .doc(slug)
     .collection("credentials")
     .doc(id);
+}
+
+// Firestore caps a WriteBatch at 500 operations; 400 leaves headroom, the
+// same margin handlers/checkin.ts uses.
+const REMINDER_BATCH_SIZE = 400;
+
+/**
+ * POST /api/events/:slug/credentials/reminders
+ *
+ * Re-queues the "you are not registered yet" email for a hand-picked set
+ * of credentials.
+ *
+ * Manual rather than scheduled on purpose. `bevyStatus` only becomes
+ * `loaded` when someone marks it or reconciliation matches it, so an
+ * automatic sweep would email people who registered on the official panel
+ * themselves. Telling someone they are not registered when they are is
+ * worse than saying nothing: it costs trust and generates support.
+ *
+ * The ids come from the panel so the operator sends exactly the list they
+ * previewed, and the handler re-checks each one so a stale tab cannot mail
+ * somebody who was loaded in the meantime.
+ */
+export async function sendReminders(req: Request, res: Response) {
+  try {
+    const slug = req.params.slug as string;
+    const user = (req as AuthenticatedRequest).user;
+    const { credentialIds } = req.body as CredentialReminderInput;
+
+    const db = admin.firestore();
+    const base = db.collection("events").doc(slug).collection("credentials");
+
+    // Deduped: the panel should not send repeats, but a repeated id would
+    // otherwise put two operations on the same document in one batch,
+    // which Firestore rejects outright.
+    const ids = [...new Set(credentialIds)];
+    const snaps = await db.getAll(...ids.map((id) => base.doc(id)));
+
+    const eligible = snaps.filter((snap) => {
+      const data = snap.data();
+      if (!snap.exists || !data) return false;
+      // Only people who are still missing from the official panel, and
+      // only if we already managed to reach them once — re-queuing a send
+      // that never succeeded belongs to the retry path, not here.
+      return data.bevyStatus === "pending" && data.emailStatus === "sent";
+    });
+
+    let queued = 0;
+    for (let i = 0; i < eligible.length; i += REMINDER_BATCH_SIZE) {
+      const batch = db.batch();
+      for (const snap of eligible.slice(i, i + REMINDER_BATCH_SIZE)) {
+        batch.update(snap.ref, {
+          emailStatus: "queued",
+          emailTemplate: "reminder",
+          // Reset so the backoff ladder starts clean; this is a fresh
+          // message, not a retry of the credential email.
+          emailAttempts: 0,
+          emailNextAttemptAt: FieldValue.serverTimestamp(),
+          emailLastError: null,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        queued++;
+      }
+      await batch.commit();
+    }
+
+    await writeAuditLog({
+      action: "credential.reminders",
+      performedBy: user.uid,
+      targetId: slug,
+      targetType: "event",
+      details: { requested: ids.length, queued, skipped: ids.length - queued },
+      timestamp: FieldValue.serverTimestamp(),
+    });
+
+    res.json({
+      success: true,
+      data: { queued, skipped: ids.length - queued },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: safeError(err) });
+  }
 }

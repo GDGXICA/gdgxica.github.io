@@ -289,6 +289,12 @@ const realApi = {
       `/events/${encodeURIComponent(slug)}/credentials/${id}/photo`,
       data
     ),
+  sendCredentialReminders: (slug: string, credentialIds: string[]) =>
+    request<{ queued: number; skipped: number }>(
+      "POST",
+      `/events/${encodeURIComponent(slug)}/credentials/reminders`,
+      { credentialIds }
+    ),
   retryCredentialEmail: (slug: string, id: string) =>
     request(
       "POST",

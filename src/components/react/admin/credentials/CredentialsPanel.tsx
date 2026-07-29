@@ -3,6 +3,7 @@ import { isDevPreview } from "@/lib/api";
 import { useCredentials } from "./useCredentials";
 import { BevyQueue } from "./BevyQueue";
 import { PhotoModerationQueue } from "./PhotoModerationQueue";
+import { ReminderButton } from "./ReminderButton";
 import {
   buildCredentialBevyCsv,
   credentialCsvFilename,
@@ -103,13 +104,20 @@ export function CredentialsPanel({ initialSlug }: { initialSlug?: string }) {
         <h1 className="text-primary text-2xl font-bold">
           Credenciales · {slug}
         </h1>
-        <button
-          type="button"
-          onClick={downloadCsv}
-          className="bg-google-blue rounded px-3 py-2 text-sm text-white"
-        >
-          Descargar CSV para Bevy
-        </button>
+        <div className="flex flex-wrap items-start gap-2">
+          <ReminderButton
+            slug={slug}
+            credentials={credentials}
+            onError={setError}
+          />
+          <button
+            type="button"
+            onClick={downloadCsv}
+            className="bg-google-blue rounded px-3 py-2 text-sm text-white"
+          >
+            Descargar CSV para Bevy
+          </button>
+        </div>
       </header>
 
       {/* "Pendientes de cargar" is the headline metric on purpose. If people

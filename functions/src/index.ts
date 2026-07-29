@@ -26,6 +26,7 @@ import {
   credentialImageSchema,
   credentialBevyStatusSchema,
   credentialPhotoModerationSchema,
+  credentialReminderSchema,
 } from "./schemas";
 import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
@@ -704,6 +705,14 @@ app.post(
   vid,
   writeLimiter,
   credentials.retryEmail
+);
+app.post(
+  "/api/events/:slug/credentials/reminders",
+  requirePermission("credentials:operate", { scopeParam: "slug" }),
+  slugP,
+  writeLimiter,
+  validateBody(credentialReminderSchema),
+  credentials.sendReminders
 );
 
 // Roulette spin
