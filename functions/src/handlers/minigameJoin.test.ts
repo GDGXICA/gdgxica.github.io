@@ -68,33 +68,95 @@ interface InstanceFixture {
   id: string;
   type: string;
   state: string;
-  config?: { terms?: string[] };
+  config?: {
+    terms?: string[];
+    classic?: boolean;
+    maxWinnersPerDraw?: number;
+  };
   existingParticipant?: {
     alias: string;
     bingoCard?: string[];
   };
+  // Classic mode only: the calling sequence already sealed for this
+  // instance, and the winning balls other participants have reserved.
+  sealedOrder?: string[];
+  takenWinIndices?: number[];
 }
 
 interface WiringResult {
   txCalls: Array<Record<string, unknown>>;
   setCalls: Array<{ ref: object; data: Record<string, unknown> }>;
+  slotCalls: Array<{ instanceId: string; data: Record<string, unknown> }>;
+  sealCalls: Array<{ instanceId: string; data: Record<string, unknown> }>;
   auditAdd: ReturnType<typeof vi.fn>;
 }
 
 function wireFirestore(liveInstances: InstanceFixture[]): WiringResult {
   const setCalls: Array<{ ref: object; data: Record<string, unknown> }> = [];
+  const slotCalls: Array<{
+    instanceId: string;
+    data: Record<string, unknown>;
+  }> = [];
+  const sealCalls: Array<{
+    instanceId: string;
+    data: Record<string, unknown>;
+  }> = [];
   const auditAdd = vi.fn(async () => undefined);
 
   const instanceDocs = liveInstances.map((i) => {
     const participantRef = { __participantFor: i.id };
+    const drawRef = { __drawFor: i.id };
+    const slotDocRef = { __slotFor: i.id };
+    // The occupancy query the dealer runs inside the transaction. It
+    // carries the fixture's reserved balls so tx.get can answer it.
+    const slotQuery = {
+      __slotQueryFor: i.id,
+      __taken: i.takenWinIndices ?? [],
+    };
+
+    const sealTransaction = vi.fn(async (cb: (tx: unknown) => unknown) => {
+      const tx = {
+        get: vi.fn(async () => ({
+          data: () => (i.sealedOrder ? { order: i.sealedOrder } : undefined),
+        })),
+        set: vi.fn((_ref: object, data: Record<string, unknown>) => {
+          sealCalls.push({ instanceId: i.id, data });
+          // Later reads in the same test see the sealed sequence.
+          i.sealedOrder = data.order as string[];
+        }),
+      };
+      return cb(tx);
+    });
+
     const ref = {
+      id: i.id,
+      firestore: { runTransaction: sealTransaction },
       collection: vi.fn((name: string) => {
         if (name === "participants") {
           return { doc: vi.fn(() => participantRef) };
         }
+        if (name === "secret") {
+          return {
+            doc: vi.fn(() => ({
+              ...drawRef,
+              get: vi.fn(async () => ({
+                data: () =>
+                  i.sealedOrder ? { order: i.sealedOrder } : undefined,
+              })),
+            })),
+          };
+        }
+        if (name === "slots") {
+          return {
+            doc: vi.fn(() => slotDocRef),
+            where: vi.fn(() => slotQuery),
+          };
+        }
         throw new Error("unexpected nested collection " + name);
       }),
       __participantRef: participantRef,
+      __slotDocRef: slotDocRef,
+      __slotQuery: slotQuery,
     };
     return {
       id: i.id,
@@ -124,9 +186,19 @@ function wireFirestore(liveInstances: InstanceFixture[]): WiringResult {
 
   runTransactionMock.mockImplementation(async (callback) => {
     // Find which instance ref the upcoming tx.set/get refers to. We
-    // expose `tx.get(participantRef)` and `tx.set(participantRef, data)`.
+    // expose `tx.get(participantRef)`, `tx.get(slotQuery)` and
+    // `tx.set(ref, data)`.
     const tx = {
       get: vi.fn(async (ref: object) => {
+        const query = ref as { __slotQueryFor?: string; __taken?: number[] };
+        if (query.__slotQueryFor) {
+          return {
+            docs: (query.__taken ?? []).map((winIndex, n) => ({
+              id: `other-${n}`,
+              data: () => ({ winIndex }),
+            })),
+          };
+        }
         const inst = instanceDocs.find((d) => d.ref.__participantRef === ref);
         if (inst?.__existing) {
           return { exists: true, data: () => inst.__existing };
@@ -134,13 +206,18 @@ function wireFirestore(liveInstances: InstanceFixture[]): WiringResult {
         return { exists: false };
       }),
       set: vi.fn((ref: object, data: Record<string, unknown>) => {
+        const slotOwner = instanceDocs.find((d) => d.ref.__slotDocRef === ref);
+        if (slotOwner) {
+          slotCalls.push({ instanceId: slotOwner.id, data });
+          return;
+        }
         setCalls.push({ ref, data });
       }),
     };
     await callback(tx);
   });
 
-  return { txCalls: [], setCalls, auditAdd };
+  return { txCalls: [], setCalls, slotCalls, sealCalls, auditAdd };
 }
 
 const POLL_INSTANCE: InstanceFixture = {
@@ -320,6 +397,117 @@ describe("minigameJoin handler", () => {
     await handler.join(buildReq({ alias: "Test" }, { slug: "x" }), res);
     // Should not throw / not 500. Card empty in summary.
     expect(res.__status).toBeUndefined();
+  });
+
+  describe("classic bingo — staggered card dealing", () => {
+    const CLASSIC_TERMS = Array.from({ length: 50 }, (_, i) => `t${i + 1}`);
+    const classicInstance = (
+      overrides: Partial<InstanceFixture> = {}
+    ): InstanceFixture => ({
+      id: "i-classic",
+      type: "bingo",
+      state: "live",
+      config: { terms: CLASSIC_TERMS, classic: true, maxWinnersPerDraw: 1 },
+      sealedOrder: [...CLASSIC_TERMS].reverse(),
+      ...overrides,
+    });
+
+    it("deals a card and reserves the ball it wins on", async () => {
+      const wiring = wireFirestore([classicInstance()]);
+      const res = buildRes();
+      await handler.join(buildReq({ alias: "Ana" }, { slug: "x" }), res);
+
+      expect(wiring.setCalls).toHaveLength(1);
+      expect(wiring.setCalls[0].data.bingoCard).toHaveLength(16);
+      expect(wiring.slotCalls).toHaveLength(1);
+      const slot = wiring.slotCalls[0].data;
+      expect(slot.uid).toBe("anon-uid-1");
+      expect(typeof slot.winIndex).toBe("number");
+      expect(slot.relaxed).toBe(false);
+    });
+
+    it("keeps the winning ball out of the world-readable participant doc", async () => {
+      const wiring = wireFirestore([classicInstance()]);
+      const res = buildRes();
+      await handler.join(buildReq({ alias: "Ana" }, { slug: "x" }), res);
+
+      const stored = wiring.setCalls[0].data;
+      expect(stored.winIndex).toBeUndefined();
+      expect(stored.bingoWinIndex).toBeUndefined();
+      // And nothing in the API response leaks it either.
+      expect(JSON.stringify(res.__body)).not.toContain("winIndex");
+    });
+
+    it("re-deals when the ball it would win on is already taken", async () => {
+      // Deal once with nothing reserved to learn the natural ball...
+      const first = wireFirestore([classicInstance()]);
+      await handler.join(buildReq({ alias: "Ana" }, { slug: "x" }), buildRes());
+      const natural = first.slotCalls[0].data.winIndex as number;
+      const naturalCard = first.setCalls[0].data.bingoCard;
+
+      // ...then reserve exactly that ball and join again as the same uid.
+      const second = wireFirestore([
+        classicInstance({ takenWinIndices: [natural] }),
+      ]);
+      await handler.join(buildReq({ alias: "Ana" }, { slug: "x" }), buildRes());
+
+      expect(second.slotCalls[0].data.winIndex).not.toBe(natural);
+      expect(second.setCalls[0].data.bingoCard).not.toEqual(naturalCard);
+      expect(second.slotCalls[0].data.relaxed).toBe(false);
+    });
+
+    it("seals the calling sequence when the instance has none yet", async () => {
+      const wiring = wireFirestore([
+        classicInstance({ sealedOrder: undefined }),
+      ]);
+      await handler.join(buildReq({ alias: "Ana" }, { slug: "x" }), buildRes());
+      expect(wiring.sealCalls).toHaveLength(1);
+      expect(wiring.sealCalls[0].data.order).toHaveLength(50);
+      expect(wiring.slotCalls).toHaveLength(1);
+    });
+
+    it("still deals when every candidate ball is taken, flagging the squeeze", async () => {
+      // Reserve a wide swathe of balls so no candidate can be free.
+      const wiring = wireFirestore([
+        classicInstance({
+          takenWinIndices: Array.from({ length: 50 }, (_, i) => i + 1),
+        }),
+      ]);
+      const res = buildRes();
+      await handler.join(buildReq({ alias: "Ana" }, { slug: "x" }), res);
+      expect(res.__status).toBeUndefined();
+      expect(wiring.setCalls[0].data.bingoCard).toHaveLength(16);
+      expect(wiring.slotCalls[0].data.relaxed).toBe(true);
+    });
+
+    it("does not touch the private collections in conference mode", async () => {
+      const wiring = wireFirestore([
+        {
+          id: "i-conference",
+          type: "bingo",
+          state: "live",
+          config: { terms: CLASSIC_TERMS },
+        },
+      ]);
+      await handler.join(buildReq({ alias: "Ana" }, { slug: "x" }), buildRes());
+      expect(wiring.slotCalls).toHaveLength(0);
+      expect(wiring.sealCalls).toHaveLength(0);
+      expect(wiring.setCalls[0].data.bingoCard).toHaveLength(16);
+    });
+
+    it("hands out no card when a classic bank is too small, without failing the join", async () => {
+      const wiring = wireFirestore([
+        classicInstance({
+          config: { terms: ["a", "b", "c"], classic: true },
+          sealedOrder: undefined,
+        }),
+      ]);
+      const res = buildRes();
+      await handler.join(buildReq({ alias: "Ana" }, { slug: "x" }), res);
+      expect(res.__status).toBeUndefined();
+      expect(wiring.setCalls[0].data.bingoCard).toEqual([]);
+      expect(wiring.slotCalls).toHaveLength(0);
+    });
   });
 
   it("returns 500 when Firestore unexpectedly throws", async () => {

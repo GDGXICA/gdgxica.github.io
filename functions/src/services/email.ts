@@ -60,6 +60,94 @@ export function htmlEscape(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
+const FROM_NAME = "GDG ICA";
+
+async function sendPlain(
+  to: string,
+  subject: string,
+  bodyHtml: string,
+  bodyText: string
+) {
+  await getTransporter().sendMail({
+    from: `"${FROM_NAME}" <${GMAIL_USER.value()}>`,
+    to,
+    subject: singleLine(subject),
+    text: bodyText,
+    html: bodyHtml,
+  });
+}
+
+/**
+ * Invitación con el enlace de canje. El token viaja SOLO aquí: en Firestore
+ * se guarda su hash, así que ni con acceso de lectura a la base se puede
+ * canjear una invitación ajena.
+ */
+export async function sendInvitationEmail(mail: {
+  to: string;
+  roleLabel: string;
+  url: string;
+  invitedBy: string;
+  expiresAt: Date;
+}): Promise<void> {
+  const roleLabel = singleLine(mail.roleLabel);
+  const invitedBy = singleLine(mail.invitedBy);
+  const expires = mail.expiresAt.toLocaleDateString("es-PE");
+
+  await sendPlain(
+    mail.to,
+    `Te invitamos a colaborar en la plataforma de GDG ICA`,
+    `<p>Hola,</p>` +
+      `<p><strong>${htmlEscape(invitedBy)}</strong> te ha invitado a colaborar ` +
+      `en la plataforma de la comunidad GDG ICA como <strong>${htmlEscape(roleLabel)}</strong>.</p>` +
+      `<p><a href="${htmlEscape(mail.url)}">Aceptar la invitación</a></p>` +
+      `<p>La invitación caduca el ${expires} y solo funciona con esta ` +
+      `dirección de correo.</p>` +
+      `<p>Si no esperabas este mensaje, puedes ignorarlo.</p>` +
+      `<p>Comunidad GDG ICA</p>`,
+    `Hola,\n\n${invitedBy} te ha invitado a colaborar en la plataforma de ` +
+      `GDG ICA como ${roleLabel}.\n\n${mail.url}\n\n` +
+      `Caduca el ${expires} y solo funciona con esta dirección de correo.\n\n` +
+      `Comunidad GDG ICA`
+  );
+}
+
+/** Avisa del resultado de una solicitud de acceso. */
+export async function sendAccessDecisionEmail(mail: {
+  to: string;
+  approved: boolean;
+  roleLabel?: string;
+  note?: string;
+}): Promise<void> {
+  const note = mail.note ? singleLine(mail.note) : "";
+  const noteHtml = note ? `<p>Nota: ${htmlEscape(note)}</p>` : "";
+  const noteText = note ? `\nNota: ${note}\n` : "";
+
+  if (mail.approved) {
+    const roleLabel = singleLine(mail.roleLabel ?? "");
+    await sendPlain(
+      mail.to,
+      "Tu solicitud de acceso fue aprobada",
+      `<p>Hola,</p><p>Tu solicitud para colaborar en la plataforma de GDG ICA ` +
+        `fue aprobada con el rol <strong>${htmlEscape(roleLabel)}</strong>.</p>` +
+        `${noteHtml}<p>Ya puedes entrar en /admin.</p><p>Comunidad GDG ICA</p>`,
+      `Hola,\n\nTu solicitud fue aprobada con el rol ${roleLabel}.\n${noteText}\n` +
+        `Ya puedes entrar en /admin.\n\nComunidad GDG ICA`
+    );
+    return;
+  }
+
+  await sendPlain(
+    mail.to,
+    "Sobre tu solicitud de acceso",
+    `<p>Hola,</p><p>Por ahora no hemos podido aprobar tu solicitud de acceso ` +
+      `a la plataforma de GDG ICA.</p>${noteHtml}` +
+      `<p>Gracias por el interés — sigues siendo parte de la comunidad.</p>` +
+      `<p>Comunidad GDG ICA</p>`,
+    `Hola,\n\nPor ahora no hemos podido aprobar tu solicitud.\n${noteText}\n` +
+      `Gracias por el interés.\n\nComunidad GDG ICA`
+  );
+}
+
 /** Sends one certificate email with the PDF attached. */
 export async function sendCertificateEmail(
   mail: CertificateEmail

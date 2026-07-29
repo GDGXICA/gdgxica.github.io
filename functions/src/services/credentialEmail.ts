@@ -13,7 +13,8 @@ import { getTransporter, htmlEscape, singleLine } from "./email";
 // does NOT register anybody, and an attendee who believes otherwise is
 // worse off than one who never filled the form.
 
-export type CredentialEmailTemplate = "credential" | "photo_removed";
+export type CredentialEmailTemplate =
+  "credential" | "photo_removed" | "reminder";
 
 export interface CredentialEmail {
   to: string;
@@ -53,12 +54,16 @@ export async function sendCredentialEmail(
   const subject =
     mail.template === "photo_removed"
       ? `Actualizamos tu credencial — ${eventName}`
-      : `Tu credencial de ${eventName}`;
+      : mail.template === "reminder"
+        ? `Te falta un paso para asistir a ${eventName}`
+        : `Tu credencial de ${eventName}`;
 
   const body =
     mail.template === "photo_removed"
       ? photoRemovedBody(mail, eventName, firstName)
-      : credentialBody(mail, eventName, firstName);
+      : mail.template === "reminder"
+        ? reminderBody(mail, eventName, firstName)
+        : credentialBody(mail, eventName, firstName);
 
   await getTransporter().sendMail({
     from: `"GDG ICA" <${GMAIL_USER.value()}>`,
@@ -66,15 +71,16 @@ export async function sendCredentialEmail(
     subject,
     text: body.text,
     html: body.html,
-    attachments: mail.image
-      ? [
-          {
-            filename: `credencial-${asciiSlug(mail.eventName)}.jpg`,
-            content: mail.image,
-            contentType: "image/jpeg",
-          },
-        ]
-      : [],
+    attachments:
+      mail.template !== "reminder" && mail.image
+        ? [
+            {
+              filename: `credencial-${asciiSlug(mail.eventName)}.jpg`,
+              content: mail.image,
+              contentType: "image/jpeg",
+            },
+          ]
+        : [],
   });
 }
 
@@ -143,6 +149,51 @@ function photoRemovedBody(
     `<p><a href="${htmlEscape(url)}">Genera una credencial nueva</a></p>` +
     `<p>Si crees que fue un error, responde a este correo.</p>` +
     `<p>Comunidad GDG ICA</p>`;
+
+  return { text, html };
+}
+
+/**
+ * The nudge for someone who has their credential but never finished
+ * registering on the official panel.
+ *
+ * Deliberately short and single-purpose. The credential email already
+ * explained everything; the only job here is the link, so anything else
+ * competing with it makes the message worse.
+ */
+function reminderBody(
+  mail: CredentialEmail,
+  eventName: string,
+  firstName: string
+) {
+  const url = mail.registrationUrl;
+
+  const text =
+    `Hola ${firstName},\n\n` +
+    `Ya tienes tu credencial de ${eventName}, pero todavia no apareces ` +
+    `inscrito en el panel oficial del evento. Sin ese paso no podemos ` +
+    `reservarte un lugar.\n\n` +
+    `Completa tu inscripcion aqui:\n${url}\n\n` +
+    `El panel cierra la sesion a los 15 minutos, asi que ten tus datos a ` +
+    `mano antes de empezar.\n\n` +
+    `Si ya lo hiciste, ignora este correo.\n\n` +
+    `Nos vemos,\nComunidad GDG ICA`;
+
+  const html =
+    `<p>Hola <strong>${htmlEscape(firstName)}</strong>,</p>` +
+    `<p>Ya tienes tu credencial de <strong>${htmlEscape(eventName)}</strong>, ` +
+    `pero <strong>todavía no apareces inscrito</strong> en el panel oficial ` +
+    `del evento. Sin ese paso no podemos reservarte un lugar.</p>` +
+    `<table role="presentation" cellpadding="0" cellspacing="0" ` +
+    `style="margin:24px 0"><tr><td style="background:#2463eb;border-radius:8px">` +
+    `<a href="${htmlEscape(url)}" ` +
+    `style="display:inline-block;padding:16px 28px;color:#ffffff;` +
+    `font-size:17px;font-weight:700;text-decoration:none">` +
+    `Completar mi inscripción</a></td></tr></table>` +
+    `<p>El panel cierra la sesión a los <strong>15 minutos</strong>, así que ` +
+    `ten tus datos a mano antes de empezar.</p>` +
+    `<p>Si ya lo hiciste, ignora este correo.</p>` +
+    `<p>Nos vemos,<br/>Comunidad GDG ICA</p>`;
 
   return { text, html };
 }

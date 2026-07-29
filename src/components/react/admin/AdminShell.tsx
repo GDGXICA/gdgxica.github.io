@@ -1,23 +1,106 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "./AuthProvider";
+import type { Permission } from "@/lib/permissions";
 
-const NAV_ITEMS = [
+/**
+ * Cada entrada declara el permiso que la habilita, en vez de la antigua
+ * bandera `adminOnly`. Así el menú refleja los permisos reales — incluidos
+ * los concedidos a una persona concreta — y no una jerarquía de roles.
+ *
+ * Ocultar una entrada es cosmético: la sección y su endpoint vuelven a
+ * comprobar el permiso.
+ */
+const NAV_ITEMS: {
+  label: string;
+  href: string;
+  icon: string;
+  permission?: Permission;
+}[] = [
   { label: "Dashboard", href: "/admin", icon: "📊" },
-  { label: "Eventos", href: "/admin/events", icon: "📅" },
-  { label: "Check-in", href: "/admin/checkin", icon: "✅" },
-  { label: "Equipo", href: "/admin/team", icon: "👥", adminOnly: true },
-  { label: "Speakers", href: "/admin/speakers", icon: "🎤" },
-  { label: "Ubicaciones", href: "/admin/locations", icon: "📍" },
-  { label: "Sponsors", href: "/admin/sponsors", icon: "🤝", adminOnly: true },
-  { label: "Usuarios", href: "/admin/users", icon: "👤", adminOnly: true },
-  { label: "Stats", href: "/admin/stats", icon: "📈", adminOnly: true },
-  { label: "Formularios", href: "/admin/forms", icon: "📋" },
-  { label: "Certificados", href: "/admin/certificates", icon: "📜" },
+  {
+    label: "Eventos",
+    href: "/admin/events",
+    icon: "📅",
+    permission: "events:read",
+  },
+  {
+    label: "Check-in",
+    href: "/admin/checkin",
+    icon: "✅",
+    permission: "roster:read",
+  },
+  { label: "Equipo", href: "/admin/team", icon: "👥", permission: "team:read" },
+  {
+    label: "Speakers",
+    href: "/admin/speakers",
+    icon: "🎤",
+    permission: "speakers:read",
+  },
+  {
+    label: "Ubicaciones",
+    href: "/admin/locations",
+    icon: "📍",
+    permission: "locations:read",
+  },
+  {
+    label: "Sponsors",
+    href: "/admin/sponsors",
+    icon: "🤝",
+    permission: "sponsors:read",
+  },
+  {
+    label: "Usuarios",
+    href: "/admin/users",
+    icon: "👤",
+    permission: "users:read",
+  },
+  {
+    label: "Propuestas",
+    href: "/admin/proposals",
+    icon: "💡",
+    permission: "proposals:create",
+  },
+  {
+    label: "Accesos",
+    href: "/admin/access",
+    icon: "🚪",
+    permission: "access:review",
+  },
+  {
+    label: "Roles y permisos",
+    href: "/admin/roles",
+    icon: "🔑",
+    permission: "users:read",
+  },
+  {
+    label: "Auditoría",
+    href: "/admin/audit",
+    icon: "🧾",
+    permission: "audit:read",
+  },
+  {
+    label: "Stats",
+    href: "/admin/stats",
+    icon: "📈",
+    permission: "stats:read",
+  },
+  {
+    label: "Formularios",
+    href: "/admin/forms",
+    icon: "📋",
+    permission: "forms:read",
+  },
+  {
+    label: "Certificados",
+    href: "/admin/certificates",
+    icon: "📜",
+    permission: "certificates:send",
+  },
   {
     label: "Minijuegos",
     href: "/admin/minigame-templates",
     icon: "🎮",
-    adminOnly: true,
+    permission: "minigames:template:read",
   },
 ];
 
@@ -27,7 +110,7 @@ interface Props {
 }
 
 export function AdminShell({ currentPage, children }: Props) {
-  const { user, role, signOut, isAdmin } = useAuth();
+  const { user, role, signOut, can } = useAuth();
   const [dark, setDark] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -42,7 +125,9 @@ export function AdminShell({ currentPage, children }: Props) {
     localStorage.setItem("admin-theme", next ? "dark" : "light");
   }
 
-  const visibleItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => !item.permission || can(item.permission)
+  );
 
   const sidebarContent = (
     <>

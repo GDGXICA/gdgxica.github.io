@@ -5,7 +5,7 @@ import type {
   WordCloudConfig,
 } from "../admin/minigame-templates/types";
 import { useAggregates } from "./useAggregates";
-import { useBingoWinners } from "./useBingoWinners";
+import { useBingoWinners, type BingoWinner } from "./useBingoWinners";
 import { useLiveMinigames } from "./useLiveMinigames";
 import { useRouletteParticipants } from "./useRouletteParticipants";
 import { useWordCloud } from "./useWordCloud";
@@ -400,7 +400,142 @@ function formatWinTime(value: { seconds?: number } | null | undefined): string {
   });
 }
 
+// Google brand colours, cycled per ball so the history strip reads as a
+// row of distinct balls rather than a wall of one colour. The faded
+// variants are spelled out rather than built as `${color}/70`, because
+// Tailwind only generates classes it can find literally in the source —
+// an interpolated opacity modifier would come out unstyled.
+const BALL_COLORS = [
+  "bg-google-blue",
+  "bg-google-red",
+  "bg-google-yellow",
+  "bg-google-green",
+];
+
+const BALL_COLORS_SOFT = [
+  "bg-google-blue/70",
+  "bg-google-red/70",
+  "bg-google-yellow/70",
+  "bg-google-green/70",
+];
+
+function ballColor(index: number, soft = false): string {
+  const palette = soft ? BALL_COLORS_SOFT : BALL_COLORS;
+  // Guard the negative case (index -1 before the first ball) so a bad
+  // index yields a colour rather than the literal class "undefined".
+  const n = palette.length;
+  return palette[((index % n) + n) % n];
+}
+
 function ProjectorBingo({
+  slug,
+  instance,
+}: {
+  slug: string;
+  instance: LiveInstance;
+}) {
+  if (instance.config?.classic === true) {
+    return <ProjectorBingoClassic slug={slug} instance={instance} />;
+  }
+  return <ProjectorBingoConference slug={slug} instance={instance} />;
+}
+
+// Classic mode: the admin calls a ball, it drops onto the screen, and the
+// ones already called line up behind it.
+function ProjectorBingoClassic({
+  slug,
+  instance,
+}: {
+  slug: string;
+  instance: LiveInstance;
+}) {
+  const { winners } = useBingoWinners(slug, instance.id);
+  const prizes = (instance.config?.prizes as number | undefined) ?? 3;
+  const bankSize =
+    (instance.config?.terms as string[] | undefined)?.length ?? 0;
+
+  const drawn = instance.drawnTerms ?? [];
+  const drawCount = instance.drawCount ?? drawn.length;
+  const current = instance.lastDrawnTerm ?? null;
+
+  // Re-key the ball on every new call so React remounts it and the drop
+  // animation replays. The count is part of the key because two balls
+  // called inside the same second would otherwise share a timestamp and
+  // the second one would appear without animating.
+  const drawKey = `${instance.lastDrawAt?.seconds ?? 0}-${drawCount}`;
+  const previous = useMemo(() => drawn.slice(0, -1).reverse(), [drawn]);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-4">
+        <Badge color="green">Bingo clásico</Badge>
+        <span className="text-lg text-white/70 tabular-nums">
+          {drawCount}
+          {bankSize > 0 && ` / ${bankSize}`} bolas
+        </span>
+      </div>
+      <h2 className="mt-3 text-3xl font-bold">{instance.title}</h2>
+
+      <div className="mt-6 flex min-h-[15rem] flex-col items-center justify-center rounded-2xl border border-white/10 bg-black/40 p-6">
+        {current ? (
+          <div
+            key={drawKey}
+            className={`animate-bingo-ball-drop flex h-44 w-44 items-center justify-center rounded-full ${ballColor(
+              drawCount - 1
+            )} p-4 text-center shadow-2xl`}
+          >
+            <span className="text-2xl leading-tight font-extrabold break-words text-white drop-shadow">
+              {current}
+            </span>
+          </div>
+        ) : (
+          <>
+            {/* Nothing called yet. Idling balls beat a blank rectangle. */}
+            <div className="flex items-end gap-4" aria-hidden>
+              {BALL_COLORS.map((color, i) => (
+                <span
+                  key={color}
+                  className={`animate-bingo-tumble h-12 w-12 rounded-full ${color}`}
+                  style={{ animationDelay: `${i * 180}ms` }}
+                />
+              ))}
+            </div>
+            <p className="mt-6 text-xl text-white/70">
+              Esperando la primera bola...
+            </p>
+          </>
+        )}
+      </div>
+
+      {previous.length > 0 && (
+        <div className="mt-6">
+          <p className="text-xs tracking-widest text-white/50 uppercase">
+            Ya cantadas
+          </p>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {previous.map((term, i) => (
+              <li
+                key={`${term}-${i}`}
+                className={`flex h-20 w-20 items-center justify-center rounded-full ${ballColor(
+                  previous.length - 1 - i,
+                  true
+                )} p-2 text-center`}
+              >
+                <span className="text-[0.7rem] leading-tight font-bold break-words text-white">
+                  {term}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <BingoWinnerList winners={winners} prizes={prizes} />
+    </div>
+  );
+}
+
+function ProjectorBingoConference({
   slug,
   instance,
 }: {
@@ -415,33 +550,55 @@ function ProjectorBingo({
       <p className="mt-2 text-xl text-white/80">
         Marca tu cartón cuando el speaker mencione un término.
       </p>
-      <div className="mt-6 rounded-xl border border-white/10 bg-black/40 p-6">
-        <p className="text-xs tracking-widest text-white/50 uppercase">
-          Ganadores
-        </p>
-        {winners.length === 0 ? (
-          <p className="mt-3 text-white/60">Aún no hay ganadores.</p>
-        ) : (
-          <ol className="mt-3 space-y-2 text-lg">
-            {winners.map((w, i) => (
-              <li
-                key={w.uid}
-                className="flex items-center justify-between gap-4"
-              >
-                <span>
-                  <span aria-hidden className="mr-2">
-                    {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🎉"}
+      <BingoWinnerList winners={winners} />
+    </div>
+  );
+}
+
+// Shared by both bingo modes. `prizes` is classic-only: conference mode
+// has no ball count to rank against, so it just lists who got there first.
+function BingoWinnerList({
+  winners,
+  prizes,
+}: {
+  winners: BingoWinner[];
+  prizes?: number;
+}) {
+  return (
+    <div className="mt-6 rounded-xl border border-white/10 bg-black/40 p-6">
+      <p className="text-xs tracking-widest text-white/50 uppercase">
+        Ganadores
+      </p>
+      {winners.length === 0 ? (
+        <p className="mt-3 text-white/60">Aún no hay ganadores.</p>
+      ) : (
+        <ol className="mt-3 space-y-2 text-lg">
+          {winners.map((w, i) => (
+            <li key={w.uid} className="flex items-center justify-between gap-4">
+              <span>
+                <span aria-hidden className="mr-2">
+                  {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🎉"}
+                </span>
+                {w.alias}
+                {prizes !== undefined && (
+                  <span
+                    className={`ml-3 rounded-full px-2 py-0.5 text-xs font-semibold tracking-wide uppercase ${
+                      i < prizes
+                        ? "bg-google-green/25 text-green-200"
+                        : "bg-white/10 text-white/60"
+                    }`}
+                  >
+                    {i < prizes ? "Premio" : "Mención"}
                   </span>
-                  {w.alias}
-                </span>
-                <span className="text-sm text-white/60 tabular-nums">
-                  {formatWinTime(w.bingoWonAt)}
-                </span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
+                )}
+              </span>
+              <span className="text-sm text-white/60 tabular-nums">
+                {formatWinTime(w.bingoWonAt)}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   );
 }

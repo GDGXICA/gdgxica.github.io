@@ -107,10 +107,17 @@ export const drainCredentialEmails = onSchedule(
           groupLetter: data.groupLetter ?? "",
           registrationUrl: await readRegistrationUrl(db, eventSlug),
           image,
+          // Mapped explicitly rather than cast: an unknown value must
+          // fall back to the credential email, never be passed through.
+          // Before the reminder existed this collapsed everything that was
+          // not photo_removed into "credential", which would have sent a
+          // queued reminder the wrong message with the card re-attached.
           template:
             data.emailTemplate === "photo_removed"
               ? "photo_removed"
-              : "credential",
+              : data.emailTemplate === "reminder"
+                ? "reminder"
+                : "credential",
           credentialPageUrl: `${SITE_ORIGIN}/events/${eventSlug}/credencial`,
         });
 

@@ -1,0 +1,8 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { AccessGateway } from "@/components/react/admin/access/AccessGateway";
+---
+
+<AdminLayout title="Solicitar acceso">
+  <AccessGateway client:load mode="request" />
+</AdminLayout>

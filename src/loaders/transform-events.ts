@@ -64,6 +64,11 @@ interface ExternalEvent {
     }[]
   >;
   sponsors?: { id: string; image_url: string; alt: string }[];
+  credential?: {
+    enabled?: boolean;
+    headline?: string;
+    group_letters?: string[];
+  };
 }
 
 interface ExternalSpeaker {
@@ -162,6 +167,22 @@ function transformEvent(
     schedule,
     speakers,
     sponsors,
+    credential: buildCredential(event),
+  };
+}
+
+// Undefined — not a disabled stub — when the event carries no credential
+// block, so the schema's `.optional()` is what distinguishes "this event
+// has no credential feature" from "it has one and it is off".
+function buildCredential(event: ExternalEvent) {
+  if (!event.credential) return undefined;
+
+  return {
+    enabled: event.credential.enabled ?? false,
+    headline: event.credential.headline || `Soy parte de ${event.title}`,
+    groupLetters: event.credential.group_letters?.length
+      ? event.credential.group_letters
+      : ["A", "B", "C", "D"],
   };
 }
 
