@@ -127,8 +127,61 @@ const realApi = {
 
   // Users
   listUsers: () => request("GET", "/users"),
-  updateUserRole: (uid: string, role: string) =>
-    request("PATCH", `/users/${uid}/role`, { role }),
+  updateUserRole: (uid: string, role: string, reason: string) =>
+    request("PATCH", `/users/${uid}/role`, { role, reason }),
+  updateUserStatus: (uid: string, status: string, reason: string) =>
+    request("PATCH", `/users/${uid}/status`, { status, reason }),
+  updateUserGrants: (
+    uid: string,
+    grants: unknown[],
+    revocations: string[],
+    reason: string
+  ) => request("PUT", `/users/${uid}/grants`, { grants, revocations, reason }),
+
+  // Audit
+  listAudit: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request("GET", `/audit${qs ? `?${qs}` : ""}`);
+  },
+
+  // Propuestas de contenido
+  listProposals: () => request("GET", "/proposals"),
+  createProposal: (type: string, payload: unknown) =>
+    request("POST", "/proposals", { type, payload }),
+  updateProposal: (id: string, payload: unknown) =>
+    request("PUT", `/proposals/${id}`, { payload }),
+  reviewProposal: (id: string, decision: string, note?: string) =>
+    request("POST", `/proposals/${id}/review`, { decision, note }),
+  publishProposal: (id: string) => request("POST", `/proposals/${id}/publish`),
+
+  // Equipo por evento
+  listEventStaff: (slug: string) => request("GET", `/events/${slug}/staff`),
+  assignEventStaff: (slug: string, uid: string, data: unknown) =>
+    request("PUT", `/events/${slug}/staff/${uid}`, data),
+  removeEventStaff: (slug: string, uid: string) =>
+    request("DELETE", `/events/${slug}/staff/${uid}`),
+  listMyEvents: () => request("GET", "/me/events"),
+
+  // Access — solicitudes e invitaciones
+  getMyAccessRequest: () => request("GET", "/access/requests/me"),
+  createAccessRequest: (data: unknown) =>
+    request("POST", "/access/requests", data),
+  listAccessRequests: (status = "pending") =>
+    request("GET", `/access/requests?status=${encodeURIComponent(status)}`),
+  decideAccessRequest: (
+    uid: string,
+    approve: boolean,
+    note: string,
+    role?: string
+  ) =>
+    request("POST", `/access/requests/${uid}/decide`, { approve, note, role }),
+  listInvitations: () => request("GET", "/access/invitations"),
+  createInvitation: (email: string, role: string) =>
+    request("POST", "/access/invitations", { email, role }),
+  revokeInvitation: (id: string) =>
+    request("DELETE", `/access/invitations/${id}`),
+  redeemInvitation: (token: string) =>
+    request("POST", "/access/invitations/redeem", { token }),
 
   // Forms
   listForms: () => request("GET", "/forms"),
@@ -238,6 +291,27 @@ const realApi = {
     request<{ winnerId: string; alias: string; spinNumber: number }>(
       "POST",
       `/events/${encodeURIComponent(slug)}/minigames/${id}/roulette/spin`
+    ),
+
+  // Classic bingo: the admin calls a ball (admin-only)...
+  drawBingoBall: (slug: string, id: string) =>
+    request<{ term: string; drawCount: number; remaining: number }>(
+      "POST",
+      `/events/${encodeURIComponent(slug)}/minigames/${id}/bingo/draw`
+    ),
+  // ...and the participant claims the line. Verified server-side against
+  // the balls actually called, so nothing here is taken on trust.
+  claimBingo: (slug: string, id: string) =>
+    request<{
+      rank: number;
+      winDraw: number;
+      prizes: number;
+      hasPrize: boolean;
+      lines: number[][];
+      alreadyWon: boolean;
+    }>(
+      "POST",
+      `/events/${encodeURIComponent(slug)}/minigames/${id}/bingo/claim`
     ),
 
   // Certificates (generated on the fly + emailed; nothing is stored)

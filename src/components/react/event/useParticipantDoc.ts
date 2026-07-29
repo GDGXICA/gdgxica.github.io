@@ -7,6 +7,10 @@ export interface ParticipantDoc {
   bingoCard?: string[];
   bingoMarked?: boolean[];
   bingoWonAt?: { seconds: number } | null;
+  // Classic mode only: the placing the Cloud Function assigned when it
+  // verified the claim, and which ball it happened on.
+  bingoRank?: number;
+  bingoWinDraw?: number;
   quizScore?: number;
   quizAnsweredQuestions?: string[];
 }

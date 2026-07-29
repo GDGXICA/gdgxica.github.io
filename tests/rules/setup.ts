@@ -11,6 +11,12 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const RULES_PATH = resolve(HERE, "../../firestore.rules");
 const STORAGE_RULES_PATH = resolve(HERE, "../../storage.rules");
 
+// El puerto se puede fijar por entorno para poder correr esta suite mientras
+// otro emulador ocupa el 8080 (otra copia del repo, otra sesión de trabajo).
+// Sin esto, dos checkouts del mismo proyecto no pueden testear a la vez.
+const HOST = process.env.FIRESTORE_EMULATOR_HOST_ADDR ?? "127.0.0.1";
+const PORT = Number(process.env.FIRESTORE_EMULATOR_PORT ?? 8080);
+
 let env: RulesTestEnvironment | null = null;
 
 export async function getTestEnv(): Promise<RulesTestEnvironment> {
@@ -19,8 +25,8 @@ export async function getTestEnv(): Promise<RulesTestEnvironment> {
     projectId: PROJECT_ID,
     firestore: {
       rules: readFileSync(RULES_PATH, "utf8"),
-      host: "127.0.0.1",
-      port: 8080,
+      host: HOST,
+      port: PORT,
     },
     // Storage is configured on the SAME environment because the credential
     // storage rule resolves the caller's role with firestore.get() against

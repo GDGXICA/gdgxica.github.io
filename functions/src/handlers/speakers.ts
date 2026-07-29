@@ -4,6 +4,7 @@ import { writeAuditLog, triggerRebuildAndLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import { GitHubService } from "../services/github";
+import { publishSpeaker } from "../services/publish";
 import { GITHUB_TOKEN } from "../config";
 
 interface Speaker {
@@ -43,24 +44,8 @@ export async function addSpeaker(req: Request, res: Response) {
     const github = new GitHubService(GITHUB_TOKEN.value());
     const user = (req as AuthenticatedRequest).user;
 
-    // Create individual speaker file
-    await github.putFile(
-      `speakers/${speaker.id}.json`,
-      JSON.stringify(speaker, null, 2),
-      `feat(speakers): add ${speaker.name}`
-    );
-
-    // Update index
-    const { data: index, sha } = await github.getFileContent<Speaker[]>(
-      "speakers/index.json"
-    );
-    index.push(speaker);
-    await github.putFile(
-      "speakers/index.json",
-      JSON.stringify(index, null, 2),
-      `feat(speakers): add ${speaker.name} to index`,
-      sha
-    );
+    // Compartido con la publicación de una propuesta aprobada.
+    await publishSpeaker(github, speaker);
 
     triggerRebuildAndLog(github);
 

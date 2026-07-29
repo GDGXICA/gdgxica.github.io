@@ -23,9 +23,12 @@ export async function listForms(req: Request, res: Response) {
       await github.getFileContent<FormEntry[]>("about/forms.json");
 
     const user = (req as AuthenticatedRequest).user;
-    const isAdmin = user.role === "admin";
+    // Quien puede gestionar formularios ve también los no públicos; el resto
+    // se queda con los públicos. Antes esto miraba el rol directamente, lo
+    // que dejaba fuera la posibilidad de concederlo por permiso.
+    const canSeeAll = user.permissions.has("forms:write");
 
-    const visible = isAdmin ? data : data.filter((f) => f.is_public);
+    const visible = canSeeAll ? data : data.filter((f) => f.is_public);
     res.json({ success: true, data: visible });
   } catch (err) {
     res.status(500).json({ success: false, error: safeError(err) });

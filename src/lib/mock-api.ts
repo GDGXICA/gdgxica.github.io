@@ -5,6 +5,11 @@ import {
   MOCK_SPONSORS,
   MOCK_STATS,
   MOCK_USERS,
+  MOCK_AUDIT,
+  MOCK_ACCESS_REQUESTS,
+  MOCK_INVITATIONS,
+  MOCK_EVENT_STAFF,
+  MOCK_PROPOSALS,
   MOCK_FORMS,
   MOCK_FORM_RESPONSES,
   MOCK_LOCATIONS,
@@ -44,6 +49,30 @@ export const mockApi = {
 
   listUsers: () => ok(MOCK_USERS),
   updateUserRole: () => ok({ uid: "dev", role: "admin" }),
+  updateUserStatus: () => ok({ uid: "dev", status: "active" }),
+  updateUserGrants: () => ok({ uid: "dev", grants: [], revocations: [] }),
+
+  listAudit: () => ok({ entries: MOCK_AUDIT, nextCursor: null }),
+
+  listProposals: () => ok(MOCK_PROPOSALS),
+  createProposal: () => ok({ id: "prop-nueva" }),
+  updateProposal: () => ok({ id: "prop-1" }),
+  reviewProposal: () => ok({ id: "prop-1", status: "approved" }),
+  publishProposal: () => ok({ id: "prop-1", publishedId: "charla-compose" }),
+
+  listEventStaff: () => ok(MOCK_EVENT_STAFF),
+  assignEventStaff: () => ok({ uid: "dev-volunteer" }),
+  removeEventStaff: () => ok(null),
+  listMyEvents: () => ok([{ eventSlug: "devfest-2026", role: "volunteer" }]),
+
+  getMyAccessRequest: () => ok(null),
+  createAccessRequest: () => ok({ status: "pending" }),
+  listAccessRequests: () => ok(MOCK_ACCESS_REQUESTS),
+  decideAccessRequest: () => ok({ uid: "dev", approved: true }),
+  listInvitations: () => ok(MOCK_INVITATIONS),
+  createInvitation: () => ok({ id: "inv-nueva" }),
+  revokeInvitation: () => ok(null),
+  redeemInvitation: () => ok({ role: "contributor" }),
 
   listForms: () => ok(MOCK_FORMS),
   addForm: () => ok({ id: "new-form" }),
@@ -90,6 +119,19 @@ export const mockApi = {
     hidden: boolean
   ) => ok({ id: wordId, hidden }),
   listMinigameBingoWinners: () => ok([]),
+
+  spinRoulette: () =>
+    ok({ winnerId: "mock-uid", alias: "Alias", spinNumber: 1 }),
+  drawBingoBall: () => ok({ term: "Firebase", drawCount: 1, remaining: 47 }),
+  claimBingo: () =>
+    ok({
+      rank: 1,
+      winDraw: 1,
+      prizes: 3,
+      hasPrize: true,
+      lines: [[0, 1, 2, 3]],
+      alreadyWon: false,
+    }),
 
   sendCertificates: (data: unknown) => {
     const recipients =

@@ -1,6 +1,12 @@
 import { afterAll, afterEach, beforeAll, describe, it } from "vitest";
 import { assertFails, assertSucceeds } from "@firebase/rules-unit-testing";
-import { doc, serverTimestamp, setDoc, Timestamp } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+  Timestamp,
+} from "firebase/firestore";
 import { cleanup, clearAll, getTestEnv } from "./setup";
 
 const SLUG = "devfest-2025";
@@ -23,11 +29,20 @@ const DIAG = marks(0, 5, 10, 15);
 const NO_LINE = marks(0, 1, 6, 11); // scattered, no full line
 const EMPTY = marks();
 
+const INSTANCE_PATH = `events/${SLUG}/minigames/${INSTANCE_ID}`;
+
 /** Seeds the participant doc exactly as the join Cloud Function leaves it:
- *  identity + card, and NO check-in / win fields. */
-async function seedParticipant() {
+ *  identity + card, and NO check-in / win fields. The parent instance doc
+ *  is seeded too, because the win rule reads its config to tell classic
+ *  mode from conference mode. */
+async function seedParticipant(classic = false) {
   const env = await getTestEnv();
   await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), INSTANCE_PATH), {
+      type: "bingo",
+      state: "live",
+      config: { terms: ["a", "b"], classic },
+    });
     await setDoc(doc(ctx.firestore(), PATH), {
       uid: UID,
       alias: "Jugador",
@@ -202,6 +217,125 @@ describe("firestore.rules — bingo win verification", () => {
       await assertFails(
         setDoc(doc(other, PATH), { bingoMarked: ROW0 }, { merge: true })
       );
+    });
+  });
+
+  // Classic mode has an admin calling balls, so "I completed a line" is
+  // only true for balls that were actually called — something rules
+  // cannot check, since it means cross-referencing the card against the
+  // called list. So the client is shut out of bingoWonAt entirely and
+  // /bingo/claim (Admin SDK, bypasses rules) does the verifying.
+  describe("classic mode — the client may not declare its own win", () => {
+    it("still allows marking cells", async () => {
+      await seedParticipant(true);
+      const db = asPlayer();
+      await assertSucceeds(
+        setDoc(doc(db, PATH), { bingoMarked: ROW0 }, { merge: true })
+      );
+    });
+
+    it("rejects a self-reported win even on a genuine, server-timed line", async () => {
+      await seedParticipant(true);
+      const db = asPlayer();
+      await assertFails(
+        setDoc(
+          doc(db, PATH),
+          { bingoMarked: ROW0, bingoWonAt: serverTimestamp() },
+          { merge: true }
+        )
+      );
+    });
+
+    it("rejects a self-reported win on a diagonal too", async () => {
+      await seedParticipant(true);
+      const db = asPlayer();
+      await assertFails(
+        setDoc(
+          doc(db, PATH),
+          { bingoMarked: DIAG, bingoWonAt: serverTimestamp() },
+          { merge: true }
+        )
+      );
+    });
+
+    it("lets the player keep marking after the server crowned them", async () => {
+      await seedParticipant(true);
+      const env = await getTestEnv();
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        // What /bingo/claim leaves behind.
+        await setDoc(
+          doc(ctx.firestore(), PATH),
+          {
+            bingoMarked: ROW0,
+            bingoWonAt: Timestamp.fromMillis(5000),
+            bingoRank: 1,
+            bingoWinDraw: 12,
+          },
+          { merge: true }
+        );
+      });
+      const db = asPlayer();
+      await assertSucceeds(
+        setDoc(
+          doc(db, PATH),
+          { bingoMarked: marks(0, 1, 2, 3, 7) },
+          { merge: true }
+        )
+      );
+    });
+
+    it("rejects a client rewriting the rank the server assigned", async () => {
+      await seedParticipant(true);
+      const db = asPlayer();
+      await assertFails(
+        setDoc(doc(db, PATH), { bingoRank: 1 }, { merge: true })
+      );
+      await assertFails(
+        setDoc(doc(db, PATH), { bingoWinDraw: 1 }, { merge: true })
+      );
+    });
+  });
+
+  // The sealed calling sequence and the per-participant ball reservations.
+  // Reading either would spoil the game: one reveals every future ball,
+  // the other reveals when each person is going to win.
+  describe("classic-mode secrets are unreadable", () => {
+    const SECRET_PATH = `${INSTANCE_PATH}/secret/draw`;
+    const SLOT_PATH = `${INSTANCE_PATH}/slots/${UID}`;
+
+    async function seedSecrets() {
+      const env = await getTestEnv();
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), SECRET_PATH), {
+          order: ["a", "b", "c"],
+        });
+        await setDoc(doc(ctx.firestore(), SLOT_PATH), {
+          uid: UID,
+          winIndex: 31,
+        });
+      });
+    }
+
+    it("denies reading the draw order, authenticated or not", async () => {
+      await seedParticipant(true);
+      await seedSecrets();
+      await assertFails(getDoc(doc(asPlayer(), SECRET_PATH)));
+      await assertFails(
+        getDoc(doc(env2.unauthenticatedContext().firestore(), SECRET_PATH))
+      );
+    });
+
+    it("denies reading which ball anyone wins on", async () => {
+      await seedParticipant(true);
+      await seedSecrets();
+      await assertFails(getDoc(doc(asPlayer(), SLOT_PATH)));
+    });
+
+    it("denies writing to either", async () => {
+      await seedParticipant(true);
+      const db = asPlayer();
+      await assertFails(setDoc(doc(db, SECRET_PATH), { order: ["x"] }));
+      await assertFails(setDoc(doc(db, SLOT_PATH), { winIndex: 1 }));
     });
   });
 });

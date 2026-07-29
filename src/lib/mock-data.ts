@@ -114,6 +114,8 @@ export const MOCK_STATS = {
   updated_at: new Date().toISOString(),
 };
 
+const NOW_SECONDS = Math.floor(Date.now() / 1000);
+
 export const MOCK_USERS = [
   {
     uid: "dev-admin",
@@ -121,7 +123,220 @@ export const MOCK_USERS = [
     displayName: "Admin Preview",
     photoURL: "",
     role: "admin",
-    lastLoginAt: { _seconds: Math.floor(Date.now() / 1000) },
+    status: "active",
+    grants: [],
+    revocations: [],
+    lastLoginAt: { _seconds: NOW_SECONDS },
+  },
+  {
+    uid: "dev-organizer",
+    email: "organizadora@preview.dev",
+    displayName: "Organizadora Preview",
+    photoURL: "",
+    role: "organizer",
+    status: "active",
+    grants: [],
+    revocations: [],
+    lastLoginAt: { _seconds: NOW_SECONDS - 3600 },
+  },
+  {
+    // Voluntaria: sin permisos globales; solo opera donde esté asignada.
+    uid: "dev-volunteer",
+    email: "voluntario@preview.dev",
+    displayName: "Voluntario Preview",
+    photoURL: "",
+    role: "volunteer",
+    status: "active",
+    grants: [],
+    revocations: [],
+    lastLoginAt: { _seconds: NOW_SECONDS - 86400 },
+  },
+  {
+    // Externo con un permiso puntual y con caducidad.
+    uid: "dev-contributor",
+    email: "externa@preview.dev",
+    displayName: "Colaboradora Externa",
+    photoURL: "",
+    role: "contributor",
+    status: "active",
+    grants: [
+      {
+        permission: "events:read",
+        scope: "*",
+        expiresAt: new Date(Date.now() + 7 * 86400_000).toISOString(),
+        grantedBy: "dev-admin",
+        reason: "Revisión de la agenda del DevFest",
+      },
+    ],
+    revocations: [],
+    lastLoginAt: { _seconds: NOW_SECONDS - 172800 },
+  },
+  {
+    uid: "dev-suspended",
+    email: "suspendido@preview.dev",
+    displayName: "Cuenta Suspendida",
+    photoURL: "",
+    role: "organizer",
+    status: "suspended",
+    grants: [],
+    revocations: [],
+    lastLoginAt: { _seconds: NOW_SECONDS - 604800 },
+  },
+];
+
+export const MOCK_PROPOSALS = [
+  {
+    id: "prop-1",
+    type: "event",
+    status: "submitted",
+    createdBy: "dev-contributor",
+    createdByName: "Colaboradora Externa",
+    createdByEmail: "externa@preview.dev",
+    payload: {
+      id: "charla-compose",
+      title: "Charla sobre Jetpack Compose",
+      description: "Una introducción práctica al toolkit de UI de Android.",
+      date: "2026-09-01",
+    },
+    createdAt: { _seconds: NOW_SECONDS - 5400 },
+    reviewNote: null,
+  },
+  {
+    id: "prop-2",
+    type: "speaker",
+    status: "changes_requested",
+    createdBy: "dev-contributor",
+    createdByName: "Colaboradora Externa",
+    createdByEmail: "externa@preview.dev",
+    payload: { id: "ana-perez", name: "Ana Pérez" },
+    createdAt: { _seconds: NOW_SECONDS - 172800 },
+    reviewNote: "Falta la biografía y una foto.",
+  },
+  {
+    id: "prop-3",
+    type: "event",
+    status: "approved",
+    createdBy: "dev-contributor",
+    createdByName: "Colaboradora Externa",
+    createdByEmail: "externa@preview.dev",
+    payload: {
+      id: "taller-firebase",
+      title: "Taller de Firebase",
+      description: "Sesión práctica de dos horas.",
+      date: "2026-10-15",
+    },
+    createdAt: { _seconds: NOW_SECONDS - 259200 },
+    reviewNote: null,
+  },
+];
+
+export const MOCK_EVENT_STAFF = [
+  {
+    uid: "dev-volunteer",
+    role: "volunteer",
+    assignedBy: "dev-admin",
+    expiresAt: new Date(Date.now() + 2 * 86400_000).toISOString(),
+    reason: "Apoyo en puerta",
+    active: true,
+  },
+  {
+    uid: "dev-volunteer-antiguo",
+    role: "volunteer",
+    assignedBy: "dev-admin",
+    expiresAt: new Date(Date.now() - 30 * 86400_000).toISOString(),
+    reason: "Edición anterior",
+    active: false,
+  },
+];
+
+export const MOCK_ACCESS_REQUESTS = [
+  {
+    uid: "req-1",
+    email: "nueva.colaboradora@example.com",
+    displayName: "Nueva Colaboradora",
+    photoURL: "",
+    requestedRole: "contributor",
+    motivo:
+      "Trabajo en Android y me gustaría proponer una charla sobre Compose para el próximo DevFest.",
+    links: "https://github.com/ejemplo",
+    eventSlug: null,
+    status: "pending",
+    createdAt: { _seconds: NOW_SECONDS - 3600 },
+  },
+  {
+    uid: "req-2",
+    email: "voluntario.puerta@example.com",
+    displayName: "Voluntario de Puerta",
+    photoURL: "",
+    requestedRole: "volunteer",
+    motivo: "Puedo ayudar con el registro de asistentes el día del evento.",
+    links: "",
+    eventSlug: "devfest-2026",
+    status: "pending",
+    createdAt: { _seconds: NOW_SECONDS - 86400 },
+  },
+];
+
+export const MOCK_INVITATIONS = [
+  {
+    id: "inv-1",
+    emailLower: "persona.invitada@example.com",
+    role: "organizer",
+    expiresAt: new Date(Date.now() + 10 * 86400_000).toISOString(),
+    usedAt: null,
+    usedBy: null,
+    revokedAt: null,
+    createdBy: "dev-admin",
+    createdAt: { _seconds: NOW_SECONDS - 7200 },
+  },
+  {
+    id: "inv-2",
+    emailLower: "ya.acepto@example.com",
+    role: "volunteer",
+    expiresAt: new Date(Date.now() + 3 * 86400_000).toISOString(),
+    usedAt: { _seconds: NOW_SECONDS - 3600 },
+    usedBy: "dev-volunteer",
+    revokedAt: null,
+    createdBy: "dev-admin",
+    createdAt: { _seconds: NOW_SECONDS - 172800 },
+  },
+];
+
+export const MOCK_AUDIT = [
+  {
+    id: "a1",
+    action: "user.role.change",
+    performedBy: "dev-admin",
+    targetId: "dev-volunteer",
+    targetType: "user",
+    details: {
+      newRole: "volunteer",
+      previousRole: "member",
+      reason: "Apoyo en puerta para el DevFest 2026",
+    },
+    timestamp: { _seconds: NOW_SECONDS - 1800 },
+  },
+  {
+    id: "a2",
+    action: "user.status.change",
+    performedBy: "dev-admin",
+    targetId: "dev-suspended",
+    targetType: "user",
+    details: {
+      newStatus: "suspended",
+      previousStatus: "active",
+      reason: "Salida del equipo organizador",
+    },
+    timestamp: { _seconds: NOW_SECONDS - 7200 },
+  },
+  {
+    id: "a3",
+    action: "event.update",
+    performedBy: "dev-organizer",
+    targetId: "devfest-2026",
+    targetType: "event",
+    details: { title: "DevFest ICA 2026" },
+    timestamp: { _seconds: NOW_SECONDS - 10800 },
   },
 ];
 

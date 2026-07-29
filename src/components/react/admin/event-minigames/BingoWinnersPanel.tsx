@@ -5,6 +5,10 @@ interface Winner {
   id: string;
   alias: string;
   bingoWonAt?: { seconds?: number; _seconds?: number } | null;
+  // Classic mode only: the placing and the ball it happened on, both
+  // assigned by the Cloud Function that verified the claim.
+  bingoRank?: number;
+  bingoWinDraw?: number;
 }
 
 interface Props {
@@ -12,6 +16,9 @@ interface Props {
   instanceId: string;
   title: string;
   onClose: () => void;
+  // Classic mode: how many of these winners actually get a prize. Left
+  // undefined in conference mode, which has no prize split.
+  prizes?: number;
 }
 
 function formatWonAt(value: Winner["bingoWonAt"]): string {
@@ -21,7 +28,13 @@ function formatWonAt(value: Winner["bingoWonAt"]): string {
   return new Date(seconds * 1000).toLocaleString("es-PE");
 }
 
-export function BingoWinnersPanel({ slug, instanceId, title, onClose }: Props) {
+export function BingoWinnersPanel({
+  slug,
+  instanceId,
+  title,
+  onClose,
+  prizes,
+}: Props) {
   const [winners, setWinners] = useState<Winner[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -103,9 +116,27 @@ export function BingoWinnersPanel({ slug, instanceId, title, onClose }: Props) {
                     <span className="text-lg" aria-hidden>
                       {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🎉"}
                     </span>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {w.alias}
-                    </p>
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {w.alias}
+                      </p>
+                      {w.bingoWinDraw !== undefined && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Línea en la bola {w.bingoWinDraw}
+                        </p>
+                      )}
+                    </div>
+                    {prizes !== undefined && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          i < prizes
+                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                            : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                        }`}
+                      >
+                        {i < prizes ? "Premio" : "Mención"}
+                      </span>
+                    )}
                   </div>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
                     {formatWonAt(w.bingoWonAt)}
