@@ -11,8 +11,32 @@ const MAX_LIMIT = 200;
  * y solo se admite UN filtro a la vez: combinarlos multiplicaría los índices
  * sin que nadie los esté pidiendo.
  */
-const FILTERABLE = ["action", "performedBy", "targetId"] as const;
+const FILTERABLE = [
+  "action",
+  "performedBy",
+  "targetId",
+  // Categoría: es la única forma de pedir "solo lo de seguridad". Firestore no
+  // filtra por prefijo de cadena, así que sin un campo propio esa pregunta no
+  // se puede hacer.
+  "category",
+  "severity",
+  "outcome",
+  // Respuesta a incidentes: "qué más hizo esta red". Solo el prefijo, nunca la
+  // dirección completa — esa vive únicamente en Cloud Logging.
+  "context.ipPrefix",
+] as const;
 type Filterable = (typeof FILTERABLE)[number];
+
+/**
+ * Severidades que alguien querría revisar de una sentada.
+ *
+ * Se resuelve con un `in` sobre el mismo campo que ya tiene índice. La
+ * alternativa —una desigualdad `severity >= "warning"`— no sirve: Firestore
+ * exige que el primer `orderBy` sea el campo de la desigualdad, y aquí el orden
+ * tiene que ser por `timestamp` o el registro deja de leerse como una
+ * cronología.
+ */
+const NOTABLE_SEVERITIES = ["warning", "critical"];
 
 function readLimit(raw: unknown): number {
   const parsed = typeof raw === "string" ? parseInt(raw, 10) : NaN;
@@ -47,7 +71,13 @@ export async function listAudit(req: Request, res: Response) {
 
     if (active.length === 1) {
       const field = active[0] as Filterable;
-      query = query.where(field, "==", req.query[field] as string);
+      const value = req.query[field] as string;
+
+      if (field === "severity" && value === "notable") {
+        query = query.where("severity", "in", NOTABLE_SEVERITIES);
+      } else {
+        query = query.where(field, "==", value);
+      }
     }
 
     const limit = readLimit(req.query.limit);
