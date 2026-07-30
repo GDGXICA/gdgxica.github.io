@@ -184,6 +184,42 @@ export const locationSchema = z
   .strict();
 
 /**
+ * Registro de formularios de `about/forms.json`.
+ *
+ * Era la última escritura de la API sin esquema: los handlers hacían
+ * `req.body as FormEntry` y `req.body as Partial<FormEntry>`, y `updateForm`
+ * mezclaba ese cuerpo sin validar sobre la entrada existente, así que
+ * cualquier clave inventada acababa publicada en el repo de datos.
+ */
+export const formSchema = z
+  .object({
+    id: safeId,
+    name: shortText(200).min(1),
+    // Los IDs de Google Sheets son [A-Za-z0-9_-], así que `safeId` los acepta
+    // enteros y de paso acota lo que llega a `readSheet()`.
+    spreadsheet_id: safeId,
+    sheet_name: shortText(200).default("Form Responses 1"),
+    is_public: z.boolean().default(true),
+    // El panel manda SIEMPRE esta clave, y con la cadena vacía: `EMPTY_FORM`
+    // en FormRegistry la incluye y el estado se arrastra hasta el cuerpo del
+    // POST. El handler la pisa con la hora del servidor. Se acepta para no
+    // obligar al cliente a recortar el objeto, no porque su valor cuente —
+    // mismo tratamiento que `updated_at` en `statsSchema`.
+    created_at: shortText(100).optional(),
+  })
+  .strict();
+
+/**
+ * Cuerpo del PUT. Hoy no tiene cliente —`api.updateForm` existe y nadie la
+ * llama— y el handler hace una mezcla parcial sobre la entrada existente.
+ * Todo opcional para que el día que se añada el botón "Editar" siguiendo el
+ * patrón del panel (reenviar el objeto leído, con su `id` y su `created_at`
+ * reales) no choque contra `.strict()`, que es justo lo que pasó con
+ * `credential` en `eventSchema`. El handler sigue forzando `id: formId`.
+ */
+export const formUpdateSchema = formSchema.partial().strict();
+
+/**
  * Cifras de la comunidad que se pintan en la portada.
  *
  * Era la ÚNICA escritura de la API sin esquema: el handler cogía `req.body`

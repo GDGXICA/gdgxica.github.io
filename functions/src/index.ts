@@ -18,6 +18,8 @@ import {
   sponsorSchema,
   teamMemberSchema,
   locationSchema,
+  formSchema,
+  formUpdateSchema,
   minigameTemplateSchema,
   minigameInstanceCreateSchema,
   minigameStateSchema,
@@ -579,6 +581,7 @@ app.post(
   "/api/forms",
   requirePermission("forms:write"),
   writeLimiter,
+  validateBody(formSchema),
   forms.addForm
 );
 app.put(
@@ -586,6 +589,7 @@ app.put(
   requirePermission("forms:write"),
   vid,
   writeLimiter,
+  validateBody(formUpdateSchema),
   forms.updateForm
 );
 app.delete(
