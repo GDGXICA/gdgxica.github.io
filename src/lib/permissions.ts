@@ -277,6 +277,28 @@ export function hasPermission(
  * llegar a los eventos que tiene asignados. Es solo la puerta de la UI — cada
  * sección y cada endpoint vuelven a comprobar el permiso con su alcance real.
  */
+/**
+ * `true` si el rol puede llegar a este permiso estando asignado a un evento,
+ * aunque a alcance global no lo tenga.
+ *
+ * Existe porque `can()` evalúa a alcance GLOBAL, y los permisos de un
+ * voluntario son todos `perEvent`: su conjunto global está vacío. Filtrando el
+ * menú solo por `can()`, un voluntario iniciaba sesión y veía únicamente el
+ * dashboard — sin un enlace al check-in que es su único trabajo.
+ *
+ * Es cosmético, como todo lo de este archivo: abre la puerta de la UI para que
+ * la persona llegue al selector de evento, y es el servidor quien decide sobre
+ * el evento concreto comprobando la asignación de staff.
+ */
+export function canReachByAssignment(
+  subject: PermissionSubject,
+  permission: Permission
+): boolean {
+  if (subject.status === "suspended") return false;
+  const role = isRole(subject.role) ? subject.role : "member";
+  return ROLE_BUNDLES[role].perEvent.includes(permission);
+}
+
 export function canAccessPanel(subject: PermissionSubject): boolean {
   if (subject.status === "suspended") return false;
   if (effectivePermissions(subject).size > 0) return true;

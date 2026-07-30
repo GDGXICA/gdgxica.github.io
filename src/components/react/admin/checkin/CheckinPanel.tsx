@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { isDevPreview } from "@/lib/api";
 import { useAuth } from "../AuthProvider";
+import { EventPicker } from "../ui/EventPicker";
 import { Toast } from "../ui/Toast";
 import { AttendeeRow } from "./AttendeeRow";
 import { bevyCsvFilename, buildBevyCheckinCsv } from "./buildBevyCsv";
@@ -207,17 +208,7 @@ export function CheckinPanel({ initialSlug }: Props) {
   }
 
   if (!slug) {
-    return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-        <p className="font-medium">Falta indicar el evento.</p>
-        <p className="mt-1 text-sm">
-          Abre esta página como{" "}
-          <code className="rounded bg-amber-100 px-1 dark:bg-amber-900/40">
-            /admin/checkin?slug=devfest-ica-2026
-          </code>
-        </p>
-      </div>
-    );
+    return <EventPicker basePath="/admin/checkin" title="Check-in" />;
   }
 
   if (loading) {

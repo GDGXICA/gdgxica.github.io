@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { isDevPreview } from "@/lib/api";
 import { useAuth } from "../AuthProvider";
+import { EventPicker } from "../ui/EventPicker";
 import { useCredentials } from "./useCredentials";
 import { BevyQueue } from "./BevyQueue";
 import { PhotoModerationQueue } from "./PhotoModerationQueue";
@@ -78,17 +79,7 @@ export function CredentialsPanel({ initialSlug }: { initialSlug?: string }) {
   };
 
   if (!slug) {
-    return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-amber-800">
-        <p className="font-medium">Falta indicar el evento.</p>
-        <p className="mt-1 text-sm">
-          Abre esta página como{" "}
-          <code className="rounded bg-amber-100 px-1">
-            /admin/credentials?slug=devfest-2026
-          </code>
-        </p>
-      </div>
-    );
+    return <EventPicker basePath="/admin/credentials" title="Credenciales" />;
   }
 
   if (loading) {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "./AuthProvider";
-import type { Permission } from "@/lib/permissions";
+import { canReachByAssignment, type Permission } from "@/lib/permissions";
 
 /**
  * Cada entrada declara el permiso que la habilita, en vez de la antigua
@@ -119,7 +119,7 @@ interface Props {
 }
 
 export function AdminShell({ currentPage, children }: Props) {
-  const { user, role, signOut, can } = useAuth();
+  const { user, role, profile, signOut, can } = useAuth();
   const [dark, setDark] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -134,8 +134,17 @@ export function AdminShell({ currentPage, children }: Props) {
     localStorage.setItem("admin-theme", next ? "dark" : "light");
   }
 
+  // `can()` evalúa a alcance GLOBAL, y los permisos de un voluntario son todos
+  // `perEvent`: su conjunto global está vacío. Filtrando solo por `can()`, un
+  // voluntario entraba y veía únicamente el dashboard, sin un enlace al
+  // check-in que es su único trabajo — mientras el servidor sí le habría dejado
+  // operar su evento. La segunda condición abre esas entradas a quien pueda
+  // alcanzarlas estando asignado; el evento concreto lo decide el servidor.
   const visibleItems = NAV_ITEMS.filter(
-    (item) => !item.permission || can(item.permission)
+    (item) =>
+      !item.permission ||
+      can(item.permission) ||
+      (profile !== null && canReachByAssignment(profile, item.permission))
   );
 
   const sidebarContent = (

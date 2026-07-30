@@ -24,7 +24,11 @@ import { AuditLog } from "./audit/AuditLog";
 import { AccessReview } from "./access/AccessReview";
 import { EventStaffPanel } from "./event-staff/EventStaffPanel";
 import { ProposalsPanel } from "./proposals/ProposalsPanel";
-import { ROLE_BUNDLES, isRole, type Permission } from "@/lib/permissions";
+import {
+  canReachByAssignment,
+  type Permission,
+  type PermissionSubject,
+} from "@/lib/permissions";
 
 interface Props {
   page: string;
@@ -33,6 +37,7 @@ interface Props {
 
 interface Guards {
   can: (permission: Permission) => boolean;
+  profile: PermissionSubject | null;
   role: string | null;
   signOut: () => void;
 }
@@ -68,6 +73,13 @@ const PAGE_PERMISSIONS: Record<string, Permission> = {
   "event-staff": "roster:read",
   certificates: "certificates:send",
   checkin: "roster:read",
+  // Faltaba, y `renderPage` trata la ausencia como "sin requisito": cualquiera
+  // que entrase al panel podía abrir /admin/credentials y recibir la pantalla
+  // en vez del aviso de acceso restringido. No era una fuga —las reglas
+  // deniegan los datos— pero sí justo el agujero que el comentario de arriba
+  // dice que no existe. Mismo permiso que el check-in: una credencial son
+  // datos personales del asistente, y el panel enseña el DNI.
+  credentials: "roster:read",
 };
 
 function pageContent(page: string) {
@@ -128,31 +140,29 @@ function renderPage(page: string, guards: Guards | null) {
   if (!guards) return content;
 
   const required = PAGE_PERMISSIONS[page];
-  // Las páginas acotadas a un evento (check-in, minijuegos) las puede abrir
-  // quien tenga el permiso globalmente O quien pueda alcanzarlo estando
-  // asignado — de ahí que el voluntario pase esta puerta y sea el servidor
-  // quien decida sobre el evento concreto.
+  // Las páginas acotadas a un evento (check-in, credenciales, minijuegos) las
+  // puede abrir quien tenga el permiso globalmente O quien pueda alcanzarlo
+  // estando asignado — de ahí que el voluntario pase esta puerta y sea el
+  // servidor quien decida sobre el evento concreto.
+  //
+  // Ya no hace falta una lista de páginas acotadas: `canReachByAssignment`
+  // pregunta por el PERMISO, y un permiso que el rol no alcanza por asignación
+  // devuelve false igual. La lista era una segunda fuente de verdad que había
+  // que acordarse de ampliar al añadir una página — y a la que ya se le había
+  // olvidado `credentials`.
   if (
     required &&
     !guards.can(required) &&
-    !canReachByAssignment(page, guards)
+    !(guards.profile && canReachByAssignment(guards.profile, required))
   ) {
     return <AccessDenied role={guards.role} signOut={guards.signOut} />;
   }
   return content;
 }
 
-/** Páginas cuyo permiso un rol puede obtener por asignación a un evento. */
-const SCOPED_PAGES = new Set(["checkin", "event-minigames", "event-staff"]);
-
-function canReachByAssignment(page: string, guards: Guards): boolean {
-  if (!SCOPED_PAGES.has(page)) return false;
-  const bundle = ROLE_BUNDLES[isRole(guards.role) ? guards.role : "member"];
-  return bundle.perEvent.length > 0;
-}
-
 function AdminContent({ page, currentPath }: Props) {
-  const { user, role, loading, canAccessPanel, can, signOut } = useAuth();
+  const { user, role, profile, loading, canAccessPanel, can, signOut } =
+    useAuth();
 
   if (loading) {
     return (
@@ -209,7 +219,7 @@ function AdminContent({ page, currentPath }: Props) {
 
   return (
     <AdminShell currentPage={currentPath}>
-      {renderPage(page, { can, role, signOut })}
+      {renderPage(page, { can, profile, role, signOut })}
     </AdminShell>
   );
 }

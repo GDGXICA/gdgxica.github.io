@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { EventPicker } from "../ui/EventPicker";
 import { Toast } from "../ui/Toast";
 import { AttachTemplateModal } from "./AttachTemplateModal";
 import { BingoWinnersPanel } from "./BingoWinnersPanel";
@@ -160,9 +161,7 @@ export function EventMinigameManager({ initialSlug }: Props) {
 
   if (!slug) {
     return (
-      <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-yellow-800 dark:border-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400">
-        Falta el parámetro <code>?slug=</code> en la URL.
-      </div>
+      <EventPicker basePath="/admin/events/minigames" title="Mini-juegos" />
     );
   }
 
