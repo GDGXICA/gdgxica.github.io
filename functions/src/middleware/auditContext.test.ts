@@ -27,7 +27,12 @@ vi.mock("firebase-admin/firestore", () => ({
   FieldValue: { serverTimestamp: () => "__TS__" },
 }));
 
-import { auditContext, truncateIp } from "./auditContext";
+import {
+  auditContext,
+  auditedRead,
+  truncateIp,
+  __resetReadDedupeState,
+} from "./auditContext";
 
 /** Simula el ciclo de vida: entra la petición, responde, se dispara `finish`. */
 function run(opts: {
@@ -245,5 +250,126 @@ describe("red de seguridad", () => {
     run({ method: "POST", routePath: "/api/x" });
     await flush();
     expect(written[0]).toMatchObject({ performedBy: "unknown" });
+  });
+});
+
+/**
+ * Lecturas sensibles.
+ *
+ * Las lecturas no se auditan en general y eso es deliberado: una fila por GET
+ * daría una por vista de página, y un registro donde el 99% de las filas son
+ * "alguien abrió una pantalla" no sirve para encontrar el 1% que importa.
+ */
+describe("auditedRead", () => {
+  function runRead(opts: {
+    status?: number;
+    uid?: string;
+    params?: Record<string, string>;
+    action?: string;
+    dedupe?: boolean;
+    targetIdParam?: string;
+  }) {
+    const handlers: (() => void)[] = [];
+    const req = {
+      method: "GET",
+      path: "/api/forms/f1/responses",
+      baseUrl: "",
+      params: opts.params ?? {},
+      get: () => undefined,
+      ...(opts.uid ? { user: { uid: opts.uid } } : {}),
+    } as unknown as Request;
+    const res = {
+      statusCode: opts.status ?? 200,
+      setHeader: () => {},
+      on: (event: string, cb: () => void) => {
+        if (event === "finish") handlers.push(cb);
+      },
+    } as unknown as Response;
+
+    const next = vi.fn();
+    auditedRead((opts.action ?? "read.form_responses") as never, "form", {
+      dedupe: opts.dedupe,
+      targetIdParam: opts.targetIdParam,
+    })(req, res, next);
+    handlers.forEach((h) => h());
+    return { next };
+  }
+
+  beforeEach(() => {
+    __resetReadDedupeState();
+  });
+
+  it("registra la lectura con su categoría y llama a next()", async () => {
+    const { next } = runRead({ uid: "u1" });
+    await flush();
+    expect(next).toHaveBeenCalledOnce();
+    expect(written).toHaveLength(1);
+    expect(written[0]).toMatchObject({
+      action: "read.form_responses",
+      performedBy: "u1",
+      targetType: "form",
+      category: "read",
+    });
+  });
+
+  it("guarda qué se leyó cuando la ruta lo identifica", async () => {
+    runRead({ uid: "u1", params: { id: "f42" }, targetIdParam: "id" });
+    await flush();
+    expect(written[0]).toMatchObject({ targetId: "f42" });
+  });
+
+  // Un 403 no leyó nada, y además ya queda registrado como evento de seguridad
+  // por su cuenta: una fila de lectura ahí diría que alguien vio datos que no vio.
+  it.each([403, 404, 500])("no registra nada con un %i", async (status) => {
+    written.length = 0;
+    runRead({ status, uid: "u1" });
+    await flush();
+    expect(written).toHaveLength(0);
+  });
+
+  // La exportación masiva de respuestas se usa poco y a propósito: cada lectura
+  // es un hecho distinto que hay que poder fechar.
+  it("sin dedupe, cinco lecturas dejan cinco filas", async () => {
+    for (let i = 0; i < 5; i++) runRead({ uid: "u1" });
+    await flush();
+    expect(written).toHaveLength(5);
+  });
+
+  // El panel pide /api/users en cada montaje y en cada foco de pestaña.
+  it("con dedupe, veinte lecturas dejan una fila", async () => {
+    for (let i = 0; i < 20; i++) {
+      runRead({ uid: "u1", action: "read.users", dedupe: true });
+    }
+    await flush();
+    expect(written).toHaveLength(1);
+    expect(written[0].details).toMatchObject({ deduped: true });
+  });
+
+  it("el dedupe es por persona, no global", async () => {
+    runRead({ uid: "u1", action: "read.users", dedupe: true });
+    runRead({ uid: "u2", action: "read.users", dedupe: true });
+    await flush();
+    expect(written).toHaveLength(2);
+  });
+
+  it("el dedupe es por acción: leer usuarios y leer el log son dos filas", async () => {
+    runRead({ uid: "u1", action: "read.users", dedupe: true });
+    runRead({ uid: "u1", action: "read.audit_log", dedupe: true });
+    await flush();
+    expect(written).toHaveLength(2);
+  });
+
+  it("pasada la hora, vuelve a registrar", async () => {
+    vi.useFakeTimers();
+    try {
+      runRead({ uid: "u1", action: "read.users", dedupe: true });
+      runRead({ uid: "u1", action: "read.users", dedupe: true });
+      vi.advanceTimersByTime(60 * 60 * 1000 + 1000);
+      runRead({ uid: "u1", action: "read.users", dedupe: true });
+    } finally {
+      vi.useRealTimers();
+    }
+    await flush();
+    expect(written).toHaveLength(2);
   });
 });

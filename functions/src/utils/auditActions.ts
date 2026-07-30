@@ -79,6 +79,18 @@ export const AUDIT_ACTIONS = [
   "credential.reconcile",
   "credential_email.drain",
 
+  // Lecturas sensibles. Son las ÚNICAS lecturas que se auditan: un GET normal
+  // no deja fila, porque una por vista de página ahoga el registro y el visor
+  // solo admite un filtro a la vez.
+  //
+  // Falta a propósito el roster de asistentes y las credenciales con datos
+  // personales: el panel los lee DIRECTAMENTE de Firestore, acotado por las
+  // reglas, sin pasar por la API. No hay endpoint donde engancharse, así que
+  // cubrirlos exigiría instrumentar el lado de Firestore.
+  "read.audit_log",
+  "read.users",
+  "read.form_responses",
+
   // Minijuegos
   "minigame_template.create",
   "minigame_template.update",
