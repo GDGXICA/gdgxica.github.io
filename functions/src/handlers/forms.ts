@@ -1,9 +1,11 @@
 import { Request, Response } from "express";
+import { z } from "zod";
 import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { GitHubService } from "../services/github";
 import { readSheet } from "../services/sheets";
 import { safeError } from "../middleware/validate";
+import { formSchema, formUpdateSchema } from "../schemas";
 import { GITHUB_TOKEN } from "../config";
 
 interface FormEntry {
@@ -14,6 +16,10 @@ interface FormEntry {
   is_public: boolean;
   created_at: string;
 }
+
+// Lo que el middleware deja en `req.body`: validado, con defaults aplicados.
+type FormBody = z.infer<typeof formSchema>;
+type FormUpdateBody = z.infer<typeof formUpdateSchema>;
 
 export async function listForms(req: Request, res: Response) {
   try {
@@ -36,14 +42,10 @@ export async function listForms(req: Request, res: Response) {
 
 export async function addForm(req: Request, res: Response) {
   try {
-    const form = req.body as FormEntry;
-    if (!form.id || !form.name || !form.spreadsheet_id) {
-      res.status(400).json({
-        success: false,
-        error: "Missing required fields: id, name, spreadsheet_id",
-      });
-      return;
-    }
+    // `validateBody(formSchema)` ya rechazó lo que falte o sobre y aplicó los
+    // valores por defecto de `sheet_name` e `is_public`, así que aquí no queda
+    // nada que comprobar a mano.
+    const form = req.body as FormBody;
 
     const github = new GitHubService(GITHUB_TOKEN.value());
     const user = (req as AuthenticatedRequest).user;
@@ -52,8 +54,9 @@ export async function addForm(req: Request, res: Response) {
       id: form.id,
       name: form.name,
       spreadsheet_id: form.spreadsheet_id,
-      sheet_name: form.sheet_name || "Form Responses 1",
-      is_public: form.is_public ?? true,
+      sheet_name: form.sheet_name,
+      is_public: form.is_public,
+      // El panel envía `created_at: ""`; la hora la pone el servidor.
       created_at: new Date().toISOString(),
     };
 
@@ -88,7 +91,7 @@ export async function addForm(req: Request, res: Response) {
 export async function updateForm(req: Request, res: Response) {
   try {
     const formId = req.params.id as string;
-    const updates = req.body as Partial<FormEntry>;
+    const updates = req.body as FormUpdateBody;
     const github = new GitHubService(GITHUB_TOKEN.value());
     const user = (req as AuthenticatedRequest).user;
 
