@@ -121,12 +121,56 @@ total.
 
 ## Lo que este procedimiento deja fuera a propósito
 
-- **`audit_log`** conserva la acción `credential.create` con el
-  `credentialId`, el correlativo y la letra de grupo — **nunca DNI, nombre ni
-  correo**. Es trazabilidad operativa sin datos personales, así que no entra
-  en los plazos de arriba.
 - **`credential_email_budget`** solo cuenta envíos por día. No contiene
   ninguna referencia a personas.
+
+## `audit_log`: qué guarda y por qué no sigue estos plazos
+
+De la credencial en sí, `audit_log` conserva la acción `credential.create` con
+el `credentialId`, el correlativo y la letra de grupo — **nunca DNI, nombre ni
+correo**. Eso sigue siendo cierto y es deliberado: la colección la lee cualquiera
+con el permiso `audit:read`, que es más amplio que el permiso para ver el roster
+con datos personales, así que el handler los omite a propósito.
+
+Lo que **sí** guarda de quien opera el panel, desde que se amplió la auditoría:
+
+| Campo               | Qué es                                                        |
+| ------------------- | ------------------------------------------------------------- |
+| `performedBy`       | uid de Firebase de quien ejecutó la acción                    |
+| `actor.email`       | correo de la cuenta con la que se actuó                       |
+| `actor.role`        | rol con el que se actuó, congelado en ese momento             |
+| `context.ipPrefix`  | **prefijo de red**, no la dirección: /24 en IPv4, /48 en IPv6 |
+| `context.userAgent` | cadena del navegador, saneada y cortada a 200 caracteres      |
+| `context.route`     | patrón de la ruta (`/api/users/:uid/role`)                    |
+| `context.requestId` | identificador para correlacionar con Cloud Logging            |
+
+Esto es un cambio respecto a lo que este documento decía antes. `audit_log` ya
+no es "trazabilidad sin datos personales": el correo identifica a una persona, y
+una dirección IP es dato personal bajo la Ley N.º 29733. Se guarda solo el
+prefijo de red precisamente para quedarse en lo que hace falta —correlacionar
+"desde esta red se hicieron estas cuarenta cosas"— sin conservar un dato que
+señale a un individuo concreto. La dirección completa existe únicamente en Cloud
+Logging, que tiene su propio control de acceso y su propia retención.
+
+**Plazo: 24 meses.** Más largo que los 12 de los datos de inscripción, y a
+propósito: un registro de auditoría sirve para reconstruir qué pasó cuando el
+problema se descubre tarde, y los abusos de permisos se descubren tarde por
+definición. Borrarlo al año dejaría sin rastro justo el caso que justifica
+tenerlo.
+
+**Qué contiene sobre asistentes**: nada más que el `credentialId`. Las personas
+que sacan una credencial no operan el panel, así que no generan entradas con
+correo ni IP. Una solicitud de borrado de un asistente **no** requiere tocar
+`audit_log`; el procedimiento de arriba está completo tal y como está.
+
+**Qué contiene sobre quien opera el panel**: lo de la tabla. Si una de esas
+personas pide el borrado de sus datos, hay que decirle con claridad que el
+registro de auditoría no se borra a petición mientras esté dentro de su plazo:
+es la constancia de decisiones que afectaron a otras personas —conceder
+permisos, publicar contenido, exportar respuestas de formularios— y borrarlo a
+petición del sujeto lo convertiría en un registro que sus propios sujetos
+pueden editar, que es lo mismo que no tener registro. Ese es el argumento que
+hay que dar, no un "no se puede".
 
 ## Después de ejecutarlo
 
