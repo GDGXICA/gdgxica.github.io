@@ -10,6 +10,7 @@ import {
   writeAuditLog,
 } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
+import { recordSecurityEvent } from "../utils/securityAudit";
 import { safeError } from "../middleware/validate";
 import {
   canAssignRole,
@@ -143,7 +144,12 @@ export async function createRequest(req: Request, res: Response) {
       return;
     }
 
-    await ref.set({
+    // La PETICIÓN también se registra, no solo la decisión. Antes el registro
+    // enseñaba una aprobación sin constancia de qué se había pedido ni cuándo,
+    // y "se aprobó el rol X" sin el "pidió el rol Y" de al lado no permite ver
+    // si alguien insistió con roles cada vez más altos.
+    const batch = admin.firestore().batch();
+    batch.set(ref, {
       uid: user.uid,
       email: user.email,
       displayName: user.displayName,
@@ -158,6 +164,17 @@ export async function createRequest(req: Request, res: Response) {
       reviewedAt: null,
       reviewNote: null,
     });
+    await commitWithAuditLog(
+      batch,
+      {
+        action: "access.request.create",
+        performedBy: user.uid,
+        targetId: user.uid,
+        targetType: "access_request",
+        details: { requestedRole: body.requestedRole, eventSlug },
+      },
+      req
+    );
 
     res.status(201).json({ success: true, data: { status: "pending" } });
   } catch (err) {
@@ -434,16 +451,17 @@ export async function createInvitation(req: Request, res: Response) {
         createdAt: FieldValue.serverTimestamp(),
       });
 
-    await writeAuditLog({
-      action: "access.invitation.create",
-      performedBy: performer.uid,
-      targetId: ref.id,
-      targetType: "invitation",
-      details: { email: email.toLowerCase(), role: body.role },
-      timestamp: FieldValue.serverTimestamp(),
-    });
-
+    // El registro se escribe DESPUÉS de intentar el envío, no antes.
+    //
+    // Antes iba justo tras crear el documento, y como el envío puede devolver
+    // 502, el registro afirmaba que la invitación se había creado mientras la
+    // persona nunca recibía el enlace. Al revisarlo después, eso es peor que
+    // no tener fila: manda a buscar por qué alguien no usó una invitación que
+    // en realidad nunca le llegó. `emailDelivered` es el dato que zanja esa
+    // pregunta.
     const url = `${SITE_ORIGIN}/admin/invitacion?token=${token}`;
+    let emailDelivered = true;
+    let emailError: unknown = null;
     try {
       await sendInvitationEmail({
         to: email,
@@ -453,10 +471,34 @@ export async function createInvitation(req: Request, res: Response) {
         expiresAt,
       });
     } catch (err) {
+      emailDelivered = false;
+      emailError = err;
+    }
+
+    await writeAuditLog(
+      {
+        action: "access.invitation.create",
+        performedBy: performer.uid,
+        targetId: ref.id,
+        targetType: "invitation",
+        details: {
+          email: email.toLowerCase(),
+          role: body.role,
+          emailDelivered,
+        },
+        // La invitación existe en la base de las dos maneras, pero sin correo
+        // no sirve para nada: se marca como fallo para que salte a la vista de
+        // quien revise, en vez de parecer una invitación normal que nadie usó.
+        outcome: emailDelivered ? "success" : "failure",
+      },
+      req
+    );
+
+    if (!emailDelivered) {
       // A diferencia de la decisión, aquí el correo ES la entrega: si no
       // sale, se avisa para poder reenviar en vez de dar por hecho que la
       // persona recibió el enlace.
-      logger.error("Invitation email failed", err);
+      logger.error("Invitation email failed", emailError);
       res.status(502).json({
         success: false,
         error: "Invitation created but the email could not be sent",
@@ -538,28 +580,45 @@ export async function redeemInvitation(req: Request, res: Response) {
     // Un único mensaje para "no existe", "no es tuya", "caducada" y "ya
     // usada": distinguirlos convierte el endpoint en un oráculo para
     // sondear invitaciones ajenas.
-    const invalid = () =>
+    // El MOTIVO real sí se registra. La respuesta sigue siendo idéntica en
+    // todos los casos —eso es lo que impide usar el endpoint como oráculo—,
+    // pero la fila de auditoría puede distinguirlos porque solo la ve quien
+    // tiene `audit:read`. Sin este registro, adivinar tokens no dejaba el
+    // menor rastro en ningún sitio, y es la superficie por la que se roba un
+    // enlace de invitación.
+    const invalid = (reason: string, invitationId?: string) => {
+      recordSecurityEvent({
+        event: "security.invitation.redeem_failed",
+        uid: user.uid,
+        details: { reason, email: user.email, invitationId },
+        req,
+      });
       res.status(400).json({
         success: false,
         error: "Invitation is invalid, expired or already used",
       });
+    };
 
     if (!match) {
-      invalid();
+      invalid("no_match");
       return;
     }
 
     const data = match.data();
-    if (
-      data.usedAt ||
-      data.revokedAt ||
-      !isNotExpired(data.expiresAt, Date.now())
-    ) {
-      invalid();
+    if (data.usedAt) {
+      invalid("already_used", match.id);
+      return;
+    }
+    if (data.revokedAt) {
+      invalid("revoked", match.id);
+      return;
+    }
+    if (!isNotExpired(data.expiresAt, Date.now())) {
+      invalid("expired", match.id);
       return;
     }
     if (!isRole(data.role) || !REQUESTABLE_ROLES.includes(data.role)) {
-      invalid();
+      invalid("bad_role", match.id);
       return;
     }
 
@@ -623,6 +682,16 @@ export async function redeemInvitation(req: Request, res: Response) {
     res.json({ success: true, data: { role: data.role } });
   } catch (err) {
     if (err instanceof Error && err.message === "ALREADY_USED") {
+      // La comprobación de arriba ya pasó, así que llegar aquí significa que
+      // otro canje del mismo enlace ganó la carrera entre esa lectura y esta
+      // transacción. Se registra con su propio motivo: dos canjes simultáneos
+      // del mismo token es exactamente el patrón de un enlace compartido.
+      recordSecurityEvent({
+        event: "security.invitation.redeem_failed",
+        uid: (req as AuthenticatedRequest).user.uid,
+        details: { reason: "race_already_used" },
+        req,
+      });
       res.status(400).json({
         success: false,
         error: "Invitation is invalid, expired or already used",

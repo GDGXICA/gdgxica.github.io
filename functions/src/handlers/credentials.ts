@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog } from "../utils/audit";
+import { singleLineHeader } from "../utils/headers";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import {
@@ -294,21 +295,6 @@ async function readCredentialConfig(
 }
 
 /**
- * Collapses a header value to one bounded, control-character-free line.
- *
- * Mirrors singleLine() in services/email.ts. Applied here because the
- * user-agent is stored and later rendered in the admin panel.
- */
-function singleLineHeader(value: string | undefined): string {
-  if (!value) return "";
-  return value
-    .replace(/[\r\n\t]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 200);
-}
-
-/**
  * PATCH /api/events/:slug/credentials/:id/image
  *
  * Public, on the same anonymous token as create.
@@ -371,6 +357,22 @@ export async function attachCredentialImage(req: Request, res: Response) {
       credentialImagePath: paths.credentialImagePath,
       updatedAt: FieldValue.serverTimestamp(),
     });
+
+    // Endpoint público, sobre el mismo token anónimo que la creación, y escribe
+    // bytes en Storage: es la única mutación pública que subía un archivo sin
+    // dejar constancia. Sin DNI, nombre ni correo en los detalles, igual que
+    // `credential.create` (ver el comentario de más arriba): `audit_log` lo lee
+    // cualquiera con `audit:read`, que es más amplio que el permiso del roster.
+    await writeAuditLog(
+      {
+        action: "credential.image",
+        performedBy: user.uid,
+        targetId: id,
+        targetType: "credential",
+        details: { slug, bytes: image.byteLength },
+      },
+      req
+    );
 
     res.json({ success: true, data: { id } });
   } catch (err) {

@@ -135,6 +135,23 @@ export async function createProposal(req: Request, res: Response) {
       publishedAt: null,
     });
 
+    // Toda la superficie de escritura de un `contributor` pasa por aquí, y
+    // hasta ahora era invisible hasta que alguien revisaba: solo se auditaban
+    // la revisión y la publicación. Un colaborador externo es justo el perfil
+    // con menos confianza acumulada, así que es el que más falta hace poder
+    // reconstruir. El payload NO va en los detalles — puede ser grande y ya
+    // está en el propio documento.
+    await writeAuditLog(
+      {
+        action: "proposal.create",
+        performedBy: user.uid,
+        targetId: ref.id,
+        targetType: "proposal",
+        details: { type: body.type },
+      },
+      req
+    );
+
     res.status(201).json({ success: true, data: { id: ref.id } });
   } catch (err) {
     res.status(500).json({ success: false, error: safeError(err) });
@@ -177,11 +194,27 @@ export async function updateProposal(req: Request, res: Response) {
       return;
     }
 
+    const previousStatus = String(data.status);
     await ref.update({
       payload: parsed.data,
       status: "submitted",
       submittedAt: FieldValue.serverTimestamp(),
     });
+
+    // Reenviar reescribe el payload y devuelve el estado a `submitted`. Sin
+    // esta fila, un borrador que ya pasó por "requiere cambios" podía cambiar
+    // de contenido entre la revisión y la publicación sin que quedara constancia
+    // de que había cambiado.
+    await writeAuditLog(
+      {
+        action: "proposal.update",
+        performedBy: user.uid,
+        targetId: id,
+        targetType: "proposal",
+        details: { type: data.type, previousStatus },
+      },
+      req
+    );
 
     res.json({ success: true, data: { id } });
   } catch (err) {

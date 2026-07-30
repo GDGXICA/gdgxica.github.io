@@ -32,6 +32,19 @@ vi.mock("firebase-functions", () => ({
   logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
+/**
+ * Se captura la llamada en vez de dejar correr el registro real: lo que se
+ * comprueba aquí es que el middleware emita el EVENTO correcto en cada
+ * rechazo. Que ese evento acabe o no en Firestore según su nivel es decisión
+ * de `utils/securityAudit`, y tiene sus propios tests.
+ */
+const securityEvents: { event: string; uid?: string }[] = [];
+vi.mock("../utils/securityAudit", () => ({
+  recordSecurityEvent: (input: { event: string; uid?: string }) => {
+    securityEvents.push(input);
+  },
+}));
+
 import { requireAuth, requirePermission } from "./auth";
 import type { AuthenticatedRequest } from "./auth";
 
@@ -80,6 +93,7 @@ beforeEach(() => {
   verifyIdToken.mockResolvedValue({ uid: "u1", email: "u@x.com" });
   docs.clear();
   readPaths.length = 0;
+  securityEvents.length = 0;
 });
 
 describe("requirePermission — token", () => {
@@ -347,5 +361,78 @@ describe("requireAuth", () => {
     const next = vi.fn() as unknown as NextFunction;
     await requireAuth()(buildReq(), res, next);
     expect(readPaths).toEqual([]);
+  });
+});
+
+/**
+ * Cada rechazo del middleware tiene que dejar rastro. Antes solo la denegación
+ * de permiso emitía una línea de Cloud Logging, y las otras tres —token
+ * inválido, cuenta sin registrar, cuenta suspendida— no registraban nada en
+ * ningún sitio: quien revisaba el panel veía únicamente lo que salió bien.
+ */
+describe("eventos de seguridad", () => {
+  it("registra el token inválido", async () => {
+    verifyIdToken.mockRejectedValue(new Error("nope"));
+    await run(requirePermission("events:read"), buildReq());
+    expect(securityEvents).toEqual([
+      expect.objectContaining({ event: "security.auth.invalid_token" }),
+    ]);
+  });
+
+  // Falta la cabecera entera: no hay token que verificar, así que no es un
+  // intento de nada. Registrarlo sería ruido de cada sonda o preflight.
+  it("no registra evento cuando falta la cabecera", async () => {
+    const res = buildRes();
+    const next = vi.fn() as unknown as NextFunction;
+    await requirePermission("events:read")(
+      { headers: {}, params: {}, path: "/api/test" } as unknown as Request,
+      res,
+      next
+    );
+    expect(res.__status).toBe(401);
+    expect(securityEvents).toEqual([]);
+  });
+
+  it("registra el token válido sin doc de usuario", async () => {
+    await run(requirePermission("events:read"), buildReq());
+    expect(securityEvents).toEqual([
+      expect.objectContaining({
+        event: "security.user.unregistered",
+        uid: "u1",
+      }),
+    ]);
+  });
+
+  // La señal más limpia que hay de una cuenta comprometida, o de alguien que ya
+  // no debería estar y sigue intentándolo con un token todavía vivo.
+  it("registra el acceso de una cuenta suspendida", async () => {
+    docs.set("users/u1", { role: "admin", status: "suspended" });
+    const { res } = await run(requirePermission("events:read"), buildReq());
+    expect(res.__status).toBe(403);
+    expect(securityEvents).toEqual([
+      expect.objectContaining({
+        event: "security.account.suspended_access",
+        uid: "u1",
+      }),
+    ]);
+  });
+
+  it("registra la denegación de permiso", async () => {
+    docs.set("users/u1", { role: "member", status: "active" });
+    const { res } = await run(requirePermission("users:read"), buildReq());
+    expect(res.__status).toBe(403);
+    expect(securityEvents).toEqual([
+      expect.objectContaining({
+        event: "security.permission.denied",
+        uid: "u1",
+      }),
+    ]);
+  });
+
+  it("una petición autorizada no genera ningún evento", async () => {
+    docs.set("users/u1", { role: "admin", status: "active" });
+    const { passed } = await run(requirePermission("users:read"), buildReq());
+    expect(passed).toBe(true);
+    expect(securityEvents).toEqual([]);
   });
 });
