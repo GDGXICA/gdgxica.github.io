@@ -155,6 +155,27 @@ vi.mock("firebase-functions", () => ({
   logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
+/**
+ * Los eventos de seguridad se capturan aquí. La respuesta HTTP de un canje
+ * fallido es deliberadamente idéntica en todos los casos —para no convertir el
+ * endpoint en un oráculo de invitaciones ajenas—, así que la única forma de
+ * comprobar que el MOTIVO real queda registrado es mirar el evento.
+ */
+const securityEvents: {
+  event: string;
+  uid?: string;
+  details?: Record<string, unknown>;
+}[] = [];
+vi.mock("../utils/securityAudit", () => ({
+  recordSecurityEvent: (input: {
+    event: string;
+    uid?: string;
+    details?: Record<string, unknown>;
+  }) => {
+    securityEvents.push(input);
+  },
+}));
+
 vi.mock("../services/email", () => ({
   sendInvitationEmail: async (mail: Record<string, unknown>) => {
     if (invitationEmailFails) throw new Error("smtp down");
@@ -223,6 +244,7 @@ beforeEach(() => {
   sentInvitations.length = 0;
   sentDecisions.length = 0;
   invitationEmailFails = false;
+  securityEvents.length = 0;
 });
 
 describe("createRequest", () => {
@@ -828,5 +850,174 @@ describe("listInvitations", () => {
     await handler.listInvitations(buildReq({ role: "admin" }), res);
     expect(JSON.stringify(res.__body?.data)).not.toContain("no-debe-salir");
     expect(JSON.stringify(res.__body?.data)).not.toContain("tokenHash");
+  });
+});
+
+/**
+ * El cable trampa contra un enlace de invitación robado o reenviado.
+ *
+ * Antes de esto, adivinar tokens contra `/redeem` no dejaba el menor rastro en
+ * ningún sitio: ni fila de auditoría ni línea de log. La respuesta sigue siendo
+ * un único mensaje opaco en todos los casos —eso es lo que impide usar el
+ * endpoint como oráculo—, pero el motivo real sí se registra, porque solo lo ve
+ * quien tiene `audit:read`.
+ */
+describe("canje fallido — registro del motivo", () => {
+  const TOKEN = "un-token-de-prueba";
+
+  function seedInvitation(over: Record<string, unknown> = {}) {
+    docs.set("invitations/inv-1", {
+      emailLower: "invitada@example.com",
+      role: "contributor",
+      tokenHash: hash(TOKEN),
+      expiresAt: new Date(Date.now() + 86400_000),
+      usedAt: null,
+      revokedAt: null,
+      ...over,
+    });
+    docs.set("users/u1", { uid: "u1", role: "member" });
+  }
+
+  async function attempt(opts: {
+    email?: string;
+    token?: string;
+  }): Promise<ResMock> {
+    const res = buildRes();
+    await handler.redeemInvitation(
+      buildReq({
+        email: opts.email ?? "invitada@example.com",
+        body: { token: opts.token ?? TOKEN },
+      }),
+      res
+    );
+    return res;
+  }
+
+  it.each([
+    ["token que no coincide", { token: "token-equivocado" }, "no_match"],
+    ["no es la persona invitada", { email: "otra@example.com" }, "no_match"],
+  ])("registra %s como %s", async (_label, opts, reason) => {
+    seedInvitation();
+    await attempt(opts);
+    expect(securityEvents).toEqual([
+      expect.objectContaining({
+        event: "security.invitation.redeem_failed",
+        uid: "u1",
+        details: expect.objectContaining({ reason }),
+      }),
+    ]);
+  });
+
+  it("distingue una invitación ya usada", async () => {
+    seedInvitation({ usedAt: new Date() });
+    await attempt({});
+    expect(securityEvents[0].details).toMatchObject({
+      reason: "already_used",
+      invitationId: "inv-1",
+    });
+  });
+
+  it("distingue una invitación revocada", async () => {
+    seedInvitation({ revokedAt: new Date() });
+    await attempt({});
+    expect(securityEvents[0].details).toMatchObject({ reason: "revoked" });
+  });
+
+  it("distingue una invitación caducada", async () => {
+    seedInvitation({ expiresAt: new Date(Date.now() - 86400_000) });
+    await attempt({});
+    expect(securityEvents[0].details).toMatchObject({ reason: "expired" });
+  });
+
+  // Los cuatro motivos anteriores devuelven EXACTAMENTE la misma respuesta:
+  // es lo que impide sondear invitaciones ajenas comparando errores.
+  it("la respuesta es idéntica sea cual sea el motivo", async () => {
+    const errores: (string | undefined)[] = [];
+
+    for (const over of [
+      { usedAt: new Date() },
+      { revokedAt: new Date() },
+      { expiresAt: new Date(Date.now() - 86400_000) },
+    ]) {
+      docs.clear();
+      seedInvitation(over);
+      errores.push((await attempt({})).__body?.error);
+    }
+    docs.clear();
+    seedInvitation();
+    errores.push((await attempt({ token: "otro" })).__body?.error);
+
+    expect(new Set(errores).size).toBe(1);
+    expect(errores[0]).toBe("Invitation is invalid, expired or already used");
+  });
+
+  it("un canje correcto no genera ningún evento de seguridad", async () => {
+    seedInvitation();
+    const res = await attempt({});
+    expect(res.__body?.success).toBe(true);
+    expect(securityEvents).toEqual([]);
+  });
+});
+
+/**
+ * El registro de `invitation.create` se escribe DESPUÉS de intentar el envío.
+ * Antes iba justo tras crear el documento, así que decía que la invitación se
+ * había creado mientras la persona nunca recibía el enlace — y al revisarlo
+ * después, eso manda a buscar por qué alguien no usó una invitación que en
+ * realidad nunca le llegó.
+ */
+describe("invitación creada — resultado del correo", () => {
+  const body = { email: "nueva@example.com", role: "contributor" };
+
+  it("registra emailDelivered true cuando el correo sale", async () => {
+    const res = buildRes();
+    await handler.createInvitation(
+      buildReq({ role: "admin", uid: "rev", body }),
+      res
+    );
+    expect(res.__status).toBe(201);
+    expect(auditLogEntries()[0]).toMatchObject({
+      action: "access.invitation.create",
+      outcome: "success",
+      details: { emailDelivered: true },
+    });
+  });
+
+  it("registra el fallo del correo como failure, no como éxito", async () => {
+    invitationEmailFails = true;
+    const res = buildRes();
+    await handler.createInvitation(
+      buildReq({ role: "admin", uid: "rev", body }),
+      res
+    );
+    expect(res.__status).toBe(502);
+    expect(auditLogEntries()[0]).toMatchObject({
+      action: "access.invitation.create",
+      // Sin correo la invitación existe pero no sirve de nada: tiene que
+      // saltar a la vista de quien revise, no parecer una que nadie usó.
+      outcome: "failure",
+      details: { emailDelivered: false },
+    });
+  });
+});
+
+/** La petición de acceso también deja constancia, no solo la decisión. */
+describe("solicitud de acceso — registro", () => {
+  it("audita la creación de la solicitud", async () => {
+    const res = buildRes();
+    await handler.createRequest(
+      buildReq({
+        body: { requestedRole: "organizer", motivo: "Coordino el DevFest" },
+      }),
+      res
+    );
+    expect(res.__status).toBe(201);
+    expect(auditLogEntries()[0]).toMatchObject({
+      action: "access.request.create",
+      performedBy: "u1",
+      targetType: "access_request",
+      category: "access",
+      details: { requestedRole: "organizer" },
+    });
   });
 });

@@ -9,6 +9,8 @@ import { requirePermission, requireAuth } from "./middleware/auth";
 import { isAllowedOrigin, rejectDisallowedOrigin } from "./middleware/cors";
 import { safeError, validateParamId } from "./middleware/validate";
 import { verifyAppCheck } from "./middleware/appCheck";
+import { auditContext } from "./middleware/auditContext";
+import { recordSecurityEvent } from "./utils/securityAudit";
 import { validateBody } from "./middleware/validateBody";
 import {
   eventSchema,
@@ -77,6 +79,38 @@ app.use(
 );
 app.use(express.json({ limit: "1mb" }));
 
+// Contexto de auditoría ANTES del limitador de perímetro: así un 429 también
+// lleva su id de correlación. Si alguien satura la API, lo que hace falta poder
+// hacer es cruzar esas respuestas rechazadas con lo que sí llegó a pasar.
+app.use(auditContext());
+
+/**
+ * Registra el 429 antes de responderlo, conservando el mensaje propio de cada
+ * limitador.
+ *
+ * Va en el nivel `rollup`: agotar un limitador es gratis por definición, así
+ * que solo la primera vez de cada (evento, red, uid) escribe fila y el resto
+ * cuenta en memoria. Sin esto, quien saturara la API no dejaba constancia
+ * ninguna en el panel, y una ráfaga de 429 es precisamente lo que distingue un
+ * pico de tráfico legítimo de alguien insistiendo.
+ */
+function limitExceeded(limiter: string) {
+  return (
+    req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction,
+    options: { statusCode: number; message: unknown }
+  ) => {
+    recordSecurityEvent({
+      event: "security.ratelimit.exceeded",
+      uid: (req as { user?: { uid?: string } }).user?.uid,
+      details: { limiter },
+      req,
+    });
+    res.status(options.statusCode).json(options.message);
+  };
+}
+
 // Latched so the warning below fires once per cold start, not per request.
 let warnedMissingIp = false;
 
@@ -112,6 +146,7 @@ app.use(
       return true;
     },
     keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip as string)}`,
+    handler: limitExceeded("perimeter"),
     message: { success: false, error: "Too many requests, try again later" },
   })
 );
@@ -132,6 +167,7 @@ const writeLimiter = rateLimit({
     // used to bypass the limit by rotating the suffix.
     return `ip:${ipKeyGenerator(req.ip ?? "unknown")}`;
   },
+  handler: limitExceeded("write"),
   message: {
     success: false,
     error: "Too many write requests, slow down",
@@ -147,6 +183,7 @@ const joinLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip ?? "unknown")}`,
+  handler: limitExceeded("join"),
   message: {
     success: false,
     error: "Demasiados intentos, espera un momento",
@@ -171,6 +208,7 @@ const ballLimiter = rateLimit({
     const uid = (req as { user?: { uid?: string } }).user?.uid;
     return uid ? `u:${uid}` : `ip:${ipKeyGenerator(req.ip ?? "unknown")}`;
   },
+  handler: limitExceeded("ball"),
   message: {
     success: false,
     error: "Demasiadas bolas seguidas, espera un momento",
@@ -190,6 +228,7 @@ const claimLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip ?? "unknown")}`,
+  handler: limitExceeded("claim"),
   message: {
     success: false,
     error: "Demasiados intentos, espera un momento",
@@ -215,6 +254,7 @@ const credentialLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip ?? "unknown")}`,
+  handler: limitExceeded("credential"),
   message: {
     success: false,
     error:
@@ -396,6 +436,7 @@ const accessLimiter = rateLimit({
   // bypassable by rotating accounts, which is exactly what a token-guessing
   // client would do. Same reasoning as joinLimiter above.
   keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip ?? "unknown")}`,
+  handler: limitExceeded("access"),
   message: {
     success: false,
     error: "Demasiados intentos, inténtalo más tarde",

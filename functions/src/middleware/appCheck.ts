@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import * as admin from "firebase-admin";
 import { logger } from "firebase-functions";
+import { recordSecurityEvent } from "../utils/securityAudit";
 
 // App Check verification for the public credential endpoints.
 //
@@ -70,10 +71,18 @@ export function verifyAppCheck() {
 
     const enforce = await readAppCheckEnforcement();
 
-    logger.warn("Request without a valid App Check token", {
-      path: req.path,
-      hadToken: Boolean(token),
-      enforced: enforce,
+    // Nivel `log-only`: estos endpoints son públicos, así que provocar esto no
+    // cuesta nada ni requiere cuenta. Escribirlo en Firestore le daría a
+    // cualquiera un amplificador de una petición a una escritura.
+    //
+    // Es además la medición con la que se decide activar la exigencia: hay que
+    // confirmar en estos logs que los clientes reales sí mandan la cabecera
+    // ANTES de exigirla, porque src/lib/api.ts la omite en silencio cuando
+    // reCAPTCHA falla. Un evento en marcha no es el momento de descubrirlo.
+    recordSecurityEvent({
+      event: "security.appcheck.missing",
+      details: { hadToken: Boolean(token), enforced: enforce },
+      req,
     });
 
     if (!enforce) {

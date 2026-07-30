@@ -471,3 +471,49 @@ describe("publishProposal", () => {
     expect(res.__status).toBe(404);
   });
 });
+
+/**
+ * Toda la superficie de escritura de un `contributor` pasa por crear y editar
+ * propuestas, y era invisible hasta que alguien revisaba: solo se auditaban la
+ * revisión y la publicación. Un colaborador externo es el perfil con menos
+ * confianza acumulada, así que es el que más falta hace poder reconstruir.
+ */
+describe("auditoría de crear y editar", () => {
+  it("audita la creación", async () => {
+    const res = buildRes();
+    await handler.createProposal(
+      buildReq("contributor", "ext", { type: "event", payload: EVENT }),
+      res
+    );
+    expect(res.__status).toBe(201);
+    expect(auditEntries[0]).toMatchObject({
+      action: "proposal.create",
+      targetType: "proposal",
+      details: { type: "event" },
+    });
+  });
+
+  // El payload puede ser grande y ya está en el propio documento; duplicarlo en
+  // los detalles solo engordaría el registro.
+  it("no mete el payload en los detalles", async () => {
+    const res = buildRes();
+    await handler.createProposal(
+      buildReq("contributor", "ext", { type: "event", payload: EVENT }),
+      res
+    );
+    expect(auditEntries[0].details).not.toHaveProperty("payload");
+  });
+
+  it("no audita una creación rechazada por validación", async () => {
+    const res = buildRes();
+    await handler.createProposal(
+      buildReq("contributor", "ext", {
+        type: "event",
+        payload: { id: "sin-titulo" },
+      }),
+      res
+    );
+    expect(res.__status).toBe(400);
+    expect(auditEntries).toHaveLength(0);
+  });
+});

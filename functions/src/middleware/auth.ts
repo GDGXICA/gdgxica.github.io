@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import * as admin from "firebase-admin";
 import { logger } from "firebase-functions";
+import { recordSecurityEvent } from "../utils/securityAudit";
 import {
   GLOBAL_SCOPE,
   effectivePermissions,
@@ -77,6 +78,14 @@ async function verifyBearer(
       photoURL: decoded.picture || "",
     };
   } catch {
+    // Solo a Cloud Logging, nunca a `audit_log`: ver el nivel `log-only` en
+    // utils/securityAudit.ts. Hasta ahora esto no se registraba en NINGÚN
+    // sitio, así que un intento de adivinar tokens no dejaba el menor rastro.
+    recordSecurityEvent({
+      event: "security.auth.invalid_token",
+      details: { hadHeader: true },
+      req,
+    });
     res.status(401).json({ success: false, error: "Invalid token" });
     return null;
   }
@@ -161,6 +170,12 @@ export function requirePermission(
         .get();
 
       if (!userDoc.exists) {
+        recordSecurityEvent({
+          event: "security.user.unregistered",
+          uid: token.uid,
+          details: { permission, scope },
+          req,
+        });
         res.status(403).json({ success: false, error: "User not registered" });
         return;
       }
@@ -173,6 +188,17 @@ export function requirePermission(
       }
 
       if (data.status === "suspended") {
+        // `critical`: una cuenta suspendida con un token todavía válido
+        // intentando operar es la señal más limpia que hay de una cuenta
+        // comprometida, o de alguien que ya no debería estar y sigue
+        // probando. Provocarlo exige poseer una cuenta suspendida, así que no
+        // hay volumen que temer y se escribe siempre.
+        recordSecurityEvent({
+          event: "security.account.suspended_access",
+          uid: token.uid,
+          details: { role: data.role, permission, scope },
+          req,
+        });
         res.status(403).json({ success: false, error: "Account suspended" });
         return;
       }
@@ -200,12 +226,14 @@ export function requirePermission(
       }
 
       if (!permissions.has(permission)) {
-        logger.warn("Permiso denegado", {
+        // Esta era la señal más relevante del sistema y solo existía como una
+        // línea de Cloud Logging: quien revisaba el panel veía únicamente lo
+        // que había salido bien, nunca a alguien tanteando qué podía tocar.
+        recordSecurityEvent({
+          event: "security.permission.denied",
           uid: token.uid,
-          role: data.role,
-          permission,
-          scope,
-          path: req.path,
+          details: { role: data.role, permission, scope },
+          req,
         });
         res
           .status(403)
