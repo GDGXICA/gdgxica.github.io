@@ -50,6 +50,21 @@ function readActor(req: Request | undefined): AuditActor | undefined {
  * escriben su entrada dentro de una transacción y necesitan el documento, no
  * la escritura.
  */
+function stripUndefined<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((v) => stripUndefined(v)) as unknown as T;
+  }
+  if (value === null || typeof value !== "object") return value;
+  if (Object.getPrototypeOf(value) !== Object.prototype) return value;
+
+  const out: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+    if (val === undefined) continue;
+    out[key] = stripUndefined(val);
+  }
+  return out as T;
+}
+
 export function buildAuditEntry(
   entry: AuditEntry,
   req?: Request
@@ -59,18 +74,15 @@ export function buildAuditEntry(
   const actor = entry.actor ?? readActor(req);
   const context = entry.context ?? req?.auditContext;
 
-  return {
+  return stripUndefined({
     ...entry,
     timestamp: entry.timestamp ?? FieldValue.serverTimestamp(),
     outcome,
     category,
     severity: entry.severity ?? deriveSeverity(category, outcome),
-    // Se omiten en vez de guardarse como `undefined`: Firestore rechaza
-    // `undefined` por defecto, así que dejarlos pasar convertiría una entrada
-    // sin contexto en una escritura fallida.
     ...(actor ? { actor } : {}),
     ...(context ? { context } : {}),
-  };
+  });
 }
 
 /**

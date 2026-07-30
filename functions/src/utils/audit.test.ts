@@ -349,3 +349,69 @@ describe("commitWithAuditLog", () => {
     expect(loggerMock.info).not.toHaveBeenCalled();
   });
 });
+
+describe("valores undefined", () => {
+  it("elimina claves undefined de details", () => {
+    const entry = buildAuditEntry({
+      action: "security.invitation.redeem_failed",
+      performedBy: "u1",
+      details: { reason: "no_match", email: "a@b.c", invitationId: undefined },
+    });
+    const details = entry.details as Record<string, unknown>;
+    expect("invitationId" in details).toBe(false);
+    expect(details).toEqual({ reason: "no_match", email: "a@b.c" });
+  });
+
+  it("conserva null, cero y cadena vacía", () => {
+    const entry = buildAuditEntry({
+      action: "event.update",
+      performedBy: "u1",
+      details: { previousRole: null, count: 0, note: "", gone: undefined },
+    });
+    expect(entry.details).toEqual({ previousRole: null, count: 0, note: "" });
+  });
+
+  it("limpia también dentro de objetos anidados y arrays", () => {
+    const entry = buildAuditEntry({
+      action: "user.grants.change",
+      performedBy: "u1",
+      details: {
+        grants: [
+          { permission: "audit:read", scope: "*", expiresAt: undefined },
+        ],
+        nested: { a: 1, b: undefined },
+      },
+    });
+    const d = entry.details as Record<string, unknown>;
+    expect((d.grants as Record<string, unknown>[])[0]).toEqual({
+      permission: "audit:read",
+      scope: "*",
+    });
+    expect(d.nested).toEqual({ a: 1 });
+  });
+
+  it("no destruye el sentinel de timestamp", () => {
+    const entry = buildAuditEntry({ action: "event.create", performedBy: "u" });
+    expect(entry.timestamp).toBe("__TS__");
+  });
+
+  it("conserva instancias de Date", () => {
+    const when = new Date("2026-07-30T00:00:00Z");
+    const entry = buildAuditEntry({
+      action: "event.create",
+      performedBy: "u",
+      details: { when },
+    });
+    expect((entry.details as Record<string, unknown>).when).toBe(when);
+  });
+
+  it("escribe en Firestore una entrada que traía undefined", async () => {
+    await writeAuditLog({
+      action: "security.invitation.redeem_failed",
+      performedBy: "u1",
+      details: { reason: "no_match", invitationId: undefined },
+    });
+    expect(written).toHaveLength(1);
+    expect(JSON.stringify(written[0].data)).not.toContain("invitationId");
+  });
+});
