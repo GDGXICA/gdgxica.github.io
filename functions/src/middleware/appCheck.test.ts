@@ -13,7 +13,11 @@ vi.mock("firebase-admin", () => ({
   }),
 }));
 
-import { verifyAppCheck } from "./appCheck";
+import {
+  verifyAppCheck,
+  readAppCheckEnforcement,
+  __resetAppCheckCache,
+} from "./appCheck";
 
 function buildReq(token?: string): Request {
   return {
@@ -52,6 +56,9 @@ function enforcement(enforce: boolean | undefined | "error") {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // El valor cacheado vive en el módulo, así que sin esto un test que activa la
+  // exigencia se la deja puesta al siguiente.
+  __resetAppCheckCache();
 });
 
 describe("verifyAppCheck", () => {
@@ -117,9 +124,10 @@ describe("verifyAppCheck", () => {
     expect(body.error).toMatch(/recarga la página/i);
   });
 
-  it("fails open when the setting cannot be read", async () => {
-    // A Firestore hiccup must not close public registration. The endpoint
-    // still has its per-IP limit and its per-event cap.
+  it("fails open when the setting cannot be read and nothing is cached", async () => {
+    // With no known value there is nothing to fall back on, so a Firestore
+    // hiccup must not close public registration. The endpoint still has its
+    // per-IP limit and its per-event cap.
     mocks.verifyToken.mockRejectedValue(new Error("bad"));
     enforcement("error");
     const next = vi.fn();
@@ -130,11 +138,82 @@ describe("verifyAppCheck", () => {
     expect(res.__status).toBeUndefined();
   });
 
+  // This replaces the older blanket "a hiccup always fails open". That was a
+  // hole: a Firestore blink silently switched App Check off and back on, so it
+  // neither protected nor said it wasn't protecting.
+  //
+  // Keeping the last known value is safe because a VALID token never reads the
+  // setting at all (see the first test). So this only affects requests that
+  // already arrived without a usable App Check token — exactly the ones
+  // enforcement exists to reject. Legitimate clients are untouched.
+  it("keeps enforcing through a hiccup once the setting was read as on", async () => {
+    enforcement(true);
+    expect(await readAppCheckEnforcement()).toBe(true);
+
+    mocks.verifyToken.mockRejectedValue(new Error("bad"));
+    enforcement("error");
+    const next = vi.fn();
+    const res = buildRes();
+    await verifyAppCheck()(buildReq("bad-token"), res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.__status).toBe(403);
+  });
+
   it("treats a missing enforce field as unenforced", async () => {
     mocks.verifyToken.mockRejectedValue(new Error("bad"));
     enforcement(undefined);
     const next = vi.fn();
     await verifyAppCheck()(buildReq("bad-token"), buildRes(), next);
     expect(next).toHaveBeenCalledOnce();
+  });
+});
+
+/**
+ * La caché del interruptor.
+ *
+ * La bandera vive en Firestore para poder apagarla sin desplegar si reCAPTCHA se
+ * cae en mitad de un evento. Eso sigue funcionando; lo que cambia es qué pasa
+ * cuando la LECTURA falla.
+ */
+describe("readAppCheckEnforcement", () => {
+  it("reads the flag", async () => {
+    enforcement(true);
+    expect(await readAppCheckEnforcement()).toBe(true);
+    enforcement(false);
+    expect(await readAppCheckEnforcement()).toBe(false);
+  });
+
+  // Solo `true` exacto: un "true" de cadena en el documento no activa nada.
+  it("only an exact boolean true enforces", async () => {
+    mocks.settingsGet.mockResolvedValue({ data: () => ({ enforce: "true" }) });
+    expect(await readAppCheckEnforcement()).toBe(false);
+  });
+
+  it("survives several consecutive read failures", async () => {
+    enforcement(true);
+    await readAppCheckEnforcement();
+    enforcement("error");
+    expect(await readAppCheckEnforcement()).toBe(true);
+    expect(await readAppCheckEnforcement()).toBe(true);
+    expect(await readAppCheckEnforcement()).toBe(true);
+  });
+
+  it("caches a known false too", async () => {
+    enforcement(false);
+    expect(await readAppCheckEnforcement()).toBe(false);
+    enforcement("error");
+    expect(await readAppCheckEnforcement()).toBe(false);
+  });
+
+  // El interruptor de emergencia sigue siendo inmediato: en cuanto la lectura
+  // vuelve, manda el valor real y no el cacheado.
+  it("returns to the real value once reads recover", async () => {
+    enforcement(true);
+    await readAppCheckEnforcement();
+    enforcement("error");
+    expect(await readAppCheckEnforcement()).toBe(true);
+    enforcement(false);
+    expect(await readAppCheckEnforcement()).toBe(false);
   });
 });
