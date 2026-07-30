@@ -32,6 +32,7 @@ import {
   auditedRead,
   truncateIp,
   __resetReadDedupeState,
+  __resetProxyChainLog,
 } from "./auditContext";
 
 /** Simula el ciclo de vida: entra la petición, responde, se dispara `finish`. */
@@ -371,5 +372,76 @@ describe("auditedRead", () => {
     }
     await flush();
     expect(written).toHaveLength(2);
+  });
+});
+
+describe("logProxyChainOnce", () => {
+  beforeEach(() => __resetProxyChainLog());
+
+  function runWithHeaders(xff?: string, ip = "38.250.154.63") {
+    const handlers: (() => void)[] = [];
+    const req = {
+      method: "GET",
+      path: "/api/x",
+      baseUrl: "",
+      ip,
+      headers: xff === undefined ? {} : { "x-forwarded-for": xff },
+      get: () => undefined,
+    } as unknown as Request;
+    const res = {
+      statusCode: 200,
+      setHeader: () => {},
+      on: (e: string, cb: () => void) => {
+        if (e === "finish") handlers.push(cb);
+      },
+    } as unknown as Response;
+    auditContext()(req, res, vi.fn());
+    handlers.forEach((h) => h());
+  }
+
+  it("no revienta cuando la petición no trae headers", () => {
+    expect(() => {
+      const req = {
+        method: "GET",
+        path: "/x",
+        baseUrl: "",
+        get: () => undefined,
+      } as unknown as Request;
+      const res = {
+        statusCode: 200,
+        setHeader: () => {},
+        on: () => {},
+      } as unknown as Response;
+      auditContext()(req, res, vi.fn());
+    }).not.toThrow();
+  });
+  it("marca coincidencia cuando req.ip es la primera entrada de la cadena", () => {
+    runWithHeaders("38.250.154.63, 74.125.209.32", "38.250.154.63");
+    expect(loggerMock.info).toHaveBeenCalledWith(
+      "proxy.chain",
+      expect.objectContaining({
+        entryCount: 2,
+        firstEntry: "38.250.154.63",
+        lastEntry: "74.125.209.32",
+        resolvedIp: "38.250.154.63",
+        matchesFirstEntry: true,
+      })
+    );
+  });
+  it("marca DESAJUSTE cuando req.ip es la última entrada", () => {
+    runWithHeaders("38.250.154.63, 74.125.209.32", "74.125.209.32");
+    expect(loggerMock.info).toHaveBeenCalledWith(
+      "proxy.chain",
+      expect.objectContaining({ matchesFirstEntry: false })
+    );
+  });
+  it("solo emite una vez por arranque", () => {
+    runWithHeaders("1.2.3.4");
+    runWithHeaders("1.2.3.4");
+    runWithHeaders("1.2.3.4");
+    const calls = loggerMock.info.mock.calls.filter(
+      (c) => c[0] === "proxy.chain"
+    );
+    expect(calls).toHaveLength(1);
   });
 });

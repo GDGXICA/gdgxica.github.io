@@ -60,10 +60,9 @@ import * as emailSettings from "./handlers/emailSettings";
 admin.initializeApp();
 
 const app = express();
-// Firebase Hosting + Cloud Functions sits behind exactly one Google
-// Frontend hop, so trust a single proxy. Setting `true` would let
-// callers spoof X-Forwarded-For and bypass IP-based rate limiting.
-app.set("trust proxy", 1);
+
+const TRUSTED_PROXY_HOPS = 2;
+app.set("trust proxy", TRUSTED_PROXY_HOPS);
 
 // Registered BEFORE cors(), which answers OPTIONS itself and never calls
 // next() — anything after it would be dead code for preflight. See the
