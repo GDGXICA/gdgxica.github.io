@@ -9,6 +9,9 @@ const mocks = vi.hoisted(() => ({
   advanceQuizQuestion: vi.fn(),
   removeMinigameFromEvent: vi.fn(),
   listMinigameTemplates: vi.fn(),
+  listEvents: vi.fn(),
+  listMyEvents: vi.fn(),
+  useAuth: vi.fn(),
 }));
 
 vi.mock("@/lib/api", () => ({
@@ -19,7 +22,14 @@ vi.mock("@/lib/api", () => ({
     advanceQuizQuestion: mocks.advanceQuizQuestion,
     removeMinigameFromEvent: mocks.removeMinigameFromEvent,
     listMinigameTemplates: mocks.listMinigameTemplates,
+    listEvents: mocks.listEvents,
+    listMyEvents: mocks.listMyEvents,
   },
+}));
+
+// Lo usa el selector de evento que se pinta cuando no hay slug.
+vi.mock("../../AuthProvider", () => ({
+  useAuth: mocks.useAuth,
 }));
 
 import { EventMinigameManager } from "../EventMinigameManager";
@@ -56,6 +66,12 @@ beforeEach(() => {
     data: SAMPLE_INSTANCES,
   });
   mocks.listMinigameTemplates.mockResolvedValue({ success: true, data: [] });
+  mocks.useAuth.mockReturnValue({ can: () => true });
+  mocks.listEvents.mockResolvedValue({
+    success: true,
+    data: [{ id: "devfest-2025", title: "DevFest 2025" }],
+  });
+  mocks.listMyEvents.mockResolvedValue({ success: true, data: [] });
   mocks.attachMinigameToEvent.mockResolvedValue({
     success: true,
     data: { id: "new", type: "poll" },
@@ -70,9 +86,9 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("EventMinigameManager", () => {
-  it("renders an error if no slug is provided", () => {
+  it("ofrece elegir evento si no se dio slug", async () => {
     render(<EventMinigameManager />);
-    expect(screen.getByText(/Falta el parámetro/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Elige el evento/)).toBeInTheDocument();
     expect(mocks.listEventMinigames).not.toHaveBeenCalled();
   });
 

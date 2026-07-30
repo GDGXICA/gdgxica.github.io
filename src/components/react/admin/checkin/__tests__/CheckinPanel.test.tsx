@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   useRoster: vi.fn(),
   setCheckedIn: vi.fn(),
   useAuth: vi.fn(),
+  listEvents: vi.fn(),
+  listMyEvents: vi.fn(),
   isDevPreview: { value: false },
 }));
 
@@ -23,7 +25,11 @@ vi.mock("@/lib/api", () => ({
   get isDevPreview() {
     return mocks.isDevPreview.value;
   },
-  api: { importCheckinRoster: vi.fn() },
+  api: {
+    importCheckinRoster: vi.fn(),
+    listEvents: mocks.listEvents,
+    listMyEvents: mocks.listMyEvents,
+  },
 }));
 
 import { CheckinPanel } from "../CheckinPanel";
@@ -86,7 +92,15 @@ beforeEach(() => {
   mocks.useRoster.mockReturnValue(rosterState());
   mocks.useAuth.mockReturnValue({
     user: { uid: "org-1", displayName: "Alvaro", email: "a@x.com" },
+    // El selector de evento pregunta por `events:read` para decidir si lista
+    // el catálogo entero o solo los eventos asignados a quien mira.
+    can: () => true,
   });
+  mocks.listEvents.mockResolvedValue({
+    success: true,
+    data: [{ id: "devfest-ica-2026", title: "DevFest Ica 2026" }],
+  });
+  mocks.listMyEvents.mockResolvedValue({ success: true, data: [] });
 });
 
 afterEach(() => cleanup());
@@ -100,9 +114,12 @@ describe("CheckinPanel — it renders at all", () => {
     expect(screen.getByText("Alex Alberto Quintanilla Garcia")).toBeVisible();
   });
 
-  it("explains itself when no event was given", () => {
+  // Sin slug ya no se pide escribir la URL a mano: se ofrece elegir el evento.
+  // Era la puerta cerrada para un voluntario, cuyo rol tampoco le da
+  // `events:read` para poder consultar los slugs por su cuenta.
+  it("ofrece elegir evento cuando no se dio ninguno", async () => {
     render(<CheckinPanel />);
-    expect(screen.getByText(/Falta indicar el evento/)).toBeVisible();
+    expect(await screen.findByText(/Elige el evento/)).toBeVisible();
   });
 
   it("does not hit live Firestore in dev preview", () => {
