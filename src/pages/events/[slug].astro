@@ -128,11 +128,13 @@ const hasSchedule = isArraySchedule
     : false;
 
 const whatsappGroupLink = event.data.whatsappGroupLink;
-const whatsappQrSvg = whatsappGroupLink
-  ? await QRCode.toString(whatsappGroupLink, {
-      type: "svg",
+// Data URL rather than an SVG string so it goes into an <img src>, without
+// injecting raw HTML into the page. Same approach as credencial.astro.
+const whatsappQrDataUrl = whatsappGroupLink
+  ? await QRCode.toDataURL(whatsappGroupLink, {
       errorCorrectionLevel: "M",
       margin: 1,
+      width: 480,
       color: { dark: "#111827", light: "#ffffff" },
     })
   : null;
@@ -413,7 +415,7 @@ const whatsappQrSvg = whatsappGroupLink
             </div>
           </div>
           {
-            whatsappGroupLink && whatsappQrSvg && (
+            whatsappGroupLink && whatsappQrDataUrl && (
               <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
                 <h2 class="text-primary mb-4 text-2xl font-semibold">
                   Grupo de WhatsApp
@@ -422,10 +424,13 @@ const whatsappQrSvg = whatsappGroupLink
                   Únete al grupo del evento para recibir información sobre
                   salones, charlas y novedades en tiempo real.
                 </p>
-                <div
-                  class="mb-4 flex items-center justify-center rounded-lg bg-white p-4 [&>svg]:h-auto [&>svg]:w-full [&>svg]:max-w-[240px]"
-                  set:html={whatsappQrSvg}
-                />
+                <div class="mb-4 flex items-center justify-center rounded-lg bg-white p-4">
+                  <img
+                    src={whatsappQrDataUrl}
+                    alt="QR del grupo de WhatsApp del evento"
+                    class="h-auto w-full max-w-[240px]"
+                  />
+                </div>
                 <div class="flex justify-center">
                   <Button
                     variant="solid"

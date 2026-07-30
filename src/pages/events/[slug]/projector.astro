@@ -20,10 +20,15 @@ const joinUrl = `https://gdgica.com/events/${slug}?play=1`;
 // works the moment it's served — even before the React island
 // hydrates. Standard black-on-white; all containers (footer, overlay,
 // hero) already have a white background so no inversion is needed.
-const qrSvg = await QRCode.toString(joinUrl, {
-  type: "svg",
+//
+// A data URL rather than an SVG string: the component renders it as the
+// `src` of an <img>, so nothing here has to be injected as raw HTML.
+// Same approach as credencial.astro. 512px covers the largest on-screen
+// size (a 640px-capped container on a projector).
+const qrDataUrl = await QRCode.toDataURL(joinUrl, {
   errorCorrectionLevel: "H",
   margin: 1,
+  width: 512,
   color: { dark: "#000000", light: "#ffffff" },
 });
 ---
@@ -34,6 +39,6 @@ const qrSvg = await QRCode.toString(joinUrl, {
     slug={slug!}
     eventName={event.data.name}
     joinUrl={joinUrl}
-    qrSvg={qrSvg}
+    qrDataUrl={qrDataUrl}
   />
 </ProjectorLayout>

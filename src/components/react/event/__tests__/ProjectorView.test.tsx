@@ -23,7 +23,8 @@ vi.mock("../useBingoWinners", () => ({
 
 import { ProjectorView } from "../ProjectorView";
 
-const QR_SVG = '<svg data-testid="qr-svg"><rect /></svg>';
+const QR_DATA_URL =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==";
 const JOIN_URL = "https://gdgica.com/events/x?play=1";
 const NOW_MS = 1_700_000_000_000;
 
@@ -59,7 +60,7 @@ function renderProjector() {
       slug="x"
       eventName="DevFest ICA 2026"
       joinUrl={JOIN_URL}
-      qrSvg={QR_SVG}
+      qrDataUrl={QR_DATA_URL}
     />
   );
 }
@@ -69,7 +70,9 @@ describe("ProjectorView", () => {
     renderProjector();
     expect(screen.getByText("DevFest ICA 2026")).toBeInTheDocument();
     expect(screen.getByText(/Escanea para participar/i)).toBeInTheDocument();
-    expect(screen.getByLabelText("QR de unión")).toBeInTheDocument();
+    // getByAltText, no getByLabelText: el QR es un <img> y su nombre
+    // accesible viene del alt, no de un aria-label.
+    expect(screen.getByAltText("QR de unión")).toBeInTheDocument();
     expect(screen.getAllByText(JOIN_URL)).not.toHaveLength(0);
   });
 
