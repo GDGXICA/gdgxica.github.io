@@ -190,3 +190,74 @@ export async function sendCertificateEmail(
     ],
   });
 }
+
+/**
+ * Aviso de que el registro de auditoría tiene algo que mirar.
+ *
+ * Va a la misma dirección de contacto que el resto: quien recibe esto es quien
+ * administra la plataforma, no una persona de la comunidad. Se manda un solo
+ * correo con todo lo acumulado en la ventana en vez de uno por evento — un
+ * ataque genera decenas de filas, y decenas de correos se leen como spam y se
+ * empiezan a ignorar justo cuando importan.
+ *
+ * El cuerpo NO lleva datos personales de nadie: solo acción, actor, severidad y
+ * prefijo de red. Si hace falta más, el enlace lleva al panel, que ya exige el
+ * permiso `audit:read`. Un correo es la copia menos controlada que existe.
+ */
+export async function sendAuditAlertEmail(mail: {
+  to: string;
+  since: Date;
+  events: {
+    action: string;
+    severity: string;
+    performedBy: string;
+    ipPrefix?: string | null;
+    at?: Date | null;
+  }[];
+  /** Total real: puede superar `events.length` si se recortó la lista. */
+  total: number;
+  panelUrl: string;
+}): Promise<void> {
+  const desde = mail.since.toLocaleString("es-PE");
+  const rows = mail.events
+    .map((e) => {
+      const cuando = e.at ? e.at.toLocaleString("es-PE") : "—";
+      const red = e.ipPrefix ? ` · ${htmlEscape(singleLine(e.ipPrefix))}` : "";
+      return (
+        `<li><code>${htmlEscape(singleLine(e.action))}</code> ` +
+        `(${htmlEscape(singleLine(e.severity))}) — ` +
+        `${htmlEscape(singleLine(e.performedBy))}${red} · ${htmlEscape(cuando)}</li>`
+      );
+    })
+    .join("");
+
+  const recortado =
+    mail.total > mail.events.length
+      ? `<p>Se muestran ${mail.events.length} de <strong>${mail.total}</strong>. ` +
+        `El resto está en el panel.</p>`
+      : "";
+
+  const textRows = mail.events
+    .map(
+      (e) =>
+        `- ${singleLine(e.action)} (${singleLine(e.severity)}) — ` +
+        `${singleLine(e.performedBy)}${e.ipPrefix ? ` · ${singleLine(e.ipPrefix)}` : ""}`
+    )
+    .join("\n");
+
+  await sendPlain(
+    mail.to,
+    `[GDG ICA] ${mail.total} evento(s) de auditoría que revisar`,
+    `<p>Hay <strong>${mail.total}</strong> evento(s) registrados desde ` +
+      `${htmlEscape(desde)} que conviene revisar.</p>` +
+      `<ul>${rows}</ul>${recortado}` +
+      `<p><a href="${htmlEscape(mail.panelUrl)}">Abrir el registro de auditoría</a></p>` +
+      `<p>Si no reconoces alguna de estas acciones, revisa los roles y los ` +
+      `permisos en /admin/users antes que nada.</p>` +
+      `<p>Comunidad GDG ICA</p>`,
+    `Hay ${mail.total} evento(s) de auditoría desde ${desde} que conviene ` +
+      `revisar.\n\n${textRows}\n\n${mail.panelUrl}\n\n` +
+      `Si no reconoces alguna de estas acciones, revisa los roles y permisos ` +
+      `en /admin/users antes que nada.\n\nComunidad GDG ICA`
+  );
+}
