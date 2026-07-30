@@ -6,10 +6,28 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // falta para ejercitar la protección del último admin.
 const docs = new Map<string, Record<string, unknown>>();
 const updates: { path: string; data: Record<string, unknown> }[] = [];
-const auditEntries: Record<string, unknown>[] = [];
+
+/**
+ * Entradas de auditoría realmente escritas en `audit_log`.
+ *
+ * Antes se recogían mockeando `../utils/audit`, lo que hacía imposible
+ * comprobar lo único que de verdad importa aquí: que el registro y la mutación
+ * se confirman en el MISMO batch. Con el escritor real corriendo contra este
+ * almacén, un batch que no llegue a `commit()` no deja ni mutación ni entrada,
+ * que es exactamente la garantía que se quiere.
+ */
+function auditLogEntries(): Record<string, unknown>[] {
+  return [...docs.entries()]
+    .filter(([path]) => path.startsWith("audit_log/"))
+    .map(([, data]) => data);
+}
+
+let generatedIds = 0;
 
 function docRef(path: string) {
   return {
+    __path: path,
+    id: path.split("/").pop() as string,
     get: async () => {
       const data = docs.get(path);
       return { exists: data !== undefined, data: () => data };
@@ -21,9 +39,43 @@ function docRef(path: string) {
   };
 }
 
+type DocRef = ReturnType<typeof docRef>;
+
+/**
+ * Batch que solo aplica sus operaciones al confirmar. Que nada toque el
+ * almacén antes de `commit()` es la mitad del test: es lo que distingue un
+ * batch de dos escrituras seguidas.
+ */
+function batchMock() {
+  const staged: (() => void)[] = [];
+  const api = {
+    update: (ref: DocRef, data: Record<string, unknown>) => {
+      staged.push(() => {
+        updates.push({ path: ref.__path, data });
+        docs.set(ref.__path, { ...(docs.get(ref.__path) ?? {}), ...data });
+      });
+      return api;
+    },
+    set: (ref: DocRef, data: Record<string, unknown>) => {
+      staged.push(() => docs.set(ref.__path, data));
+      return api;
+    },
+    delete: (ref: DocRef) => {
+      staged.push(() => docs.delete(ref.__path));
+      return api;
+    },
+    commit: async () => {
+      staged.forEach((apply) => apply());
+      staged.length = 0;
+    },
+  };
+  return api;
+}
+
 function collectionRef(name: string) {
   return {
-    doc: (id: string) => docRef(`${name}/${id}`),
+    // Sin id para `newAuditRef()`, que deja que Firestore lo genere.
+    doc: (id?: string) => docRef(`${name}/${id ?? `gen-${++generatedIds}`}`),
     where: (field: string, _op: string, value: unknown) => ({
       get: async () => ({
         docs: [...docs.entries()]
@@ -43,7 +95,10 @@ function collectionRef(name: string) {
 }
 
 vi.mock("firebase-admin", () => ({
-  firestore: () => ({ collection: (name: string) => collectionRef(name) }),
+  firestore: () => ({
+    collection: (name: string) => collectionRef(name),
+    batch: () => batchMock(),
+  }),
 }));
 
 vi.mock("firebase-admin/firestore", () => ({
@@ -51,10 +106,8 @@ vi.mock("firebase-admin/firestore", () => ({
   Timestamp: class {},
 }));
 
-vi.mock("../utils/audit", () => ({
-  writeAuditLog: async (entry: Record<string, unknown>) => {
-    auditEntries.push(entry);
-  },
+vi.mock("firebase-functions", () => ({
+  logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
 import * as handler from "./users";
@@ -110,7 +163,6 @@ function seed(uid: string, data: Record<string, unknown>) {
 beforeEach(() => {
   docs.clear();
   updates.length = 0;
-  auditEntries.length = 0;
 });
 
 describe("updateRole — validación", () => {
@@ -179,7 +231,7 @@ describe("updateRole — validación", () => {
     expect(updates).toEqual([
       { path: "users/t1", data: { role: "organizer" } },
     ]);
-    expect(auditEntries[0]).toMatchObject({
+    expect(auditLogEntries()[0]).toMatchObject({
       action: "user.role.change",
       performedBy: "actor-1",
       targetId: "t1",
@@ -288,7 +340,7 @@ describe("updateStatus", () => {
     expect(updates).toEqual([
       { path: "users/t1", data: { status: "suspended" } },
     ]);
-    expect(auditEntries[0]).toMatchObject({
+    expect(auditLogEntries()[0]).toMatchObject({
       action: "user.status.change",
       details: { newStatus: "suspended", reason: "Baja temporal" },
     });

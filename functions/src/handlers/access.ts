@@ -3,7 +3,12 @@ import * as admin from "firebase-admin";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
-import { writeAuditLog } from "../utils/audit";
+import {
+  commitWithAuditLog,
+  mirrorToCloudLogging,
+  stageAuditLog,
+  writeAuditLog,
+} from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import {
@@ -248,6 +253,9 @@ export async function decideRequest(req: Request, res: Response) {
       ? body.role
       : requestDoc.data()?.requestedRole;
 
+    /** Rol que la persona tenía antes de aprobarle la solicitud. */
+    let currentRole: unknown = null;
+
     if (body.approve) {
       if (!isRole(granted) || !REQUESTABLE_ROLES.includes(granted)) {
         res.status(400).json({
@@ -266,17 +274,21 @@ export async function decideRequest(req: Request, res: Response) {
         return;
       }
 
-      const userRef = db.collection("users").doc(uid);
-      if (!(await userRef.get()).exists) {
+      const userDoc = await db.collection("users").doc(uid).get();
+      if (!userDoc.exists) {
         res
           .status(404)
           .json({ success: false, error: "User account not found" });
         return;
       }
-      await userRef.update({ role: granted });
+      currentRole = userDoc.data()?.role;
     }
 
-    await requestRef.update({
+    const batch = db.batch();
+    if (body.approve) {
+      batch.update(db.collection("users").doc(uid), { role: granted });
+    }
+    batch.update(requestRef, {
       status: body.approve ? "approved" : "rejected",
       reviewedBy: performer.uid,
       reviewedAt: FieldValue.serverTimestamp(),
@@ -284,14 +296,23 @@ export async function decideRequest(req: Request, res: Response) {
       grantedRole: body.approve ? granted : null,
     });
 
-    await writeAuditLog({
-      action: body.approve ? "access.request.approve" : "access.request.reject",
-      performedBy: performer.uid,
-      targetId: uid,
-      targetType: "access_request",
-      details: { grantedRole: body.approve ? granted : null, reason: note },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await commitWithAuditLog(
+      batch,
+      {
+        action: body.approve
+          ? "access.request.approve"
+          : "access.request.reject",
+        performedBy: performer.uid,
+        targetId: uid,
+        targetType: "access_request",
+        details: {
+          grantedRole: body.approve ? granted : null,
+          previousRole: currentRole ?? null,
+          reason: note,
+        },
+      },
+      req
+    );
 
     // El correo no debe tumbar la operación: la decisión ya está tomada y
     // registrada, y un fallo de Gmail no puede deshacerla.
@@ -521,27 +542,44 @@ export async function redeemInvitation(req: Request, res: Response) {
 
     // Transacción para que dos canjes simultáneos del mismo enlace no
     // aplique el rol dos veces ni deje la invitación sin marcar.
-    await db.runTransaction(async (tx) => {
+    //
+    // El registro de auditoría se confirma DENTRO de la transacción, no después:
+    // canjear una invitación cambia el rol de quien canjea, y si la instancia
+    // moría entre el commit y la escritura del registro, quedaba una elevación
+    // de permisos sin rastro alguno. Firestore exige que todas las lecturas
+    // vayan antes de todas las escrituras, de ahí el orden de abajo.
+    const stored = await db.runTransaction(async (tx) => {
       const fresh = await tx.get(match.ref);
       const freshData = fresh.data();
       if (freshData?.usedAt || freshData?.revokedAt) {
         throw new Error("ALREADY_USED");
       }
+
+      const userSnap = await tx.get(userRef);
+      const currentRole = userSnap.data()?.role;
+
       tx.update(match.ref, {
         usedAt: FieldValue.serverTimestamp(),
         usedBy: user.uid,
       });
       tx.update(userRef, { role: data.role });
+
+      return stageAuditLog(
+        tx,
+        {
+          action: "access.invitation.redeem",
+          performedBy: user.uid,
+          targetId: match.id,
+          targetType: "invitation",
+          details: { role: data.role, previousRole: currentRole ?? null },
+        },
+        req
+      );
     });
 
-    await writeAuditLog({
-      action: "access.invitation.redeem",
-      performedBy: user.uid,
-      targetId: match.id,
-      targetType: "invitation",
-      details: { role: data.role },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    // Fuera de la transacción a propósito: el callback se puede reintentar, y
+    // espejar dentro dejaría una línea por intento.
+    mirrorToCloudLogging(stored, req);
 
     res.json({ success: true, data: { role: data.role } });
   } catch (err) {

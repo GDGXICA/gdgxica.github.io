@@ -107,7 +107,10 @@ export async function createEvent(req: Request, res: Response) {
 
 export async function updateEvent(req: Request, res: Response) {
   try {
-    const eventId = req.params.id;
+    // `as string` como en el resto de handlers: express 5 tipa los params como
+    // `string | string[]`, y validateParamId ya rechazó cualquier cosa que no
+    // encaje en SAFE_ID_PATTERN antes de llegar aquí.
+    const eventId = req.params.id as string;
     const event = { ...req.body, id: eventId };
 
     if (!validateEventUrls(event, res)) return;
@@ -160,7 +163,7 @@ export async function updateEvent(req: Request, res: Response) {
 
 export async function deleteEvent(req: Request, res: Response) {
   try {
-    const eventId = req.params.id;
+    const eventId = req.params.id as string;
     const github = new GitHubService(GITHUB_TOKEN.value());
     const user = (req as AuthenticatedRequest).user;
 
