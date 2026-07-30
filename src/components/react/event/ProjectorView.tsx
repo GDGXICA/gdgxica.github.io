@@ -15,10 +15,11 @@ interface Props {
   slug: string;
   eventName: string;
   joinUrl: string;
-  qrSvg: string;
+  /** PNG data URL built at build time by projector.astro. */
+  qrDataUrl: string;
 }
 
-export function ProjectorView({ slug, eventName, joinUrl, qrSvg }: Props) {
+export function ProjectorView({ slug, eventName, joinUrl, qrDataUrl }: Props) {
   const { liveInstances } = useLiveMinigames(slug);
   const [qrExpanded, setQrExpanded] = useState(false);
 
@@ -52,7 +53,7 @@ export function ProjectorView({ slug, eventName, joinUrl, qrSvg }: Props) {
         </div>
       </header>
 
-      {!hasLive && <HeroQr qrSvg={qrSvg} joinUrl={joinUrl} />}
+      {!hasLive && <HeroQr qrDataUrl={qrDataUrl} joinUrl={joinUrl} />}
 
       {hasLive && (
         <main className="flex-1 p-8">
@@ -97,7 +98,9 @@ export function ProjectorView({ slug, eventName, joinUrl, qrSvg }: Props) {
               className="h-24 w-24 rounded bg-white p-1 transition hover:ring-2 hover:ring-white/60"
               aria-label="Agrandar QR"
             >
-              <div dangerouslySetInnerHTML={{ __html: qrSvg }} />
+              {/* alt vacío a propósito: el botón ya aporta el nombre
+                  accesible, y repetirlo lo anunciaría dos veces. */}
+              <img src={qrDataUrl} alt="" className="h-full w-full" />
             </button>
           </div>
         </footer>
@@ -116,11 +119,13 @@ export function ProjectorView({ slug, eventName, joinUrl, qrSvg }: Props) {
           >
             ✕ Achicar
           </button>
-          <div
-            className="h-[60vh] max-h-[640px] w-[60vh] max-w-[640px] rounded-2xl bg-white p-6"
-            dangerouslySetInnerHTML={{ __html: qrSvg }}
-            aria-label="QR de unión ampliado"
-          />
+          <div className="h-[60vh] max-h-[640px] w-[60vh] max-w-[640px] rounded-2xl bg-white p-6">
+            <img
+              src={qrDataUrl}
+              alt="QR de unión ampliado"
+              className="h-full w-full object-contain"
+            />
+          </div>
           <p className="font-mono text-xl text-white/80">{joinUrl}</p>
         </div>
       )}
@@ -130,15 +135,23 @@ export function ProjectorView({ slug, eventName, joinUrl, qrSvg }: Props) {
 
 export default ProjectorView;
 
-function HeroQr({ qrSvg, joinUrl }: { qrSvg: string; joinUrl: string }) {
+function HeroQr({
+  qrDataUrl,
+  joinUrl,
+}: {
+  qrDataUrl: string;
+  joinUrl: string;
+}) {
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-8 p-8 text-center">
       <p className="text-2xl text-white/70">Escanea para participar</p>
-      <div
-        className="h-[60vh] max-h-[640px] w-[60vh] max-w-[640px] rounded-2xl bg-white p-6"
-        dangerouslySetInnerHTML={{ __html: qrSvg }}
-        aria-label="QR de unión"
-      />
+      <div className="h-[60vh] max-h-[640px] w-[60vh] max-w-[640px] rounded-2xl bg-white p-6">
+        <img
+          src={qrDataUrl}
+          alt="QR de unión"
+          className="h-full w-full object-contain"
+        />
+      </div>
       <p className="font-mono text-xl text-white/80">{joinUrl}</p>
     </main>
   );
