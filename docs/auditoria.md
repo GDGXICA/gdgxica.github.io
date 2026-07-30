@@ -112,9 +112,28 @@ que ninguna petición pase el middleware — y cada intento posterior queda como
 
 ## Alertas
 
-`functions/src/triggers/auditAlerts.ts` corre cada hora, busca lo `critical`
-desde su marca de agua (`settings/auditAlerts`) y manda un correo a la dirección
-de contacto. Un solo correo con todo lo acumulado, no uno por evento.
+`functions/src/triggers/auditAlerts.ts` corre cada hora, busca lo **notable**
+(`warning` y `critical`) desde su marca de agua (`settings/auditAlerts`) y manda
+un correo a la dirección de contacto. Un solo correo con todo lo acumulado, no
+uno por evento.
+
+Mira los dos niveles y no solo `critical` por una razón concreta: a `critical`
+solo llegan dos cosas —una cuenta suspendida que sigue intentando operar y el
+propio registro estrangulándose—, mientras que `security.permission.denied`, que
+es lo que delata a alguien probando qué puede tocar, es `warning`. Igual que las
+filas `synthesized`, que significan "hay código mutando cosas sin decir qué".
+Avisando solo de lo crítico, una tarde entera de sondeo no generaba ni un correo.
+
+Los dos niveles se tratan distinto para que ampliarlo no convierta el aviso en
+ruido: lo crítico se detalla evento a evento y los `warning` van **agregados por
+acción** con su cuenta. Provocar un `warning` es barato —basta con tantear un
+endpoint—, así que detallarlos dejaría que quien sondea decidiera la longitud
+del correo.
+
+Si el correo dice **"al menos N"**, la consulta llegó a su techo de 200 filas y
+hubo más de las que cuenta. La marca de agua avanza igual, así que lo que quedó
+fuera no se avisa nunca: el panel es la fuente completa. El enlace del correo ya
+va filtrado por `?severity=notable`, que es exactamente lo que el aviso cubre.
 
 Si las alertas dejan de llegar, el fallo está en Cloud Logging:
 

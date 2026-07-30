@@ -91,6 +91,22 @@ function critical(over: Record<string, unknown> = {}, agoMs = 60_000) {
   };
 }
 
+/**
+ * Fila de nivel aviso. Es la severidad de `security.permission.denied`, que es
+ * la señal de alguien tanteando qué puede tocar — y la que antes no disparaba
+ * ningún correo.
+ */
+function warning(over: Record<string, unknown> = {}, agoMs = 60_000) {
+  return critical(
+    {
+      action: "security.permission.denied",
+      severity: "warning",
+      ...over,
+    },
+    agoMs
+  );
+}
+
 beforeEach(() => {
   docs.clear();
   rows = [];
@@ -136,17 +152,116 @@ describe("aviso", () => {
     expect(alert.events).toHaveLength(25);
   });
 
+  // El caso que motivó ampliar la consulta: `security.permission.denied` es la
+  // señal principal de alguien probando qué alcanza, y es `warning`. Mirando
+  // solo lo crítico, una tarde entera de sondeo no generaba ni un correo.
+  it("avisa también de lo que es solo aviso", async () => {
+    rows = [warning()];
+    await run();
+    expect(sentAlerts).toHaveLength(1);
+    expect(sentAlerts[0]).toMatchObject({ total: 1, warningTotal: 1 });
+  });
+
+  // Detallarlos uno a uno dejaría que quien sondea decidiera la longitud del
+  // correo, y un correo larguísimo se lee como spam.
+  it("agrupa los avisos por acción en vez de detallarlos", async () => {
+    rows = [
+      warning(),
+      warning({ performedBy: "actor-2" }),
+      warning({ action: "security.ratelimit.exceeded" }),
+    ];
+    await run();
+    const alert = sentAlerts[0] as {
+      events: unknown[];
+      warningSummary: { action: string; count: number }[];
+    };
+    expect(alert.events).toHaveLength(0);
+    expect(alert.warningSummary).toEqual([
+      { action: "security.permission.denied", count: 2 },
+      { action: "security.ratelimit.exceeded", count: 1 },
+    ]);
+  });
+
+  it("detalla lo crítico y resume lo demás en el mismo correo", async () => {
+    rows = [critical(), warning(), warning()];
+    await run();
+    const alert = sentAlerts[0] as {
+      total: number;
+      events: unknown[];
+      warningTotal: number;
+    };
+    expect(alert.total).toBe(3);
+    expect(alert.events).toHaveLength(1);
+    expect(alert.warningTotal).toBe(2);
+  });
+
+  // El resumen se recorta a 15 acciones. Callar que se recortó sería el mismo
+  // fallo que este cambio corrige en el total.
+  it("dice cuántas acciones deja fuera del resumen", async () => {
+    rows = Array.from({ length: 20 }, (_, i) =>
+      warning({ action: `security.accion.${i}` })
+    );
+    await run();
+    const alert = sentAlerts[0] as {
+      warningSummary: unknown[];
+      warningActionCount: number;
+    };
+    expect(alert.warningSummary).toHaveLength(15);
+    expect(alert.warningActionCount).toBe(20);
+  });
+
+  it("no deja nada fuera cuando caben todas", async () => {
+    rows = [warning(), warning({ action: "security.ratelimit.exceeded" })];
+    await run();
+    const alert = sentAlerts[0] as {
+      warningSummary: unknown[];
+      warningActionCount: number;
+    };
+    expect(alert.warningSummary).toHaveLength(2);
+    expect(alert.warningActionCount).toBe(2);
+  });
+
+  // La marca de agua avanza igual, así que lo que el límite dejó fuera no se
+  // avisa nunca. Dar ese recuento como total sería mentir justo en la ráfaga,
+  // que es cuando el número real es el dato que hace falta.
+  it("avisa de que el recuento es un suelo cuando la consulta topa", async () => {
+    rows = Array.from({ length: 200 }, () => critical());
+    await run();
+    expect(sentAlerts[0]).toMatchObject({ truncated: true, total: 200 });
+  });
+
+  it("no lo marca como truncado si la ventana cabía entera", async () => {
+    // 199 filas: la consulta no llegó a su techo, así que se trajo todo.
+    rows = Array.from({ length: 199 }, () => critical());
+    await run();
+    expect(sentAlerts[0]).toMatchObject({ truncated: false });
+  });
+
+  // Aunque la consulta tope, si parte de lo traído queda fuera de la ventana
+  // sabemos que la ventana entera cabía y el total es exacto.
+  it("no lo marca como truncado si parte de lo traído es antiguo", async () => {
+    rows = [
+      ...Array.from({ length: 199 }, () => critical()),
+      critical({}, 5 * 60 * 60 * 1000),
+    ];
+    await run();
+    expect(sentAlerts[0]).toMatchObject({ truncated: false, total: 199 });
+  });
+
   it("incluye el prefijo de red, no la dirección", async () => {
     rows = [critical()];
     await run();
     expect(JSON.stringify(sentAlerts[0])).toContain("181.65.42.0/24");
   });
 
-  it("enlaza al panel ya filtrado", async () => {
-    rows = [critical()];
+  // `notable`, no `critical`: el enlace tiene que enseñar lo mismo de lo que
+  // avisa el correo. Filtrando por crítico, quien siguiera el enlace tras un
+  // aviso de sondeo no encontraría ninguna de las filas que lo motivaron.
+  it("enlaza al panel filtrado por lo mismo que avisa", async () => {
+    rows = [warning()];
     await run();
     expect(sentAlerts[0]).toMatchObject({
-      panelUrl: "https://gdgica.com/admin/audit?severity=critical",
+      panelUrl: "https://gdgica.com/admin/audit?severity=notable",
     });
   });
 });
