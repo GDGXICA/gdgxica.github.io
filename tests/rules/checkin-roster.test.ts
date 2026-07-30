@@ -1,6 +1,14 @@
 import { afterAll, afterEach, beforeAll, describe, it } from "vitest";
 import { assertFails, assertSucceeds } from "@firebase/rules-unit-testing";
-import { deleteDoc, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import {
+  deleteDoc,
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+  Timestamp,
+  updateDoc,
+} from "firebase/firestore";
 import { cleanup, clearAll, getTestEnv } from "./setup";
 
 const SLUG = "devfest-ica-2026";
@@ -28,7 +36,7 @@ async function seedRole(
  * el motivo que dicen estar comprobando.
  */
 function checkin(uid: string, fields: Record<string, unknown>) {
-  return { lastActionBy: uid, ...fields };
+  return { lastActionBy: uid, lastActionAt: serverTimestamp(), ...fields };
 }
 
 /** Seeds a roster doc the way the import Cloud Function would. */
@@ -397,6 +405,39 @@ describe("checkin roster rules", () => {
           checkedIn: false,
           checkedInAt: null,
           checkedInBy: null,
+        })
+      );
+    });
+
+    // Mismo motivo por el que `bingoWonAt` va fijado a `request.time`: si el
+    // cliente pudiera elegir la fecha, la auditoría contaría el orden de los
+    // hechos como a esa persona le conviniera. Y sin la fijación este campo era
+    // el único de la lista blanca sin cota de tipo ni de tamaño.
+    it("denies a backdated lastActionAt", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("org-1", "organizer");
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertFails(
+        updateDoc(doc(org, ATTENDEE), {
+          checkedIn: true,
+          checkedInBy: "org-1",
+          lastActionBy: "org-1",
+          lastActionAt: Timestamp.fromMillis(1000),
+        })
+      );
+    });
+
+    it("denies a write with no lastActionAt at all", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("org-1", "organizer");
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertFails(
+        updateDoc(doc(org, ATTENDEE), {
+          checkedIn: true,
+          checkedInBy: "org-1",
+          lastActionBy: "org-1",
         })
       );
     });

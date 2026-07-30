@@ -1,6 +1,12 @@
 import { afterAll, afterEach, beforeAll, describe, it } from "vitest";
 import { assertFails, assertSucceeds } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+} from "firebase/firestore";
 import { cleanup, clearAll, getTestEnv } from "./setup";
 
 const EVENT_A = "devfest-ica-2026";
@@ -120,8 +126,10 @@ describe("alcance por evento", () => {
           checkedIn: true,
           checkedInBy: "vol-1",
           // Las reglas exigen atribución de la ACCIÓN en toda escritura del
-          // roster, para que el trigger de auditoría sepa quién la hizo.
+          // roster, para que el trigger de auditoría sepa quién la hizo, y la
+          // fecha fijada al reloj del servidor.
           lastActionBy: "vol-1",
+          lastActionAt: serverTimestamp(),
         })
       );
     });

@@ -19,7 +19,13 @@ import { writeAuditLog } from "../utils/audit";
  * documento (`lastActionBy`), y las reglas exigen que coincida con el uid de
  * quien escribe. Ver el bloque `roster` en firestore.rules.
  *
- * Coste: una invocación por cambio de estado. En un DevFest son cientos.
+ * Coste: una invocación por ESCRITURA en el roster, no por cambio de estado.
+ * Un trigger de Firestore no se puede filtrar en el servidor, así que importar
+ * un CSV de trescientas filas son trescientas invocaciones que salen por el
+ * `return` de abajo sin escribir nada. Es el precio de instrumentar una
+ * escritura directa, y a escala de un DevFest —unos cientos de filas por
+ * evento, unas pocas importaciones— entra de sobra en el nivel gratuito. Si
+ * algún día el roster fuera de decenas de miles, esto habría que replantearlo.
  */
 
 /** Lo mínimo del evento de Firestore que necesita el handler. */

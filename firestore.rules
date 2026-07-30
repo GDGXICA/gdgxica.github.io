@@ -343,6 +343,15 @@ service cloud.firestore {
                       // Exigir la igualdad con el uid obliga además a que el
                       // campo esté presente: si falta, es null y no coincide.
                       && request.resource.data.lastActionBy == request.auth.uid
+                      // Fijada al reloj del servidor, igual que `bingoWonAt`
+                      // más arriba y por los dos mismos motivos: nadie puede
+                      // fechar su acción cuando le convenga, y el campo queda
+                      // acotado sin necesidad de comprobar tipo ni tamaño.
+                      // Sin esto era el ÚNICO campo de la lista blanca sin
+                      // cota — justo lo que advierte el comentario de
+                      // `checkedInByName`, que existe para que un voluntario
+                      // no pueda escribir varios megabytes en una fila.
+                      && request.resource.data.lastActionAt == request.time
                       && (!('note' in request.resource.data)
                           || request.resource.data.note == null
                           || request.resource.data.note.size() <= 200)
