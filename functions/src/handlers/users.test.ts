@@ -550,3 +550,91 @@ describe("updateGrants", () => {
     expect(res.__status).toBe(400);
   });
 });
+
+// Degradar o suspender al último admin ya estaba cubierto; vaciarlo por
+// revocaciones lo dejaba igual de inútil y no lo impedía nada. Y como
+// `countActiveAdmins()` cuenta por rol y estado, seguía contando como admin
+// activo mientras no podía hacer nada.
+describe("updateGrants — último admin", () => {
+  it("no deja revocar la administración de usuarios al único admin", async () => {
+    docs.clear();
+    seed("solo-admin", { role: "admin" });
+    const res = buildRes();
+    await handler.updateGrants(
+      buildReq("admin", "solo-admin", {
+        grants: [],
+        revocations: ["users:role:write"],
+        reason: "x",
+      }),
+      res
+    );
+    expect(res.__status).toBe(400);
+    expect(res.__body?.error).toMatch(/last active admin/i);
+    expect(updates).toHaveLength(0);
+  });
+
+  it("sí deja hacerlo cuando queda otro admin activo", async () => {
+    seed("admin-a", { role: "admin" });
+    seed("admin-b", { role: "admin" });
+    const res = buildRes();
+    await handler.updateGrants(
+      buildReq("admin", "admin-a", {
+        grants: [],
+        revocations: ["users:role:write"],
+        reason: "Se queda solo con lectura",
+      }),
+      res
+    );
+    expect(res.__body?.success).toBe(true);
+  });
+
+  it("un admin suspendido no cuenta para el mínimo", async () => {
+    seed("admin-a", { role: "admin" });
+    seed("admin-b", { role: "admin", status: "suspended" });
+    const res = buildRes();
+    await handler.updateGrants(
+      buildReq("admin", "admin-a", {
+        grants: [],
+        revocations: ["users:role:write"],
+        reason: "x",
+      }),
+      res
+    );
+    expect(res.__status).toBe(400);
+  });
+
+  // La guarda es específica: retirarle otra cosa al último admin no lo deja
+  // sin gobierno, así que no hay motivo para impedirlo.
+  it("deja revocar un permiso que no sea el de administrar usuarios", async () => {
+    docs.clear();
+    seed("solo-admin", { role: "admin" });
+    const res = buildRes();
+    await handler.updateGrants(
+      buildReq("admin", "solo-admin", {
+        grants: [],
+        revocations: ["events:delete"],
+        reason: "Ya no borra eventos",
+      }),
+      res
+    );
+    expect(res.__body?.success).toBe(true);
+  });
+
+  // Sobre un no-admin la guarda no aplica: el rol no otorga ese permiso, así
+  // que revocarlo no quita nada que nadie más pueda cubrir.
+  it("no estorba al tocar los permisos de alguien que no es admin", async () => {
+    docs.clear();
+    seed("solo-admin", { role: "admin" });
+    seed("t1", { role: "organizer" });
+    const res = buildRes();
+    await handler.updateGrants(
+      buildReq("admin", "t1", {
+        grants: [],
+        revocations: ["users:role:write"],
+        reason: "x",
+      }),
+      res
+    );
+    expect(res.__body?.success).toBe(true);
+  });
+});

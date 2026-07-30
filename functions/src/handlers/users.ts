@@ -7,6 +7,7 @@ import {
   GLOBAL_SCOPE,
   ROLES,
   canGrant,
+  effectivePermissions,
   isPermission,
   isRole,
   type Permission,
@@ -345,12 +346,43 @@ export async function updateGrants(req: Request, res: Response) {
       return;
     }
 
-    if (!actorDominates(performer.permissions, userDoc.data()?.role)) {
+    const targetRole = userDoc.data()?.role;
+    const targetStatus = userDoc.data()?.status;
+
+    if (!actorDominates(performer.permissions, targetRole)) {
       res.status(403).json({
         success: false,
         error: "Cannot manage a user whose role exceeds your own permissions",
       });
       return;
+    }
+
+    // Guarda de último admin, que este camino no tenía.
+    //
+    // `countActiveAdmins()` cuenta por rol y estado, así que un admin al que se
+    // le hayan revocado los permisos sigue contando como admin activo mientras
+    // no puede hacer nada. Degradar o suspender al último ya estaba cubierto;
+    // vaciarlo por revocaciones lo dejaba igual de inútil y sin que nada lo
+    // impidiera, y la plataforma se quedaba sin nadie capaz de repartir roles
+    // salvo entrando a mano por la consola de Firebase.
+    //
+    // Se mira el estado RESULTANTE y no la lista de revocaciones: es la misma
+    // función que decide los permisos en cada petición, así que no puede
+    // discrepar de ella.
+    if (targetRole === "admin" && targetStatus !== "suspended") {
+      const after = effectivePermissions({
+        role: targetRole,
+        status: targetStatus,
+        grants,
+        revocations,
+      });
+      if (!after.has("users:role:write") && (await countActiveAdmins()) <= 1) {
+        res.status(400).json({
+          success: false,
+          error: "Cannot revoke user administration from the last active admin",
+        });
+        return;
+      }
     }
 
     const batch = admin.firestore().batch();
