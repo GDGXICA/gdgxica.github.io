@@ -25,6 +25,27 @@ const HEADER = "x-firebase-appcheck";
  * way to disable it would be worse than the abuse it prevents. Start
  * unenforced, watch the logs, then turn it on.
  */
+/**
+ * Último valor leído con éxito, por instancia.
+ *
+ * Existe porque caer a `false` ante un error de lectura desactiva App Check en
+ * silencio: un parpadeo de Firestore bastaba para que la protección se apagara
+ * sin que nada lo dijera, y volviera sola cuando la lectura funcionase otra vez.
+ * Eso es lo peor de los dos mundos — ni protege ni avisa de que no protege.
+ *
+ * Con la caché, un error transitorio conserva la última decisión conocida. La
+ * primera lectura de una instancia sigue cayendo a `false` si falla, y eso se
+ * mantiene a propósito: sin ningún valor conocido, cerrar el paso convertiría un
+ * problema de Firestore en asistentes que no pueden sacar su credencial en
+ * mitad de un evento.
+ */
+let cachedEnforcement: boolean | null = null;
+
+/** Solo para los tests: olvida el valor cacheado. */
+export function __resetAppCheckCache(): void {
+  cachedEnforcement = null;
+}
+
 export async function readAppCheckEnforcement(): Promise<boolean> {
   try {
     const snap = await admin
@@ -32,11 +53,24 @@ export async function readAppCheckEnforcement(): Promise<boolean> {
       .collection("settings")
       .doc("appcheck")
       .get();
-    return snap.data()?.enforce === true;
+    cachedEnforcement = snap.data()?.enforce === true;
+    return cachedEnforcement;
   } catch (err) {
-    // Fail open: a settings read failure must not close public
-    // registration. The endpoint still has its rate limit and its cap.
-    logger.warn("Could not read the App Check enforcement setting", { err });
+    if (cachedEnforcement !== null) {
+      // Se conserva la última decisión conocida en vez de abrir el paso.
+      logger.warn(
+        "Could not read the App Check enforcement setting; keeping the last known value",
+        { err, enforce: cachedEnforcement }
+      );
+      return cachedEnforcement;
+    }
+    // Sin valor previo: se abre, con ruido. La alternativa —cerrar sin saber si
+    // la exigencia estaba activada— rompería el registro público por un fallo
+    // que puede no tener nada que ver.
+    logger.warn(
+      "Could not read the App Check enforcement setting and there is no cached value",
+      { err }
+    );
     return false;
   }
 }
