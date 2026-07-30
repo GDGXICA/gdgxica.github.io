@@ -44,6 +44,33 @@ export function truncateIp(ip: string | undefined): string | null {
 /** Métodos que cambian estado. Los demás no generan fila de respaldo. */
 const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+let loggedProxyChain = false;
+
+export function __resetProxyChainLog(): void {
+  loggedProxyChain = false;
+}
+
+function logProxyChainOnce(req: Request): void {
+  if (loggedProxyChain) return;
+  loggedProxyChain = true;
+
+  const raw = req.headers?.["x-forwarded-for"];
+  const chain = Array.isArray(raw) ? raw.join(", ") : (raw ?? "");
+  const entries = chain
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  logger.info("proxy.chain", {
+    xForwardedFor: chain,
+    entryCount: entries.length,
+    firstEntry: entries[0] ?? null,
+    lastEntry: entries[entries.length - 1] ?? null,
+    resolvedIp: req.ip ?? null,
+    matchesFirstEntry: entries.length > 0 && entries[0] === req.ip,
+  });
+}
+
 /**
  * Patrón de la ruta, no la ruta concreta.
  *
@@ -159,6 +186,7 @@ export function auditContext() {
       userAgent: singleLineHeader(req.get("user-agent")) || null,
     };
     req.auditContext = context;
+    logProxyChainOnce(req);
 
     // Útil para que quien reporte un fallo pueda pegar el id, y para cruzar la
     // respuesta con su línea de Cloud Logging.
