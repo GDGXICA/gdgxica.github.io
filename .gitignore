@@ -38,6 +38,9 @@ auth-debug.log*
 
 # Cloud Functions build output
 functions/lib/
+# Copias de seguridad del build que deja alguna herramienta al reconstruir;
+# sin esto, un `git add -A` se las lleva por delante.
+functions/lib.bak.*/
 functions/node_modules/
 
 # Content images (copied from gdg-ica-data during build)
