@@ -1,13 +1,11 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
-import { FieldValue } from "firebase-admin/firestore";
-import { writeAuditLog } from "../utils/audit";
+import { commitWithAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import {
   GLOBAL_SCOPE,
   ROLES,
-  canAssignRole,
   canGrant,
   isPermission,
   isRole,
@@ -15,6 +13,7 @@ import {
   type PermissionGrant,
   type Role,
 } from "../auth/permissions";
+import { actorDominates, countActiveAdmins } from "../auth/guards";
 
 const MAX_REASON = 500;
 const MAX_GRANTS = 50;
@@ -30,34 +29,6 @@ function readReason(body: unknown): string | null {
   const trimmed = reason.trim();
   if (trimmed.length === 0 || trimmed.length > MAX_REASON) return null;
   return trimmed;
-}
-
-/**
- * Cuenta los admins que realmente pueden operar. Se usa para no dejar la
- * plataforma sin nadie capaz de administrarla: un descuido ahí obliga a
- * entrar por la consola de Firebase a reparar el desastre a mano.
- */
-async function countActiveAdmins(): Promise<number> {
-  const snapshot = await admin
-    .firestore()
-    .collection("users")
-    .where("role", "==", "admin")
-    .get();
-  return snapshot.docs.filter((d) => d.data()?.status !== "suspended").length;
-}
-
-/**
- * El actor debe poseer todos los permisos del rol que toca — tanto el que
- * quita como el que pone. Sin la comprobación sobre el rol ACTUAL, alguien
- * con `users:role:write` concedido a mano podría degradar a un admin pese a
- * no tener sus permisos, que es escalada por la puerta de atrás.
- */
-function actorDominates(
-  actor: AuthenticatedRequest["user"],
-  role: unknown
-): boolean {
-  if (!isRole(role)) return true; // rol corrupto: no hay nada que dominar
-  return canAssignRole(actor.permissions, role);
 }
 
 export async function listUsers(_req: Request, res: Response) {
@@ -118,8 +89,8 @@ export async function updateRole(req: Request, res: Response) {
     // No escalada: nadie reparte lo que no tiene, ni en el rol que asigna ni
     // en el que retira.
     if (
-      !actorDominates(performer, role) ||
-      !actorDominates(performer, previousRole)
+      !actorDominates(performer.permissions, role) ||
+      !actorDominates(performer.permissions, previousRole)
     ) {
       res.status(403).json({
         success: false,
@@ -139,16 +110,24 @@ export async function updateRole(req: Request, res: Response) {
       }
     }
 
-    await userRef.update({ role });
-
-    await writeAuditLog({
-      action: "user.role.change",
-      performedBy: performer.uid,
-      targetId: uid,
-      targetType: "user",
-      details: { newRole: role, previousRole, reason },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    // El cambio de rol y su registro se confirman juntos. Antes iban en dos
+    // escrituras seguidas, y como `writeAuditLog` se traga sus errores, una
+    // instancia desalojada entre las dos —algo que Cloud Functions hace de
+    // rutina— dejaba a alguien con permisos nuevos y sin una sola línea que lo
+    // dijera.
+    const batch = admin.firestore().batch();
+    batch.update(userRef, { role });
+    await commitWithAuditLog(
+      batch,
+      {
+        action: "user.role.change",
+        performedBy: performer.uid,
+        targetId: uid,
+        targetType: "user",
+        details: { newRole: role, previousRole, reason },
+      },
+      req
+    );
 
     res.json({ success: true, data: { uid, role } });
   } catch (err) {
@@ -203,7 +182,7 @@ export async function updateStatus(req: Request, res: Response) {
     }
 
     const targetRole = userDoc.data()?.role;
-    if (!actorDominates(performer, targetRole)) {
+    if (!actorDominates(performer.permissions, targetRole)) {
       res.status(403).json({
         success: false,
         error: "Cannot manage a user whose role exceeds your own permissions",
@@ -221,20 +200,23 @@ export async function updateStatus(req: Request, res: Response) {
       }
     }
 
-    await userRef.update({ status });
-
-    await writeAuditLog({
-      action: "user.status.change",
-      performedBy: performer.uid,
-      targetId: uid,
-      targetType: "user",
-      details: {
-        newStatus: status,
-        previousStatus: userDoc.data()?.status ?? "active",
-        reason,
+    const batch = admin.firestore().batch();
+    batch.update(userRef, { status });
+    await commitWithAuditLog(
+      batch,
+      {
+        action: "user.status.change",
+        performedBy: performer.uid,
+        targetId: uid,
+        targetType: "user",
+        details: {
+          newStatus: status,
+          previousStatus: userDoc.data()?.status ?? "active",
+          reason,
+        },
       },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+      req
+    );
 
     res.json({ success: true, data: { uid, status } });
   } catch (err) {
@@ -363,7 +345,7 @@ export async function updateGrants(req: Request, res: Response) {
       return;
     }
 
-    if (!actorDominates(performer, userDoc.data()?.role)) {
+    if (!actorDominates(performer.permissions, userDoc.data()?.role)) {
       res.status(403).json({
         success: false,
         error: "Cannot manage a user whose role exceeds your own permissions",
@@ -371,24 +353,27 @@ export async function updateGrants(req: Request, res: Response) {
       return;
     }
 
-    await userRef.update({ grants, revocations });
-
-    await writeAuditLog({
-      action: "user.grants.change",
-      performedBy: performer.uid,
-      targetId: uid,
-      targetType: "user",
-      details: {
-        grants: grants.map((g) => ({
-          permission: g.permission,
-          scope: g.scope,
-          expiresAt: g.expiresAt ? (g.expiresAt as Date).toISOString() : null,
-        })),
-        revocations,
-        reason,
+    const batch = admin.firestore().batch();
+    batch.update(userRef, { grants, revocations });
+    await commitWithAuditLog(
+      batch,
+      {
+        action: "user.grants.change",
+        performedBy: performer.uid,
+        targetId: uid,
+        targetType: "user",
+        details: {
+          grants: grants.map((g) => ({
+            permission: g.permission,
+            scope: g.scope,
+            expiresAt: g.expiresAt ? (g.expiresAt as Date).toISOString() : null,
+          })),
+          revocations,
+          reason,
+        },
       },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+      req
+    );
 
     res.json({ success: true, data: { uid, grants, revocations } });
   } catch (err) {

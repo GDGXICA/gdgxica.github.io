@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
-import { writeAuditLog } from "../utils/audit";
+import { commitWithAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import {
@@ -96,7 +96,11 @@ export async function assignStaff(req: Request, res: Response) {
       expiresAt = parsed;
     }
 
-    await db.collection("events").doc(slug).collection("staff").doc(uid).set({
+    // Asignar staff concede permisos dentro del evento, así que se registra con
+    // la misma atomicidad que un cambio de rol: o queda la asignación con su
+    // constancia, o no queda ninguna de las dos.
+    const batch = db.batch();
+    batch.set(db.collection("events").doc(slug).collection("staff").doc(uid), {
       uid,
       role: targetRole,
       assignedBy: performer.uid,
@@ -104,20 +108,22 @@ export async function assignStaff(req: Request, res: Response) {
       expiresAt,
       reason,
     });
-
-    await writeAuditLog({
-      action: "event.staff.assign",
-      performedBy: performer.uid,
-      targetId: uid,
-      targetType: "event_staff",
-      details: {
-        eventSlug: slug,
-        role: targetRole,
-        expiresAt: expiresAt ? expiresAt.toISOString() : null,
-        reason,
+    await commitWithAuditLog(
+      batch,
+      {
+        action: "event.staff.assign",
+        performedBy: performer.uid,
+        targetId: uid,
+        targetType: "event_staff",
+        details: {
+          eventSlug: slug,
+          role: targetRole,
+          expiresAt: expiresAt ? expiresAt.toISOString() : null,
+          reason,
+        },
       },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+      req
+    );
 
     res.status(201).json({ success: true, data: { uid, eventSlug: slug } });
   } catch (err) {
@@ -143,16 +149,19 @@ export async function removeStaff(req: Request, res: Response) {
       return;
     }
 
-    await ref.delete();
-
-    await writeAuditLog({
-      action: "event.staff.remove",
-      performedBy: performer.uid,
-      targetId: uid,
-      targetType: "event_staff",
-      details: { eventSlug: slug },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    const batch = admin.firestore().batch();
+    batch.delete(ref);
+    await commitWithAuditLog(
+      batch,
+      {
+        action: "event.staff.remove",
+        performedBy: performer.uid,
+        targetId: uid,
+        targetType: "event_staff",
+        details: { eventSlug: slug },
+      },
+      req
+    );
 
     res.json({ success: true });
   } catch (err) {

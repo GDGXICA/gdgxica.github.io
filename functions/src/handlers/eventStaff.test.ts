@@ -3,10 +3,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const docs = new Map<string, Record<string, unknown>>();
 const deleted: string[] = [];
-const auditEntries: Record<string, unknown>[] = [];
+
+/**
+ * Entradas realmente escritas en `audit_log`. Se leen del almacén en vez de
+ * mockear `../utils/audit` para que el test compruebe que la asignación de
+ * staff y su registro se confirman en el mismo batch: asignar staff concede
+ * permisos dentro del evento, así que una asignación sin rastro es el mismo
+ * problema que un cambio de rol sin rastro.
+ */
+function auditLogEntries(): Record<string, unknown>[] {
+  return [...docs.entries()]
+    .filter(([path]) => path.startsWith("audit_log/"))
+    .map(([, data]) => data);
+}
+
+let generatedIds = 0;
 
 function docRef(path: string) {
   return {
+    __path: path,
     id: path.split("/").pop() as string,
     get: async () => {
       const data = docs.get(path);
@@ -23,9 +38,40 @@ function docRef(path: string) {
   };
 }
 
+type DocRef = ReturnType<typeof docRef>;
+
+/** Nada toca el almacén hasta `commit()`: eso es lo que se está probando. */
+function batchMock() {
+  const staged: (() => void)[] = [];
+  const api = {
+    set: (ref: DocRef, data: Record<string, unknown>) => {
+      staged.push(() => docs.set(ref.__path, data));
+      return api;
+    },
+    update: (ref: DocRef, data: Record<string, unknown>) => {
+      staged.push(() =>
+        docs.set(ref.__path, { ...(docs.get(ref.__path) ?? {}), ...data })
+      );
+      return api;
+    },
+    delete: (ref: DocRef) => {
+      staged.push(() => {
+        deleted.push(ref.__path);
+        docs.delete(ref.__path);
+      });
+      return api;
+    },
+    commit: async () => {
+      staged.forEach((apply) => apply());
+      staged.length = 0;
+    },
+  };
+  return api;
+}
+
 function collectionRef(name: string) {
   return {
-    doc: (id: string) => docRef(`${name}/${id}`),
+    doc: (id?: string) => docRef(`${name}/${id ?? `gen-${++generatedIds}`}`),
     get: async () => ({
       docs: [...docs.entries()]
         .filter(([path]) => path.startsWith(`${name}/`))
@@ -40,6 +86,7 @@ function collectionRef(name: string) {
 vi.mock("firebase-admin", () => ({
   firestore: () => ({
     collection: (name: string) => collectionRef(name),
+    batch: () => batchMock(),
     collectionGroup: (name: string) => ({
       where: (field: string, _op: string, value: unknown) => ({
         get: async () => ({
@@ -65,10 +112,8 @@ vi.mock("firebase-admin/firestore", () => ({
   Timestamp: class {},
 }));
 
-vi.mock("../utils/audit", () => ({
-  writeAuditLog: async (entry: Record<string, unknown>) => {
-    auditEntries.push(entry);
-  },
+vi.mock("firebase-functions", () => ({
+  logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
 import * as handler from "./eventStaff";
@@ -109,7 +154,6 @@ const SLUG = "devfest-2026";
 beforeEach(() => {
   docs.clear();
   deleted.length = 0;
-  auditEntries.length = 0;
 });
 
 describe("assignStaff", () => {
@@ -127,7 +171,7 @@ describe("assignStaff", () => {
       assignedBy: "adm",
       reason: "Puerta del DevFest",
     });
-    expect(auditEntries[0]).toMatchObject({
+    expect(auditLogEntries()[0]).toMatchObject({
       action: "event.staff.assign",
       details: { eventSlug: SLUG },
     });
@@ -204,7 +248,9 @@ describe("removeStaff", () => {
     await handler.removeStaff(buildReq({ slug: SLUG, uid: "vol" }), res);
     expect(res.__body?.success).toBe(true);
     expect(deleted).toContain(`events/${SLUG}/staff/vol`);
-    expect(auditEntries[0]).toMatchObject({ action: "event.staff.remove" });
+    expect(auditLogEntries()[0]).toMatchObject({
+      action: "event.staff.remove",
+    });
   });
 
   it("404 si no hay asignación", async () => {

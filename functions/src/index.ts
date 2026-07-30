@@ -7,7 +7,7 @@ import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { GITHUB_TOKEN, GMAIL_USER, GMAIL_APP_PASSWORD } from "./config";
 import { requirePermission, requireAuth } from "./middleware/auth";
 import { isAllowedOrigin, rejectDisallowedOrigin } from "./middleware/cors";
-import { validateParamId } from "./middleware/validate";
+import { safeError, validateParamId } from "./middleware/validate";
 import { verifyAppCheck } from "./middleware/appCheck";
 import { validateBody } from "./middleware/validateBody";
 import {
@@ -843,12 +843,48 @@ app.post(
   triggerRebuild
 );
 
+// Manejador de errores global. Va DESPUÉS de todas las rutas: express lo
+// distingue por tener cuatro parámetros, y solo recibe lo que ningún handler
+// capturó.
+//
+// Cada handler envuelve su cuerpo en try/catch y devuelve `safeError`, así que
+// esto no debería dispararse nunca. Existe porque hasta ahora un throw FUERA
+// de ese try —en `validateBody`, en un middleware, en un `JSON.parse` de un
+// cuerpo malformado— caía en el manejador por defecto de express, que responde
+// con el stack trace en texto plano. Eso filtra rutas del repo y estructura
+// interna a quien mande basura a propósito, y no deja constancia de nada.
+app.use(
+  (
+    err: unknown,
+    req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction
+  ) => {
+    logger.error("Unhandled error", {
+      requestId: req.auditContext?.requestId,
+      method: req.method,
+      path: req.path,
+      err,
+    });
+    if (res.headersSent) return;
+    res.status(500).json({ success: false, error: safeError(err) });
+  }
+);
+
 export const api = onRequest(
   {
     secrets: [GITHUB_TOKEN, GMAIL_USER, GMAIL_APP_PASSWORD],
     invoker: "public",
     timeoutSeconds: 300,
     memory: "512MiB",
+    // Techo de instancias concurrentes. Gen2 usa 100 por defecto, y sin límite
+    // tres cosas escalan a la vez sin freno: el coste de un ataque, las
+    // escrituras de auditoría que ese ataque genera, y la deriva de los seis
+    // rate limiters —que guardan su contador en memoria, así que cada
+    // instancia nueva estrena presupuesto y el límite real es
+    // `instancias × cupo`. Diez instancias sirven de sobra el tráfico de un
+    // DevFest y acotan las tres cosas de una vez.
+    maxInstances: 10,
   },
   app
 );

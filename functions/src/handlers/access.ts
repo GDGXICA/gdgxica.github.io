@@ -3,7 +3,12 @@ import * as admin from "firebase-admin";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
-import { writeAuditLog } from "../utils/audit";
+import {
+  commitWithAuditLog,
+  mirrorToCloudLogging,
+  stageAuditLog,
+  writeAuditLog,
+} from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import {
@@ -12,6 +17,12 @@ import {
   isRole,
   type Role,
 } from "../auth/permissions";
+import {
+  actorDominates,
+  activeAdminsQuery,
+  countActiveAdmins,
+  countActiveAdminsIn,
+} from "../auth/guards";
 import {
   sendAccessDecisionEmail,
   sendInvitationEmail,
@@ -248,6 +259,9 @@ export async function decideRequest(req: Request, res: Response) {
       ? body.role
       : requestDoc.data()?.requestedRole;
 
+    /** Rol que la persona tenía antes de aprobarle la solicitud. */
+    let currentRole: unknown = null;
+
     if (body.approve) {
       if (!isRole(granted) || !REQUESTABLE_ROLES.includes(granted)) {
         res.status(400).json({
@@ -266,17 +280,44 @@ export async function decideRequest(req: Request, res: Response) {
         return;
       }
 
-      const userRef = db.collection("users").doc(uid);
-      if (!(await userRef.get()).exists) {
+      const userDoc = await db.collection("users").doc(uid).get();
+      if (!userDoc.exists) {
         res
           .status(404)
           .json({ success: false, error: "User account not found" });
         return;
       }
-      await userRef.update({ role: granted });
+
+      // Aprobar una solicitud SUSTITUYE el rol que la persona ya tenía, así
+      // que pasa por las mismas guardas que un cambio de rol en el panel. Sin
+      // esto, aprobar una solicitud vieja de quien entretanto llegó a admin lo
+      // degradaba sin más, y si era el último dejaba la plataforma sin nadie
+      // capaz de administrarla.
+      currentRole = userDoc.data()?.role;
+      if (!actorDominates(performer.permissions, currentRole)) {
+        res.status(403).json({
+          success: false,
+          error: "Cannot manage a user whose role exceeds your own permissions",
+        });
+        return;
+      }
+
+      if (currentRole === "admin" && granted !== "admin") {
+        if ((await countActiveAdmins()) <= 1) {
+          res.status(400).json({
+            success: false,
+            error: "Cannot demote the last active admin",
+          });
+          return;
+        }
+      }
     }
 
-    await requestRef.update({
+    const batch = db.batch();
+    if (body.approve) {
+      batch.update(db.collection("users").doc(uid), { role: granted });
+    }
+    batch.update(requestRef, {
       status: body.approve ? "approved" : "rejected",
       reviewedBy: performer.uid,
       reviewedAt: FieldValue.serverTimestamp(),
@@ -284,14 +325,23 @@ export async function decideRequest(req: Request, res: Response) {
       grantedRole: body.approve ? granted : null,
     });
 
-    await writeAuditLog({
-      action: body.approve ? "access.request.approve" : "access.request.reject",
-      performedBy: performer.uid,
-      targetId: uid,
-      targetType: "access_request",
-      details: { grantedRole: body.approve ? granted : null, reason: note },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await commitWithAuditLog(
+      batch,
+      {
+        action: body.approve
+          ? "access.request.approve"
+          : "access.request.reject",
+        performedBy: performer.uid,
+        targetId: uid,
+        targetType: "access_request",
+        details: {
+          grantedRole: body.approve ? granted : null,
+          previousRole: currentRole ?? null,
+          reason: note,
+        },
+      },
+      req
+    );
 
     // El correo no debe tumbar la operación: la decisión ya está tomada y
     // registrada, y un fallo de Gmail no puede deshacerla.
@@ -521,27 +571,54 @@ export async function redeemInvitation(req: Request, res: Response) {
 
     // Transacción para que dos canjes simultáneos del mismo enlace no
     // aplique el rol dos veces ni deje la invitación sin marcar.
-    await db.runTransaction(async (tx) => {
+    //
+    // El registro de auditoría se confirma DENTRO de la transacción, no después:
+    // canjear una invitación cambia el rol de quien canjea, y si la instancia
+    // moría entre el commit y la escritura del registro, quedaba una elevación
+    // de permisos sin rastro alguno. Firestore exige que todas las lecturas
+    // vayan antes de todas las escrituras, de ahí el orden de abajo.
+    const stored = await db.runTransaction(async (tx) => {
       const fresh = await tx.get(match.ref);
       const freshData = fresh.data();
       if (freshData?.usedAt || freshData?.revokedAt) {
         throw new Error("ALREADY_USED");
       }
+
+      // El rol actual se lee aquí y no fuera: canjear SUSTITUYE el rol, y una
+      // invitación de organizador al correo de un admin lo degradaba en
+      // silencio. La cuenta de admins también va dentro, porque una lectura
+      // suelta no entra en la transacción y dos canjes a la vez podrían pasar
+      // los dos la comprobación y dejar la plataforma con cero admins.
+      const userSnap = await tx.get(userRef);
+      const currentRole = userSnap.data()?.role;
+      if (currentRole === "admin" && data.role !== "admin") {
+        if (countActiveAdminsIn(await tx.get(activeAdminsQuery())) <= 1) {
+          throw new Error("LAST_ADMIN");
+        }
+      }
+
       tx.update(match.ref, {
         usedAt: FieldValue.serverTimestamp(),
         usedBy: user.uid,
       });
       tx.update(userRef, { role: data.role });
+
+      return stageAuditLog(
+        tx,
+        {
+          action: "access.invitation.redeem",
+          performedBy: user.uid,
+          targetId: match.id,
+          targetType: "invitation",
+          details: { role: data.role, previousRole: currentRole ?? null },
+        },
+        req
+      );
     });
 
-    await writeAuditLog({
-      action: "access.invitation.redeem",
-      performedBy: user.uid,
-      targetId: match.id,
-      targetType: "invitation",
-      details: { role: data.role },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    // Fuera de la transacción a propósito: el callback se puede reintentar, y
+    // espejar dentro dejaría una línea por intento.
+    mirrorToCloudLogging(stored, req);
 
     res.json({ success: true, data: { role: data.role } });
   } catch (err) {
@@ -549,6 +626,19 @@ export async function redeemInvitation(req: Request, res: Response) {
       res.status(400).json({
         success: false,
         error: "Invitation is invalid, expired or already used",
+      });
+      return;
+    }
+    // Este SÍ dice qué pasó, al contrario que el mensaje opaco de arriba. Ese
+    // es opaco para no convertir el endpoint en un oráculo de invitaciones
+    // ajenas; aquí no hay nada que filtrar —quien canjea es el último admin y
+    // ya lo sabe— y un error genérico le haría pensar que el enlace está roto.
+    if (err instanceof Error && err.message === "LAST_ADMIN") {
+      res.status(400).json({
+        success: false,
+        error:
+          "Canjear esta invitación te quitaría el rol de administrador y no " +
+          "queda ningún otro activo. Pide que asciendan a otra persona antes.",
       });
       return;
     }
