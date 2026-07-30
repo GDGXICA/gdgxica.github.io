@@ -9,6 +9,18 @@ interface AuditEntry {
   targetType?: string;
   details?: Record<string, unknown>;
   timestamp?: { _seconds: number };
+  outcome?: "success" | "denied" | "failure";
+  severity?: "info" | "notice" | "warning" | "critical";
+  category?: string;
+  actor?: { email?: string | null; role?: string | null; scope?: string };
+  context?: {
+    requestId?: string;
+    route?: string;
+    ipPrefix?: string | null;
+    method?: string;
+  };
+  /** La escribió la red de seguridad porque ningún handler dijo qué pasó. */
+  synthesized?: boolean;
 }
 
 interface AuditPage {
@@ -21,31 +33,114 @@ const FILTERS = [
   { key: "action", label: "Acción", placeholder: "user.role.change" },
   { key: "performedBy", label: "Autor (uid)", placeholder: "uid del actor" },
   { key: "targetId", label: "Objetivo", placeholder: "uid o id del recurso" },
+  { key: "category", label: "Categoría", placeholder: "security, access…" },
+  { key: "severity", label: "Severidad", placeholder: "notable, critical…" },
+  { key: "outcome", label: "Resultado", placeholder: "denied, failure…" },
+  {
+    key: "context.ipPrefix",
+    label: "Red (prefijo)",
+    placeholder: "181.65.42.0/24",
+  },
 ] as const;
 
 type FilterKey = (typeof FILTERS)[number]["key"];
 
-/** Acciones que tocan el control de acceso: se resaltan al revisar. */
-const ACCESS_ACTIONS = new Set([
-  "user.role.change",
-  "user.status.change",
-  "user.grants.change",
-]);
+const FILTER_KEYS = FILTERS.map((f) => f.key) as readonly string[];
+
+/**
+ * Atajos: las dos preguntas que de verdad se hacen al abrir esta pantalla, sin
+ * tener que recordar qué valor va en qué campo.
+ */
+const PRESETS = [
+  { label: "Todo", params: {} as Record<string, string> },
+  { label: "Seguridad", params: { category: "security" } },
+  { label: "Notable", params: { severity: "notable" } },
+  { label: "Accesos", params: { category: "access" } },
+  { label: "Denegado", params: { outcome: "denied" } },
+];
+
+/**
+ * Color por severidad, no por una lista de acciones a mano.
+ *
+ * Antes era un `Set` con tres nombres de acción escritos a mano. Esa lista se
+ * desincroniza en cuanto se añade una acción —y se añadieron muchas—, así que
+ * el resaltado dejaba de marcar justo lo nuevo. Derivarlo del campo hace que
+ * cualquier acción futura entre con el color que le toca sin tocar nada aquí.
+ */
+const SEVERITY_STYLE: Record<string, string> = {
+  critical: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
+  warning:
+    "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+  notice: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+  info: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
+};
+
+const OUTCOME_LABEL: Record<string, string> = {
+  success: "OK",
+  denied: "Denegado",
+  failure: "Fallo",
+};
+
+const OUTCOME_STYLE: Record<string, string> = {
+  success: "text-green-700 dark:text-green-400",
+  denied: "text-amber-700 dark:text-amber-400",
+  failure: "text-red-700 dark:text-red-400",
+};
 
 function formatDate(ts: AuditEntry["timestamp"]): string {
   if (!ts?._seconds) return "—";
   return new Date(ts._seconds * 1000).toLocaleString("es-PE");
 }
 
+/** Lee el filtro de la URL, para que un hallazgo se pueda enlazar. */
+function paramsFromUrl(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const search = new URLSearchParams(window.location.search);
+  for (const key of FILTER_KEYS) {
+    const value = search.get(key);
+    if (value) return { [key]: value };
+  }
+  return {};
+}
+
+function syncUrl(params: Record<string, string>) {
+  if (typeof window === "undefined") return;
+  const search = new URLSearchParams(window.location.search);
+  for (const key of FILTER_KEYS) search.delete(key);
+  for (const [key, value] of Object.entries(params)) search.set(key, value);
+  const query = search.toString();
+  window.history.replaceState(
+    null,
+    "",
+    query ? `${window.location.pathname}?${query}` : window.location.pathname
+  );
+}
+
+const COLUMNS = [
+  "Fecha",
+  "Acción",
+  "Resultado",
+  "Autor",
+  "Objetivo",
+  "Red",
+  "Detalle",
+];
+
 export function AuditLog() {
+  // Se lee UNA vez al montar, no en cada render: es el estado inicial que trae
+  // la URL, y recalcularlo continuamente además dejaría el efecto de abajo con
+  // una dependencia que cambia de identidad en cada pasada.
+  const [initial] = useState(paramsFromUrl);
+  const initialKey = (Object.keys(initial)[0] ?? "action") as FilterKey;
+
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filterKey, setFilterKey] = useState<FilterKey>("action");
-  const [filterValue, setFilterValue] = useState("");
-  const [applied, setApplied] = useState<Record<string, string>>({});
+  const [filterKey, setFilterKey] = useState<FilterKey>(initialKey);
+  const [filterValue, setFilterValue] = useState(initial[initialKey] ?? "");
+  const [applied, setApplied] = useState<Record<string, string>>(initial);
 
   const load = useCallback(
     async (params: Record<string, string>, append: boolean) => {
@@ -71,20 +166,30 @@ export function AuditLog() {
   );
 
   useEffect(() => {
-    load({}, false);
-  }, [load]);
+    load(initial, false);
+  }, [load, initial]);
+
+  function apply(params: Record<string, string>) {
+    setApplied(params);
+    syncUrl(params);
+    load(params, false);
+  }
 
   function applyFilter(e: React.FormEvent) {
     e.preventDefault();
-    const next = filterValue.trim() ? { [filterKey]: filterValue.trim() } : {};
-    setApplied(next);
-    load(next, false);
+    apply(filterValue.trim() ? { [filterKey]: filterValue.trim() } : {});
+  }
+
+  function applyPreset(params: Record<string, string>) {
+    const key = (Object.keys(params)[0] ?? "action") as FilterKey;
+    setFilterKey(key);
+    setFilterValue(params[key] ?? "");
+    apply(params);
   }
 
   function clearFilter() {
     setFilterValue("");
-    setApplied({});
-    load({}, false);
+    apply({});
   }
 
   if (loading) {
@@ -98,9 +203,31 @@ export function AuditLog() {
   return (
     <div>
       <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-        Registro de todas las operaciones de escritura. Es de solo lectura:
-        nadie, ni un administrador, puede editarlo ni borrarlo desde el panel.
+        Registro de todas las operaciones de escritura, los intentos denegados y
+        las lecturas de datos sensibles. Es de solo lectura: nadie, ni un
+        administrador, puede editarlo ni borrarlo desde el panel.
       </p>
+
+      <div className="mb-3 flex flex-wrap gap-2">
+        {PRESETS.map((preset) => {
+          const active =
+            JSON.stringify(preset.params) === JSON.stringify(applied);
+          return (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => applyPreset(preset.params)}
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                active
+                  ? "bg-blue-600 text-white"
+                  : "border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              }`}
+            >
+              {preset.label}
+            </button>
+          );
+        })}
+      </div>
 
       <form onSubmit={applyFilter} className="mb-6 flex flex-wrap gap-2">
         <select
@@ -153,25 +280,31 @@ export function AuditLog() {
           <table className="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                {["Fecha", "Acción", "Autor", "Objetivo", "Detalle"].map(
-                  (h) => (
-                    <th
-                      key={h}
-                      className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
-                    >
-                      {h}
-                    </th>
-                  )
-                )}
+                {COLUMNS.map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {entries.map((entry) => {
                 const reason = entry.details?.reason;
+                const severity = entry.severity ?? "info";
+                const outcome = entry.outcome ?? "success";
                 return (
                   <tr
                     key={entry.id}
-                    className="align-top hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                    className={`align-top hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+                      // Una fila sintética significa que hay código mutando sin
+                      // decir qué. Se marca para que incomode, no para que pase.
+                      entry.synthesized
+                        ? "border-l-4 border-l-amber-500 bg-amber-50/40 dark:bg-amber-900/10"
+                        : ""
+                    }`}
                   >
                     <td className="px-4 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400">
                       {formatDate(entry.timestamp)}
@@ -179,19 +312,50 @@ export function AuditLog() {
                     <td className="px-4 py-3">
                       <span
                         className={`rounded-full px-2 py-0.5 font-mono text-xs font-medium ${
-                          ACCESS_ACTIONS.has(entry.action)
-                            ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
-                            : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                          SEVERITY_STYLE[severity] ?? SEVERITY_STYLE.info
                         }`}
                       >
                         {entry.action}
                       </span>
+                      {entry.synthesized && (
+                        <span
+                          className="ml-2 text-xs text-amber-700 dark:text-amber-400"
+                          title="Ningún handler declaró esta operación: la registró la red de seguridad."
+                        >
+                          sin declarar
+                        </span>
+                      )}
+                      {entry.category && (
+                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                          {entry.category}
+                        </p>
+                      )}
+                    </td>
+                    <td
+                      className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${
+                        OUTCOME_STYLE[outcome] ?? ""
+                      }`}
+                    >
+                      {OUTCOME_LABEL[outcome] ?? outcome}
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-gray-600 dark:text-gray-400">
                       {entry.performedBy}
+                      {entry.actor?.role && (
+                        <p className="mt-1 font-sans text-gray-400 dark:text-gray-500">
+                          {entry.actor.role}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-gray-600 dark:text-gray-400">
                       {entry.targetId || "—"}
+                      {entry.targetType && (
+                        <p className="mt-1 font-sans text-gray-400 dark:text-gray-500">
+                          {entry.targetType}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs whitespace-nowrap text-gray-500 dark:text-gray-500">
+                      {entry.context?.ipPrefix || "—"}
                     </td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
                       {typeof reason === "string" && (
@@ -208,6 +372,14 @@ export function AuditLog() {
                           )
                         )}
                       </code>
+                      {entry.context?.requestId && (
+                        <p
+                          className="mt-1 font-mono text-xs text-gray-400 dark:text-gray-600"
+                          title="Id de correlación: sirve para cruzar esta fila con Cloud Logging."
+                        >
+                          {entry.context.requestId}
+                        </p>
+                      )}
                     </td>
                   </tr>
                 );
