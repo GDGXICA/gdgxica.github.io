@@ -29,9 +29,16 @@ service firebase.storage {
     // no trabaja — mientras Firestore ya le negaba el documento con esos
     // mismos datos. Ver `isEventStaff()` en firestore.rules, que es de donde
     // sale esta regla.
+    // Un solo `get()` en vez de `exists()` + `get()`: un documento ausente
+    // vuelve como null, y atarlo a un local deja esto en un acceso. Es el
+    // mismo cuerpo que `isEventStaff()`, que es lo que un espejo tiene que
+    // ser — y en una carga del panel de moderación esto corre una vez por
+    // cada imagen, así que la diferencia es factura, no microoptimización.
     function staffAssignmentActive(eventSlug) {
-      let expiry = firestore.get(staffPath(eventSlug)).data.get('expiresAt', null);
-      return expiry == null || expiry > request.time;
+      let staff = firestore.get(staffPath(eventSlug));
+      return staff != null
+             && (staff.data.get('expiresAt', null) == null
+                 || staff.data.get('expiresAt', null) > request.time);
     }
 
     // Espejo de `canOnEvent('roster:read', …)` en firestore.rules: estas
@@ -73,7 +80,6 @@ service firebase.storage {
         && (
           caller.get('role', '') in ['organizer', 'admin']
           || (caller.get('role', '') == 'volunteer'
-              && firestore.exists(staffPath(eventSlug))
               && staffAssignmentActive(eventSlug))
         );
     }
