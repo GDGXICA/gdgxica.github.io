@@ -323,12 +323,26 @@ service cloud.firestore {
                          .hasOnly(['checkedIn', 'checkedInAt', 'checkedInBy',
                                    'checkedInByName', 'note',
                                    'dniVerified', 'dniVerifiedAt',
-                                   'dniMatchScore', 'dniMatchedName'])
+                                   'dniMatchScore', 'dniMatchedName',
+                                   'lastActionBy', 'lastActionByName',
+                                   'lastActionAt'])
                       && request.resource.data.checkedIn is bool
                       // Marking someone present must be attributable; only
                       // un-checking may leave checkedInBy unset.
                       && (request.resource.data.checkedIn == false
                           || request.resource.data.checkedInBy == request.auth.uid)
+                      // Quién tocó la fila, en LAS DOS direcciones.
+                      //
+                      // `checkedInBy` no sirve para esto: al desmarcar se pone
+                      // a null, así que marcar y desmarcar borraba la única
+                      // constancia de quién lo hizo. Y como el trigger que
+                      // audita esto es de Firestore, no lleva contexto de
+                      // autenticación: si el actor no viaja en el documento,
+                      // no hay forma de saberlo después.
+                      //
+                      // Exigir la igualdad con el uid obliga además a que el
+                      // campo esté presente: si falta, es null y no coincide.
+                      && request.resource.data.lastActionBy == request.auth.uid
                       && (!('note' in request.resource.data)
                           || request.resource.data.note == null
                           || request.resource.data.note.size() <= 200)
@@ -342,6 +356,10 @@ service cloud.firestore {
                           || request.resource.data.checkedInByName == null
                           || (request.resource.data.checkedInByName is string
                               && request.resource.data.checkedInByName.size() <= 120))
+                      && (!('lastActionByName' in request.resource.data)
+                          || request.resource.data.lastActionByName == null
+                          || (request.resource.data.lastActionByName is string
+                              && request.resource.data.lastActionByName.size() <= 120))
                       && (!('dniVerified' in request.resource.data)
                           || request.resource.data.dniVerified is bool)
                       && (!('dniMatchedName' in request.resource.data)
