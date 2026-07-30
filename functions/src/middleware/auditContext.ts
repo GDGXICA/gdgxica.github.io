@@ -63,6 +63,85 @@ function routePattern(req: Request): string {
 }
 
 /**
+ * Ventana de agrupación de las lecturas repetidas. Una hora: lo bastante para
+ * que abrir el panel treinta veces en una mañana deje una fila, y lo bastante
+ * corto para que "entró por la tarde" y "entró por la noche" se distingan.
+ */
+const READ_DEDUPE_MS = 60 * 60 * 1000;
+
+/** Última vez que se registró cada (uid, acción). */
+const lastRead = new Map<string, number>();
+
+/** Solo para los tests: reinicia el estado en memoria. */
+export function __resetReadDedupeState(): void {
+  lastRead.clear();
+}
+
+export interface AuditedReadOptions {
+  /**
+   * Agrupa a una fila por hora y por persona. Para las lecturas que el panel
+   * repite solo por estar abierto.
+   */
+  dedupe?: boolean;
+  /** Parámetro de ruta que identifica lo leído (p. ej. `"id"`). */
+  targetIdParam?: string;
+}
+
+/**
+ * Registra una lectura sensible.
+ *
+ * Las lecturas no se auditan en general, y eso es deliberado: una fila por GET
+ * daría una por vista de página, y un registro donde el 99% de las filas son
+ * "alguien abrió una pantalla" no sirve para encontrar el 1% que importa. Se
+ * audita la lista corta de lecturas que exponen datos personales o el propio
+ * registro — quién leyó el log de auditoría es exactamente el tipo de cosa que
+ * un log de auditoría debería contar.
+ *
+ * Se engancha en `finish` y solo cuando la respuesta fue 2xx: un 403 no leyó
+ * nada, y ya queda registrado como evento de seguridad por su cuenta.
+ */
+export function auditedRead(
+  action: AuditAction,
+  targetType: string,
+  options: AuditedReadOptions = {}
+) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    res.on("finish", () => {
+      if (res.statusCode < 200 || res.statusCode >= 300) return;
+
+      const uid = (req as { user?: { uid?: string } }).user?.uid ?? "unknown";
+      const targetId = options.targetIdParam
+        ? (req.params[options.targetIdParam] as string | undefined)
+        : undefined;
+
+      if (options.dedupe) {
+        const key = `${uid}:${action}:${targetId ?? "-"}`;
+        const now = Date.now();
+        const previous = lastRead.get(key);
+        if (previous !== undefined && now - previous < READ_DEDUPE_MS) return;
+        lastRead.set(key, now);
+      }
+
+      void writeAuditLog(
+        {
+          action,
+          performedBy: uid,
+          ...(targetId ? { targetId } : {}),
+          targetType,
+          details: options.dedupe ? { deduped: true } : {},
+          category: "read",
+        },
+        req
+      ).catch(() => {
+        // La petición ya terminó; no hay nada que devolver.
+      });
+    });
+
+    next();
+  };
+}
+
+/**
  * Captura el contexto de la petición y deja una red de seguridad.
  *
  * Va registrado ANTES del limitador de perímetro, para que un 429 también

@@ -9,7 +9,7 @@ import { requirePermission, requireAuth } from "./middleware/auth";
 import { isAllowedOrigin, rejectDisallowedOrigin } from "./middleware/cors";
 import { safeError, validateParamId } from "./middleware/validate";
 import { verifyAppCheck } from "./middleware/appCheck";
-import { auditContext } from "./middleware/auditContext";
+import { auditContext, auditedRead } from "./middleware/auditContext";
 import { recordSecurityEvent } from "./utils/securityAudit";
 import { validateBody } from "./middleware/validateBody";
 import {
@@ -394,7 +394,15 @@ app.put(
 );
 
 // Users
-app.get("/api/users", requirePermission("users:read"), users.listUsers);
+// Devuelve los docs completos, con correo, grants y revocaciones. Agrupado por
+// hora: el panel lo pide en cada montaje y en cada foco de pestaña, así que una
+// fila por llamada sería una fila por vista de página.
+app.get(
+  "/api/users",
+  requirePermission("users:read"),
+  auditedRead("read.users", "user_list", { dedupe: true }),
+  users.listUsers
+);
 app.patch(
   "/api/users/:uid/role",
   requirePermission("users:role:write"),
@@ -418,7 +426,15 @@ app.put(
 );
 
 // Audit log — de solo lectura, y solo para quien tenga `audit:read`.
-app.get("/api/audit", requirePermission("audit:read"), audit.listAudit);
+// Quién leyó el registro es justo el tipo de cosa que un registro de auditoría
+// debería contar, y hasta ahora era la única pantalla que no dejaba rastro de
+// sus propios lectores.
+app.get(
+  "/api/audit",
+  requirePermission("audit:read"),
+  auditedRead("read.audit_log", "audit_log", { dedupe: true }),
+  audit.listAudit
+);
 
 // Access — solicitudes e invitaciones.
 //
@@ -578,10 +594,14 @@ app.delete(
   writeLimiter,
   forms.deleteForm
 );
+// Por llamada, SIN agrupar: es una exportación masiva de datos personales de
+// quien respondió, se usa poco y a propósito. Aquí cada lectura es un hecho
+// distinto que hay que poder fechar, no ruido de tener el panel abierto.
 app.get(
   "/api/forms/:id/responses",
   requirePermission("forms:responses:read"),
   vid,
+  auditedRead("read.form_responses", "form", { targetIdParam: "id" }),
   forms.getFormResponses
 );
 
