@@ -25,6 +25,25 @@ export type AuditOutcome = "success" | "denied" | "failure";
 export type AuditSeverity = "info" | "notice" | "warning" | "critical";
 
 /**
+ * Lo que alguien querría revisar de una sentada: el filtro `notable` del visor
+ * y lo que dispara un aviso por correo.
+ *
+ * Vive aquí y no en `handlers/audit.ts` porque el visor y las alertas tienen
+ * que coincidir. Si el correo avisara de menos de lo que el panel resalta, el
+ * enlace del propio correo llevaría a una lista más larga que la que anuncia.
+ *
+ * Se resuelve con un `in` sobre el campo que ya tiene índice compuesto con
+ * `timestamp`. La alternativa —una desigualdad `severity >= "warning"`— no
+ * sirve: Firestore exige que el primer `orderBy` sea el campo de la
+ * desigualdad, y aquí el orden tiene que ser por `timestamp` o el registro
+ * deja de leerse como una cronología.
+ */
+export const NOTABLE_SEVERITIES: readonly AuditSeverity[] = [
+  "warning",
+  "critical",
+];
+
+/**
  * Agrupación de primer nivel. Existe porque Firestore no sabe filtrar por
  * prefijo de cadena: sin un campo propio, "enséñame solo lo de seguridad" no
  * se puede consultar, y el visor solo admite un filtro a la vez porque cada

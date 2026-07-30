@@ -214,11 +214,28 @@ export async function sendAuditAlertEmail(mail: {
     ipPrefix?: string | null;
     at?: Date | null;
   }[];
+  /**
+   * `warning` agregados por acción. Provocarlos es barato, así que se cuentan
+   * en vez de detallarse: quien tantea endpoints no debe poder decidir la
+   * longitud del correo.
+   */
+  warningSummary?: { action: string; count: number }[];
+  /** Cuántos `warning` hubo en total, aunque el resumen recorte acciones. */
+  warningTotal?: number;
   /** Total real: puede superar `events.length` si se recortó la lista. */
   total: number;
+  /**
+   * La consulta llegó a su techo, así que `total` es un suelo y no un total.
+   * Se dice en voz alta: la marca de agua avanza igual y lo que quedó fuera no
+   * se avisa nunca.
+   */
+  truncated?: boolean;
   panelUrl: string;
 }): Promise<void> {
   const desde = mail.since.toLocaleString("es-PE");
+  const cuantos = mail.truncated
+    ? `al menos ${mail.total}`
+    : String(mail.total);
   const rows = mail.events
     .map((e) => {
       const cuando = e.at ? e.at.toLocaleString("es-PE") : "—";
@@ -231,9 +248,27 @@ export async function sendAuditAlertEmail(mail: {
     })
     .join("");
 
-  const recortado =
-    mail.total > mail.events.length
-      ? `<p>Se muestran ${mail.events.length} de <strong>${mail.total}</strong>. ` +
+  const summary = mail.warningSummary ?? [];
+  const warningTotal = mail.warningTotal ?? 0;
+
+  const summaryRows = summary
+    .map(
+      (s) =>
+        `<li><code>${htmlEscape(singleLine(s.action))}</code> × ${s.count}</li>`
+    )
+    .join("");
+
+  const resumen = summary.length
+    ? `<p>Además, <strong>${warningTotal}</strong> evento(s) de nivel aviso, ` +
+      `agrupados por acción:</p><ul>${summaryRows}</ul>`
+    : "";
+
+  const recortado = mail.truncated
+    ? `<p>La consulta llegó a su límite, así que hubo <strong>al menos</strong> ` +
+      `esos eventos — pueden haber sido más. Míralo en el panel.</p>`
+    : mail.events.length < mail.total - warningTotal
+      ? `<p>Se detallan ${mail.events.length} de ` +
+        `<strong>${mail.total - warningTotal}</strong> críticos. ` +
         `El resto está en el panel.</p>`
       : "";
 
@@ -245,18 +280,30 @@ export async function sendAuditAlertEmail(mail: {
     )
     .join("\n");
 
+  const textSummary = summary
+    .map((s) => `- ${singleLine(s.action)} x ${s.count}`)
+    .join("\n");
+
   await sendPlain(
     mail.to,
-    `[GDG ICA] ${mail.total} evento(s) de auditoría que revisar`,
-    `<p>Hay <strong>${mail.total}</strong> evento(s) registrados desde ` +
+    `[GDG ICA] ${cuantos} evento(s) de auditoría que revisar`,
+    `<p>Hay <strong>${cuantos}</strong> evento(s) registrados desde ` +
       `${htmlEscape(desde)} que conviene revisar.</p>` +
-      `<ul>${rows}</ul>${recortado}` +
+      (rows ? `<ul>${rows}</ul>` : "") +
+      `${resumen}${recortado}` +
       `<p><a href="${htmlEscape(mail.panelUrl)}">Abrir el registro de auditoría</a></p>` +
       `<p>Si no reconoces alguna de estas acciones, revisa los roles y los ` +
       `permisos en /admin/users antes que nada.</p>` +
       `<p>Comunidad GDG ICA</p>`,
-    `Hay ${mail.total} evento(s) de auditoría desde ${desde} que conviene ` +
-      `revisar.\n\n${textRows}\n\n${mail.panelUrl}\n\n` +
+    `Hay ${cuantos} evento(s) de auditoría desde ${desde} que conviene ` +
+      `revisar.\n\n${textRows}\n\n` +
+      (textSummary
+        ? `Avisos por acción (${warningTotal}):\n${textSummary}\n\n`
+        : "") +
+      (mail.truncated
+        ? `La consulta llegó a su límite: pudo haber más.\n\n`
+        : "") +
+      `${mail.panelUrl}\n\n` +
       `Si no reconoces alguna de estas acciones, revisa los roles y permisos ` +
       `en /admin/users antes que nada.\n\nComunidad GDG ICA`
   );

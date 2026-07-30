@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
 import { safeError } from "../middleware/validate";
+import { NOTABLE_SEVERITIES } from "../utils/auditTypes";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
@@ -27,16 +28,8 @@ const FILTERABLE = [
 ] as const;
 type Filterable = (typeof FILTERABLE)[number];
 
-/**
- * Severidades que alguien querría revisar de una sentada.
- *
- * Se resuelve con un `in` sobre el mismo campo que ya tiene índice. La
- * alternativa —una desigualdad `severity >= "warning"`— no sirve: Firestore
- * exige que el primer `orderBy` sea el campo de la desigualdad, y aquí el orden
- * tiene que ser por `timestamp` o el registro deja de leerse como una
- * cronología.
- */
-const NOTABLE_SEVERITIES = ["warning", "critical"];
+// Compartida con las alertas por correo: el visor y el aviso tienen que
+// resaltar exactamente lo mismo. Ver `utils/auditTypes.ts`.
 
 function readLimit(raw: unknown): number {
   const parsed = typeof raw === "string" ? parseInt(raw, 10) : NaN;
