@@ -17,25 +17,34 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
+        with:
+          version: 10.11.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: "22.15.0"
+          cache: pnpm
 
       - name: Setup Java (for Firestore emulator)
-        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with:
           distribution: temurin
           java-version: "21"
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - name: Cache npm (Cloud Functions)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
-          version: 10.11.0
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('functions/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-npm-
 
       - name: Install root dependencies
         run: pnpm install --frozen-lockfile
@@ -55,20 +64,29 @@ jobs:
   build-and-deploy:
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: "22.15.0"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
         with:
           version: 10.11.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22.15.0"
+          cache: pnpm
+
+      - name: Cache npm (Cloud Functions)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('functions/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-npm-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -96,12 +114,4 @@ jobs:
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
-          firebase deploy --only "hosting:gdgica,functions,firestore:rules,firestore:indexes,storage" --force
-
-      - name: Cleanup old hosting versions
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-        run: |
-          firebase hosting:releases:list --site gdgica --limit 50 | tail -n +3 | tail -n +6 | awk '{print $2}' | while read version; do
-            [ -n "$version" ] && firebase hosting:releases:cleanup "$version" --site gdgica --force 2>/dev/null || true
-          done
+          firebase deploy --only "hosting:gdgica,functions,firestore:rules,firestore:indexes,storage"
