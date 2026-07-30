@@ -956,3 +956,8 @@ export { onMinigameResponseWritten } from "./triggers/recomputeAggregates";
 // Deploying this creates a Cloud Scheduler job. It declares the Gmail
 // secrets itself; the `api` function's secrets array does not extend here.
 export { drainCredentialEmails } from "./triggers/drainCredentialEmails";
+// Aviso por correo de lo que hay que revisar en el registro: sin esto, toda la
+// instrumentación solo sirve si alguien se acuerda de abrir el panel.
+export { auditAlerts } from "./triggers/auditAlerts";
+// Copia mensual de audit_log fuera de Firestore, donde el Admin SDK no llega.
+export { exportAudit } from "./triggers/exportAudit";

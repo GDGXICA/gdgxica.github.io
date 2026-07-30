@@ -28,6 +28,34 @@ describe("baseline firestore.rules", () => {
     await assertFails(setDoc(doc(anon, "audit_log/x"), { action: "x" }));
   });
 
+  // The rule closes read AND write, but only the write half was covered. The
+  // read half is the one that matters more now: entries carry the actor's email
+  // and the network prefix they acted from, so a client-side read would hand
+  // that to anyone who opened a console.
+  it("denies anonymous reads of audit_log", async () => {
+    const env = await getTestEnv();
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), "audit_log/seeded"), {
+        action: "user.role.change",
+      });
+    });
+    const anon = env.unauthenticatedContext().firestore();
+    await assertFails(getDoc(doc(anon, "audit_log/seeded")));
+  });
+
+  // Signing in changes nothing: audit_log is reachable only through
+  // GET /api/audit, which checks the `audit:read` permission.
+  it("denies a signed-in user from reading audit_log", async () => {
+    const env = await getTestEnv();
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), "audit_log/seeded"), {
+        action: "user.role.change",
+      });
+    });
+    const signedIn = env.authenticatedContext("user-a").firestore();
+    await assertFails(getDoc(doc(signedIn, "audit_log/seeded")));
+  });
+
   it("denies authenticated user from reading another user's profile", async () => {
     const env = await getTestEnv();
     // Seed a user doc bypassing rules so the read target exists.
