@@ -50,6 +50,31 @@ export const PERMISSIONS = [
 
 export type Permission = (typeof PERMISSIONS)[number];
 
+/**
+ * Permisos que además se evalúan en `firestore.rules` y `storage.rules`.
+ *
+ * Son los de las dos pantallas que hablan con Firestore y Storage DIRECTAMENTE
+ * y no a través de la API: el check-in escribe directo para poder encolar sin
+ * wifi, y el roster y las credenciales se leen por suscripción en tiempo real.
+ *
+ * Lo que las reglas sí honran: el rol, la suspensión, las revocaciones y la
+ * caducidad de la asignación de staff.
+ *
+ * Lo que NO honran: los `grants` por usuario. El lenguaje de reglas no sabe
+ * recorrer una lista de mapas, así que un grant con `expiresAt` no es
+ * expresable sin denormalizar los permisos efectivos en el propio doc de
+ * usuario. Conceder uno de estos dos permisos a alguien por `grants` le abre la
+ * API pero no las reglas, y la pantalla se queda vacía: para dar acceso a un
+ * evento concreto está la asignación de staff (`events/{slug}/staff/{uid}`),
+ * que es justo para lo que existe.
+ *
+ * La UI lo advierte al conceder uno de estos (ver `GrantEditor`).
+ */
+export const RULES_ENFORCED_PERMISSIONS = [
+  "roster:read",
+  "checkin:operate",
+] as const satisfies readonly Permission[];
+
 export const ROLES = [
   "member",
   "contributor",

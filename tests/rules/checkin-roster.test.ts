@@ -7,10 +7,14 @@ const SLUG = "devfest-ica-2026";
 const ATTENDEE = `events/${SLUG}/roster/t_GOOGA263171317`;
 
 /** Seeds a users/{uid} doc with the given role, bypassing rules. */
-async function seedRole(uid: string, role: string) {
+async function seedRole(
+  uid: string,
+  role: string,
+  over: Record<string, unknown> = {}
+) {
   const env = await getTestEnv();
   await env.withSecurityRulesDisabled(async (ctx) => {
-    await setDoc(doc(ctx.firestore(), `users/${uid}`), { uid, role });
+    await setDoc(doc(ctx.firestore(), `users/${uid}`), { uid, role, ...over });
   });
 }
 
@@ -123,6 +127,78 @@ describe("checkin roster rules", () => {
       await seedRole("adm-1", "admin");
       const adm = env.authenticatedContext("adm-1").firestore();
       await assertSucceeds(getDoc(doc(adm, ATTENDEE)));
+    });
+  });
+
+  // `users/{uid}.revocations` subtracts from whatever the role grants, and the
+  // API applies it on every request. The rules did not look at it at all, so
+  // revoking roster:read from an organizer took away the half of the panel
+  // that goes through the API and left the direct Firestore subscription —
+  // the one that actually shows attendee names and emails — wide open.
+  describe("revocations", () => {
+    it("denies reading the roster when roster:read was revoked", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("org-1", "organizer", { revocations: ["roster:read"] });
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertFails(getDoc(doc(org, ATTENDEE)));
+    });
+
+    it("denies an admin whose roster:read was revoked", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("adm-1", "admin", { revocations: ["roster:read"] });
+      const adm = env.authenticatedContext("adm-1").firestore();
+      await assertFails(getDoc(doc(adm, ATTENDEE)));
+    });
+
+    it("denies marking someone present when checkin:operate was revoked", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("org-1", "organizer", {
+        revocations: ["checkin:operate"],
+      });
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertFails(
+        updateDoc(doc(org, ATTENDEE), {
+          checkedIn: true,
+          checkedInBy: "org-1",
+        })
+      );
+    });
+
+    // Revoking the write must not take the read with it: the two are separate
+    // permissions, and someone who may still see the door list but no longer
+    // operate it is a real arrangement.
+    it("still allows reading when only checkin:operate was revoked", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("org-1", "organizer", {
+        revocations: ["checkin:operate"],
+      });
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertSucceeds(getDoc(doc(org, ATTENDEE)));
+    });
+
+    it("denies reading import metadata when roster:read was revoked", async () => {
+      const env = await getTestEnv();
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(
+          doc(ctx.firestore(), `events/${SLUG}/checkinMeta/current`),
+          { rosterCount: 34 }
+        );
+      });
+      await seedRole("org-1", "organizer", { revocations: ["roster:read"] });
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertFails(getDoc(doc(org, `events/${SLUG}/checkinMeta/current`)));
+    });
+
+    it("leaves an unrelated revocation alone", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("org-1", "organizer", { revocations: ["events:write"] });
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertSucceeds(getDoc(doc(org, ATTENDEE)));
     });
   });
 
@@ -331,7 +407,10 @@ describe("checkin roster rules", () => {
       await seedRole("org-1", "organizer");
       const org = env.authenticatedContext("org-1").firestore();
       await assertFails(
-        updateDoc(doc(org, ATTENDEE), { checkedIn: "yes", checkedInBy: "org-1" })
+        updateDoc(doc(org, ATTENDEE), {
+          checkedIn: "yes",
+          checkedInBy: "org-1",
+        })
       );
     });
 
@@ -377,9 +456,12 @@ describe("checkin roster rules", () => {
     it("allows an organizer to read import metadata", async () => {
       const env = await getTestEnv();
       await env.withSecurityRulesDisabled(async (ctx) => {
-        await setDoc(doc(ctx.firestore(), `events/${SLUG}/checkinMeta/current`), {
-          rosterCount: 34,
-        });
+        await setDoc(
+          doc(ctx.firestore(), `events/${SLUG}/checkinMeta/current`),
+          {
+            rosterCount: 34,
+          }
+        );
       });
       await seedRole("org-1", "organizer");
       const org = env.authenticatedContext("org-1").firestore();

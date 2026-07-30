@@ -4,6 +4,7 @@ import {
   PERMISSIONS,
   ROLE_BUNDLES,
   ROLE_LABELS,
+  RULES_ENFORCED_PERMISSIONS,
   effectivePermissions,
   isRole,
   type Permission,
@@ -101,6 +102,16 @@ export function GrantEditor({ user, saving, onCancel, onSave }: Props) {
   const inputClass =
     "rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white";
 
+  /**
+   * Estos dos permisos los aplican también `firestore.rules` y
+   * `storage.rules`, que no saben leer `grants`. Concederlos por aquí abre la
+   * API pero no las reglas, así que el check-in se queda en blanco y quien lo
+   * concedió cree haber dado un acceso que no existe. Se avisa en la fila del
+   * grant, no en un cartel general, porque el aviso solo tiene sentido junto al
+   * permiso que lo provoca.
+   */
+  const rulesEnforced = new Set<string>(RULES_ENFORCED_PERMISSIONS);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/50" onClick={onCancel} />
@@ -191,6 +202,22 @@ export function GrantEditor({ user, saving, onCancel, onSave }: Props) {
                   >
                     Quitar
                   </button>
+                  {rulesEnforced.has(grant.permission) && (
+                    <p className="w-full text-xs text-amber-700 dark:text-amber-500">
+                      ⚠️ <code>{grant.permission}</code> lo aplican también las
+                      reglas de Firestore y Storage, que no leen los permisos
+                      concedidos. Este permiso abrirá la API, pero el check-in y
+                      las credenciales seguirán sin cargar. Para dar acceso a un
+                      evento, asigna a la persona como staff en{" "}
+                      <a
+                        href="/admin/events/staff"
+                        className="underline hover:no-underline"
+                      >
+                        Eventos → Staff
+                      </a>
+                      .
+                    </p>
+                  )}
                 </li>
               ))}
             </ul>

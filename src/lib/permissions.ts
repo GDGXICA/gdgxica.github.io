@@ -50,6 +50,22 @@ export const PERMISSIONS = [
 
 export type Permission = (typeof PERMISSIONS)[number];
 
+/**
+ * Permisos que además se evalúan en `firestore.rules` y `storage.rules`, por
+ * ser los de las pantallas que hablan con Firestore y Storage directamente.
+ *
+ * Las reglas honran rol, suspensión, revocaciones y caducidad de la asignación
+ * de staff, pero NO los `grants` por usuario: el lenguaje de reglas no sabe
+ * recorrer una lista de mapas. Conceder uno de estos por `grants` abre la API
+ * pero no las reglas, así que la pantalla se queda vacía — para eso está la
+ * asignación de staff. El catálogo canónico y la explicación larga viven en
+ * `functions/src/auth/permissions.ts`.
+ */
+export const RULES_ENFORCED_PERMISSIONS = [
+  "roster:read",
+  "checkin:operate",
+] as const satisfies readonly Permission[];
+
 export const ROLES = [
   "member",
   "contributor",
