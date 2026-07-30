@@ -5,7 +5,11 @@ vi.mock("firebase-functions", () => ({
   logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
-import { ALLOWED_ORIGINS, isAllowedOrigin, rejectDisallowedOrigin } from "./cors";
+import {
+  ALLOWED_ORIGINS,
+  isAllowedOrigin,
+  rejectDisallowedOrigin,
+} from "./cors";
 
 const ORIGINAL = process.env.FUNCTIONS_EMULATOR;
 

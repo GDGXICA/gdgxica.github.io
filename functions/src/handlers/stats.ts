@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog, triggerRebuildAndLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
@@ -40,14 +39,16 @@ export async function updateStats(req: Request, res: Response) {
 
     triggerRebuildAndLog(github);
 
-    await writeAuditLog({
-      action: "stats.update",
-      performedBy: user.uid,
-      targetId: "stats",
-      targetType: "stats",
-      details: stats,
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "stats.update",
+        performedBy: user.uid,
+        targetId: "stats",
+        targetType: "stats",
+        details: stats,
+      },
+      req
+    );
 
     res.json({ success: true, data: updated });
   } catch (err) {

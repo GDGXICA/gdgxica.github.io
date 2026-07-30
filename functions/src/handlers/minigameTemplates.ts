@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { writeAuditLog } from "../utils/audit";
+import { auditEntryFor, writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import type { MinigameTemplate } from "../schemas";
@@ -14,21 +14,8 @@ interface AuditDetails {
   version?: number;
 }
 
-function auditEntry(
-  action: string,
-  performedBy: string,
-  targetId: string,
-  details: AuditDetails
-) {
-  return {
-    action,
-    performedBy,
-    targetId,
-    targetType: "minigame_template",
-    details,
-    timestamp: FieldValue.serverTimestamp(),
-  };
-}
+/** Entradas de este handler: `targetType` fijo, detalles tipados arriba. */
+const auditEntry = auditEntryFor<AuditDetails>("minigame_template");
 
 function toIso(ts: Timestamp | null | undefined): string | null {
   return ts?.toDate?.().toISOString() ?? null;
@@ -77,7 +64,8 @@ export async function create(req: Request, res: Response) {
       auditEntry("minigame_template.create", user.uid, ref.id, {
         type: body.type,
         title: body.title,
-      })
+      }),
+      req
     );
     res.status(201).json({ success: true, data: { id: ref.id } });
   } catch (err) {
@@ -113,7 +101,8 @@ export async function update(req: Request, res: Response) {
         type: body.type,
         title: body.title,
         version: nextVersion,
-      })
+      }),
+      req
     );
     res.json({ success: true, data: { id, version: nextVersion } });
   } catch (err) {
@@ -139,7 +128,8 @@ export async function remove(req: Request, res: Response) {
       auditEntry("minigame_template.delete", user.uid, id, {
         type: data?.type ?? "poll",
         title: data?.title ?? id,
-      })
+      }),
+      req
     );
     res.json({ success: true });
   } catch (err) {

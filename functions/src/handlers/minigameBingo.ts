@@ -130,14 +130,16 @@ export async function drawBall(req: Request, res: Response) {
       return;
     }
 
-    await writeAuditLog({
-      action: "minigame_instance.bingo.draw",
-      performedBy: user.uid,
-      targetId: id,
-      targetType: "minigame_instance",
-      details: { slug, term: drawn.term, drawCount: drawn.drawCount },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "minigame_instance.bingo.draw",
+        performedBy: user.uid,
+        targetId: id,
+        targetType: "minigame_instance",
+        details: { slug, term: drawn.term, drawCount: drawn.drawCount },
+      },
+      req
+    );
 
     res.json({
       success: true,
@@ -239,19 +241,21 @@ export async function claim(req: Request, res: Response) {
     });
 
     if (!result.alreadyWon) {
-      await writeAuditLog({
-        action: "minigame_participant.bingo.claim",
-        performedBy: user.uid,
-        targetId: id,
-        targetType: "minigame_instance",
-        details: {
-          slug,
-          alias: participant.alias ?? "Anónimo",
-          rank: result.rank,
-          winDraw: result.winDraw,
+      await writeAuditLog(
+        {
+          action: "minigame_participant.bingo.claim",
+          performedBy: user.uid,
+          targetId: id,
+          targetType: "minigame_instance",
+          details: {
+            slug,
+            alias: participant.alias ?? "Anónimo",
+            rank: result.rank,
+            winDraw: result.winDraw,
+          },
         },
-        timestamp: FieldValue.serverTimestamp(),
-      });
+        req
+      );
     }
 
     res.json({

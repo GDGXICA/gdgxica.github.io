@@ -1,4 +1,5 @@
 import type { FieldValue } from "firebase-admin/firestore";
+import type { AuditAction } from "./auditActions";
 
 /**
  * Forma del registro de auditoría.
@@ -90,7 +91,11 @@ export interface AuditActor {
 }
 
 export interface AuditEntry {
-  action: string;
+  /**
+   * Del registro cerrado de `auditActions.ts`. Un typo no compila, que es
+   * justo lo que no ocurría cuando esto era `string`.
+   */
+  action: AuditAction;
   performedBy: string;
   targetId?: string;
   targetType?: string;

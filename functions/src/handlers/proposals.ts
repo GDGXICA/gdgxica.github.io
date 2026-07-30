@@ -285,14 +285,16 @@ export async function reviewProposal(req: Request, res: Response) {
       reviewNote: note,
     });
 
-    await writeAuditLog({
-      action: "proposal.review",
-      performedBy: performer.uid,
-      targetId: id,
-      targetType: "proposal",
-      details: { decision, type: data.type, reason: note },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "proposal.review",
+        performedBy: performer.uid,
+        targetId: id,
+        targetType: "proposal",
+        details: { decision, type: data.type, reason: note },
+      },
+      req
+    );
 
     res.json({ success: true, data: { id, status: decision } });
   } catch (err) {
@@ -380,18 +382,20 @@ export async function publishProposal(req: Request, res: Response) {
       publishedBy: performer.uid,
     });
 
-    await writeAuditLog({
-      action: "proposal.publish",
-      performedBy: performer.uid,
-      targetId: id,
-      targetType: "proposal",
-      details: {
-        type: data.type,
-        publishedId: targetId,
-        proposedBy: data.createdBy,
+    await writeAuditLog(
+      {
+        action: "proposal.publish",
+        performedBy: performer.uid,
+        targetId: id,
+        targetType: "proposal",
+        details: {
+          type: data.type,
+          publishedId: targetId,
+          proposedBy: data.createdBy,
+        },
       },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+      req
+    );
 
     res.json({ success: true, data: { id, publishedId: targetId } });
   } catch (err) {

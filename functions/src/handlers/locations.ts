@@ -45,14 +45,16 @@ export async function create(req: Request, res: Response) {
       createdAt: FieldValue.serverTimestamp(),
       createdBy: user.uid,
     });
-    await writeAuditLog({
-      action: "location.create",
-      performedBy: user.uid,
-      targetId: ref.id,
-      targetType: "location",
-      details: { name },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "location.create",
+        performedBy: user.uid,
+        targetId: ref.id,
+        targetType: "location",
+        details: { name },
+      },
+      req
+    );
     res.status(201).json({ success: true, data: { id: ref.id } });
   } catch (err) {
     res.status(500).json({ success: false, error: safeError(err) });
@@ -78,14 +80,16 @@ export async function update(req: Request, res: Response) {
       return;
     }
     await ref.update({ name, address, map_url, map_embed });
-    await writeAuditLog({
-      action: "location.update",
-      performedBy: user.uid,
-      targetId: id,
-      targetType: "location",
-      details: { name },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "location.update",
+        performedBy: user.uid,
+        targetId: id,
+        targetType: "location",
+        details: { name },
+      },
+      req
+    );
     res.json({ success: true, data: { id } });
   } catch (err) {
     res.status(500).json({ success: false, error: safeError(err) });
@@ -104,14 +108,16 @@ export async function remove(req: Request, res: Response) {
     }
     const name = (doc.data()?.name as string) || id;
     await ref.delete();
-    await writeAuditLog({
-      action: "location.delete",
-      performedBy: user.uid,
-      targetId: id,
-      targetType: "location",
-      details: { name },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "location.delete",
+        performedBy: user.uid,
+        targetId: id,
+        targetType: "location",
+        details: { name },
+      },
+      req
+    );
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: safeError(err) });

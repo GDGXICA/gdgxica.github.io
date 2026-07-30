@@ -234,18 +234,20 @@ export async function join(req: Request, res: Response) {
       })
     );
 
-    await writeAuditLog({
-      action: "minigame_participant.join",
-      performedBy: user.uid,
-      targetId: slug,
-      targetType: "event",
-      details: {
-        alias: canonicalAlias,
-        instanceCount: summaries.length,
-        newJoins: summaries.filter((s) => s.joined).length,
+    await writeAuditLog(
+      {
+        action: "minigame_participant.join",
+        performedBy: user.uid,
+        targetId: slug,
+        targetType: "event",
+        details: {
+          alias: canonicalAlias,
+          instanceCount: summaries.length,
+          newJoins: summaries.filter((s) => s.joined).length,
+        },
       },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+      req
+    );
 
     res.json({
       success: true,

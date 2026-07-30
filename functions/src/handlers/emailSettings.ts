@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
@@ -62,14 +61,16 @@ export async function setEmailSettings(req: Request, res: Response) {
 
     await writeEmailTransport(transport, user.uid);
 
-    await writeAuditLog({
-      action: "settings.email_transport",
-      performedBy: user.uid,
-      targetId: "email",
-      targetType: "settings",
-      details: { transport },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "settings.email_transport",
+        performedBy: user.uid,
+        targetId: "email",
+        targetType: "settings",
+        details: { transport },
+      },
+      req
+    );
 
     res.json({
       success: true,

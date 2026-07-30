@@ -48,7 +48,9 @@ export async function importRoster(req: Request, res: Response) {
     const rawRows = (req.body.rows ?? []) as RosterRow[];
 
     if (rawRows.length === 0) {
-      res.status(400).json({ success: false, error: "No hay filas que importar" });
+      res
+        .status(400)
+        .json({ success: false, error: "No hay filas que importar" });
       return;
     }
 
@@ -156,21 +158,23 @@ export async function importRoster(req: Request, res: Response) {
       { merge: true }
     );
 
-    await writeAuditLog({
-      action: "checkin.import",
-      performedBy: user.uid,
-      targetId: slug,
-      targetType: "checkin_roster",
-      details: {
-        importId,
-        total: rows.length,
-        created,
-        updated,
-        stale,
-        unusableTickets,
+    await writeAuditLog(
+      {
+        action: "checkin.import",
+        performedBy: user.uid,
+        targetId: slug,
+        targetType: "checkin_roster",
+        details: {
+          importId,
+          total: rows.length,
+          created,
+          updated,
+          stale,
+          unusableTickets,
+        },
       },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+      req
+    );
 
     res.json({
       success: true,
