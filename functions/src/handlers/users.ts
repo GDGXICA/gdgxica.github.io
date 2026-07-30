@@ -6,7 +6,6 @@ import { safeError } from "../middleware/validate";
 import {
   GLOBAL_SCOPE,
   ROLES,
-  canAssignRole,
   canGrant,
   isPermission,
   isRole,
@@ -14,6 +13,7 @@ import {
   type PermissionGrant,
   type Role,
 } from "../auth/permissions";
+import { actorDominates, countActiveAdmins } from "../auth/guards";
 
 const MAX_REASON = 500;
 const MAX_GRANTS = 50;
@@ -29,34 +29,6 @@ function readReason(body: unknown): string | null {
   const trimmed = reason.trim();
   if (trimmed.length === 0 || trimmed.length > MAX_REASON) return null;
   return trimmed;
-}
-
-/**
- * Cuenta los admins que realmente pueden operar. Se usa para no dejar la
- * plataforma sin nadie capaz de administrarla: un descuido ahí obliga a
- * entrar por la consola de Firebase a reparar el desastre a mano.
- */
-async function countActiveAdmins(): Promise<number> {
-  const snapshot = await admin
-    .firestore()
-    .collection("users")
-    .where("role", "==", "admin")
-    .get();
-  return snapshot.docs.filter((d) => d.data()?.status !== "suspended").length;
-}
-
-/**
- * El actor debe poseer todos los permisos del rol que toca — tanto el que
- * quita como el que pone. Sin la comprobación sobre el rol ACTUAL, alguien
- * con `users:role:write` concedido a mano podría degradar a un admin pese a
- * no tener sus permisos, que es escalada por la puerta de atrás.
- */
-function actorDominates(
-  actorPermissions: ReadonlySet<Permission>,
-  role: unknown
-): boolean {
-  if (!isRole(role)) return true; // rol corrupto: no hay nada que dominar
-  return canAssignRole(actorPermissions, role);
 }
 
 export async function listUsers(_req: Request, res: Response) {

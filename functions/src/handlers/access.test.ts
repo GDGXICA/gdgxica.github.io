@@ -354,6 +354,68 @@ describe("decideRequest", () => {
     expect(sentDecisions[0]).toMatchObject({ approved: true });
   });
 
+  // Aprobar una solicitud SUSTITUYE el rol que la persona ya tenía. Este
+  // camino no pasaba por el guard de último admin de `handlers/users.ts`, así
+  // que aprobar una solicitud vieja de quien entretanto llegó a admin lo
+  // degradaba y podía dejar la plataforma sin nadie capaz de administrarla.
+  it("RECHAZA aprobar si degradaría al último admin", async () => {
+    docs.set("users/t1", { uid: "t1", role: "admin" });
+    const res = buildRes();
+    await handler.decideRequest(
+      buildReq({
+        role: "admin",
+        uid: "rev",
+        params: { uid: "t1" },
+        body: { approve: true, note: "Baja a voluntario" },
+      }),
+      res
+    );
+    expect(res.__status).toBe(400);
+    expect(res.__body?.error).toContain("last active admin");
+    expect(docs.get("users/t1")).toMatchObject({ role: "admin" });
+    expect(docs.get("access_requests/t1")).toMatchObject({ status: "pending" });
+    expect(auditLogEntries()).toHaveLength(0);
+  });
+
+  it("sí deja aprobar si queda otro admin activo", async () => {
+    docs.set("users/t1", { uid: "t1", role: "admin" });
+    docs.set("users/otro-admin", { uid: "otro-admin", role: "admin" });
+    const res = buildRes();
+    await handler.decideRequest(
+      buildReq({
+        role: "admin",
+        uid: "rev",
+        params: { uid: "t1" },
+        body: { approve: true, note: "Baja a voluntario" },
+      }),
+      res
+    );
+    expect(res.__body?.success).toBe(true);
+    expect(docs.get("users/t1")).toMatchObject({ role: "volunteer" });
+  });
+
+  // Un admin suspendido no gobierna nada, así que no cuenta para el guard.
+  it("no cuenta a un admin suspendido como admin activo", async () => {
+    docs.set("users/t1", { uid: "t1", role: "admin" });
+    docs.set("users/dormido", {
+      uid: "dormido",
+      role: "admin",
+      status: "suspended",
+    });
+    const res = buildRes();
+    await handler.decideRequest(
+      buildReq({
+        role: "admin",
+        uid: "rev",
+        params: { uid: "t1" },
+        body: { approve: true, note: "Baja a voluntario" },
+      }),
+      res
+    );
+    expect(res.__status).toBe(400);
+    expect(docs.get("users/t1")).toMatchObject({ role: "admin" });
+  });
+
   it("registra el rol anterior en la auditoría", async () => {
     const res = buildRes();
     await handler.decideRequest(
@@ -589,6 +651,39 @@ describe("redeemInvitation", () => {
     expect(res.__body?.success).toBe(true);
     expect(docs.get("users/u1")).toMatchObject({ role: "contributor" });
     expect(docs.get("invitations/inv-1")).toMatchObject({ usedBy: "u1" });
+  });
+
+  // Canjear SUSTITUYE el rol de quien canjea. Sin este guard, una invitación
+  // de organizador al correo de un admin —canjeada por ese mismo admin— lo
+  // degradaba en silencio, y si era el único dejaba la plataforma sin nadie
+  // capaz de administrarla salvo entrando a mano por la consola de Firebase.
+  it("RECHAZA canjear si degradaría al último admin", async () => {
+    seedInvitation();
+    docs.set("users/u1", { uid: "u1", role: "admin" });
+    const res = buildRes();
+    await handler.redeemInvitation(
+      buildReq({ email: "invitada@example.com", body: { token: TOKEN } }),
+      res
+    );
+    expect(res.__status).toBe(400);
+    expect(res.__body?.error).toContain("administrador");
+    // La transacción abortó entera: ni rol degradado ni invitación consumida.
+    expect(docs.get("users/u1")).toMatchObject({ role: "admin" });
+    expect(docs.get("invitations/inv-1")).toMatchObject({ usedAt: null });
+    expect(auditLogEntries()).toHaveLength(0);
+  });
+
+  it("sí deja canjear a un admin si queda otro activo", async () => {
+    seedInvitation();
+    docs.set("users/u1", { uid: "u1", role: "admin" });
+    docs.set("users/otro-admin", { uid: "otro-admin", role: "admin" });
+    const res = buildRes();
+    await handler.redeemInvitation(
+      buildReq({ email: "invitada@example.com", body: { token: TOKEN } }),
+      res
+    );
+    expect(res.__body?.success).toBe(true);
+    expect(docs.get("users/u1")).toMatchObject({ role: "contributor" });
   });
 
   // El registro va DENTRO de la transacción: antes se escribía después, y una

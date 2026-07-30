@@ -18,6 +18,12 @@ import {
   type Role,
 } from "../auth/permissions";
 import {
+  actorDominates,
+  activeAdminsQuery,
+  countActiveAdmins,
+  countActiveAdminsIn,
+} from "../auth/guards";
+import {
   sendAccessDecisionEmail,
   sendInvitationEmail,
 } from "../services/email";
@@ -281,7 +287,30 @@ export async function decideRequest(req: Request, res: Response) {
           .json({ success: false, error: "User account not found" });
         return;
       }
+
+      // Aprobar una solicitud SUSTITUYE el rol que la persona ya tenía, así
+      // que pasa por las mismas guardas que un cambio de rol en el panel. Sin
+      // esto, aprobar una solicitud vieja de quien entretanto llegó a admin lo
+      // degradaba sin más, y si era el último dejaba la plataforma sin nadie
+      // capaz de administrarla.
       currentRole = userDoc.data()?.role;
+      if (!actorDominates(performer.permissions, currentRole)) {
+        res.status(403).json({
+          success: false,
+          error: "Cannot manage a user whose role exceeds your own permissions",
+        });
+        return;
+      }
+
+      if (currentRole === "admin" && granted !== "admin") {
+        if ((await countActiveAdmins()) <= 1) {
+          res.status(400).json({
+            success: false,
+            error: "Cannot demote the last active admin",
+          });
+          return;
+        }
+      }
     }
 
     const batch = db.batch();
@@ -555,8 +584,18 @@ export async function redeemInvitation(req: Request, res: Response) {
         throw new Error("ALREADY_USED");
       }
 
+      // El rol actual se lee aquí y no fuera: canjear SUSTITUYE el rol, y una
+      // invitación de organizador al correo de un admin lo degradaba en
+      // silencio. La cuenta de admins también va dentro, porque una lectura
+      // suelta no entra en la transacción y dos canjes a la vez podrían pasar
+      // los dos la comprobación y dejar la plataforma con cero admins.
       const userSnap = await tx.get(userRef);
       const currentRole = userSnap.data()?.role;
+      if (currentRole === "admin" && data.role !== "admin") {
+        if (countActiveAdminsIn(await tx.get(activeAdminsQuery())) <= 1) {
+          throw new Error("LAST_ADMIN");
+        }
+      }
 
       tx.update(match.ref, {
         usedAt: FieldValue.serverTimestamp(),
@@ -587,6 +626,19 @@ export async function redeemInvitation(req: Request, res: Response) {
       res.status(400).json({
         success: false,
         error: "Invitation is invalid, expired or already used",
+      });
+      return;
+    }
+    // Este SÍ dice qué pasó, al contrario que el mensaje opaco de arriba. Ese
+    // es opaco para no convertir el endpoint en un oráculo de invitaciones
+    // ajenas; aquí no hay nada que filtrar —quien canjea es el último admin y
+    // ya lo sabe— y un error genérico le haría pensar que el enlace está roto.
+    if (err instanceof Error && err.message === "LAST_ADMIN") {
+      res.status(400).json({
+        success: false,
+        error:
+          "Canjear esta invitación te quitaría el rol de administrador y no " +
+          "queda ningún otro activo. Pide que asciendan a otra persona antes.",
       });
       return;
     }
