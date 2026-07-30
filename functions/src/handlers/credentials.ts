@@ -233,20 +233,22 @@ export async function createCredential(req: Request, res: Response) {
     // No DNI, name or email in the audit details: audit_log is readable by
     // a different set of eyes than the credentials collection, and the
     // document id is enough to trace the record.
-    await writeAuditLog({
-      action: "credential.create",
-      performedBy: user.uid,
-      targetId: credentialRef.id,
-      targetType: "credential",
-      details: {
-        eventSlug: slug,
-        sequenceNumber,
-        groupLetter,
-        avatarKind: body.avatarKind,
-        hasPhoto: Boolean(photo),
+    await writeAuditLog(
+      {
+        action: "credential.create",
+        performedBy: user.uid,
+        targetId: credentialRef.id,
+        targetType: "credential",
+        details: {
+          eventSlug: slug,
+          sequenceNumber,
+          groupLetter,
+          avatarKind: body.avatarKind,
+          hasPhoto: Boolean(photo),
+        },
       },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+      req
+    );
 
     res.json({
       success: true,
@@ -415,14 +417,16 @@ export async function setBevyStatus(req: Request, res: Response) {
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    await writeAuditLog({
-      action: "credential.bevy_status",
-      performedBy: user.uid,
-      targetId: id,
-      targetType: "credential",
-      details: { eventSlug: slug, status: body.status },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "credential.bevy_status",
+        performedBy: user.uid,
+        targetId: id,
+        targetType: "credential",
+        details: { eventSlug: slug, status: body.status },
+      },
+      req
+    );
 
     res.json({ success: true, data: { id, status: body.status } });
   } catch (err) {
@@ -490,14 +494,16 @@ export async function moderatePhoto(req: Request, res: Response) {
       });
     }
 
-    await writeAuditLog({
-      action: "credential.moderate_photo",
-      performedBy: user.uid,
-      targetId: id,
-      targetType: "credential",
-      details: { eventSlug: slug, action: body.action },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "credential.moderate_photo",
+        performedBy: user.uid,
+        targetId: id,
+        targetType: "credential",
+        details: { eventSlug: slug, action: body.action },
+      },
+      req
+    );
 
     res.json({ success: true, data: { id, action: body.action } });
   } catch (err) {
@@ -543,14 +549,16 @@ export async function retryEmail(req: Request, res: Response) {
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    await writeAuditLog({
-      action: "credential.email_retry",
-      performedBy: user.uid,
-      targetId: id,
-      targetType: "credential",
-      details: { eventSlug: slug },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "credential.email_retry",
+        performedBy: user.uid,
+        targetId: id,
+        targetType: "credential",
+        details: { eventSlug: slug },
+      },
+      req
+    );
 
     res.json({ success: true, data: { id } });
   } catch (err) {
@@ -630,14 +638,20 @@ export async function sendReminders(req: Request, res: Response) {
       await batch.commit();
     }
 
-    await writeAuditLog({
-      action: "credential.reminders",
-      performedBy: user.uid,
-      targetId: slug,
-      targetType: "event",
-      details: { requested: ids.length, queued, skipped: ids.length - queued },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "credential.reminders",
+        performedBy: user.uid,
+        targetId: slug,
+        targetType: "event",
+        details: {
+          requested: ids.length,
+          queued,
+          skipped: ids.length - queued,
+        },
+      },
+      req
+    );
 
     res.json({
       success: true,
@@ -737,21 +751,23 @@ export async function reconcileCredentials(req: Request, res: Response) {
       await batch.commit();
     }
 
-    await writeAuditLog({
-      action: "credential.reconcile",
-      performedBy: user.uid,
-      targetId: slug,
-      targetType: "event",
-      details: {
-        credentials: credentials.length,
-        roster: attendees.length,
-        matched: result.matches.length,
-        unmatchedCredentials: result.unmatchedCredentialIds.length,
-        unmatchedRoster: result.unmatchedAttendeeIds.length,
-        ambiguous: result.ambiguousEmails.length,
+    await writeAuditLog(
+      {
+        action: "credential.reconcile",
+        performedBy: user.uid,
+        targetId: slug,
+        targetType: "event",
+        details: {
+          credentials: credentials.length,
+          roster: attendees.length,
+          matched: result.matches.length,
+          unmatchedCredentials: result.unmatchedCredentialIds.length,
+          unmatchedRoster: result.unmatchedAttendeeIds.length,
+          ambiguous: result.ambiguousEmails.length,
+        },
       },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+      req
+    );
 
     res.json({
       success: true,

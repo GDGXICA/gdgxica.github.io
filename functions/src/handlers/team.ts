@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog, triggerRebuildAndLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
@@ -56,14 +55,16 @@ export async function addTeamMember(req: Request, res: Response) {
 
     triggerRebuildAndLog(github);
 
-    await writeAuditLog({
-      action: "team.create",
-      performedBy: user.uid,
-      targetId: member.id,
-      targetType: "team",
-      details: { name: member.name },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "team.create",
+        performedBy: user.uid,
+        targetId: member.id,
+        targetType: "team",
+        details: { name: member.name },
+      },
+      req
+    );
 
     res.status(201).json({ success: true, data: { id: member.id } });
   } catch (err) {
@@ -97,14 +98,16 @@ export async function updateTeamMember(req: Request, res: Response) {
 
     triggerRebuildAndLog(github);
 
-    await writeAuditLog({
-      action: "team.update",
-      performedBy: user.uid,
-      targetId: memberId,
-      targetType: "team",
-      details: { name: updates.name },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "team.update",
+        performedBy: user.uid,
+        targetId: memberId,
+        targetType: "team",
+        details: { name: updates.name },
+      },
+      req
+    );
 
     res.json({ success: true, data: { id: memberId } });
   } catch (err) {
@@ -136,14 +139,16 @@ export async function deleteTeamMember(req: Request, res: Response) {
 
     triggerRebuildAndLog(github);
 
-    await writeAuditLog({
-      action: "team.delete",
-      performedBy: user.uid,
-      targetId: memberId,
-      targetType: "team",
-      details: {},
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "team.delete",
+        performedBy: user.uid,
+        targetId: memberId,
+        targetType: "team",
+        details: {},
+      },
+      req
+    );
 
     res.json({ success: true });
   } catch (err) {

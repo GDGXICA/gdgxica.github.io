@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
-import { writeAuditLog } from "../utils/audit";
+import { auditEntryFor, writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import { ensureDrawOrder } from "../services/bingoDrawStore";
@@ -21,21 +21,8 @@ function modeForType(type: MinigameTemplateType): "global" | "realtime" {
   return type === "poll" || type === "quiz" ? "realtime" : "global";
 }
 
-function auditEntry(
-  action: string,
-  performedBy: string,
-  targetId: string,
-  details: AuditDetails
-) {
-  return {
-    action,
-    performedBy,
-    targetId,
-    targetType: "minigame_instance",
-    details,
-    timestamp: FieldValue.serverTimestamp(),
-  };
-}
+/** Entradas de este handler: `targetType` fijo, detalles tipados arriba. */
+const auditEntry = auditEntryFor<AuditDetails>("minigame_instance");
 
 function eventDocRef(slug: string) {
   return admin.firestore().collection("events").doc(slug);
@@ -152,7 +139,8 @@ export async function attach(req: Request, res: Response) {
         type: tpl.type,
         title: tpl.title,
         templateId,
-      })
+      }),
+      req
     );
 
     res
@@ -195,7 +183,8 @@ export async function setState(req: Request, res: Response) {
       auditEntry(`minigame_instance.state.${state}`, user.uid, id, {
         slug,
         state,
-      })
+      }),
+      req
     );
 
     res.json({ success: true, data: { id, state } });
@@ -257,7 +246,8 @@ export async function quizAdvance(req: Request, res: Response) {
         slug,
         fromIndex,
         toIndex,
-      })
+      }),
+      req
     );
 
     res.json({ success: true, data: { id, currentQuestionIndex: toIndex } });
@@ -296,7 +286,8 @@ export async function remove(req: Request, res: Response) {
       auditEntry("minigame_instance.delete", user.uid, id, {
         slug,
         title: data?.title,
-      })
+      }),
+      req
     );
 
     res.json({ success: true });

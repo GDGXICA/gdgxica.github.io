@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog, triggerRebuildAndLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
@@ -49,14 +48,16 @@ export async function addSpeaker(req: Request, res: Response) {
 
     triggerRebuildAndLog(github);
 
-    await writeAuditLog({
-      action: "speaker.create",
-      performedBy: user.uid,
-      targetId: speaker.id,
-      targetType: "speaker",
-      details: { name: speaker.name },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "speaker.create",
+        performedBy: user.uid,
+        targetId: speaker.id,
+        targetType: "speaker",
+        details: { name: speaker.name },
+      },
+      req
+    );
 
     res.status(201).json({ success: true, data: { id: speaker.id } });
   } catch (err) {
@@ -96,14 +97,16 @@ export async function updateSpeaker(req: Request, res: Response) {
 
     triggerRebuildAndLog(github);
 
-    await writeAuditLog({
-      action: "speaker.update",
-      performedBy: user.uid,
-      targetId: speakerId,
-      targetType: "speaker",
-      details: { name: updates.name },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "speaker.update",
+        performedBy: user.uid,
+        targetId: speakerId,
+        targetType: "speaker",
+        details: { name: updates.name },
+      },
+      req
+    );
 
     res.json({ success: true, data: { id: speakerId } });
   } catch (err) {
@@ -141,14 +144,16 @@ export async function deleteSpeaker(req: Request, res: Response) {
 
     triggerRebuildAndLog(github);
 
-    await writeAuditLog({
-      action: "speaker.delete",
-      performedBy: user.uid,
-      targetId: speakerId,
-      targetType: "speaker",
-      details: {},
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "speaker.delete",
+        performedBy: user.uid,
+        targetId: speakerId,
+        targetType: "speaker",
+        details: {},
+      },
+      req
+    );
 
     res.json({ success: true });
   } catch (err) {

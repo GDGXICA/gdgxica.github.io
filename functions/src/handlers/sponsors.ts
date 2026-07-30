@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog, triggerRebuildAndLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError, validateUrl } from "../middleware/validate";
@@ -62,14 +61,16 @@ export async function addSponsor(req: Request, res: Response) {
 
     triggerRebuildAndLog(github);
 
-    await writeAuditLog({
-      action: "sponsor.create",
-      performedBy: user.uid,
-      targetId: sponsor.name,
-      targetType: "sponsor",
-      details: { name: sponsor.name },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "sponsor.create",
+        performedBy: user.uid,
+        targetId: sponsor.name,
+        targetType: "sponsor",
+        details: { name: sponsor.name },
+      },
+      req
+    );
 
     res.status(201).json({ success: true, data: { name: sponsor.name } });
   } catch (err) {
@@ -110,14 +111,16 @@ export async function updateSponsor(req: Request, res: Response) {
 
     triggerRebuildAndLog(github);
 
-    await writeAuditLog({
-      action: "sponsor.update",
-      performedBy: user.uid,
-      targetId: updates.name,
-      targetType: "sponsor",
-      details: { name: updates.name },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "sponsor.update",
+        performedBy: user.uid,
+        targetId: updates.name,
+        targetType: "sponsor",
+        details: { name: updates.name },
+      },
+      req
+    );
 
     res.json({ success: true, data: { name: updates.name } });
   } catch (err) {
@@ -150,14 +153,16 @@ export async function deleteSponsor(req: Request, res: Response) {
 
     triggerRebuildAndLog(github);
 
-    await writeAuditLog({
-      action: "sponsor.delete",
-      performedBy: user.uid,
-      targetId: sponsorId,
-      targetType: "sponsor",
-      details: {},
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "sponsor.delete",
+        performedBy: user.uid,
+        targetId: sponsorId,
+        targetType: "sponsor",
+        details: {},
+      },
+      req
+    );
 
     res.json({ success: true });
   } catch (err) {

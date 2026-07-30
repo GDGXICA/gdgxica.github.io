@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog, triggerRebuildAndLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import {
@@ -90,14 +89,16 @@ export async function createEvent(req: Request, res: Response) {
     triggerRebuildAndLog(github);
 
     // Audit log
-    await writeAuditLog({
-      action: "event.create",
-      performedBy: user.uid,
-      targetId: event.id,
-      targetType: "event",
-      details: { title: event.title },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "event.create",
+        performedBy: user.uid,
+        targetId: event.id,
+        targetType: "event",
+        details: { title: event.title },
+      },
+      req
+    );
 
     res.status(201).json({ success: true, data: { id: event.id } });
   } catch (err) {
@@ -146,14 +147,16 @@ export async function updateEvent(req: Request, res: Response) {
 
     triggerRebuildAndLog(github);
 
-    await writeAuditLog({
-      action: "event.update",
-      performedBy: user.uid,
-      targetId: eventId,
-      targetType: "event",
-      details: { title: event.title },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "event.update",
+        performedBy: user.uid,
+        targetId: eventId,
+        targetType: "event",
+        details: { title: event.title },
+      },
+      req
+    );
 
     res.json({ success: true, data: { id: eventId } });
   } catch (err) {
@@ -190,14 +193,16 @@ export async function deleteEvent(req: Request, res: Response) {
 
     triggerRebuildAndLog(github);
 
-    await writeAuditLog({
-      action: "event.delete",
-      performedBy: user.uid,
-      targetId: eventId,
-      targetType: "event",
-      details: {},
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "event.delete",
+        performedBy: user.uid,
+        targetId: eventId,
+        targetType: "event",
+        details: {},
+      },
+      req
+    );
 
     res.json({ success: true });
   } catch (err) {

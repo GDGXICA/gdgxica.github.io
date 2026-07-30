@@ -532,14 +532,16 @@ export async function revokeInvitation(req: Request, res: Response) {
 
     await ref.update({ revokedAt: FieldValue.serverTimestamp() });
 
-    await writeAuditLog({
-      action: "access.invitation.revoke",
-      performedBy: performer.uid,
-      targetId: id,
-      targetType: "invitation",
-      details: {},
-      timestamp: FieldValue.serverTimestamp(),
-    });
+    await writeAuditLog(
+      {
+        action: "access.invitation.revoke",
+        performedBy: performer.uid,
+        targetId: id,
+        targetType: "invitation",
+        details: {},
+      },
+      req
+    );
 
     res.json({ success: true });
   } catch (err) {

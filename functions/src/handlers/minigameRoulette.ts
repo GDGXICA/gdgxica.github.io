@@ -79,14 +79,17 @@ export async function spin(req: Request, res: Response) {
       return spinCount;
     });
 
-    await writeAuditLog({
-      action: "minigame_instance.roulette.spin",
-      performedBy: user.uid,
-      targetId: id,
-      targetType: "minigame_instance",
-      details: { slug, winnerId: winner.id, alias, spinNumber },
-      timestamp: now,
-    });
+    await writeAuditLog(
+      {
+        action: "minigame_instance.roulette.spin",
+        performedBy: user.uid,
+        targetId: id,
+        targetType: "minigame_instance",
+        details: { slug, winnerId: winner.id, alias, spinNumber },
+        timestamp: now,
+      },
+      req
+    );
 
     res.json({
       success: true,

@@ -20,7 +20,9 @@ describe("normalizeSearchText", () => {
   });
 
   it("replaces punctuation with a separator rather than joining words", () => {
-    expect(normalizeSearchText("Quintanilla-Garcia")).toBe("quintanilla garcia");
+    expect(normalizeSearchText("Quintanilla-Garcia")).toBe(
+      "quintanilla garcia"
+    );
     expect(normalizeSearchText("O'Brien")).toBe("o brien");
   });
 

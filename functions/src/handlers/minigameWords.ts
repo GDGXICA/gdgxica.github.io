@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
-import { writeAuditLog } from "../utils/audit";
+import { auditEntryFor, writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 
@@ -12,21 +12,8 @@ interface AuditDetails {
   hidden?: boolean;
 }
 
-function auditEntry(
-  action: string,
-  performedBy: string,
-  targetId: string,
-  details: AuditDetails
-) {
-  return {
-    action,
-    performedBy,
-    targetId,
-    targetType: "minigame_word",
-    details,
-    timestamp: FieldValue.serverTimestamp(),
-  };
-}
+/** Entradas de este handler: `targetType` fijo, detalles tipados arriba. */
+const auditEntry = auditEntryFor<AuditDetails>("minigame_word");
 
 function wordsCol(slug: string, instanceId: string) {
   return admin
@@ -95,7 +82,8 @@ export async function setWordHidden(req: Request, res: Response) {
         user.uid,
         wordId,
         { slug, instanceId: id, wordId, hidden }
-      )
+      ),
+      req
     );
     res.json({ success: true, data: { id: wordId, hidden } });
   } catch (err) {

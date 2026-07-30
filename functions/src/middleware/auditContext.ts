@@ -4,6 +4,7 @@ import { logger } from "firebase-functions";
 import { writeAuditLog } from "../utils/audit";
 import { singleLineHeader } from "../utils/headers";
 import type { AuditContext } from "../utils/auditTypes";
+import type { AuditAction } from "../utils/auditActions";
 
 /**
  * Trunca la dirección a su prefijo de red.
@@ -106,7 +107,11 @@ export function auditContext() {
       // async de aquí y la instancia puede congelarse antes de que termine una
       // escritura a Firestore. El log siempre sale; la fila es best-effort.
       const uid = (req as { user?: { uid?: string } }).user?.uid ?? "unknown";
-      const action = `http.${req.method.toLowerCase()}.${context.route}`;
+      // Anotado a propósito: TS ensancha a `string` un template con
+      // interpolaciones no literales, y `AuditAction` admite `http.${string}`
+      // precisamente para estas filas. La anotación es lo que comprueba que
+      // sigan empezando por `http.` y no se cuelen como una acción de dominio.
+      const action: AuditAction = `http.${req.method.toLowerCase()}.${context.route}`;
 
       logger.warn("audit.synthesized", {
         action,
@@ -123,19 +128,22 @@ export function auditContext() {
       // capaz de mandar basura en dueño del volumen de la colección.
       if (outcome !== "success") return;
 
-      void writeAuditLog({
-        action,
-        performedBy: uid,
-        targetType: "http_request",
-        details: { status },
-        outcome,
-        // `warning`, no `info`: esta fila significa que hay código mutando
-        // cosas sin decir qué. Se resalta en el visor para que alguien lo
-        // arregle, no para que se normalice.
-        severity: "warning",
-        category: "operations",
-        synthesized: true,
-      }).catch(() => {
+      void writeAuditLog(
+        {
+          action,
+          performedBy: uid,
+          targetType: "http_request",
+          details: { status },
+          outcome,
+          // `warning`, no `info`: esta fila significa que hay código mutando
+          // cosas sin decir qué. Se resalta en el visor para que alguien lo
+          // arregle, no para que se normalice.
+          severity: "warning",
+          category: "operations",
+          synthesized: true,
+        },
+        req
+      ).catch(() => {
         // `writeAuditLog` ya registró el fallo, y aquí no hay respuesta que
         // devolver: la petición terminó hace rato.
       });

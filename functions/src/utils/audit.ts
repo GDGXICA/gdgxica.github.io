@@ -6,8 +6,10 @@ import {
   deriveCategory,
   deriveSeverity,
   type AuditActor,
+  type AuditDetails,
   type AuditEntry,
 } from "./auditTypes";
+import type { AuditAction } from "./auditActions";
 
 /** Documento tal y como queda en Firestore: sin huecos que el visor tenga que adivinar. */
 type StoredAuditEntry = AuditEntry & {
@@ -108,6 +110,37 @@ export function mirrorToCloudLogging(
   } else {
     logger.info("audit", payload);
   }
+}
+
+/**
+ * Fabrica un constructor de entradas con el `targetType` ya fijado.
+ *
+ * Sustituye a tres factorías `auditEntry()` idénticas que vivían copiadas en
+ * `minigameTemplates`, `minigameWords` y `minigameInstances`. Está currificada
+ * en vez de recibir `targetType` como quinto argumento porque cinco parámetros
+ * posicionales del mismo tipo son un imán de bugs: basta intercambiar dos para
+ * escribir un registro que compila y miente.
+ *
+ * El genérico `D` conserva el tipado de detalles propio de cada archivo. Esas
+ * interfaces locales son las que impiden un typo en una CLAVE de `details`, así
+ * que aplanarlas a `AuditDetails` para quitar la duplicación habría cambiado
+ * una garantía por otra.
+ */
+export function auditEntryFor<D extends AuditDetails>(targetType: string) {
+  return (
+    action: AuditAction,
+    performedBy: string,
+    targetId: string,
+    details: D
+  ): AuditEntry => ({
+    action,
+    performedBy,
+    targetId,
+    targetType,
+    details,
+    // Sin `timestamp`: lo sella el escritor. Ponerlo aquí obligaba a importar
+    // FieldValue en cada handler para repetir el mismo valor.
+  });
 }
 
 /**
