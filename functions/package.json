@@ -25,7 +25,7 @@
     "zod": "^4.4.3"
   },
   "overrides": {
-    "protobufjs": "8.6.0",
+    "protobufjs": "8.6.6",
     "@babel/core": "7.29.6",
     "@tootallnate/once": "2.0.1",
     "js-yaml": "3.15.0",
@@ -33,6 +33,7 @@
     "@grpc/grpc-js": "1.14.4",
     "fast-xml-parser": "5.7.0",
     "fast-xml-builder": "1.1.7",
+    "websocket-driver": "0.7.5",
     "vite": "8.0.16",
     "qs": "6.15.2"
   },
