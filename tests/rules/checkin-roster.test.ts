@@ -1,6 +1,14 @@
 import { afterAll, afterEach, beforeAll, describe, it } from "vitest";
 import { assertFails, assertSucceeds } from "@firebase/rules-unit-testing";
-import { deleteDoc, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import {
+  deleteDoc,
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+  Timestamp,
+  updateDoc,
+} from "firebase/firestore";
 import { cleanup, clearAll, getTestEnv } from "./setup";
 
 const SLUG = "devfest-ica-2026";
@@ -16,6 +24,19 @@ async function seedRole(
   await env.withSecurityRulesDisabled(async (ctx) => {
     await setDoc(doc(ctx.firestore(), `users/${uid}`), { uid, role, ...over });
   });
+}
+
+/**
+ * Payload de una escritura de check-in, con la atribución ya puesta.
+ *
+ * Las reglas exigen `lastActionBy == request.auth.uid` en TODA escritura del
+ * roster. Va en un helper y no a mano en cada caso para que los tests que
+ * comprueban otra cosa —los límites de longitud, los campos inmutables— no
+ * puedan pasar por accidente al faltarles la atribución, en vez de fallar por
+ * el motivo que dicen estar comprobando.
+ */
+function checkin(uid: string, fields: Record<string, unknown>) {
+  return { lastActionBy: uid, lastActionAt: serverTimestamp(), ...fields };
 }
 
 /** Seeds a roster doc the way the import Cloud Function would. */
@@ -160,10 +181,10 @@ describe("checkin roster rules", () => {
       });
       const org = env.authenticatedContext("org-1").firestore();
       await assertFails(
-        updateDoc(doc(org, ATTENDEE), {
-          checkedIn: true,
-          checkedInBy: "org-1",
-        })
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", { checkedIn: true, checkedInBy: "org-1" })
+        )
       );
     });
 
@@ -233,12 +254,15 @@ describe("checkin roster rules", () => {
       await seedRole("org-1", "organizer");
       const org = env.authenticatedContext("org-1").firestore();
       await assertSucceeds(
-        updateDoc(doc(org, ATTENDEE), {
-          checkedIn: true,
-          checkedInAt: new Date(),
-          checkedInBy: "org-1",
-          checkedInByName: "Alvaro",
-        })
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", {
+            checkedIn: true,
+            checkedInAt: new Date(),
+            checkedInBy: "org-1",
+            checkedInByName: "Alvaro",
+          })
+        )
       );
     });
 
@@ -248,11 +272,14 @@ describe("checkin roster rules", () => {
       await seedRole("org-1", "organizer");
       const org = env.authenticatedContext("org-1").firestore();
       await assertFails(
-        updateDoc(doc(org, ATTENDEE), {
-          checkedIn: true,
-          checkedInBy: "org-1",
-          email: "attacker@evil.com",
-        })
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", {
+            checkedIn: true,
+            checkedInBy: "org-1",
+            email: "attacker@evil.com",
+          })
+        )
       );
     });
   });
@@ -264,11 +291,31 @@ describe("checkin roster rules", () => {
       await seedRole("org-1", "organizer");
       const org = env.authenticatedContext("org-1").firestore();
       await assertFails(
-        updateDoc(doc(org, ATTENDEE), {
-          checkedIn: true,
-          checkedInBy: "org-1",
-          checkedInByName: "x".repeat(121),
-        })
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", {
+            checkedIn: true,
+            checkedInBy: "org-1",
+            checkedInByName: "x".repeat(121),
+          })
+        )
+      );
+    });
+
+    it("rejects an over-long lastActionByName", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("org-1", "organizer");
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertFails(
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", {
+            checkedIn: true,
+            checkedInBy: "org-1",
+            lastActionByName: "x".repeat(121),
+          })
+        )
       );
     });
 
@@ -278,11 +325,14 @@ describe("checkin roster rules", () => {
       await seedRole("org-1", "organizer");
       const org = env.authenticatedContext("org-1").firestore();
       await assertFails(
-        updateDoc(doc(org, ATTENDEE), {
-          checkedIn: true,
-          checkedInBy: "org-1",
-          dniMatchScore: 7,
-        })
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", {
+            checkedIn: true,
+            checkedInBy: "org-1",
+            dniMatchScore: 7,
+          })
+        )
       );
     });
 
@@ -292,11 +342,14 @@ describe("checkin roster rules", () => {
       await seedRole("org-1", "organizer");
       const org = env.authenticatedContext("org-1").firestore();
       await assertFails(
-        updateDoc(doc(org, ATTENDEE), {
-          checkedIn: true,
-          checkedInBy: "org-1",
-          dniVerified: "yes",
-        })
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", {
+            checkedIn: true,
+            checkedInBy: "org-1",
+            dniVerified: "yes",
+          })
+        )
       );
     });
   });
@@ -308,26 +361,113 @@ describe("checkin roster rules", () => {
       await seedRole("org-1", "organizer");
       const org = env.authenticatedContext("org-1").firestore();
       await assertSucceeds(
-        updateDoc(doc(org, ATTENDEE), {
-          checkedIn: true,
-          checkedInAt: new Date(),
-          checkedInBy: "org-1",
-          checkedInByName: "Alvaro",
-        })
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", {
+            checkedIn: true,
+            checkedInAt: new Date(),
+            checkedInBy: "org-1",
+            checkedInByName: "Alvaro",
+          })
+        )
       );
     });
 
-    it("allows un-checking without attribution", async () => {
+    // Desmarcar sigue poniendo `checkedInBy` a null —es lo correcto, ya no hay
+    // check-in que atribuir—, pero la ACCIÓN sí queda atribuida en
+    // `lastActionBy`. Antes marcar y desmarcar no dejaba constancia de nadie en
+    // ninguna parte, y el trigger de auditoría no tiene contexto de auth del
+    // que sacarlo.
+    it("allows un-checking, attributed to whoever did it", async () => {
       const env = await getTestEnv();
       await seedAttendee({ checkedIn: true, checkedInBy: "org-1" });
       await seedRole("org-1", "organizer");
       const org = env.authenticatedContext("org-1").firestore();
       await assertSucceeds(
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", {
+            checkedIn: false,
+            checkedInAt: null,
+            checkedInBy: null,
+          })
+        )
+      );
+    });
+
+    it("denies un-checking without saying who did it", async () => {
+      const env = await getTestEnv();
+      await seedAttendee({ checkedIn: true, checkedInBy: "org-1" });
+      await seedRole("org-1", "organizer");
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertFails(
         updateDoc(doc(org, ATTENDEE), {
           checkedIn: false,
           checkedInAt: null,
           checkedInBy: null,
         })
+      );
+    });
+
+    // Mismo motivo por el que `bingoWonAt` va fijado a `request.time`: si el
+    // cliente pudiera elegir la fecha, la auditoría contaría el orden de los
+    // hechos como a esa persona le conviniera. Y sin la fijación este campo era
+    // el único de la lista blanca sin cota de tipo ni de tamaño.
+    it("denies a backdated lastActionAt", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("org-1", "organizer");
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertFails(
+        updateDoc(doc(org, ATTENDEE), {
+          checkedIn: true,
+          checkedInBy: "org-1",
+          lastActionBy: "org-1",
+          lastActionAt: Timestamp.fromMillis(1000),
+        })
+      );
+    });
+
+    it("denies a write with no lastActionAt at all", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("org-1", "organizer");
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertFails(
+        updateDoc(doc(org, ATTENDEE), {
+          checkedIn: true,
+          checkedInBy: "org-1",
+          lastActionBy: "org-1",
+        })
+      );
+    });
+
+    it("denies marking someone present without saying who did it", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("org-1", "organizer");
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertFails(
+        updateDoc(doc(org, ATTENDEE), {
+          checkedIn: true,
+          checkedInBy: "org-1",
+        })
+      );
+    });
+
+    it("denies attributing the action to somebody else", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("org-1", "organizer");
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertFails(
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("otra-persona", {
+            checkedIn: true,
+            checkedInBy: "org-1",
+          })
+        )
       );
     });
 
@@ -337,10 +477,13 @@ describe("checkin roster rules", () => {
       await seedRole("member-1", "member");
       const member = env.authenticatedContext("member-1").firestore();
       await assertFails(
-        updateDoc(doc(member, ATTENDEE), {
-          checkedIn: true,
-          checkedInBy: "member-1",
-        })
+        updateDoc(
+          doc(member, ATTENDEE),
+          checkin("member-1", {
+            checkedIn: true,
+            checkedInBy: "member-1",
+          })
+        )
       );
     });
 
@@ -350,10 +493,13 @@ describe("checkin roster rules", () => {
       await seedRole("org-1", "organizer");
       const org = env.authenticatedContext("org-1").firestore();
       await assertFails(
-        updateDoc(doc(org, ATTENDEE), {
-          checkedIn: true,
-          checkedInBy: "someone-else",
-        })
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", {
+            checkedIn: true,
+            checkedInBy: "someone-else",
+          })
+        )
       );
     });
   });
@@ -365,7 +511,10 @@ describe("checkin roster rules", () => {
       await seedRole("org-1", "organizer");
       const org = env.authenticatedContext("org-1").firestore();
       await assertFails(
-        updateDoc(doc(org, ATTENDEE), { email: "attacker@evil.com" })
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", { email: "attacker@evil.com" })
+        )
       );
     });
 
@@ -374,7 +523,9 @@ describe("checkin roster rules", () => {
       await seedAttendee();
       await seedRole("org-1", "organizer");
       const org = env.authenticatedContext("org-1").firestore();
-      await assertFails(updateDoc(doc(org, ATTENDEE), { firstName: "Otro" }));
+      await assertFails(
+        updateDoc(doc(org, ATTENDEE), checkin("org-1", { firstName: "Otro" }))
+      );
     });
 
     it("denies faking bevyCheckinAt, which the Bevy sync diffs against", async () => {
@@ -383,7 +534,10 @@ describe("checkin roster rules", () => {
       await seedRole("org-1", "organizer");
       const org = env.authenticatedContext("org-1").firestore();
       await assertFails(
-        updateDoc(doc(org, ATTENDEE), { bevyCheckinAt: new Date() })
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", { bevyCheckinAt: new Date() })
+        )
       );
     });
 
@@ -393,11 +547,14 @@ describe("checkin roster rules", () => {
       await seedRole("org-1", "organizer");
       const org = env.authenticatedContext("org-1").firestore();
       await assertFails(
-        updateDoc(doc(org, ATTENDEE), {
-          checkedIn: true,
-          checkedInBy: "org-1",
-          email: "attacker@evil.com",
-        })
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", {
+            checkedIn: true,
+            checkedInBy: "org-1",
+            email: "attacker@evil.com",
+          })
+        )
       );
     });
 
@@ -407,10 +564,10 @@ describe("checkin roster rules", () => {
       await seedRole("org-1", "organizer");
       const org = env.authenticatedContext("org-1").firestore();
       await assertFails(
-        updateDoc(doc(org, ATTENDEE), {
-          checkedIn: "yes",
-          checkedInBy: "org-1",
-        })
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", { checkedIn: "yes", checkedInBy: "org-1" })
+        )
       );
     });
 
@@ -420,11 +577,14 @@ describe("checkin roster rules", () => {
       await seedRole("org-1", "organizer");
       const org = env.authenticatedContext("org-1").firestore();
       await assertFails(
-        updateDoc(doc(org, ATTENDEE), {
-          checkedIn: true,
-          checkedInBy: "org-1",
-          note: "x".repeat(201),
-        })
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", {
+            checkedIn: true,
+            checkedInBy: "org-1",
+            note: "x".repeat(201),
+          })
+        )
       );
     });
   });

@@ -70,6 +70,11 @@ export const AUDIT_ACTIONS = [
   "settings.email_transport",
   "certificate.send",
   "checkin.import",
+  // Las escribe un trigger de Firestore, no un handler: el check-in va directo
+  // del cliente a Firestore para poder encolarse sin wifi, así que no hay
+  // petición donde engancharse. Ver `triggers/auditCheckin.ts`.
+  "checkin.mark",
+  "checkin.unmark",
   "credential.create",
   "credential.image",
   "credential.bevy_status",
@@ -83,10 +88,12 @@ export const AUDIT_ACTIONS = [
   // no deja fila, porque una por vista de página ahoga el registro y el visor
   // solo admite un filtro a la vez.
   //
-  // Falta a propósito el roster de asistentes y las credenciales con datos
-  // personales: el panel los lee DIRECTAMENTE de Firestore, acotado por las
-  // reglas, sin pasar por la API. No hay endpoint donde engancharse, así que
-  // cubrirlos exigiría instrumentar el lado de Firestore.
+  // Faltan las LECTURAS del roster y de las credenciales, que el panel hace
+  // directamente contra Firestore, acotadas por las reglas y sin pasar por la
+  // API: no hay endpoint donde engancharse. Sus ESCRITURAS sí se auditan desde
+  // que existe `triggers/auditCheckin.ts` (`checkin.mark`/`checkin.unmark`);
+  // cubrir también las lecturas exigiría un camino distinto, porque una
+  // suscripción en tiempo real no es un hecho puntual que fechar.
   "read.audit_log",
   "read.users",
   "read.form_responses",

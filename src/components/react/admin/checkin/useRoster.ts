@@ -238,6 +238,15 @@ export async function setCheckedIn(
       // The rules require attribution when marking present.
       checkedInBy: checkedIn ? by.uid : null,
       checkedInByName: checkedIn ? by.name : null,
+      // Quién hizo la acción, en LAS DOS direcciones — a diferencia de
+      // checkedInBy, que se limpia al desmarcar porque ya no hay check-in que
+      // atribuir. Sin esto, marcar y desmarcar no dejaba constancia de nadie:
+      // el trigger que audita estas escrituras es de Firestore y no lleva
+      // contexto de autenticación, así que el actor tiene que viajar en el
+      // documento. Las reglas lo exigen y rechazan la escritura si falta.
+      lastActionBy: by.uid,
+      lastActionByName: by.name,
+      lastActionAt: serverTimestamp(),
     }).catch((err) => {
       onError(err instanceof Error ? err.message : "No se pudo guardar");
     });

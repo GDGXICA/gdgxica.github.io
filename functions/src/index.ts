@@ -952,6 +952,10 @@ export const api = onRequest(
 // Firestore trigger: incrementally maintains aggregates/current per
 // minigame instance whenever a participant response is created.
 export { onMinigameResponseWritten } from "./triggers/recomputeAggregates";
+// Audita el check-in. Es la única mutación del panel que no pasa por esta API
+// —va directa a Firestore para poder encolarse sin wifi—, así que un trigger es
+// el único sitio desde el que se puede registrar.
+export { onRosterCheckinWritten } from "./triggers/auditCheckin";
 // Deploying this creates a Cloud Scheduler job. It declares the Gmail
 // secrets itself; the `api` function's secrets array does not extend here.
 export { drainCredentialEmails } from "./triggers/drainCredentialEmails";
