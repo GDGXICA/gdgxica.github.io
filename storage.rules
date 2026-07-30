@@ -14,38 +14,67 @@ service firebase.storage {
     function userPath() {
       return /databases/(default)/documents/users/$(request.auth.uid);
     }
-    // exists() before get(): a signed-in caller with no users/{uid}
-    // document makes get() return null, and reading .data.role off null
-    // raises an evaluation error. The request still ends up denied, but by
-    // crashing the rule rather than evaluating it — which floods the logs
-    // and would silently swallow a genuine misconfiguration.
-    function callerRole() {
-      return firestore.get(userPath()).data.get('role', '');
-    }
-
-    // La suspensión es la palanca de emergencia del modelo de permisos:
-    // corta todo de golpe sin deshacer rol y grants uno a uno. Si Storage no
-    // la mirase, un organizador suspendido seguiría descargando fotos y DNI
-    // por aquí mientras Firestore ya se lo niega, y la palanca no serviría.
-    function callerIsActive() {
-      return firestore.get(userPath()).data.get('status', 'active') != 'suspended';
-    }
 
     function staffPath(eventSlug) {
       return /databases/(default)/documents/events/$(eventSlug)/staff/$(request.auth.uid);
     }
 
+    // Una asignación sin `expiresAt` no caduca; una con fecha pasada deja de
+    // conceder sola, sin que nadie tenga que acordarse de borrarla.
+    //
+    // Comprobarlo aquí no es un detalle: esta función es la única diferencia
+    // entre "el voluntario del evento" y "quien lo fue alguna vez". Sin ella
+    // esto solo miraba que el documento EXISTIERA, así que una asignación
+    // caducada seguía sirviendo fotos y DNI de un evento que esa persona ya
+    // no trabaja — mientras Firestore ya le negaba el documento con esos
+    // mismos datos. Ver `isEventStaff()` en firestore.rules, que es de donde
+    // sale esta regla.
+    function staffAssignmentActive(eventSlug) {
+      let expiry = firestore.get(staffPath(eventSlug)).data.get('expiresAt', null);
+      return expiry == null || expiry > request.time;
+    }
+
     // Espejo de `canOnEvent('roster:read', …)` en firestore.rules: estas
     // imágenes son la misma clase de dato personal que el roster, así que
     // se rigen igual. Un voluntario solo ve las del evento que tiene
-    // asignado; organizadores y admins, todas.
+    // asignado y mientras dure la asignación; organizadores y admins, todas.
+    //
+    // exists() antes que get(): quien tiene sesión pero ningún doc en
+    // users/{uid} hace que get() devuelva null, y leer .role de null revienta
+    // la evaluación. La petición acabaría denegada igual, pero por reventar la
+    // regla en vez de por evaluarla — lo que llena los logs de ruido y taparía
+    // una mala configuración de verdad.
     function canReadCredentials(eventSlug) {
       return request.auth != null
         && firestore.exists(userPath())
-        && callerIsActive()
+        && callerCanRead(firestore.get(userPath()).data, eventSlug);
+    }
+
+    // El doc de quien llama se lee UNA vez y se pasa aquí. Antes cada
+    // comprobación hacía su propio firestore.get(), y son lecturas facturadas
+    // por cada objeto que el panel de moderación pinta.
+    //
+    // Mismo orden que `canOnEventWith` en firestore.rules, y por las mismas
+    // razones:
+    //   - La suspensión es la palanca de emergencia: corta todo de golpe sin
+    //     deshacer rol y permisos uno a uno.
+    //   - Las revocaciones restan sobre lo que concede el rol, y la API las
+    //     aplica en cada petición. Sin mirarlas aquí, revocar `roster:read`
+    //     quitaba la mitad del panel que pasa por la API y dejaba intacta la
+    //     descarga directa de las imágenes, que es el dato más sensible.
+    //
+    // Los `grants` NO se evalúan, ni aquí ni en firestore.rules: el lenguaje
+    // de reglas no sabe recorrer una lista de mapas, así que un grant con
+    // caducidad no es expresable. Conceder acceso a un evento concreto se hace
+    // con la asignación de staff, que es justo para lo que existe.
+    function callerCanRead(caller, eventSlug) {
+      return caller.get('status', 'active') != 'suspended'
+        && !('roster:read' in caller.get('revocations', []))
         && (
-          callerRole() in ['organizer', 'admin']
-          || (callerRole() == 'volunteer' && firestore.exists(staffPath(eventSlug)))
+          caller.get('role', '') in ['organizer', 'admin']
+          || (caller.get('role', '') == 'volunteer'
+              && firestore.exists(staffPath(eventSlug))
+              && staffAssignmentActive(eventSlug))
         );
     }
 

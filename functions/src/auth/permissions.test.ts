@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   PERMISSIONS,
+  RULES_ENFORCED_PERMISSIONS,
   ROLES,
   ROLE_BUNDLES,
   canAssignRole,
@@ -31,6 +32,15 @@ describe("catálogo", () => {
     }
   });
 
+  // Si esta lista nombra un permiso que ya no existe, la advertencia de la UI
+  // deja de salir en silencio y nadie se entera hasta que alguien concede un
+  // grant que no sirve para nada.
+  it("los permisos aplicados por las reglas existen en el catálogo", () => {
+    for (const perm of RULES_ENFORCED_PERMISSIONS) {
+      expect(PERMISSIONS).toContain(perm);
+    }
+  });
+
   it("admin posee todos los permisos", () => {
     expect([...effectivePermissions({ role: "admin" })].sort()).toEqual(
       [...PERMISSIONS].sort()
@@ -49,6 +59,12 @@ describe("sincronía con el espejo de cliente", () => {
   it("expone el mismo catálogo de permisos y roles", () => {
     expect([...client.PERMISSIONS]).toEqual([...PERMISSIONS]);
     expect([...client.ROLES]).toEqual([...ROLES]);
+  });
+
+  it("expone la misma lista de permisos aplicados por las reglas", () => {
+    expect([...client.RULES_ENFORCED_PERMISSIONS]).toEqual([
+      ...RULES_ENFORCED_PERMISSIONS,
+    ]);
   });
 
   it("expone los mismos bundles por rol", () => {

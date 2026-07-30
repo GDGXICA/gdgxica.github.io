@@ -21,6 +21,21 @@ service cloud.firestore {
       return !('status' in u) || u.status != 'suspended';
     }
 
+    // `users/{uid}.revocations` resta sobre lo que concede el rol, y la API la
+    // aplica en cada petición (ver `effectivePermissions`). Aquí no se miraba,
+    // así que revocarle `roster:read` a un organizador le quitaba la mitad del
+    // panel que pasa por la API y le dejaba intacta la suscripción directa al
+    // roster — que es precisamente donde están los nombres y los correos.
+    //
+    // Los `grants` sí que NO se evalúan, y es una limitación consciente: el
+    // lenguaje de reglas no sabe recorrer una lista de mapas, así que un grant
+    // con caducidad no es expresable sin denormalizar el modelo entero. Dar
+    // acceso a un evento concreto se hace con la asignación de staff. Ver
+    // RULES_ENFORCED_PERMISSIONS en functions/src/auth/permissions.ts.
+    function notRevoked(u, perm) {
+      return !('revocations' in u) || !(perm in u.revocations);
+    }
+
     // Global (non-event-scoped) holders of a permission.
     function roleHasGlobal(role, perm) {
       return role == 'admin'
@@ -59,6 +74,7 @@ service cloud.firestore {
 
     function canOnEventWith(caller, perm, eventSlug) {
       return callerIsActive(caller)
+             && notRevoked(caller, perm)
              && (
                roleHasGlobal(caller.role, perm)
                || (roleHasPerEvent(caller.role, perm) && isEventStaff(eventSlug))
