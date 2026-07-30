@@ -45,7 +45,12 @@ export async function updateStats(req: Request, res: Response) {
         performedBy: user.uid,
         targetId: "stats",
         targetType: "stats",
-        details: stats,
+        // Un resumen, no el cuerpo entero. El esquema ya acota lo que puede
+        // llegar, pero volcar el objeto completo en cada fila hace crecer el
+        // registro sin decir nada que el propio `about/stats.json` no diga ya
+        // — y el registro se paga por documento y se lee entero en el panel.
+        // Lo que hace falta saber al revisarlo es qué se tocó y cuándo.
+        details: { fields: Object.keys(stats).sort() },
       },
       req
     );

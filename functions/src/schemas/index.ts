@@ -183,6 +183,47 @@ export const locationSchema = z
   })
   .strict();
 
+/**
+ * Cifras de la comunidad que se pintan en la portada.
+ *
+ * Era la ÚNICA escritura de la API sin esquema: el handler cogía `req.body`
+ * entero, lo esparcía en `about/stats.json` del repo de datos y lo metía tal
+ * cual en los detalles del registro. Dos consecuencias, las dos silenciosas.
+ * Un cuerpo con la forma equivocada llegaba al repo público y solo reventaba
+ * después, en el build del sitio. Y un cuerpo grande —hasta 1 MB deja pasar
+ * `express.json`— podía superar el límite por documento de Firestore al
+ * escribir la fila de auditoría; como `writeAuditLog` se traga sus errores,
+ * el cambio quedaba hecho y sin registrar.
+ *
+ * `.strict()` cierra la puerta a campos inventados: lo que llegue aquí acaba
+ * publicado, así que la lista de claves es la que es.
+ */
+const counter = z.number().int().min(0).max(10_000_000);
+
+export const statsSchema = z
+  .object({
+    total_members: counter,
+    total_events: counter,
+    total_talks: counter,
+    total_speakers: counter,
+    years_active: counter,
+    total_organizers: counter,
+    developers_mentored: counter,
+    total_sponsors: counter,
+    annual_support: shortText(100),
+    sponsored_events: counter,
+    developers_reached: counter,
+    active_volunteers: counter,
+    volunteer_hours: counter,
+    events_supported: counter,
+    volunteer_areas: counter,
+    // El panel reenvía el documento que leyó, así que llega — pero el handler
+    // lo sobrescribe con la hora del servidor. Se acepta para no obligar al
+    // cliente a recortar el objeto, no porque su valor cuente.
+    updated_at: shortText(100).optional(),
+  })
+  .strict();
+
 // Mini-game templates ------------------------------------------------------
 //
 // Each template is one of four discriminated types. The schema is the

@@ -31,6 +31,7 @@ import {
   credentialPhotoModerationSchema,
   credentialReminderSchema,
   emailTransportSchema,
+  statsSchema,
 } from "./schemas";
 import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
@@ -389,6 +390,7 @@ app.put(
   "/api/stats",
   requirePermission("stats:write"),
   writeLimiter,
+  validateBody(statsSchema),
   stats.updateStats
 );
 
