@@ -195,6 +195,32 @@ describe("aviso", () => {
     expect(alert.warningTotal).toBe(2);
   });
 
+  // El resumen se recorta a 15 acciones. Callar que se recortó sería el mismo
+  // fallo que este cambio corrige en el total.
+  it("dice cuántas acciones deja fuera del resumen", async () => {
+    rows = Array.from({ length: 20 }, (_, i) =>
+      warning({ action: `security.accion.${i}` })
+    );
+    await run();
+    const alert = sentAlerts[0] as {
+      warningSummary: unknown[];
+      warningActionCount: number;
+    };
+    expect(alert.warningSummary).toHaveLength(15);
+    expect(alert.warningActionCount).toBe(20);
+  });
+
+  it("no deja nada fuera cuando caben todas", async () => {
+    rows = [warning(), warning({ action: "security.ratelimit.exceeded" })];
+    await run();
+    const alert = sentAlerts[0] as {
+      warningSummary: unknown[];
+      warningActionCount: number;
+    };
+    expect(alert.warningSummary).toHaveLength(2);
+    expect(alert.warningActionCount).toBe(2);
+  });
+
   // La marca de agua avanza igual, así que lo que el límite dejó fuera no se
   // avisa nunca. Dar ese recuento como total sería mentir justo en la ráfaga,
   // que es cuando el número real es el dato que hace falta.

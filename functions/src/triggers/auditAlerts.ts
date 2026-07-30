@@ -174,6 +174,11 @@ export const auditAlerts = onSchedule(
         events,
         warningSummary,
         warningTotal: warnings.length,
+        // Cuántas acciones DISTINTAS hubo, no cuántas se enseñan. El resumen
+        // se recorta a `MAX_SUMMARY_ROWS`, y sin este número el correo callaba
+        // que había recortado — la misma omisión silenciosa que este cambio
+        // corrige en el total.
+        warningActionCount: byAction.size,
         total: fresh.length,
         truncated,
         // `notable` y no `critical`: el enlace tiene que enseñar lo mismo de lo

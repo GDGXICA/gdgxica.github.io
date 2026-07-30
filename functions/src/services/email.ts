@@ -222,6 +222,11 @@ export async function sendAuditAlertEmail(mail: {
   warningSummary?: { action: string; count: number }[];
   /** Cuántos `warning` hubo en total, aunque el resumen recorte acciones. */
   warningTotal?: number;
+  /**
+   * Cuántas acciones distintas hubo. Si supera las filas del resumen, el correo
+   * lo dice: recortar está bien, ocultar que se recortó no.
+   */
+  warningActionCount?: number;
   /** Total real: puede superar `events.length` si se recortó la lista. */
   total: number;
   /**
@@ -258,9 +263,19 @@ export async function sendAuditAlertEmail(mail: {
     )
     .join("");
 
+  // Recortar el resumen está bien; callar que se recortó, no — es el mismo
+  // fallo que este cambio corrige en el total de eventos.
+  const accionesOmitidas = Math.max(
+    0,
+    (mail.warningActionCount ?? summary.length) - summary.length
+  );
+
   const resumen = summary.length
     ? `<p>Además, <strong>${warningTotal}</strong> evento(s) de nivel aviso, ` +
-      `agrupados por acción:</p><ul>${summaryRows}</ul>`
+      `agrupados por acción:</p><ul>${summaryRows}</ul>` +
+      (accionesOmitidas > 0
+        ? `<p>Y ${accionesOmitidas} acción(es) más, en el panel.</p>`
+        : "")
     : "";
 
   const recortado = mail.truncated
@@ -280,9 +295,11 @@ export async function sendAuditAlertEmail(mail: {
     )
     .join("\n");
 
-  const textSummary = summary
-    .map((s) => `- ${singleLine(s.action)} x ${s.count}`)
-    .join("\n");
+  const textSummary =
+    summary.map((s) => `- ${singleLine(s.action)} x ${s.count}`).join("\n") +
+    (accionesOmitidas > 0
+      ? `\n- y ${accionesOmitidas} acción(es) más, en el panel`
+      : "");
 
   await sendPlain(
     mail.to,
