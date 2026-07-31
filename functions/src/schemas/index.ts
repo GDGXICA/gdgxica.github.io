@@ -171,6 +171,7 @@ export const teamMemberSchema = z
     tags: z.array(shortText(200)).max(50).optional(),
     joined_date: shortText(100).optional(),
     responsibilities: z.array(shortText(500)).max(50).optional(),
+    is_active: z.boolean().optional(),
   })
   .strict();
 
