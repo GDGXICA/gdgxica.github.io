@@ -29,7 +29,7 @@
     "@types/react-dom": "^19.1.7",
     "astro": "^7.1.1",
     "clsx": "^2.1.1",
-    "firebase": "^12.13.0",
+    "firebase": "^12.17.0",
     "qrcode": "^1.5.4",
     "react": "^19.2.8",
     "react-dom": "^19.1.1",
