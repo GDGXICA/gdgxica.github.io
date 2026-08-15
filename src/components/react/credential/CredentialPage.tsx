@@ -58,7 +58,6 @@ export function CredentialPage({ event: eventJson }: Props) {
   const [step, setStep] = useState<1 | 2>(1);
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [done, setDone] = useState<{ groupLetter: string } | null>(null);
 
   const fontsReady = useFontsReady();
@@ -100,68 +99,82 @@ export function CredentialPage({ event: eventJson }: Props) {
   const submit = async () => {
     setSubmitting(true);
     setServerError(null);
-    setFieldErrors({});
 
-    // MUST come first: request() in src/lib/api.ts hard-returns
-    // { success: false, error: "Not authenticated" } with no token, which
-    // would surface as an English string in a Spanish form.
-    await signInAnonymouslyIfNeeded();
+    // Everything below runs inside try/finally so `submitting` is ALWAYS
+    // cleared. signInAnonymouslyIfNeeded throws on a blocked or offline
+    // identitytoolkit — an ad blocker or a corporate proxy is enough — and
+    // without this the button sat on "Guardando…" forever with no message,
+    // which reads as a hung page at the exact moment someone is registering.
+    try {
+      // MUST come first: request() in src/lib/api.ts hard-returns
+      // { success: false, error: "Not authenticated" } with no token, which
+      // would surface as an English string in a Spanish form.
+      await signInAnonymouslyIfNeeded();
 
-    const res = await api.createCredential(event.slug, {
-      firstName: card.firstName.trim(),
-      lastName: card.lastName.trim(),
-      dni: registration.dni.trim(),
-      email: registration.email.trim(),
-      company: registration.company.trim(),
-      githubUsername: card.githubUsername.trim() || null,
-      heardAbout: registration.heardAbout as never,
-      heardAboutOther: registration.heardAboutOther.trim(),
-      yearsExperience: registration.yearsExperience as never,
-      googleToolsLevel: registration.googleToolsLevel as never,
-      consentGdgTerms: true,
-      consentGooglePrivacy: true,
-      consentCodeOfConduct: true,
-      consentDataProcessing: true,
-      consentAgeAttested: true,
-      consentPolicyVersion: PRIVACY_POLICY_VERSION,
-      avatarKind: card.avatarKind,
-      mascotId: card.avatarKind === "mascot" ? card.mascotId : null,
-      photoDataUrl: card.avatarKind === "photo" ? card.photoDataUrl : null,
-      // Always null here: the card is attached below, once the server
-      // has told us the group letter. Sending it now would store a copy
-      // with a placeholder in place of the letter.
-      credentialImageDataUrl: null,
-    });
+      const res = await api.createCredential(event.slug, {
+        firstName: card.firstName.trim(),
+        lastName: card.lastName.trim(),
+        dni: registration.dni.trim(),
+        email: registration.email.trim(),
+        company: registration.company.trim(),
+        githubUsername: card.githubUsername.trim() || null,
+        heardAbout: registration.heardAbout as never,
+        heardAboutOther: registration.heardAboutOther.trim(),
+        yearsExperience: registration.yearsExperience as never,
+        googleToolsLevel: registration.googleToolsLevel as never,
+        consentGdgTerms: true,
+        consentGooglePrivacy: true,
+        consentCodeOfConduct: true,
+        consentDataProcessing: true,
+        consentAgeAttested: true,
+        consentPolicyVersion: PRIVACY_POLICY_VERSION,
+        avatarKind: card.avatarKind,
+        mascotId: card.avatarKind === "mascot" ? card.mascotId : null,
+        photoDataUrl: card.avatarKind === "photo" ? card.photoDataUrl : null,
+        // Always null here: the card is attached below, once the server
+        // has told us the group letter. Sending it now would store a copy
+        // with a placeholder in place of the letter.
+        credentialImageDataUrl: null,
+      });
 
-    setSubmitting(false);
-
-    if (!res.success) {
-      setServerError(res.error ?? "No pudimos guardar tu inscripción.");
-      return;
-    }
-    const groupLetter = res.data?.groupLetter ?? "?";
-    const credentialId = res.data?.credentialId;
-    setDone({ groupLetter });
-
-    // The card is attached in a SECOND call rather than sent with create.
-    // The group letter comes from a server-assigned sequence number, so a
-    // card rendered before the response carries a placeholder where the
-    // letter belongs — the first end-to-end run stored exactly that.
-    if (credentialId) {
-      try {
-        const canvas = renderToCanvas({ ...renderInput, groupLetter });
-        const encoded = encodeUnderBudget(canvas, MAX_CREDENTIAL_DATAURL_CHARS);
-        if (encoded) {
-          // Not awaited into the UI path: the attendee already has their
-          // credential on screen, and a failed attach must not turn a
-          // successful registration into an error message.
-          void api.attachCredentialImage(event.slug, credentialId, {
-            credentialImageDataUrl: encoded.dataUrl,
-          });
-        }
-      } catch {
-        // Same reasoning — the registration is the part that matters.
+      if (!res.success) {
+        setServerError(res.error ?? "No pudimos guardar tu inscripción.");
+        return;
       }
+      const groupLetter = res.data?.groupLetter ?? "?";
+      const credentialId = res.data?.credentialId;
+      setDone({ groupLetter });
+
+      // The card is attached in a SECOND call rather than sent with create.
+      // The group letter comes from a server-assigned sequence number, so a
+      // card rendered before the response carries a placeholder where the
+      // letter belongs — the first end-to-end run stored exactly that.
+      if (credentialId) {
+        try {
+          const canvas = renderToCanvas({ ...renderInput, groupLetter });
+          const encoded = encodeUnderBudget(
+            canvas,
+            MAX_CREDENTIAL_DATAURL_CHARS
+          );
+          if (encoded) {
+            // Not awaited into the UI path: the attendee already has their
+            // credential on screen, and a failed attach must not turn a
+            // successful registration into an error message.
+            void api.attachCredentialImage(event.slug, credentialId, {
+              credentialImageDataUrl: encoded.dataUrl,
+            });
+          }
+        } catch {
+          // Same reasoning — the registration is the part that matters.
+        }
+      }
+    } catch {
+      // Only reachable when something outside request() throws — request()
+      // already turns fetch failures into an { success: false } response.
+      // Same wording as api.ts so the attendee sees one consistent message.
+      setServerError("No se pudo conectar con el servidor.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -212,7 +225,6 @@ export function CredentialPage({ event: eventJson }: Props) {
             onSubmit={submit}
             submitting={submitting}
             serverError={serverError}
-            fieldErrors={fieldErrors}
           />
         )}
       </div>

@@ -212,6 +212,36 @@ describe("CredentialPage — submission", () => {
       await screen.findByText(/demasiados intentos desde esta red/i)
     ).toBeInTheDocument();
   });
+
+  // Regression. signInAnonymouslyIfNeeded was awaited unguarded, so a throw
+  // skipped setSubmitting(false) entirely: the button sat on "Guardando…"
+  // forever with no message and an unhandled rejection in the console. An
+  // ad blocker or a corporate proxy on identitytoolkit is enough to hit it,
+  // and it fails at the exact moment someone is registering.
+  it("recovers the button and explains itself when sign-in throws", async () => {
+    mocks.signInAnonymouslyIfNeeded.mockRejectedValue(
+      new Error("identitytoolkit blocked")
+    );
+    const user = userEvent.setup();
+    render(<CredentialPage event={EVENT} />);
+    await reachStepTwo(user);
+    await fillRegistration(user);
+    await checkAllConsents(user);
+    await user.click(
+      screen.getByRole("button", { name: /guardar y continuar/i })
+    );
+
+    expect(
+      await screen.findByText(/no se pudo conectar con el servidor/i)
+    ).toBeInTheDocument();
+    // Usable again rather than stuck on "Guardando…", so the attendee can
+    // retry once the network recovers.
+    expect(
+      screen.getByRole("button", { name: /guardar y continuar/i })
+    ).toBeEnabled();
+    // The registration never left the browser, so nothing was half-created.
+    expect(mocks.createCredential).not.toHaveBeenCalled();
+  });
 });
 
 describe("CredentialPage — success", () => {

@@ -54,12 +54,16 @@ async function request<T>(
   path: string,
   body?: unknown
 ): Promise<ApiResponse<T>> {
-  const token = await getIdToken();
-  if (!token) {
-    return { success: false, error: "Not authenticated" };
-  }
-
   try {
+    // Inside the try: getIdToken() reaches the network to refresh an expired
+    // token, so it throws when identitytoolkit is blocked or offline. Left
+    // outside, that throw escaped request() entirely and every caller had to
+    // guard it — which none of them did.
+    const token = await getIdToken();
+    if (!token) {
+      return { success: false, error: "Not authenticated" };
+    }
+
     // Proves the call came from this web app rather than a script that
     // minted an anonymous token elsewhere. Omitted when unavailable; the
     // server decides what that means.

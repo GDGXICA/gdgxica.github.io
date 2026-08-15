@@ -25,7 +25,6 @@ interface Props {
   onSubmit: () => void;
   submitting: boolean;
   serverError: string | null;
-  fieldErrors: Record<string, string>;
 }
 
 function Field({
@@ -62,7 +61,6 @@ export function CredentialForm(props: Props) {
     onSubmit,
     submitting,
     serverError,
-    fieldErrors,
   } = props;
 
   const [touched, setTouched] = useState(false);
@@ -188,7 +186,7 @@ export function CredentialForm(props: Props) {
       </header>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="DNI" error={fieldErrors.dni}>
+        <Field label="DNI">
           <input
             className={inputClass}
             value={registration.dni}
@@ -201,7 +199,7 @@ export function CredentialForm(props: Props) {
             }
           />
         </Field>
-        <Field label="Correo electrónico" error={fieldErrors.email}>
+        <Field label="Correo electrónico">
           <input
             className={inputClass}
             type="email"
@@ -237,7 +235,7 @@ export function CredentialForm(props: Props) {
       </Field>
 
       {registration.heardAbout === "otro" && (
-        <Field label="Cuéntanos cómo" error={fieldErrors.heardAboutOther}>
+        <Field label="Cuéntanos cómo">
           <input
             className={inputClass}
             value={registration.heardAboutOther}
