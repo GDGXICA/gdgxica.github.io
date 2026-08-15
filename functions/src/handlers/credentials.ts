@@ -1,11 +1,13 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { logger } from "firebase-functions";
 import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog } from "../utils/audit";
 import { singleLineHeader } from "../utils/headers";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import {
+  MASCOT_IDS,
   letterForSequence,
   mascotForCredentialId,
 } from "../services/credentialSequence";
@@ -41,20 +43,6 @@ const MAX_CREDENTIAL_BYTES = 480_000;
 // substitutes defaults, so reaching this means something upstream is
 // misconfigured — and a degraded letter beats a rejected registration.
 const DEFAULT_GROUP_LETTERS = ["A", "B", "C", "D"];
-
-// Kept in sync with src/components/react/credential/mascots.ts, which is
-// the manifest the picker renders from. Only used to pick a replacement
-// avatar when a photo is taken down.
-const MASCOT_IDS = [
-  "gdg-blue-a",
-  "gdg-red-a",
-  "gdg-yellow-a",
-  "gdg-green-a",
-  "gdg-blue-b",
-  "gdg-red-b",
-  "gdg-yellow-b",
-  "gdg-green-b",
-];
 
 interface EventCredentialConfig {
   enabled?: boolean;
@@ -579,6 +567,13 @@ function credentialRef(slug: string, id: string) {
 // same margin handlers/checkin.ts uses.
 const REMINDER_BATCH_SIZE = 400;
 
+// Reconciliation loads both collections into memory to cross-reference
+// them, so it needs a ceiling. 5000 is far above any plausible event —
+// devfest-2026 caps at 700 credentials — which is the point: it bounds the
+// memory a runaway or mistargeted event could consume without ever
+// truncating a real run.
+const RECONCILE_READ_CAP = 5000;
+
 /**
  * POST /api/events/:slug/credentials/reminders
  *
@@ -692,9 +687,24 @@ export async function reconcileCredentials(req: Request, res: Response) {
     const eventRef = db.collection("events").doc(slug);
 
     const [credentialSnap, rosterSnap] = await Promise.all([
-      eventRef.collection("credentials").get(),
-      eventRef.collection("roster").get(),
+      eventRef.collection("credentials").limit(RECONCILE_READ_CAP).get(),
+      eventRef.collection("roster").limit(RECONCILE_READ_CAP).get(),
     ]);
+
+    // Truncation is announced rather than silent. A short reconciliation
+    // that reports "matched: 300" reads exactly like a complete one, so
+    // without this line a capped run would look like a finished run.
+    if (
+      credentialSnap.size === RECONCILE_READ_CAP ||
+      rosterSnap.size === RECONCILE_READ_CAP
+    ) {
+      logger.warn("Reconciliation hit the read cap; results are partial", {
+        eventSlug: slug,
+        cap: RECONCILE_READ_CAP,
+        credentials: credentialSnap.size,
+        roster: rosterSnap.size,
+      });
+    }
 
     const credentials: ReconcileCredential[] = credentialSnap.docs.map((d) => {
       const data = d.data();

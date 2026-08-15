@@ -8,6 +8,10 @@ const mocks = vi.hoisted(() => ({
   runTransactionMock: vi.fn(),
   writeAuditLogMock: vi.fn(),
   saveCredentialImagesMock: vi.fn(),
+  deleteCredentialImagesMock: vi.fn(),
+  getAllMock: vi.fn(),
+  batchMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
 }));
 
 vi.mock("firebase-admin", () => ({
@@ -15,9 +19,15 @@ vi.mock("firebase-admin", () => ({
     () => ({
       collection: mocks.collectionMock,
       runTransaction: mocks.runTransactionMock,
+      getAll: mocks.getAllMock,
+      batch: mocks.batchMock,
     }),
     { FieldValue: { serverTimestamp: () => SERVER_TS } }
   ),
+}));
+
+vi.mock("firebase-functions", () => ({
+  logger: { warn: mocks.loggerWarnMock, info: vi.fn(), error: vi.fn() },
 }));
 
 vi.mock("firebase-admin/firestore", () => ({
@@ -33,10 +43,23 @@ vi.mock("../services/credentialStorage", async (importOriginal) => {
   // bucket write is stubbed.
   const actual =
     await importOriginal<typeof import("../services/credentialStorage")>();
-  return { ...actual, saveCredentialImages: mocks.saveCredentialImagesMock };
+  return {
+    ...actual,
+    saveCredentialImages: mocks.saveCredentialImagesMock,
+    deleteCredentialImages: mocks.deleteCredentialImagesMock,
+  };
 });
 
-import { attachCredentialImage, createCredential } from "./credentials";
+import {
+  attachCredentialImage,
+  createCredential,
+  moderatePhoto,
+  reconcileCredentials,
+  retryEmail,
+  sendReminders,
+  setBevyStatus,
+} from "./credentials";
+import { MASCOT_IDS } from "../services/credentialSequence";
 import type { AuthenticatedRequest } from "../middleware/auth";
 
 const {
@@ -44,6 +67,10 @@ const {
   runTransactionMock,
   writeAuditLogMock,
   saveCredentialImagesMock,
+  deleteCredentialImagesMock,
+  getAllMock,
+  batchMock,
+  loggerWarnMock,
 } = mocks;
 
 // A real minimal JPEG: SOI + APP0 header. Enough for the magic-byte check.
@@ -213,6 +240,67 @@ function setupFirestore(
   return harness;
 }
 
+/**
+ * Wires a single credential document with arbitrary stored fields.
+ *
+ * Shared by the three handlers that reach one through credentialRef():
+ * setBevyStatus, moderatePhoto and retryEmail. Pass null for "not found".
+ */
+function setupCredentialDoc(data: Record<string, unknown> | null) {
+  const updates: Record<string, unknown>[] = [];
+  const docRef = {
+    get: vi.fn(() =>
+      Promise.resolve({ exists: data !== null, data: () => data ?? undefined })
+    ),
+    update: vi.fn((patch: Record<string, unknown>) => {
+      updates.push(patch);
+      return Promise.resolve();
+    }),
+  };
+  collectionMock.mockImplementation(() => ({
+    doc: vi.fn(() => ({
+      collection: vi.fn(() => ({ doc: vi.fn(() => docRef) })),
+    })),
+  }));
+  return { updates, docRef };
+}
+
+/** A request from someone holding the operator permissions. */
+function opReq(body: unknown = {}, params: Record<string, string> = {}) {
+  return {
+    body,
+    params: { slug: "devfest-2026", id: "cred-abc123", ...params },
+    user: { uid: "organizer-uid", role: "organizer" },
+    get: () => undefined,
+  } as unknown as Request;
+}
+
+/**
+ * A staged WriteBatch, the same shape users.test.ts and eventStaff.test.ts
+ * use: nothing is recorded until commit(), which is what distinguishes a
+ * batch from a pair of sequential writes and is the property worth pinning.
+ */
+function stageBatches() {
+  const committed: { ref: unknown; patch: Record<string, unknown> }[] = [];
+  const commitSizes: number[] = [];
+  batchMock.mockImplementation(() => {
+    const staged: { ref: unknown; patch: Record<string, unknown> }[] = [];
+    const api = {
+      update: (ref: unknown, patch: Record<string, unknown>) => {
+        staged.push({ ref, patch });
+        return api;
+      },
+      commit: async () => {
+        commitSizes.push(staged.length);
+        committed.push(...staged);
+        staged.length = 0;
+      },
+    };
+    return api;
+  });
+  return { committed, commitSizes };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   writeAuditLogMock.mockResolvedValue(undefined);
@@ -220,6 +308,7 @@ beforeEach(() => {
     photoPath: null,
     credentialImagePath: null,
   });
+  deleteCredentialImagesMock.mockResolvedValue(undefined);
 });
 
 describe("createCredential — sequence assignment", () => {
@@ -671,5 +760,395 @@ describe("createCredential — per-event cap", () => {
 
     expect(res.__body).toMatchObject({ success: true });
     expect(h.created).toHaveLength(1);
+  });
+});
+
+describe("setBevyStatus", () => {
+  it("returns 404 for a credential that is not there", async () => {
+    setupCredentialDoc(null);
+    const res = buildRes();
+    await setBevyStatus(opReq({ status: "loaded" }), res);
+
+    expect(res.__status).toBe(404);
+    expect(writeAuditLogMock).not.toHaveBeenCalled();
+  });
+
+  it("attributes the load to whoever claimed it", async () => {
+    const h = setupCredentialDoc({ bevyStatus: "pending" });
+    const res = buildRes();
+    await setBevyStatus(
+      opReq({ status: "loaded", ticketNumber: "T-42", note: null }),
+      res
+    );
+
+    expect(res.__body).toMatchObject({
+      success: true,
+      data: { id: "cred-abc123", status: "loaded" },
+    });
+    expect(h.updates[0]).toMatchObject({
+      bevyStatus: "loaded",
+      bevyTicketNumber: "T-42",
+      bevyLoadedBy: "organizer-uid",
+      bevyLoadedAt: SERVER_TS,
+    });
+  });
+
+  // Someone has to own the claim that a record reached the official panel.
+  // Clearing the status back to pending must not leave the previous
+  // claimant behind, or the ledger says a record is unloaded while still
+  // naming who loaded it.
+  it("drops the attribution when the status goes back to pending", async () => {
+    const h = setupCredentialDoc({ bevyStatus: "loaded" });
+    await setBevyStatus(
+      opReq({ status: "pending", ticketNumber: null, note: null }),
+      buildRes()
+    );
+
+    expect(h.updates[0]).toMatchObject({
+      bevyStatus: "pending",
+      bevyLoadedBy: null,
+      bevyLoadedAt: null,
+    });
+  });
+
+  it("records the change without the attendee's identity", async () => {
+    setupCredentialDoc({ bevyStatus: "pending" });
+    await setBevyStatus(
+      opReq({ status: "discarded", ticketNumber: null, note: "duplicada" }),
+      buildRes()
+    );
+
+    const [entry] = writeAuditLogMock.mock.calls[0];
+    expect(entry).toMatchObject({
+      action: "credential.bevy_status",
+      performedBy: "organizer-uid",
+      targetId: "cred-abc123",
+      details: { eventSlug: "devfest-2026", status: "discarded" },
+    });
+    expect(JSON.stringify(entry)).not.toContain("12345678");
+  });
+});
+
+describe("moderatePhoto — approve", () => {
+  it("keeps the image and only stamps the review", async () => {
+    const h = setupCredentialDoc({ photoStatus: "pending_review" });
+    const res = buildRes();
+    await moderatePhoto(opReq({ action: "approve", reason: "ok" }), res);
+
+    expect(res.__body).toMatchObject({ data: { action: "approve" } });
+    expect(h.updates[0]).toMatchObject({
+      photoStatus: "approved",
+      photoReviewedBy: "organizer-uid",
+    });
+    // Approving must never reach the bucket.
+    expect(deleteCredentialImagesMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("moderatePhoto — remove", () => {
+  it("returns 404 for a credential that is not there", async () => {
+    setupCredentialDoc(null);
+    const res = buildRes();
+    await moderatePhoto(opReq({ action: "remove", reason: "x" }), res);
+
+    expect(res.__status).toBe(404);
+    expect(deleteCredentialImagesMock).not.toHaveBeenCalled();
+  });
+
+  // The ordering is the whole guarantee: if the status flip landed and the
+  // delete did not, the panel would show a moderated record while the image
+  // stayed readable in Storage.
+  it("deletes the objects BEFORE flipping the status", async () => {
+    const h = setupCredentialDoc({ photoStatus: "pending_review" });
+    await moderatePhoto(
+      opReq({ action: "remove", reason: "no procede" }),
+      buildRes()
+    );
+
+    expect(deleteCredentialImagesMock).toHaveBeenCalledWith(
+      "devfest-2026",
+      "cred-abc123"
+    );
+    expect(deleteCredentialImagesMock.mock.invocationCallOrder[0]).toBeLessThan(
+      h.docRef.update.mock.invocationCallOrder[0]
+    );
+  });
+
+  it("swaps in a mascot from the shared manifest and re-queues the email", async () => {
+    const h = setupCredentialDoc({ photoStatus: "pending_review" });
+    await moderatePhoto(
+      opReq({ action: "remove", reason: "no procede" }),
+      buildRes()
+    );
+
+    expect(h.updates[0]).toMatchObject({
+      photoStatus: "removed",
+      photoPath: null,
+      credentialImagePath: null,
+      photoRemovedReason: "no procede",
+      avatarKind: "mascot",
+      emailStatus: "queued",
+      emailTemplate: "photo_removed",
+      emailAttempts: 0,
+    });
+    // Whatever it picked has to be a real mascot, or the attendee's card
+    // renders grey initials.
+    expect(MASCOT_IDS).toContain(h.updates[0].mascotId);
+  });
+
+  // A take-down must not un-load somebody a volunteer already transcribed:
+  // the registration data is independent of the photo.
+  it("leaves bevyStatus alone", async () => {
+    const h = setupCredentialDoc({
+      photoStatus: "pending_review",
+      bevyStatus: "loaded",
+    });
+    await moderatePhoto(
+      opReq({ action: "remove", reason: "no procede" }),
+      buildRes()
+    );
+
+    expect(h.updates[0]).not.toHaveProperty("bevyStatus");
+    expect(h.updates[0]).not.toHaveProperty("bevyLoadedBy");
+  });
+});
+
+describe("retryEmail", () => {
+  it("returns 404 for a credential that is not there", async () => {
+    setupCredentialDoc(null);
+    const res = buildRes();
+    await retryEmail(opReq(), res);
+
+    expect(res.__status).toBe(404);
+  });
+
+  // Re-queueing something mid-flight would race the drain's lease and could
+  // double-send, so only a parked send may be retried by hand.
+  it("refuses with 409 anything that is not parked as failed", async () => {
+    const h = setupCredentialDoc({ emailStatus: "sending" });
+    const res = buildRes();
+    await retryEmail(opReq(), res);
+
+    expect(res.__status).toBe(409);
+    expect(h.updates).toHaveLength(0);
+    expect(writeAuditLogMock).not.toHaveBeenCalled();
+  });
+
+  it("re-queues a failed send and restarts the backoff ladder", async () => {
+    const h = setupCredentialDoc({ emailStatus: "failed", emailAttempts: 6 });
+    const res = buildRes();
+    await retryEmail(opReq(), res);
+
+    expect(res.__body).toMatchObject({ success: true });
+    expect(h.updates[0]).toMatchObject({
+      emailStatus: "queued",
+      emailAttempts: 0,
+      emailLastError: null,
+    });
+  });
+});
+
+describe("sendReminders", () => {
+  /** Wires db.getAll over a set of credential documents. */
+  function setupReminders(
+    docs: { id: string; data: Record<string, unknown> | null }[]
+  ) {
+    collectionMock.mockImplementation(() => ({
+      doc: vi.fn(() => ({
+        collection: vi.fn(() => ({
+          doc: vi.fn((id: string) => ({ __id: id })),
+        })),
+      })),
+    }));
+    getAllMock.mockImplementation(async (...refs: { __id: string }[]) =>
+      refs.map((ref) => {
+        const found = docs.find((d) => d.id === ref.__id);
+        return {
+          exists: Boolean(found && found.data),
+          ref,
+          data: () => found?.data ?? undefined,
+        };
+      })
+    );
+    return stageBatches();
+  }
+
+  const SENT_PENDING = { bevyStatus: "pending", emailStatus: "sent" };
+
+  // A stale tab must not mail somebody who was loaded in the meantime, and
+  // telling a registered person they are not registered costs trust.
+  it("only re-queues people still missing from the official panel", async () => {
+    const b = setupReminders([
+      { id: "a", data: SENT_PENDING },
+      { id: "b", data: { bevyStatus: "loaded", emailStatus: "sent" } },
+      { id: "c", data: { bevyStatus: "pending", emailStatus: "failed" } },
+      { id: "d", data: null },
+    ]);
+    const res = buildRes();
+    await sendReminders(
+      opReq({ credentialIds: ["a", "b", "c", "d"] }, { id: "" }),
+      res
+    );
+
+    expect(res.__body).toMatchObject({ data: { queued: 1, skipped: 3 } });
+    expect(b.committed).toHaveLength(1);
+    expect(b.committed[0].patch).toMatchObject({
+      emailStatus: "queued",
+      emailTemplate: "reminder",
+      emailAttempts: 0,
+    });
+  });
+
+  // A repeated id would put two operations on the same document in one
+  // batch, which Firestore rejects outright.
+  it("dedupes the ids it was handed", async () => {
+    const b = setupReminders([{ id: "a", data: SENT_PENDING }]);
+    const res = buildRes();
+    await sendReminders(
+      opReq({ credentialIds: ["a", "a", "a"] }, { id: "" }),
+      res
+    );
+
+    expect(getAllMock.mock.calls[0]).toHaveLength(1);
+    expect(b.committed).toHaveLength(1);
+    expect(res.__body).toMatchObject({ data: { queued: 1, skipped: 0 } });
+  });
+
+  // Firestore caps a WriteBatch at 500 operations.
+  it("splits the work so no batch exceeds the Firestore ceiling", async () => {
+    const many = Array.from({ length: 401 }, (_, i) => ({
+      id: `c${i}`,
+      data: SENT_PENDING,
+    }));
+    const b = setupReminders(many);
+    await sendReminders(
+      opReq({ credentialIds: many.map((m) => m.id) }, { id: "" }),
+      buildRes()
+    );
+
+    expect(b.commitSizes).toEqual([400, 1]);
+    expect(b.committed).toHaveLength(401);
+  });
+
+  it("counts what it sent without naming anybody", async () => {
+    setupReminders([{ id: "a", data: SENT_PENDING }]);
+    await sendReminders(
+      opReq({ credentialIds: ["a"] }, { id: "" }),
+      buildRes()
+    );
+
+    const [entry] = writeAuditLogMock.mock.calls[0];
+    expect(entry).toMatchObject({
+      action: "credential.reminders",
+      targetId: "devfest-2026",
+      details: { requested: 1, queued: 1, skipped: 0 },
+    });
+  });
+});
+
+describe("reconcileCredentials", () => {
+  /**
+   * Wires both collections. reconcile() itself is NOT mocked — its matching
+   * semantics are already pinned by credentialReconcile.test.ts, so what is
+   * worth proving here is the wiring around it.
+   */
+  function setupReconcile(
+    credentials: Record<string, unknown>[],
+    roster: Record<string, unknown>[]
+  ) {
+    const eventRef = {
+      collection: vi.fn((name: string) => {
+        const rows = name === "credentials" ? credentials : roster;
+        return {
+          limit: vi.fn(() => ({
+            get: async () => ({
+              size: rows.length,
+              docs: rows.map((r) => ({ id: r.id as string, data: () => r })),
+            }),
+          })),
+          doc: vi.fn((id: string) => ({ __col: name, __id: id })),
+        };
+      }),
+    };
+    collectionMock.mockImplementation(() => ({ doc: vi.fn(() => eventRef) }));
+    return stageBatches();
+  }
+
+  const CRED = {
+    id: "c1",
+    email: "alvaro@example.com",
+    dni: "12345678",
+    dniNormalized: "12345678",
+    bevyStatus: "pending",
+  };
+
+  it("writes both sides of a match in one batch", async () => {
+    const b = setupReconcile(
+      [CRED],
+      [{ id: "r1", email: "alvaro@example.com", ticketNumber: "T-7" }]
+    );
+    const res = buildRes();
+    await reconcileCredentials(opReq({}, { id: "" }), res);
+
+    expect(res.__body).toMatchObject({
+      data: { matched: 1, unmatchedCredentials: 0, unmatchedRoster: 0 },
+    });
+    // Two writes per match, and they must land together.
+    expect(b.commitSizes).toEqual([2]);
+
+    const credWrite = b.committed.find(
+      (w) => (w.ref as { __col: string }).__col === "credentials"
+    );
+    expect(credWrite?.patch).toMatchObject({
+      bevyStatus: "loaded",
+      bevyTicketNumber: "T-7",
+      bevyLoadedBy: "organizer-uid",
+    });
+  });
+
+  // This stamp is the entire reason the DNI is collected: at check-in a
+  // volunteer compares the number on the document against the number on
+  // screen instead of eyeing a name.
+  it("stamps the DNI onto the roster row so it reaches the door", async () => {
+    const b = setupReconcile(
+      [CRED],
+      [{ id: "r1", email: "alvaro@example.com", ticketNumber: "T-7" }]
+    );
+    await reconcileCredentials(opReq({}, { id: "" }), buildRes());
+
+    const rosterWrite = b.committed.find(
+      (w) => (w.ref as { __col: string }).__col === "roster"
+    );
+    expect(rosterWrite?.patch).toEqual({
+      dni: "12345678",
+      dniNormalized: "12345678",
+      credentialId: "c1",
+    });
+  });
+
+  // The addresses themselves are PII and the panel already holds the rows
+  // they belong to, so the response counts rather than lists.
+  it("reports counts only, never the addresses", async () => {
+    const res = buildRes();
+    setupReconcile(
+      [CRED, { ...CRED, id: "c2" }],
+      [{ id: "r1", email: "nadie@example.com", ticketNumber: "T-1" }]
+    );
+    await reconcileCredentials(opReq({}, { id: "" }), res);
+
+    // Both credentials share an address, so the pair is ambiguous and is
+    // deliberately left unmatched rather than guessed at.
+    expect(res.__body).toMatchObject({
+      success: true,
+      data: { matched: 0, ambiguous: 1 },
+    });
+    expect(JSON.stringify(res.__body)).not.toContain("example.com");
+  });
+
+  it("says so in the logs when it truncates at the read cap", async () => {
+    setupReconcile([], []);
+    await reconcileCredentials(opReq({}, { id: "" }), buildRes());
+    // Well under the cap: nothing to warn about.
+    expect(loggerWarnMock).not.toHaveBeenCalled();
   });
 });

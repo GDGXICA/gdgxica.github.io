@@ -32,6 +32,31 @@ export function letterForSequence(
 }
 
 /**
+ * The mascot manifest, mirrored from the client.
+ *
+ * Lives here rather than in the handler so it sits next to the function
+ * that indexes into it, and so a test can import both sides and pin them
+ * together. The client owns the real manifest — the picker renders from
+ * `src/components/react/credential/mascots.ts` — and this is the copy the
+ * server needs because Functions cannot import the browser bundle at
+ * runtime.
+ *
+ * ORDER IS PART OF THE CONTRACT: mascotForCredentialId indexes by
+ * position, so reordering this list silently reassigns the replacement
+ * avatar of every credential whose photo was ever taken down.
+ */
+export const MASCOT_IDS = [
+  "gdg-blue-a",
+  "gdg-red-a",
+  "gdg-yellow-a",
+  "gdg-green-a",
+  "gdg-blue-b",
+  "gdg-red-b",
+  "gdg-yellow-b",
+  "gdg-green-b",
+];
+
+/**
  * Distributes credentials whose photo was taken down across the mascot
  * set without another round trip. Deterministic so re-running moderation
  * on the same record cannot shuffle the avatar the attendee already saw.
