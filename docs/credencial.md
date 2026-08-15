@@ -126,8 +126,7 @@ tarjeta lleva impreso el QR de inscripción.
 3. **Dentro de una transacción**, el servidor lee un contador, comprueba el
    cupo (700), asigna el **número de orden** y calcula la **letra de grupo**
    repartiendo `["A","Q","I","C"]` de forma cíclica: la nº 1 es «A», la 2 «Q»,
-   la 5 vuelve a «A». Esa letra sirve para partir a la gente en grupos el día
-   del evento sin tener que decidirlo después.
+   la 5 vuelve a «A».
 4. **La respuesta trae la letra**, y solo entonces el navegador vuelve a pintar
    la tarjeta —ahora con la letra correcta— y la sube en una **segunda llamada**,
    `PATCH …/image`.
@@ -139,6 +138,13 @@ real se guardó exactamente eso. El adjunto se manda sin esperar respuesta: si
 falla, la inscripción ya está hecha y no se convierte en un error para quien la
 hizo.
 
+> **Sobre la letra de grupo:** el código la asigna, la imprime en la tarjeta
+> bajo el rótulo «TU GRUPO» y la muestra en el panel, pero **nada del sistema
+> la consume**. No hay lógica de agrupación en ninguna parte, y para qué sirve
+> operativamente no está escrito en ningún sitio del repositorio. Es una
+> decisión que vive fuera del código: quien organice el evento tiene que
+> definirla. Si al final no se usa para nada, sobra en la tarjeta.
+
 ### Lo que ve al terminar
 
 Una pantalla de éxito con tres bloques, en este orden:
@@ -149,7 +155,13 @@ Una pantalla de éxito con tres bloques, en este orden:
    que esa sesión caduca a los 15 minutos.
 3. Su letra de grupo.
 
-El formulario se desmonta: no se puede reenviar por accidente.
+El formulario se desmonta: no se puede reenviar por accidente en esa misma
+pantalla. Pero **el endpoint no es idempotente, y eso es deliberado**: quien
+recargue la página y lo rellene otra vez crea una credencial nueva. Se acepta
+porque alguien puede querer rehacer su tarjeta tras una errata, y porque un
+DNI repetido tiene que poder guardarse para que el panel lo enseñe como
+conflicto. La consecuencia práctica es que **el total de credenciales no es el
+total de personas**: hay que contar con algún duplicado.
 
 En los siguientes cinco minutos le llega el correo con la tarjeta adjunta.
 
@@ -265,11 +277,17 @@ se ejecuta **cada 5 minutos** y va vaciando la cola:
 - Si una ejecución se cae a medias, el documento queda «en vuelo»; un
   arrendamiento caducado (5 min) permite recuperarlo.
 - Ante un fallo, reintenta con espera creciente; tras 6 intentos lo **aparca**
-  como `failed` en vez de reintentar para siempre, y el panel ofrece un botón de
-  reintento manual.
+  como `failed` en vez de reintentar para siempre.
 - Respeta un **presupuesto diario** por proveedor.
 - Escribe **una sola entrada de auditoría por ejecución**: una por correo
   añadiría cientos de filas por evento y ahogaría el resto del registro.
+
+> **Un correo aparcado como `failed` hoy no se puede reintentar desde el
+> panel.** El endpoint existe (`POST …/credentials/:id/email/retry`) y el
+> cliente tiene el método (`api.retryCredentialEmail`), pero **ningún
+> componente lo llama**: el panel solo pinta un aviso rojo contando cuántos
+> fallaron, sin nada que pulsar. Para reintentar hay que llamar a la API a
+> mano. Es un hueco de interfaz, no de backend.
 
 Hay tres plantillas:
 
@@ -283,12 +301,12 @@ Hay tres plantillas:
 
 ## 6. Quién puede hacer qué
 
-| Acción                                                        | Permiso                | Quién lo tiene                                      |
-| ------------------------------------------------------------- | ---------------------- | --------------------------------------------------- |
-| Ver la lista                                                  | `roster:read`          | organizer; volunteer **solo en su evento**          |
-| Marcar estado de Bevy, recordar, conciliar, reintentar correo | `credentials:operate`  | organizer (global); volunteer **solo en su evento** |
-| Moderar fotos                                                 | `credentials:moderate` | **solo admin**                                      |
-| Cambiar el proveedor de correo                                | `email:transport`      | solo admin                                          |
+| Acción                                                                                   | Permiso                | Quién lo tiene                                      |
+| ---------------------------------------------------------------------------------------- | ---------------------- | --------------------------------------------------- |
+| Ver la lista                                                                             | `roster:read`          | organizer; volunteer **solo en su evento**          |
+| Marcar estado de Bevy, recordar, conciliar, reintentar correo (este último solo por API) | `credentials:operate`  | organizer (global); volunteer **solo en su evento** |
+| Moderar fotos                                                                            | `credentials:moderate` | **solo admin**                                      |
+| Cambiar el proveedor de correo                                                           | `email:transport`      | solo admin                                          |
 
 Dos matices que importan:
 
@@ -346,11 +364,39 @@ Si se toca ese conjunto, la atribución tiene que seguirlo.
 - **La conciliación empareja solo por correo.** Quien se inscriba en Bevy con una
   dirección distinta a la que nos dio no se empareja solo.
 - **El cupo son 700**, y se comprueba dentro de la transacción, así que dos
-  peticiones simultáneas no pueden pasarse de largo.
+  peticiones simultáneas no pueden pasarse de largo. Al llenarse, la persona
+  recibe un 409 con un mensaje claro («Ya se emitieron todas las credenciales
+  disponibles para este evento»), pero **la página no cambia de aspecto al
+  acercarse al tope**: quien entre seguirá viendo el formulario completo y solo
+  se enterará al pulsar enviar, con su tarjeta ya generada.
 - **Los nombres de las columnas de encuesta del CSV están sin confirmar**: Bevy
   las nombra según el texto exacto de cada pregunta y hay que exportar la
   plantilla real para verificarlo. Están todas juntas en una constante para que
   corregirlo sea una línea.
+- **Un correo `failed` no tiene botón en el panel** (ver el aviso de la sección
+  5): el endpoint existe, la interfaz no.
+- **La letra de grupo no la usa nadie todavía** (ver el aviso de la sección 3).
+
+### Todo queda auditado
+
+Cada escritura deja una fila en `audit_log`: `credential.create`,
+`credential.image`, `credential.bevy_status`, `credential.moderate_photo`,
+`credential.email_retry`, `credential.reminders`, `credential.reconcile` y
+`credential_email.drain`.
+
+Esas filas registran **quién hizo qué y sobre qué credencial, pero nunca el
+DNI, el nombre ni el correo de la persona**. El registro sirve para saber quién
+retiró una foto o quién marcó a alguien como cargado, no para reconstruir los
+datos del asistente. El visor está en `/admin/audit`.
+
+### Qué pasa después con estos datos
+
+Esto es un formulario de inscripción: guarda DNI, correo y, si la persona la
+subió, su cara. **La retención no es opcional y tiene su propio runbook en
+[`retencion-de-datos.md`](./retencion-de-datos.md)**, que cubre qué se borra,
+cuándo y cómo —incluidos los objetos de Storage, que no desaparecen al borrar
+el documento de Firestore—. Si vas a operar este panel, léelo: es la otra mitad
+de esta funcionalidad.
 
 ### Dónde está cada cosa
 
@@ -365,3 +411,4 @@ Si se toca ese conjunto, la atribución tiene que seguirlo.
 | Cola de correo           | `functions/src/services/credentialQueue.ts` y `triggers/drainCredentialEmails.ts` |
 | Conciliación             | `functions/src/services/credentialReconcile.ts`                                   |
 | Configuración del evento | `events/<slug>.json` en `gdg-ica-data`                                            |
+| Borrado y retención      | [`docs/retencion-de-datos.md`](./retencion-de-datos.md)                           |
