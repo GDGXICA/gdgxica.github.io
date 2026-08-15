@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { cloneElement, useId, useState } from "react";
 import { CONSENT_ITEMS, missingConsentMessage } from "@/lib/consent";
 import { AvatarPicker } from "./AvatarPicker";
 import {
@@ -25,7 +25,6 @@ interface Props {
   onSubmit: () => void;
   submitting: boolean;
   serverError: string | null;
-  fieldErrors: Record<string, string>;
 }
 
 function Field({
@@ -35,13 +34,29 @@ function Field({
 }: {
   label: string;
   error?: string;
-  children: React.ReactNode;
+  children: React.ReactElement<React.AriaAttributes>;
 }) {
+  const errorId = useId();
+  // The error is wired to the control instead of left as loose prose beside
+  // it. Inside a <label>, a screen reader announces the label text and stops;
+  // a trailing <span> is never reached, so without aria-describedby the
+  // reason a field was rejected only exists for people who can see the red.
+  const control = error
+    ? cloneElement(children, {
+        "aria-invalid": true,
+        "aria-describedby": errorId,
+      })
+    : children;
+
   return (
     <label className="flex flex-col gap-1">
       <span className="text-secondary text-sm font-medium">{label}</span>
-      {children}
-      {error && <span className="text-xs text-red-700">{error}</span>}
+      {control}
+      {error && (
+        <span id={errorId} className="text-xs text-red-700">
+          {error}
+        </span>
+      )}
     </label>
   );
 }
@@ -62,7 +77,6 @@ export function CredentialForm(props: Props) {
     onSubmit,
     submitting,
     serverError,
-    fieldErrors,
   } = props;
 
   const [touched, setTouched] = useState(false);
@@ -188,7 +202,7 @@ export function CredentialForm(props: Props) {
       </header>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="DNI" error={fieldErrors.dni}>
+        <Field label="DNI">
           <input
             className={inputClass}
             value={registration.dni}
@@ -201,7 +215,7 @@ export function CredentialForm(props: Props) {
             }
           />
         </Field>
-        <Field label="Correo electrónico" error={fieldErrors.email}>
+        <Field label="Correo electrónico">
           <input
             className={inputClass}
             type="email"
@@ -237,7 +251,7 @@ export function CredentialForm(props: Props) {
       </Field>
 
       {registration.heardAbout === "otro" && (
-        <Field label="Cuéntanos cómo" error={fieldErrors.heardAboutOther}>
+        <Field label="Cuéntanos cómo">
           <input
             className={inputClass}
             value={registration.heardAboutOther}
@@ -318,8 +332,15 @@ export function CredentialForm(props: Props) {
         ))}
       </fieldset>
 
+      {/* role="alert" because this appears in response to pressing submit and
+          the button itself keeps focus: without it the form looks unchanged
+          to a screen reader and the attendee is left waiting on a failure
+          that already happened. */}
       {serverError && (
-        <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <p
+          role="alert"
+          className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+        >
           {serverError}
         </p>
       )}
@@ -328,7 +349,7 @@ export function CredentialForm(props: Props) {
           rejection the attendee cannot trace back to a checkbox is a dead
           end, and this is the step where people abandon. */}
       {touched && missingConsent && (
-        <p className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-red-700">
           {missingConsentMessage(missingConsent.id)}
         </p>
       )}
