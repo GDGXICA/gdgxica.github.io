@@ -85,12 +85,33 @@ export function AvatarPicker({
                   selected ? "border-google-blue" : "border-transparent"
                 }`}
               >
-                <img src={m.src} alt="" className="h-full w-full" />
+                {/* object-cover so a future asset that is not perfectly
+                    square gets centre-cropped here, matching what the
+                    canvas does, instead of being stretched. */}
+                <img
+                  src={m.src}
+                  alt=""
+                  width={512}
+                  height={512}
+                  decoding="async"
+                  className="aspect-square h-full w-full object-cover"
+                />
               </button>
             </li>
           );
         })}
       </ul>
+
+      {/* Attribution sits next to the use, not three clicks away. Several of
+          these licences require the credit to be given wherever the art is
+          used, so this link is an obligation rather than a courtesy. */}
+      <p className="text-tertiary text-xs">
+        Mascotas de Go, Rust, Linux y Android usadas con licencia abierta.{" "}
+        <a href="/creditos" className="hover:text-google-blue underline">
+          Ver créditos y licencias
+        </a>
+        .
+      </p>
 
       <div className="flex flex-wrap items-center gap-3">
         <input

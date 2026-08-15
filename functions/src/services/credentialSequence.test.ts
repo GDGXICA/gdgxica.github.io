@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { letterForSequence, mascotForCredentialId } from "./credentialSequence";
+import {
+  MASCOT_IDS,
+  letterForSequence,
+  mascotForCredentialId,
+} from "./credentialSequence";
+import * as client from "../../../src/components/react/credential/mascots";
 
 const LETTERS = ["A", "Q", "I", "C"];
 
@@ -72,5 +77,39 @@ describe("mascotForCredentialId", () => {
 
   it("returns null when there are no mascots", () => {
     expect(mascotForCredentialId("abc", [])).toBeNull();
+  });
+});
+
+/**
+ * The agreement test that mascots.ts has been asking for.
+ *
+ * The manifest exists twice on purpose — the picker renders from the client
+ * copy, and Functions cannot import the browser bundle at runtime — so the
+ * only thing standing between the two is this file. Until now nothing did,
+ * and a divergence was completely silent: a take-down would write a mascotId
+ * the client cannot resolve, and that attendee's card would quietly fall
+ * back to grey initials with no test failing anywhere.
+ */
+describe("MASCOT_IDS — espejo cliente/servidor", () => {
+  it("coincide con el manifiesto del cliente, en el mismo orden", () => {
+    // Order-sensitive on purpose: mascotForCredentialId indexes by position,
+    // so a reorder alone silently reassigns every replacement avatar.
+    expect([...MASCOT_IDS]).toEqual([...client.MASCOT_IDS]);
+  });
+
+  it("asigna la misma mascota que el cliente para una misma semilla", () => {
+    // The two hashes are written out separately, so equal lists are not
+    // enough — the functions themselves have to agree.
+    for (const seed of ["a", "cred-99", "Xk29fLp0", "cred-abc123", ""]) {
+      expect(mascotForCredentialId(seed, MASCOT_IDS)).toBe(
+        client.mascotForSeed(seed)
+      );
+    }
+  });
+
+  it("solo contiene ids que el esquema del servidor aceptaría", () => {
+    for (const id of MASCOT_IDS) {
+      expect(id).toMatch(/^[a-z0-9-]{1,40}$/);
+    }
   });
 });
