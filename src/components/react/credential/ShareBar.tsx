@@ -71,11 +71,18 @@ export function ShareBar({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap gap-2">
+        {/* No href at all while there is no image, rather than href="#" with
+            aria-disabled. An anchor without href is not a link: it leaves the
+            tab order and cannot be activated. With "#" it stayed focusable and
+            clickable, and clicking it navigated — aria-disabled only relabels
+            an element, it never stops it doing anything. */}
         <a
-          href={imageDataUrl ?? "#"}
-          download={fileName}
+          href={imageDataUrl ?? undefined}
+          download={imageDataUrl ? fileName : undefined}
           aria-disabled={!imageDataUrl}
-          className="bg-google-green rounded-lg px-4 py-2 text-sm font-semibold text-white"
+          className={`bg-google-green rounded-lg px-4 py-3 text-sm font-semibold text-white ${
+            imageDataUrl ? "" : "opacity-50"
+          }`}
         >
           Descargar credencial
         </a>
@@ -83,19 +90,25 @@ export function ShareBar({
           type="button"
           onClick={share}
           disabled={!imageDataUrl}
-          className="bg-google-blue rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          className="bg-google-blue rounded-lg px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
         >
           Compartir
         </button>
         <button
           type="button"
           onClick={copyLink}
-          className="border-gray-custom text-secondary rounded-lg border px-4 py-2 text-sm"
+          className="border-gray-custom text-secondary rounded-lg border px-4 py-3 text-sm"
         >
           {copied ? "Enlace copiado" : "Copiar enlace"}
         </button>
       </div>
-      {status && <p className="text-tertiary text-xs">{status}</p>}
+      {/* Announced, not just drawn: every message here reports the outcome of
+          a button the user just pressed, and that button keeps focus. */}
+      {status && (
+        <p role="status" className="text-tertiary text-xs">
+          {status}
+        </p>
+      )}
     </div>
   );
 }
