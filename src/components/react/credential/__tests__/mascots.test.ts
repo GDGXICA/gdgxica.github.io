@@ -1,3 +1,5 @@
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_MASCOT_ID,
@@ -31,9 +33,19 @@ describe("MASCOTS", () => {
   });
 
   it("covers all four brand colors", () => {
+    // Read off the declared brandColor rather than sniffed out of the id.
+    // The ids used to encode the colour, which stopped being true the
+    // moment a mascot was called "gopher" — and an id-substring check
+    // would have passed happily on a set that had lost a whole colour.
     for (const color of ["blue", "red", "yellow", "green"]) {
-      expect(MASCOT_IDS.some((id) => id.includes(color))).toBe(true);
+      expect(MASCOTS.some((m) => m.brandColor === color)).toBe(true);
     }
+  });
+
+  it("pre-selects an avatar that actually exists", () => {
+    // DEFAULT_MASCOT_ID is a literal now, not MASCOTS[0], so nothing but
+    // this test stops it drifting out of the set and rendering initials.
+    expect(MASCOT_IDS).toContain(DEFAULT_MASCOT_ID);
   });
 });
 
@@ -43,7 +55,11 @@ describe("findMascot", () => {
   });
 
   it("returns null for an unknown or absent id", () => {
-    expect(findMascot("gopher")).toBeNull();
+    // "gdg-blue-b" was a real id until the mascot set was replaced, so it
+    // doubles as the stored-but-retired case: it must resolve to null
+    // rather than to whatever now sits at that position.
+    expect(findMascot("gdg-blue-b")).toBeNull();
+    expect(findMascot("no-existe")).toBeNull();
     expect(findMascot(null)).toBeNull();
   });
 });
@@ -64,14 +80,52 @@ describe("mascotForSeed", () => {
     expect(new Set(seeds.map(mascotForSeed)).size).toBe(MASCOT_IDS.length);
   });
 
-  // The server picks the replacement avatar for a removed photo with the
-  // same hash (functions/src/services/credentialSequence.ts). The two
-  // implementations live in different bundles and cannot import each
-  // other, so the agreement test belongs in the PR that first has both
-  // sides — wiring it up here would couple this PR to the backend one.
-  it("uses the hash the server-side picker also uses", () => {
-    // Pinning concrete values is what makes a silent divergence fail.
-    expect(mascotForSeed("abc123")).toBe(mascotForSeed("abc123"));
-    expect(mascotForSeed("cred-42")).not.toBe(DEFAULT_MASCOT_ID + "-x");
+  // The agreement with the server-side picker is NOT tested here. It cannot
+  // be: this bundle cannot import Functions. It now lives in
+  // functions/src/services/credentialSequence.test.ts, which imports both
+  // sides and pins the list, its order and the hash itself.
+});
+
+describe("los ficheros del manifiesto", () => {
+  // Nothing validated the assets themselves, so a manifest entry pointing
+  // at a missing or wrongly-sized file failed silently: findMascot returns
+  // the entry, the <img> 404s, and the card falls back to grey initials
+  // with every test still green.
+  const PUBLIC_DIR = join(process.cwd(), "public");
+
+  // Eight of these load at once in the picker. Tux is the heaviest of the
+  // real illustrations at ~62 KB; 80 KB leaves room to re-cut the art
+  // without silently letting a multi-hundred-KB export through.
+  const MAX_BYTES = 80 * 1024;
+
+  it.each(MASCOTS.map((m) => [m.id, m.src] as const))(
+    "%s es un PNG 512x512 RGBA dentro del presupuesto",
+    (_id, src) => {
+      const file = join(PUBLIC_DIR, src);
+      expect(existsSync(file)).toBe(true);
+
+      const buf = readFileSync(file);
+      expect(buf.byteLength).toBeLessThanOrEqual(MAX_BYTES);
+
+      // Read straight out of the IHDR chunk, which PNG fixes at bytes 8-24:
+      // width and height are big-endian uint32 at 16 and 20, and byte 25 is
+      // the colour type, where 6 means truecolour with alpha. Cheaper and
+      // more precise than pulling in an image library.
+      expect(buf.subarray(1, 4).toString("ascii")).toBe("PNG");
+      expect(buf.readUInt32BE(16)).toBe(512);
+      expect(buf.readUInt32BE(20)).toBe(512);
+      expect(buf[25]).toBe(6);
+    }
+  );
+
+  it("no deja ficheros huérfanos en el directorio", () => {
+    // A retired mascot whose PNG stayed behind is dead weight in the
+    // deploy and an invitation to re-add a half-removed entry.
+    const onDisk = readdirSync(join(PUBLIC_DIR, "credencial/mascots")).filter(
+      (f) => f.endsWith(".png")
+    );
+    expect(onDisk.sort()).toEqual(
+      MASCOTS.map((m) => m.src.split("/").pop()!).sort()
+    );
   });
 });
