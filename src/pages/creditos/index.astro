@@ -1,0 +1,103 @@
+---
+import Layout from "@/layouts/Layout.astro";
+
+// Attribution page for the third-party artwork used in the credential
+// avatars. This is a licence obligation, not a courtesy: CC BY and Larry
+// Ewing's terms both require the credit to be given wherever the work is
+// used, so this page has to stay reachable and linked from the picker.
+const metadata = {
+  title: "Créditos y licencias - Google Developer Group Ica",
+  description:
+    "Autoría y licencias de las mascotas usadas en las credenciales de gdgica.com",
+  image: "",
+  url: "https://gdgica.com/creditos/",
+};
+---
+
+<Layout {...metadata}>
+  <main class="prose mx-auto max-w-[1400px] px-4 py-20">
+    <h1>Créditos y licencias</h1>
+
+    <p>
+      Las credenciales de nuestros eventos ofrecen varias mascotas de la
+      comunidad como avatar. Todas se usan bajo licencias que permiten
+      expresamente su reutilización, y todas exigen reconocer a quien las creó.
+      Esta página es ese reconocimiento.
+    </p>
+
+    <p>
+      En todos los casos hemos adaptado la obra original: se redimensionó a
+      512×512 píxeles y se compuso sobre un disco de color de la paleta de
+      Google. Las licencias que lo requieren obligan a indicar que se hicieron
+      cambios, y este párrafo lo indica.
+    </p>
+
+    <h2>Gopher, la mascota de Go</h2>
+    <p>
+      Creada por <strong>Renée French</strong>. Se usa bajo licencia{" "}
+      <a
+        href="https://creativecommons.org/licenses/by/4.0/"
+        rel="noopener noreferrer"
+        target="_blank">Creative Commons Attribution 4.0</a
+      >, que permite adaptarla siempre que se dé crédito a su autora. Fuente:{
+        " "
+      }
+      <a
+        href="https://go.dev/blog/gopher"
+        rel="noopener noreferrer"
+        target="_blank">go.dev/blog/gopher</a
+      >.
+    </p>
+
+    <h2>Ferris, la mascota de Rust</h2>
+    <p>
+      Creada por <strong>Karen Rustad Tölva</strong>, que renunció a sus
+      derechos sobre la obra mediante{" "}
+      <a
+        href="https://creativecommons.org/publicdomain/zero/1.0/"
+        rel="noopener noreferrer"
+        target="_blank">CC0 1.0</a
+      >, dejándola en dominio público. No exige atribución; la damos igual.
+      Fuente:{" "}
+      <a href="https://rustacean.net/" rel="noopener noreferrer" target="_blank"
+        >rustacean.net</a
+      >.
+    </p>
+
+    <h2>Tux, la mascota de Linux</h2>
+    <p>
+      Creada por <strong>Larry Ewing</strong> con <strong>The GIMP</strong>. Su
+      autor permite usarla y modificarla a condición de reconocerle a él y a The
+      GIMP, que es lo que hace esta línea.
+    </p>
+
+    <h2>El robot de Android</h2>
+    <p>
+      El robot de Android se reproduce o modifica a partir de trabajo creado y
+      compartido por Google, y se usa según los términos descritos en la{" "}
+      <a
+        href="https://creativecommons.org/licenses/by/3.0/"
+        rel="noopener noreferrer"
+        target="_blank">Licencia de Atribución 3.0 de Creative Commons</a
+      >.
+    </p>
+    <p>
+      Google conserva todos los derechos de marca sobre el robot de Android. GDG
+      Ica no reclama ningún derecho de marca sobre él ni sobre ninguna obra
+      derivada.
+    </p>
+
+    <h2>Las formas «Órbita»</h2>
+    <p>
+      Las cuatro formas abstractas en los colores de Google son obra original de
+      GDG Ica y se distribuyen con el resto del código de este sitio.
+    </p>
+
+    <h2>Sobre la licencia de este repositorio</h2>
+    <p>
+      El código de gdgica.com es software libre bajo licencia MIT, pero las
+      imágenes citadas arriba <strong>no</strong> están cubiertas por ella: cada una
+      conserva la licencia de su autor original, indicada en su apartado.
+    </p>
+  </main>
+</Layout>

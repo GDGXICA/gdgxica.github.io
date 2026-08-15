@@ -46,14 +46,14 @@ export function letterForSequence(
  * avatar of every credential whose photo was ever taken down.
  */
 export const MASCOT_IDS = [
+  "gopher",
+  "ferris",
+  "tux",
+  "android",
   "gdg-blue-a",
   "gdg-red-a",
   "gdg-yellow-a",
   "gdg-green-a",
-  "gdg-blue-b",
-  "gdg-red-b",
-  "gdg-yellow-b",
-  "gdg-green-b",
 ];
 
 /**
