@@ -46,7 +46,7 @@ importers:
         specifier: ^19.1.11
         version: 19.2.18
       '@types/react-dom':
-        specifier: ^19.1.7
+        specifier: ^19.2.4
         version: 19.2.4(@types/react@19.2.18)
       astro:
         specifier: ^7.1.1
