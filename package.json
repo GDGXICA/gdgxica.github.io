@@ -55,7 +55,7 @@
     "prettier-plugin-astro": "^0.14.1",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "typescript-eslint": "^8.35.1",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.11"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,astro}": [
