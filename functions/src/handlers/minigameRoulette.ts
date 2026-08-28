@@ -42,20 +42,36 @@ export async function spin(req: Request, res: Response) {
       return;
     }
 
-    // Load all participants who haven't won yet.
+    // Participantes que aún no han ganado.
+    //
+    // El filtro va en memoria, y no en un where("rouletteWonAt", "==", null),
+    // porque los docs de participante los crea /join (minigameJoin.ts) con
+    // solo {uid, alias, joinedAt}: el campo NO existe hasta que esta misma
+    // función lo escribe sobre el ganador. Firestore iguala a null únicamente
+    // el campo que existe y vale null, nunca el ausente, así que aquella
+    // consulta no veía a nadie y la ruleta no giraba jamás — devolvía "No hay
+    // participantes elegibles" con la sala llena.
+    //
+    // Filtrar aquí, además de tratar ambas formas por igual, arregla a los
+    // participantes ya apuntados sin tener que rellenarles el campo. Es la
+    // misma regla que ya aplicaba el cliente en useRouletteParticipants.ts,
+    // que por eso pintaba elegibles y habilitaba el botón mientras el
+    // servidor rechazaba el giro.
     const participantsCol = instanceRef.collection("participants");
-    const eligibleSnap = await participantsCol
-      .where("rouletteWonAt", "==", null)
-      .get();
+    const participantsSnap = await participantsCol.get();
 
-    if (eligibleSnap.empty) {
+    const eligible = participantsSnap.docs.filter((doc) => {
+      const wonAt = (doc.data() as { rouletteWonAt?: unknown }).rouletteWonAt;
+      return wonAt === null || wonAt === undefined;
+    });
+
+    if (eligible.length === 0) {
       res
         .status(400)
         .json({ success: false, error: "No hay participantes elegibles" });
       return;
     }
 
-    const eligible = eligibleSnap.docs;
     const winner = eligible[Math.floor(Math.random() * eligible.length)];
     const winnerData = winner.data() as { alias?: string };
     const alias = winnerData.alias ?? "Anónimo";
