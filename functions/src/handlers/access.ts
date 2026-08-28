@@ -14,8 +14,11 @@ import { recordSecurityEvent } from "../utils/securityAudit";
 import { safeError } from "../middleware/validate";
 import {
   canAssignRole,
+  effectivePermissions,
   isNotExpired,
   isRole,
+  GLOBAL_SCOPE,
+  ROLE_BUNDLES,
   type Role,
 } from "../auth/permissions";
 import {
@@ -130,6 +133,34 @@ export async function createRequest(req: Request, res: Response) {
 
     const links = readText(body.links, MAX_TEXT) ?? "";
     const eventSlug = readText(body.eventSlug, 100) ?? null;
+
+    // Quien ya tiene todo lo que pide no está pidiendo nada, y la solicitud
+    // solo ensucia la cola de revisión. Pasó en producción: a un admin le
+    // falló la lectura de su propio perfil, el panel lo interpretó como "sin
+    // permisos" y le ofreció el formulario — quedó una solicitud de organizer
+    // pendiente a nombre de un administrador.
+    //
+    // La comprobación es "¿el rol pedido añade algo?" y no "¿tiene acceso al
+    // panel?": un contributor SÍ entra al panel y aun así puede pedir
+    // legítimamente subir a organizer.
+    const bundle = ROLE_BUNDLES[body.requestedRole];
+    const wanted = [...bundle.global, ...bundle.perEvent];
+    const held = effectivePermissions(
+      (
+        await admin.firestore().collection("users").doc(user.uid).get()
+      ).data() ?? {},
+      { scope: GLOBAL_SCOPE, nowMs: Date.now() }
+    );
+    if (
+      wanted.length > 0 &&
+      wanted.every((permission) => held.has(permission))
+    ) {
+      res.status(409).json({
+        success: false,
+        error: "Your account already has everything this role grants",
+      });
+      return;
+    }
 
     const ref = admin.firestore().collection("access_requests").doc(user.uid);
     const existing = await ref.get();

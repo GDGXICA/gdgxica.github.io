@@ -29,6 +29,16 @@ interface AuthContextType {
   role: string | null;
   /** Doc `users/{uid}` completo, o `null` si aún no cargó. */
   profile: PermissionSubject | null;
+  /**
+   * `true` cuando el perfil NO se pudo leer: red caída, un chunk de Firebase
+   * que no cargó, IndexedDB inaccesible. Es lo contrario de "lo leímos y no
+   * tiene permisos", y la UI tiene que distinguirlos. Sin esta bandera un
+   * fallo de lectura se pintaba como «Acceso restringido», idéntico a una
+   * cuenta sin permisos, y la persona creía que se los habían quitado.
+   */
+  profileError: boolean;
+  /** Reintenta leer el perfil, sin recargar la página. */
+  retryProfile: () => Promise<void>;
   loading: boolean;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -52,6 +62,8 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   role: null,
   profile: null,
+  profileError: false,
+  retryProfile: async () => {},
   loading: true,
   signIn: async () => {},
   signOut: async () => {},
@@ -79,6 +91,8 @@ export function DevAuthProvider({ children }: { children: React.ReactNode }) {
     } as AuthContextType["user"],
     role: "admin",
     profile,
+    profileError: false,
+    retryProfile: async () => {},
     loading: false,
     signIn: async () => {},
     signOut: async () => {},
@@ -95,7 +109,48 @@ export function DevAuthProvider({ children }: { children: React.ReactNode }) {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<PermissionSubject | null>(null);
+  const [profileError, setProfileError] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Lee `users/{uid}` dejando SIEMPRE el par (profile, profileError) en un
+  // estado coherente: o perfil y sin error, o null y error. Lo que no puede
+  // volver a ocurrir es `null` sin error, que es exactamente lo que la UI
+  // interpretaba como "esta cuenta no tiene permisos".
+  const loadProfile = useCallback(async (uid: string) => {
+    try {
+      let loaded = await getUserProfile(uid);
+      if (!loaded) {
+        // Primer inicio de sesión: se da de alta como `member`, que no
+        // concede ningún permiso de panel.
+        const registered = await api.register();
+        if (!registered.success) {
+          // request() no lanza: devuelve el error. Sin mirar ese resultado,
+          // un alta que nunca llegó al servidor terminaba en `profile = null`
+          // y se contaba como falta de permisos.
+          setProfile(null);
+          setProfileError(true);
+          return;
+        }
+        loaded = await getUserProfile(uid);
+      }
+      setProfile(loaded);
+      // Un perfil que sigue sin aparecer tras un alta correcta tampoco es
+      // "sin permisos": es una lectura que no trajo lo que debía.
+      setProfileError(!loaded);
+    } catch {
+      // Sin perfil no asumimos permisos: inventarlo sería inventar
+      // autorización. Pero tampoco lo confundimos con no tenerlos.
+      setProfile(null);
+      setProfileError(true);
+    }
+  }, []);
+
+  const retryProfile = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    await loadProfile(user.uid);
+    setLoading(false);
+  }, [user, loadProfile]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(async (firebaseUser) => {
@@ -112,6 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await firebaseSignOut();
           setUser(null);
           setProfile(null);
+          setProfileError(false);
           setLoading(false);
           return;
         }
@@ -122,35 +178,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         setUser(firebaseUser);
-        try {
-          let loaded = await getUserProfile(firebaseUser.uid);
-          if (!loaded) {
-            // Primer inicio de sesión: se da de alta como `member`, que no
-            // concede ningún permiso de panel.
-            await api.register();
-            loaded = await getUserProfile(firebaseUser.uid);
-          }
-          setProfile(loaded);
-        } catch {
-          // Si no se pudo leer el perfil, no asumimos nada: sin perfil no
-          // hay permisos. Antes esto caía a "member", que daba igual porque
-          // member no podía entrar; con permisos concedibles por usuario,
-          // inventar un perfil sería inventar autorización.
-          setProfile(null);
-        }
+        await loadProfile(firebaseUser.uid);
       } else {
         setUser(null);
         setProfile(null);
+        setProfileError(false);
       }
       setLoading(false);
     });
     return unsubscribe;
-  }, []);
+  }, [loadProfile]);
 
   const signOut = useCallback(async () => {
     localStorage.removeItem(SESSION_KEY);
     await firebaseSignOut();
     setProfile(null);
+    setProfileError(false);
   }, []);
 
   const signIn = async () => {
@@ -181,6 +224,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         role: (profile?.role as string) ?? null,
         profile,
+        profileError,
+        retryProfile,
         loading,
         signIn,
         signOut,
