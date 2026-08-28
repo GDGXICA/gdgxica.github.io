@@ -133,6 +133,34 @@ describe("EventMinigameManager", () => {
     expect(screen.queryByText("Already attached")).not.toBeInTheDocument();
   });
 
+  it("no reintenta en bucle cuando falla la carga de plantillas", async () => {
+    // AttachTemplateModal lleva `onError` en las dependencias de su efecto de
+    // carga. Cuando el padre lo pasaba como flecha en linea, un fallo se
+    // realimentaba: onError -> setToast -> render del padre -> nueva identidad
+    // de onError -> el efecto vuelve a pedir -> vuelve a fallar. En produccion
+    // salieron 20 GET /api/minigame-templates en dos rafagas de ~2.5 req/s.
+    mocks.listMinigameTemplates.mockResolvedValue({
+      success: false,
+      error: "Insufficient permissions",
+    });
+    const user = userEvent.setup();
+    render(<EventMinigameManager initialSlug="devfest-2025" />);
+    await screen.findByText("First poll");
+    await user.click(
+      screen.getByRole("button", { name: /Adjuntar plantilla/i })
+    );
+
+    // El toast confirma que el error llego al padre y lo re-renderizo, que es
+    // justo la condicion que realimentaba el bucle.
+    expect(
+      await screen.findByText("Insufficient permissions")
+    ).toBeInTheDocument();
+
+    // Margen para que varias vueltas del bucle se hubieran manifestado.
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(mocks.listMinigameTemplates).toHaveBeenCalledTimes(1);
+  });
+
   it("posts attach with order=instances.length when adjuntar is clicked", async () => {
     mocks.listMinigameTemplates.mockResolvedValue({
       success: true,

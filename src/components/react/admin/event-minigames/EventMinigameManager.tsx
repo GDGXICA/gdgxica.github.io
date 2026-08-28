@@ -35,6 +35,19 @@ export function EventMinigameManager({ initialSlug }: Props) {
     null
   );
 
+  // Memoizado a proposito: AttachTemplateModal lleva `onError` en las
+  // dependencias de su efecto de carga. Con una flecha nueva en cada render,
+  // un fallo de la peticion entraba en bucle — onError -> setToast -> render
+  // del padre -> nueva identidad de onError -> el efecto vuelve a pedir ->
+  // vuelve a fallar — hasta que alguien cerraba el modal. En produccion
+  // salieron 20 GET /api/minigame-templates en dos rafagas de ~2.5 req/s.
+  //
+  // Lo dispara cualquier fallo, no solo el 403 que lo destapo: un timeout de
+  // red deja el mismo bucle abierto contra la API.
+  const showError = useCallback((message: string) => {
+    setToast({ message, type: "error" });
+  }, []);
+
   const reload = useCallback(async () => {
     if (!slug) return;
     const res = await api.listEventMinigames(slug);
@@ -295,7 +308,7 @@ export function EventMinigameManager({ initialSlug }: Props) {
         <AttachTemplateModal
           alreadyAttachedTemplateIds={attachedTemplateIds}
           onCancel={() => setAttaching(false)}
-          onError={(message) => setToast({ message, type: "error" })}
+          onError={showError}
           onAttached={async () => {
             setAttaching(false);
             setToast({ message: "Plantilla adjuntada", type: "success" });
