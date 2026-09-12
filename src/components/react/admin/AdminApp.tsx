@@ -8,6 +8,7 @@ import { EventList } from "./events/EventList";
 import { EventForm } from "./events/EventForm";
 import { TeamList } from "./team/TeamList";
 import { SpeakerList } from "./speakers/SpeakerList";
+import { PostList } from "./posts/PostList";
 import { SponsorList } from "./sponsors/SponsorList";
 import { StatsEditor } from "./stats/StatsEditor";
 import { UserDirectory } from "./users/UserDirectory";
@@ -53,6 +54,9 @@ const PAGE_PERMISSIONS: Record<string, Permission> = {
   "event-form": "events:write",
   team: "team:read",
   speakers: "speakers:read",
+  // Ver la lista incluye los borradores. Escribir y borrar los comprueba
+  // cada acción, y el endpoint por su cuenta.
+  posts: "posts:read",
   sponsors: "sponsors:read",
   stats: "stats:read",
   users: "users:read",
@@ -94,6 +98,8 @@ function pageContent(page: string) {
       return <TeamList />;
     case "speakers":
       return <SpeakerList />;
+    case "posts":
+      return <PostList />;
     case "sponsors":
       return <SponsorList />;
     case "stats":

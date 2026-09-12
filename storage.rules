@@ -100,6 +100,29 @@ service firebase.storage {
       allow write: if false;
     }
 
+    // posts/images/{uuid}.{jpg|png|webp} — imágenes de los posts del foro.
+    //
+    // Cerrado por los dos lados, y no es un olvido: ni la escritura ni la
+    // lectura pasan por aquí.
+    //
+    // Escribe el Admin SDK, que se salta estas reglas: la imagen llega en
+    // base64 dentro de la petición y la Cloud Function es lo único que pone
+    // bytes en esta ruta, con un nombre que elige el servidor. Un nombre
+    // elegido por el cliente permitiría pisar la imagen de un post ya
+    // publicado.
+    //
+    // Y se leen con la URL de descarga de Firebase, que lleva el token que el
+    // handler guardó en los metadatos del objeto — un token también se salta
+    // estas reglas. Es lo que hace falta para contenido que tiene que salir en
+    // un sitio estático y en las tarjetas de redes sociales: pública, estable
+    // y sin sesión. Abrir aquí `read: if true` no filtraría nada nuevo, pero
+    // sí añadiría una segunda puerta que nadie usa; revocar el token desde la
+    // consola es lo que retira una imagen, y solo funciona si esta es la
+    // única.
+    match /posts/images/{fileName} {
+      allow read, write: if false;
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

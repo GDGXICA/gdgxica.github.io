@@ -1,0 +1,170 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import Tag from "@/components/Tag.astro";
+import PostCard from "@/components/PostCard.astro";
+import { ArrowLeft, Clock } from "@lucide/astro";
+import { getCollection, render } from "astro:content";
+import { buildPostSchema } from "@/utils/schema";
+
+export async function getStaticPaths() {
+  const posts = await getCollection("posts");
+  return posts.map((post) => ({
+    params: { slug: post.id },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+
+// Tres más, las más recientes que no sean esta. Se calcula aquí y no en el
+// loader porque depende de qué post se está pintando.
+const related = (await getCollection("posts"))
+  .filter((other) => other.id !== post.id)
+  .sort(
+    (a, b) =>
+      Date.parse(b.data.publishedAt || "") -
+      Date.parse(a.data.publishedAt || "")
+  )
+  .slice(0, 3);
+
+const url = `https://gdgica.com/foro/${post.id}/`;
+
+const metadata = {
+  title: `${post.data.title} - Foro GDG Ica`,
+  description: post.data.excerpt || `Publicación del foro de GDG Ica.`,
+  image: post.data.cover
+    ? new URL(post.data.cover, "https://gdgica.com").href
+    : "https://gdgica.com/gdg-logo.png",
+  url,
+  schema: buildPostSchema({
+    title: post.data.title,
+    excerpt: post.data.excerpt,
+    cover: post.data.cover,
+    authorName: post.data.author.name,
+    publishedAt: post.data.publishedAt,
+    updatedAt: post.data.updatedAt,
+    url,
+  }),
+};
+---
+
+<Layout {...metadata}>
+  <article>
+    <header
+      class="bg-gradient-to-br from-[#EFF6FF] via-[#FFFFFF] to-[#F0FDF4] py-10 md:py-16"
+    >
+      <div class="container">
+        <div class="mx-auto max-w-[768px]">
+          <a
+            href="/foro"
+            class="text-secondary hover:text-google-blue mb-6 inline-flex items-center gap-2 text-sm font-medium"
+          >
+            <ArrowLeft stroke-width={1.5} size={16} />
+            Volver al foro
+          </a>
+
+          {
+            post.data.tags.length > 0 && (
+              <ul class="mb-4 flex flex-wrap gap-1">
+                {post.data.tags.map((tag) => (
+                  <li>
+                    <Tag label={tag} />
+                  </li>
+                ))}
+              </ul>
+            )
+          }
+
+          <h1 class="text-primary mb-4 text-3xl font-bold md:text-5xl">
+            {post.data.title}
+          </h1>
+
+          {
+            post.data.excerpt && (
+              <p class="text-secondary mb-6 text-xl">{post.data.excerpt}</p>
+            )
+          }
+
+          <div class="text-tertiary flex flex-wrap items-center gap-3 text-sm">
+            {
+              post.data.author.avatar && (
+                <img
+                  src={post.data.author.avatar}
+                  class="h-8 w-8 rounded-full bg-gray-100 object-cover"
+                  width={32}
+                  height={32}
+                  alt=""
+                  loading="lazy"
+                />
+              )
+            }
+            {
+              post.data.author.name && (
+                <span class="text-secondary font-medium">
+                  {post.data.author.name}
+                </span>
+              )
+            }
+            {
+              post.data.publishedLabel && (
+                <time datetime={post.data.publishedAt} class="capitalize">
+                  {post.data.publishedLabel}
+                </time>
+              )
+            }
+            <span class="inline-flex items-center gap-1">
+              <Clock stroke-width={1.5} size={14} />
+              {post.data.readingMinutes} min de lectura
+            </span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    {
+      post.data.cover && (
+        <div class="container">
+          <div class="mx-auto -mt-4 max-w-[768px] md:-mt-8">
+            <img
+              src={post.data.cover}
+              class="border-gray-custom w-full rounded-lg border bg-gray-100 object-cover shadow-sm"
+              width={768}
+              height={432}
+              alt=""
+              decoding="async"
+            />
+          </div>
+        </div>
+      )
+    }
+
+    <div class="container py-12">
+      <!-- `prose` viene del plugin de tipografía de Tailwind, ya cargado en
+           global.css. El cuerpo lo renderizó el loader en el build: aquí no
+           llega ningún parser de markdown al navegador. -->
+      <div
+        class="prose prose-lg prose-headings:text-primary prose-a:text-google-blue prose-img:rounded-lg mx-auto max-w-[768px]"
+      >
+        <Content />
+      </div>
+    </div>
+  </article>
+
+  {
+    related.length > 0 && (
+      <section class="bg-section py-16">
+        <div class="container">
+          <h2 class="text-primary mb-8 text-center text-3xl font-bold">
+            Sigue leyendo
+          </h2>
+          <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {related.map((other) => (
+              <PostCard slug={other.id} {...other.data} />
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+</Layout>

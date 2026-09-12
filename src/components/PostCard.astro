@@ -1,0 +1,108 @@
+---
+import { Clock } from "@lucide/astro";
+import Tag from "./Tag.astro";
+
+interface Props {
+  slug: string;
+  title: string;
+  excerpt: string;
+  cover: string;
+  tags: string[];
+  author: { name: string; avatar: string };
+  publishedAt: string;
+  publishedLabel: string;
+  readingMinutes: number;
+}
+
+const {
+  slug,
+  title,
+  excerpt,
+  cover,
+  tags,
+  author,
+  publishedAt,
+  publishedLabel,
+  readingMinutes,
+} = Astro.props;
+---
+
+<article
+  class="border-gray-custom flex h-full flex-col overflow-hidden rounded-lg border bg-white shadow-sm transition-shadow hover:shadow-md"
+>
+  {
+    cover && (
+      <a href={`/foro/${slug}`} tabindex="-1" aria-hidden="true">
+        <img
+          src={cover}
+          class="h-48 w-full bg-gray-100 object-cover"
+          width={385}
+          height={192}
+          alt=""
+          loading="lazy"
+          decoding="async"
+        />
+      </a>
+    )
+  }
+  <div class="flex flex-1 flex-col p-6">
+    {
+      tags.length > 0 && (
+        <ul class="mb-3 flex flex-wrap gap-1">
+          {tags.slice(0, 3).map((tag) => (
+            <li>
+              <Tag label={tag} />
+            </li>
+          ))}
+        </ul>
+      )
+    }
+    <h3 class="text-primary mb-2 text-xl font-bold">
+      <!-- El enlace envuelve el título y se estira sobre toda la tarjeta con
+           `after:absolute`: así hay un solo destino en el árbol de
+           accesibilidad en vez de tres que llevan al mismo sitio. -->
+      <a
+        href={`/foro/${slug}`}
+        class="after:absolute after:inset-0 hover:underline"
+      >
+        {title}
+      </a>
+    </h3>
+    {excerpt && <p class="text-secondary mb-6 flex-1">{excerpt}</p>}
+    <div
+      class="text-tertiary mt-auto flex flex-wrap items-center gap-3 text-sm"
+    >
+      {
+        author.avatar && (
+          <img
+            src={author.avatar}
+            class="h-6 w-6 rounded-full bg-gray-100 object-cover"
+            width={24}
+            height={24}
+            alt=""
+            loading="lazy"
+          />
+        )
+      }
+      {author.name && <span>{author.name}</span>}
+      {
+        publishedLabel && (
+          <time datetime={publishedAt} class="capitalize">
+            {publishedLabel}
+          </time>
+        )
+      }
+      <span class="inline-flex items-center gap-1">
+        <Clock stroke-width={1.5} size={14} />
+        {readingMinutes} min
+      </span>
+    </div>
+  </div>
+</article>
+
+<style>
+  /* La tarjeta es el contexto de posicionamiento del enlace estirado. */
+  article {
+    position: relative;
+  }
+</style>

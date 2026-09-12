@@ -1,0 +1,98 @@
+---
+import CallToActionSection from "@/components/CallToActionSection.astro";
+import HeroPage from "@/components/HeroPage.astro";
+import Layout from "@/layouts/Layout.astro";
+import PostCard from "@/components/PostCard.astro";
+import Button from "@/components/Button.astro";
+import { MessagesSquare } from "@lucide/astro";
+import { getCollection } from "astro:content";
+import { fetchLinks } from "@/loaders/transform-site-config";
+
+// Más recientes primero. El loader ya dejó fuera los borradores.
+const posts = (await getCollection("posts")).sort(
+  (a, b) =>
+    Date.parse(b.data.publishedAt || "") - Date.parse(a.data.publishedAt || "")
+);
+
+const links = await fetchLinks();
+
+const metadata = {
+  title: "Foro - Google Developer Group Ica",
+  description:
+    "Publicaciones de la comunidad GDG Ica: apuntes de los eventos, tutoriales, anuncios y lo que aprendemos construyendo con las tecnologías de Google.",
+  image: "https://gdgica.com/gdg-logo.png",
+  url: "https://gdgica.com/foro/",
+};
+---
+
+<Layout {...metadata}>
+  <HeroPage>
+    <div class="mx-auto max-w-[768px] text-center">
+      <p
+        class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-yellow-500 to-green-600"
+      >
+        <MessagesSquare stroke-width={1.5} size={64} color="#FFFFFF" />
+      </p>
+      <h1 class="mb-6 text-4xl font-bold md:text-5xl">
+        <span class="text-google-blue">El</span>
+        <span class="text-google-green">Foro</span>
+      </h1>
+      <p class="text-secondary mb-8 text-xl">
+        Apuntes de nuestros eventos, tutoriales, anuncios y lo que vamos
+        aprendiendo. Lo escribe el equipo organizador del GDG Ica.
+      </p>
+    </div>
+  </HeroPage>
+
+  <section class="py-20">
+    <div class="container">
+      {
+        posts.length === 0 ? (
+          <div class="mx-auto max-w-[640px] text-center">
+            <h2 class="text-primary mb-4 text-3xl font-bold">
+              Todavía no hay publicaciones
+            </h2>
+            <p class="text-secondary text-xl">
+              Estamos preparando las primeras. Mientras tanto, pásate por
+              nuestros eventos.
+            </p>
+            <div class="mt-8 flex justify-center">
+              <Button variant="solid" href="/events">
+                Ver eventos
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <h2 class="text-primary mb-6 text-center text-4xl font-bold">
+              Publicaciones
+            </h2>
+            <p class="text-secondary text-center text-xl">
+              {posts.length} publicación{posts.length !== 1 && "es"} de la
+              comunidad
+            </p>
+            <div class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {posts.map((post) => (
+                <PostCard slug={post.id} {...post.data} />
+              ))}
+            </div>
+          </>
+        )
+      }
+    </div>
+  </section>
+
+  <CallToActionSection>
+    <h2 class="mb-6 text-3xl font-bold text-white md:text-4xl">
+      ¿Quieres escribir en el foro?
+    </h2>
+    <p class="mb-8 text-xl text-white">
+      Si tienes algo que contar a la comunidad —un tutorial, lo que aprendiste
+      en un evento, un proyecto— escríbenos y lo publicamos.
+    </p>
+    <Button variant="white" href={links.forms.contact} target="_blank">
+      <MessagesSquare />
+      Contáctanos
+    </Button>
+  </CallToActionSection>
+</Layout>

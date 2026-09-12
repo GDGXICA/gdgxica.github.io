@@ -15,6 +15,8 @@ File-based routing under `src/pages/`:
 - `/` — Homepage
 - `/events` — Events listing
 - `/events/[slug]` — Dynamic event detail pages (slug = JSON filename without extension)
+- `/foro` — Forum listing (community posts)
+- `/foro/[slug]` — Post detail, markdown rendered at build time
 - `/team`, `/about`, `/sponsors`, `/volunteers`, `/gallery` — Static pages
 - `*.json.ts` endpoints — API routes returning collection data
 
@@ -30,8 +32,9 @@ All content is sourced from the external repo [`GDGXICA/gdg-ica-data`](https://g
 - `transform-sponsors.ts` — Transforms `about/partners.json` into sponsors schema
 - `transform-gallery.ts` — Transforms gallery with derived `type` from `tag`
 - `transform-volunteers.ts` — Loads volunteers (graceful fallback to `[]` if not yet available)
+- `transform-posts.ts` — Forum posts. The only loader shaped as an object rather than an array-returning function: it needs the context's `renderMarkdown` to turn each body into HTML at build time, so no markdown parser ships to the browser. Drops drafts, tolerates a data repo with no `posts/` folder yet, and refuses to publish a body carrying raw HTML (see below)
 
-**Collections**: `events`, `gallery`, `members`, `organizers`, `sponsors`, `volunteers`.
+**Collections**: `events`, `posts`, `gallery`, `members`, `organizers`, `sponsors`, `volunteers`.
 
 **Events** are the most complex: each has speakers (resolved from speaker refs), sponsors, schedule (flat array or `TrackSessions` for multi-track), location, status, category, tags, and registration link.
 
@@ -77,11 +80,17 @@ Protected admin UI at `/admin/*` using React islands (`client:load`). Firebase A
 - `auth.ts` — Google Sign-In, token management
 - `api.ts` — fetch wrapper with automatic ID token
 
-**Admin pages:** `/admin` (dashboard), `/admin/events`, `/admin/team`, `/admin/speakers`, `/admin/sponsors`, `/admin/stats`, `/admin/users`, `/admin/roles` (read-only permission matrix), `/admin/audit` (audit log viewer)
+**Admin pages:** `/admin` (dashboard), `/admin/events`, `/admin/team`, `/admin/speakers`, `/admin/posts` (forum), `/admin/sponsors`, `/admin/stats`, `/admin/users`, `/admin/roles` (read-only permission matrix), `/admin/audit` (audit log viewer)
 
 **Testing the rules:** `pnpm test:rules` boots the Firestore emulator on port 8080. If another checkout of this project is already running one, set `FIRESTORE_EMULATOR_PORT` (and optionally `FIRESTORE_EMULATOR_HOST_ADDR`) and point the emulator at the same port — `tests/rules/setup.ts` reads both — so two worktrees can run their suites concurrently.
 
-**Content proposals:** external `contributor`s draft events and speakers in the `proposals` collection at `/admin/proposals`; reviewers with `proposals:review` approve, request changes, or reject, then publish as a separate explicit step (accepting content and writing it to the public data repo are different decisions). `POST /api/proposals/:id/publish` re-validates the payload against the same Zod schema used on submit — days may pass between the two — refuses ids that would overwrite existing content, and runs under the publisher's identity, never the proposer's. The GitHub writes live in `functions/src/services/publish.ts`, shared with `handlers/events.ts` and `handlers/speakers.ts` so the two paths into the data repo cannot drift.
+**Content proposals:** external `contributor`s draft events, speakers and forum posts in the `proposals` collection at `/admin/proposals`; reviewers with `proposals:review` approve, request changes, or reject, then publish as a separate explicit step (accepting content and writing it to the public data repo are different decisions). `POST /api/proposals/:id/publish` re-validates the payload against the same Zod schema used on submit — days may pass between the two — refuses ids that would overwrite existing content, and runs under the publisher's identity, never the proposer's. The GitHub writes live in `functions/src/services/publish.ts`, shared with `handlers/events.ts` and `handlers/speakers.ts` so the two paths into the data repo cannot drift.
+
+**Forum (`/foro`):** posts live in the data repo like every other public content — `posts/index.json` (summaries, no bodies) plus `posts/{slug}.json` (the full post, body included). Written through `POST/PUT/DELETE /api/posts` (`posts:write`, `posts:delete`), whose GitHub writes live in `functions/src/services/publish.ts` alongside the event and speaker ones, so the direct path and the proposal path cannot drift. `status: "draft"` keeps a post out of the site — the loader filters it — but the data repo is public, so a draft is "unpublished", never "secret". Saving a draft skips the site rebuild; publishing or unpublishing triggers one.
+
+**Post images** go to Cloud Storage, not the data repo: `POST /api/posts/images` takes a base64 data URL, verifies the magic bytes (JPEG/PNG/WebP — the declared MIME is never believed), and stores it under a server-chosen UUID at `posts/images/{uuid}.{ext}` with a Firebase download token, returning the public URL. `storage.rules` denies both read and write on that path on purpose: writes come from the Admin SDK and reads from the token URL, and both bypass rules. The editor downscales anything over 450 KB before uploading (`prepareImage.ts`).
+
+**Markdown is markdown, not HTML.** Verified by hand: Astro's renderer passes raw HTML straight through, and the site's CSP allows inline scripts, so a `<script>` in a body would execute on gdgica.com. `postSchema` therefore rejects raw tags, HTML comments and `javascript:`/`data:` link targets at write time — the one gate both write paths cross — while leaving anything inside a code fence alone, since code samples are the point. The rule lives in `functions/src/utils/markdown.ts` (authority) and is mirrored in `src/lib/markdown.ts` for the loader's second barrier and the panel's live preview; the mirror is kept honest by a parity test in `src/lib/__tests__/markdown.test.ts`. The preview validates before rendering and refuses to paint anything that fails — it matters most when a reviewer opens an outside contributor's proposal inside their own admin session.
 
 **Per-event staff:** `PUT/DELETE /api/events/:slug/staff/:uid` (requires `users:role:write` — assigning someone to an event grants permissions, so it weighs the same as a role change) manage `events/{slug}/staff/{uid}`, editable from `/admin/events/staff?slug=…`. Assignment is refused for roles whose bundle has no `perEvent` permissions, since the document would grant nothing while appearing to. Expired assignments stay in the collection but stop granting, and are shown as such. `GET /api/me/events` returns the caller's own active assignments — a volunteer has no global permissions, so without it their panel would look empty.
 

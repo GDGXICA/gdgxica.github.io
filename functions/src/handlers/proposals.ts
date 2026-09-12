@@ -4,12 +4,14 @@ import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog, triggerRebuildAndLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
-import { eventSchema, speakerSchema } from "../schemas";
+import { eventSchema, postSchema, speakerSchema } from "../schemas";
 import { GitHubService } from "../services/github";
 import { GITHUB_TOKEN } from "../config";
 import {
   eventExists,
+  postExists,
   publishEvent,
+  publishPost,
   publishSpeaker,
   speakerExists,
 } from "../services/publish";
@@ -18,13 +20,15 @@ const MAX_NOTE = 500;
 const MAX_OPEN_PROPOSALS = 10;
 const MAX_LISTED = 200;
 
-type ProposalType = "event" | "speaker";
+type ProposalType = "event" | "speaker" | "post";
 
 /** Estados desde los que quien propone todavía puede editar. */
 const EDITABLE = new Set(["draft", "changes_requested"]);
 
+const PROPOSAL_TYPES: readonly ProposalType[] = ["event", "speaker", "post"];
+
 function isProposalType(value: unknown): value is ProposalType {
-  return value === "event" || value === "speaker";
+  return PROPOSAL_TYPES.includes(value as ProposalType);
 }
 
 function readNote(body: unknown, required: boolean): string | null | undefined {
@@ -36,6 +40,12 @@ function readNote(body: unknown, required: boolean): string | null | undefined {
   return trimmed;
 }
 
+const SCHEMA_BY_TYPE = {
+  event: eventSchema,
+  speaker: speakerSchema,
+  post: postSchema,
+} as const;
+
 /**
  * Valida el contenido contra el mismo esquema que usa la creación directa.
  * Se ejecuta al enviar Y al publicar: entre ambos momentos pueden pasar días
@@ -43,8 +53,7 @@ function readNote(body: unknown, required: boolean): string | null | undefined {
  * en el repo de datos algo que hoy ya no es válido.
  */
 function validatePayload(type: ProposalType, payload: unknown) {
-  const schema = type === "event" ? eventSchema : speakerSchema;
-  return schema.safeParse(payload);
+  return SCHEMA_BY_TYPE[type].safeParse(payload);
 }
 
 /** Quien propone ve las suyas; quien revisa, todas. */
@@ -87,9 +96,10 @@ export async function createProposal(req: Request, res: Response) {
     const body = req.body as { type?: unknown; payload?: unknown };
 
     if (!isProposalType(body.type)) {
-      res
-        .status(400)
-        .json({ success: false, error: 'type must be "event" or "speaker"' });
+      res.status(400).json({
+        success: false,
+        error: `type must be one of: ${PROPOSAL_TYPES.join(", ")}`,
+      });
       return;
     }
 
@@ -185,7 +195,14 @@ export async function updateProposal(req: Request, res: Response) {
       return;
     }
 
-    const parsed = validatePayload(data.type as ProposalType, body.payload);
+    if (!isProposalType(data.type)) {
+      res
+        .status(422)
+        .json({ success: false, error: "Proposal has an unknown type" });
+      return;
+    }
+
+    const parsed = validatePayload(data.type, body.payload);
     if (!parsed.success) {
       res.status(400).json({
         success: false,
@@ -352,10 +369,12 @@ export async function publishProposal(req: Request, res: Response) {
 
     // Publicar no puede pisar contenido existente: el id lo eligió quien
     // propuso, y una colisión sobrescribiría un evento real.
-    const collides =
-      data.type === "event"
-        ? await eventExists(github, targetId)
-        : await speakerExists(github, targetId);
+    const exists = {
+      event: eventExists,
+      speaker: speakerExists,
+      post: postExists,
+    }[data.type];
+    const collides = await exists(github, targetId);
     if (collides) {
       res.status(409).json({
         success: false,
@@ -366,6 +385,19 @@ export async function publishProposal(req: Request, res: Response) {
 
     if (data.type === "event") {
       await publishEvent(github, payload);
+    } else if (data.type === "post") {
+      // Publicar es lo que le pone fecha: `published_at` marca cuándo salió al
+      // sitio, no cuándo lo escribió quien lo propuso, que puede ser de hace
+      // días. El estado se fuerza a `published` porque publicar una propuesta
+      // ES la decisión de publicarla — dejar pasar un `draft` escribiría en el
+      // repo algo que el sitio no enseña, después de haberlo aprobado.
+      await publishPost(github, {
+        ...payload,
+        id: targetId,
+        status: "published",
+        published_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
     } else {
       await publishSpeaker(github, {
         ...payload,

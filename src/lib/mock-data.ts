@@ -371,3 +371,42 @@ export const MOCK_LOCATIONS = [
     createdBy: "dev-admin",
   },
 ];
+
+/** Posts del foro para el modo preview del panel. */
+export const MOCK_POSTS = [
+  {
+    id: "resumen-devfest-2026",
+    title: "Lo que dejó el DevFest 2026",
+    excerpt: "Tres charlas, un taller y muchas ganas: así fue nuestro DevFest.",
+    cover_image_url: "",
+    tags: ["devfest", "comunidad"],
+    author_name: "Dev Preview",
+    author_photo_url: "",
+    published_at: "2026-09-01T10:00:00.000Z",
+    status: "published" as const,
+    updated_at: "2026-09-02T10:00:00.000Z",
+    body: [
+      "# El DevFest 2026",
+      "",
+      "Fueron **tres charlas**, un taller y mucha comunidad.",
+      "",
+      "## Las charlas",
+      "",
+      "1. Compose Multiplatform",
+      "2. Gemini en producción",
+      "3. Firebase para equipos pequeños",
+    ].join("\n"),
+  },
+  {
+    id: "guia-firebase-auth",
+    title: "Guía rápida de Firebase Auth",
+    excerpt: "",
+    cover_image_url: "",
+    tags: ["firebase"],
+    author_name: "Dev Preview",
+    author_photo_url: "",
+    published_at: "2026-08-01T10:00:00.000Z",
+    status: "draft" as const,
+    body: "Todavía escribiendo esto.\n\n```bash\npnpm add firebase\n```\n",
+  },
+];

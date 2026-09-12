@@ -116,3 +116,38 @@ export function buildAboutSchema(social?: SocialLinks) {
   };
   return org;
 }
+
+interface Post {
+  title: string;
+  excerpt: string;
+  cover: string;
+  authorName: string;
+  publishedAt: string;
+  updatedAt: string;
+  url: string;
+}
+
+/** BlogPosting de un post del foro. */
+export function buildPostSchema(post: Post) {
+  const schema: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    mainEntityOfPage: post.url,
+    url: post.url,
+    publisher: buildOrganizationSchema(),
+  };
+  if (post.excerpt) schema.description = post.excerpt;
+  const image = absUrl(post.cover);
+  if (image) schema.image = image;
+  if (post.authorName) {
+    schema.author = { "@type": "Person", name: post.authorName };
+  }
+  if (post.publishedAt) schema.datePublished = post.publishedAt;
+  // Sin fecha de modificación, Google toma la de publicación. Solo se declara
+  // cuando de verdad se editó después.
+  if (post.updatedAt && post.updatedAt !== post.publishedAt) {
+    schema.dateModified = post.updatedAt;
+  }
+  return schema;
+}

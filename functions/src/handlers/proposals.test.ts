@@ -81,6 +81,10 @@ vi.mock("../services/publish", () => ({
   publishSpeaker: async (_g: unknown, payload: Record<string, unknown>) => {
     published.push({ kind: "speaker", payload });
   },
+  postExists: async (_g: unknown, id: string) => existingIds.has(id),
+  publishPost: async (_g: unknown, payload: Record<string, unknown>) => {
+    published.push({ kind: "post", payload });
+  },
 }));
 
 import * as handler from "./proposals";

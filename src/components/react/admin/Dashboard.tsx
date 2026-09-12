@@ -2,6 +2,7 @@ import { useAuth } from "./AuthProvider";
 
 const QUICK_LINKS = [
   { label: "Crear evento", href: "/admin/events/new", icon: "📅" },
+  { label: "Escribir post", href: "/admin/posts", icon: "📝" },
   { label: "Ver sitio", href: "/", icon: "🌐" },
 ];
 

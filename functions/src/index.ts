@@ -34,11 +34,14 @@ import {
   credentialReminderSchema,
   emailTransportSchema,
   statsSchema,
+  postSchema,
+  postImageSchema,
 } from "./schemas";
 import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
 import * as team from "./handlers/team";
 import * as speakers from "./handlers/speakers";
+import * as posts from "./handlers/posts";
 import * as sponsors from "./handlers/sponsors";
 import * as stats from "./handlers/stats";
 import * as users from "./handlers/users";
@@ -355,6 +358,44 @@ app.delete(
   vid,
   writeLimiter,
   speakers.deleteSpeaker
+);
+
+// Posts del foro. Leer incluye los borradores, que existen en el repo de
+// datos pero el sitio filtra; escribir cubre crear, editar y subir imágenes;
+// borrar va aparte y se queda en admin, la misma asimetría que con los
+// eventos — un organizador publica, retirar algo ya publicado pesa más.
+app.get("/api/posts", requirePermission("posts:read"), posts.listPosts);
+app.get("/api/posts/:id", requirePermission("posts:read"), vid, posts.getPost);
+app.post(
+  "/api/posts",
+  requirePermission("posts:write"),
+  writeLimiter,
+  validateBody(postSchema),
+  posts.createPost
+);
+app.put(
+  "/api/posts/:id",
+  requirePermission("posts:write"),
+  vid,
+  writeLimiter,
+  validateBody(postSchema),
+  posts.updatePost
+);
+app.delete(
+  "/api/posts/:id",
+  requirePermission("posts:delete"),
+  vid,
+  writeLimiter,
+  posts.deletePost
+);
+// La imagen NO cuelga de un post concreto: el editor la sube mientras escribe,
+// antes de que el post exista, y la misma imagen puede aparecer en varios.
+app.post(
+  "/api/posts/images",
+  requirePermission("posts:write"),
+  writeLimiter,
+  validateBody(postImageSchema),
+  posts.uploadPostImage
 );
 
 // Sponsors

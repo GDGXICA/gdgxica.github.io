@@ -5,6 +5,7 @@ import { loadSponsors } from "./loaders/transform-sponsors";
 import { loadGallery } from "./loaders/transform-gallery";
 import { loadVolunteers } from "./loaders/transform-volunteers";
 import { loadVolunteerRoles } from "./loaders/transform-volunteer-roles";
+import { postsLoader } from "./loaders/transform-posts";
 
 const events = defineCollection({
   loader: loadEvents,
@@ -221,8 +222,34 @@ const volunteerRoles = defineCollection({
   }),
 });
 
+/**
+ * Posts del foro. El loader ya filtró los borradores y renderizó el markdown,
+ * así que aquí solo está lo que sale publicado.
+ */
+const posts = defineCollection({
+  loader: postsLoader,
+  schema: z.object({
+    title: z.string(),
+    excerpt: z.string(),
+    /** Vacío = sin portada. La plantilla decide qué enseñar en su lugar. */
+    cover: z.string(),
+    tags: z.array(z.string()),
+    author: z.object({
+      name: z.string(),
+      avatar: z.string(),
+    }),
+    /** ISO 8601: es por lo que se ordena y lo que va en `<time datetime>`. */
+    publishedAt: z.string(),
+    /** La misma fecha ya en castellano, para pintarla. */
+    publishedLabel: z.string(),
+    updatedAt: z.string(),
+    readingMinutes: z.number(),
+  }),
+});
+
 export const collections = {
   events,
+  posts,
   gallery,
   members,
   organizers,
