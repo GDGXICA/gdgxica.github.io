@@ -42,13 +42,24 @@ vi.mock("../config", () => ({
   GITHUB_TOKEN: { value: () => "token" },
 }));
 
+/** Rutas que el fake debe tratar como un fallo de red, no como un 404. */
+const unreachable = new Set<string>();
+
 vi.mock("../services/github", () => ({
   GitHubService: class {
     async getFileContent<T>(path: string): Promise<{ data: T; sha: string }> {
       const content = files.get(path);
-      // Igual que la de verdad: un fichero ausente LANZA (la API de GitHub
-      // responde 404), que es lo que los helpers tienen que tolerar.
       if (content === undefined) throw new Error(`404 ${path}`);
+      return { data: JSON.parse(content) as T, sha: `sha-${path}` };
+    }
+    // Igual que la de verdad: `null` SOLO si el fichero no existe; un fallo de
+    // lectura lanza, y quien llama no puede confundirlo con "no está".
+    async getFileContentIfExists<T>(
+      path: string
+    ): Promise<{ data: T; sha: string } | null> {
+      if (unreachable.has(path)) throw new Error(`500 ${path}`);
+      const content = files.get(path);
+      if (content === undefined) return null;
       return { data: JSON.parse(content) as T, sha: `sha-${path}` };
     }
     async putFile(path: string, content: string) {
@@ -126,6 +137,7 @@ function stored(id: string): Record<string, unknown> {
 
 beforeEach(() => {
   files.clear();
+  unreachable.clear();
   auditEntries.length = 0;
   uploads.length = 0;
   rebuilds = 0;
@@ -290,6 +302,41 @@ describe("deletePost", () => {
     const res = buildRes();
     await handler.deletePost(buildReq({}, { id: "fantasma" }), res);
     expect(res.__status).toBe(404);
+  });
+
+  // El sitio nunca enseñó el borrador: reconstruirlo es gastar cuota de
+  // Actions en un build que no cambia nada.
+  it("no reconstruye al borrar un borrador", async () => {
+    await handler.createPost(
+      buildReq({ ...POST, id: "borrador", status: "draft" }),
+      buildRes()
+    );
+    rebuilds = 0;
+
+    await handler.deletePost(buildReq({}, { id: "borrador" }), buildRes());
+    expect(rebuilds).toBe(0);
+  });
+
+  it("reconstruye al borrar uno publicado", async () => {
+    await handler.createPost(buildReq({ ...POST }), buildRes());
+    rebuilds = 0;
+
+    await handler.deletePost(buildReq({}, { id: "hola-foro" }), buildRes());
+    expect(rebuilds).toBe(1);
+  });
+
+  // Antes, un fallo al leer el índice se leía como "el índice está vacío": el
+  // fichero se borraba, la entrada se quedaba en el índice y la respuesta
+  // decía que todo había ido bien.
+  it("no dice que borró si no pudo actualizar el índice", async () => {
+    await handler.createPost(buildReq({ ...POST }), buildRes());
+    unreachable.add("posts/index.json");
+
+    const res = buildRes();
+    await handler.deletePost(buildReq({}, { id: "hola-foro" }), res);
+
+    expect(res.__status).toBe(500);
+    expect(res.__body?.success).toBe(false);
   });
 });
 

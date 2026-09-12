@@ -1,6 +1,15 @@
 import type { Loader } from "astro/loaders";
-import { fetchGdgData, formatSpanishDate, stripDomain } from "./fetch-gdg-data";
-import { findMarkdownIssue } from "../lib/markdown";
+import {
+  fetchGdgData,
+  formatSpanishDate,
+  isNotFound,
+  stripDomain,
+} from "./fetch-gdg-data";
+import {
+  describeRenderedIssue,
+  findMarkdownIssue,
+  findRenderedIssue,
+} from "../lib/markdown";
 
 /**
  * Posts del foro.
@@ -96,10 +105,13 @@ export const postsLoader: Loader = {
     let index: ExternalPostIndexEntry[];
     try {
       index = await fetchGdgData<ExternalPostIndexEntry[]>("posts/index.json");
-    } catch {
-      // El repo de datos todavía no tiene carpeta `posts/`: el foro existe
-      // pero está vacío. No es un error del build, y tratarlo como tal dejaría
-      // el sitio entero sin construir por una sección sin estrenar.
+    } catch (err) {
+      // Solo se tolera que el fichero NO EXISTA: el repo de datos todavía no
+      // tiene carpeta `posts/` y el foro está vacío, que no es un error del
+      // build. Cualquier otro fallo —red, 5xx, cuota del CDN— se propaga y
+      // tumba el build a propósito: tragárselo publicaba el sitio con el foro
+      // vacío por un fallo transitorio, y sin nada que lo dijera.
+      if (!isNotFound(err)) throw err;
       logger.info("Sin posts todavía (posts/index.json no existe)");
       return;
     }
@@ -113,28 +125,48 @@ export const postsLoader: Loader = {
       let post: ExternalPost;
       try {
         post = await fetchGdgData<ExternalPost>(`posts/${summary.id}.json`);
-      } catch {
+      } catch (err) {
         // Un post del índice cuyo fichero falta es contenido roto, no un
         // motivo para tirar el build: el resto del foro se publica igual y el
-        // aviso queda en el log de la build.
+        // aviso queda en el log de la build. Un fallo de lectura, en cambio,
+        // sí se propaga: publicar el foro sin un post que sí existe es
+        // perder contenido en silencio.
+        if (!isNotFound(err)) throw err;
         logger.warn(`Post "${summary.id}" está en el índice pero no existe`);
         continue;
       }
 
-      // Segunda barrera, después de la de la API. Comprobado a mano: el
+      // Dos barreras, después de la de la API. Comprobado a mano: el
       // renderizador de markdown de Astro deja pasar el HTML en crudo tal
       // cual, y la CSP del sitio admite `script-src 'unsafe-inline'`, así que
       // un `<script>` en el cuerpo se ejecutaría en gdgica.com. La API no deja
       // escribirlo, pero el repo de datos tiene otras puertas —un commit a
-      // mano— y esta es la única por la que pasan todas.
+      // mano— y aquí pasan todas.
       //
       // El post se salta entero en vez de publicarse saneado: sanear en
       // silencio publicaría una versión mutilada que nadie revisó.
-      const issue = findMarkdownIssue(post.body ?? "");
+      const body = post.body ?? "";
+
+      // (1) Sobre el texto: da el mensaje que el autor puede accionar.
+      const issue = findMarkdownIssue(body);
       if (issue) {
         logger.error(
-          `Post "${summary.id}" NO publicado: el cuerpo lleva HTML en crudo ` +
-            `(${issue.kind}). Edítalo desde el panel.`
+          `Post "${summary.id}" NO publicado: ${issue.kind}. ` +
+            "Edítalo desde el panel."
+        );
+        continue;
+      }
+
+      const rendered = await renderMarkdown(body);
+
+      // (2) Sobre el HTML ya generado: esta es la que manda, porque mira lo
+      // que de verdad se va a pintar en vez de predecirlo a partir del
+      // markdown. La comprobación del texto es una aproximación de las reglas
+      // de CommonMark; esta no aproxima nada.
+      const renderedIssue = findRenderedIssue(rendered.html);
+      if (renderedIssue) {
+        logger.error(
+          `Post "${summary.id}" NO publicado: ${describeRenderedIssue(renderedIssue)}`
         );
         continue;
       }
@@ -142,7 +174,7 @@ export const postsLoader: Loader = {
       store.set({
         id: summary.id,
         data: await parseData({ id: summary.id, data: toEntry(post) }),
-        rendered: await renderMarkdown(post.body ?? ""),
+        rendered,
       });
     }
 

@@ -14,6 +14,31 @@ const LOCAL_PATH = process.env.GDG_DATA_LOCAL_PATH
 const cache = new Map<string, { data: unknown; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes for dev
 
+/**
+ * Error de lectura del repo de datos, con la distinción que importa: si el
+ * fichero NO EXISTE (404 / ENOENT) o si no se pudo leer (red, 5xx, cuota).
+ *
+ * Sin esta diferencia, un loader que tolera contenido ausente —el foro, que
+ * puede no tener todavía carpeta `posts/`— tolera también una caída del CDN, y
+ * un fallo transitorio durante un deploy publica el sitio con esa sección
+ * vacía sin que nada falle.
+ */
+export class GdgDataError extends Error {
+  constructor(
+    message: string,
+    readonly notFound: boolean,
+    readonly status?: number
+  ) {
+    super(message);
+    this.name = "GdgDataError";
+  }
+}
+
+/** `true` si el fallo fue "ese fichero no está", y no "no se pudo leer". */
+export function isNotFound(error: unknown): boolean {
+  return error instanceof GdgDataError && error.notFound;
+}
+
 export async function fetchGdgData<T>(path: string): Promise<T> {
   if (LOCAL_PATH) {
     // Containment check: ensure the resolved path stays inside LOCAL_PATH
@@ -23,8 +48,16 @@ export async function fetchGdgData<T>(path: string): Promise<T> {
     if (filePath !== LOCAL_PATH && !filePath.startsWith(LOCAL_PATH + sep)) {
       throw new Error(`Refusing to read path outside data repo: ${path}`);
     }
-    const contents = await readFile(filePath, "utf-8");
-    return JSON.parse(contents) as T;
+    try {
+      const contents = await readFile(filePath, "utf-8");
+      return JSON.parse(contents) as T;
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      throw new GdgDataError(
+        `Failed to read ${filePath}: ${String(err)}`,
+        code === "ENOENT"
+      );
+    }
   }
 
   const url = `${BASE_URL}/${path}`;
@@ -36,7 +69,11 @@ export async function fetchGdgData<T>(path: string): Promise<T> {
 
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: ${response.status}`);
+    throw new GdgDataError(
+      `Failed to fetch ${url}: ${response.status}`,
+      response.status === 404,
+      response.status
+    );
   }
 
   const data = await response.json();

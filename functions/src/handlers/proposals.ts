@@ -391,12 +391,22 @@ export async function publishProposal(req: Request, res: Response) {
       // días. El estado se fuerza a `published` porque publicar una propuesta
       // ES la decisión de publicarla — dejar pasar un `draft` escribiría en el
       // repo algo que el sitio no enseña, después de haberlo aprobado.
+      // La firma sale de quien PROPUSO, no de quien publica: el post lo
+      // escribió esa persona. El camino directo la estampa del token en
+      // `handlers/posts.ts`; aquí el equivalente es el doc de la propuesta,
+      // porque el esquema deja `author_name` vacío por defecto y sin esto el
+      // post salía sin firma en la tarjeta ni en el JSON-LD.
+      const now = new Date().toISOString();
       await publishPost(github, {
         ...payload,
         id: targetId,
         status: "published",
-        published_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        author_name:
+          (payload.author_name as string) ||
+          (data.createdByName as string) ||
+          "",
+        published_at: now,
+        updated_at: now,
       });
     } else {
       await publishSpeaker(github, {

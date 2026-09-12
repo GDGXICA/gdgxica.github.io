@@ -155,22 +155,38 @@ export function PostEditor({
     }));
   }
 
-  /** Mete markdown en la posición del cursor del cuerpo. */
+  /**
+   * Mete markdown en la posición del cursor del cuerpo.
+   *
+   * El cuerpo se toma del actualizador (`prev`), no de `form.body`: subir una
+   * imagen tarda, y quien escribe sigue escribiendo mientras tanto. Leyendo el
+   * cuerpo del render en que se eligió el archivo, la inserción devolvía el
+   * texto al estado que tenía entonces y se perdía lo tecleado — y como los
+   * offsets del cursor sí eran los de ahora, el markdown podía acabar cosido a
+   * mitad de una palabra.
+   */
   function insert(before: string, after: string, placeholder: string) {
     const textarea = bodyRef.current;
     if (!textarea) return;
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const selected = form.body.slice(start, end) || placeholder;
-    const next =
-      form.body.slice(0, start) +
-      before +
-      selected +
-      after +
-      form.body.slice(end);
 
-    update("body", next);
+    setForm((prev) => {
+      const selected = prev.body.slice(start, end) || placeholder;
+      return {
+        ...prev,
+        body:
+          prev.body.slice(0, start) +
+          before +
+          selected +
+          after +
+          prev.body.slice(end),
+      };
+    });
+
+    const selectedLength = (textarea.value.slice(start, end) || placeholder)
+      .length;
 
     // El cursor queda envolviendo lo insertado, para poder seguir escribiendo
     // encima sin ir a buscarlo con el ratón.
@@ -178,7 +194,7 @@ export function PostEditor({
       textarea.focus();
       textarea.setSelectionRange(
         start + before.length,
-        start + before.length + selected.length
+        start + before.length + selectedLength
       );
     });
   }
@@ -193,10 +209,16 @@ export function PostEditor({
     const textarea = bodyRef.current;
     if (!textarea) return;
     const start = textarea.selectionStart;
-    const lineStart = form.body.lastIndexOf("\n", start - 1) + 1;
-    const next =
-      form.body.slice(0, lineStart) + tool.before + form.body.slice(lineStart);
-    update("body", next);
+    setForm((prev) => {
+      const lineStart = prev.body.lastIndexOf("\n", start - 1) + 1;
+      return {
+        ...prev,
+        body:
+          prev.body.slice(0, lineStart) +
+          tool.before +
+          prev.body.slice(lineStart),
+      };
+    });
     requestAnimationFrame(() => {
       textarea.focus();
       const at = start + tool.before.length;

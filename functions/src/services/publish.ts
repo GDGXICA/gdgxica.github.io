@@ -183,13 +183,17 @@ export function toPostIndexEntry(
 export async function readPostIndex(
   github: GitHubService
 ): Promise<{ entries: PostIndexEntry[]; sha?: string }> {
-  try {
-    const { data, sha } =
-      await github.getFileContent<PostIndexEntry[]>("posts/index.json");
-    return { entries: Array.isArray(data) ? data : [], sha };
-  } catch {
-    return { entries: [] };
-  }
+  // `getFileContentIfExists` devuelve null SOLO ante un 404, así que un fallo
+  // de red se propaga en vez de disfrazarse de "todavía no hay índice". Con la
+  // versión anterior, un fallo transitorio al borrar hacía que la entrada no
+  // se quitara del índice y que la respuesta dijera que sí.
+  const file =
+    await github.getFileContentIfExists<PostIndexEntry[]>("posts/index.json");
+  if (!file) return { entries: [] };
+  return {
+    entries: Array.isArray(file.data) ? file.data : [],
+    sha: file.sha,
+  };
 }
 
 /** El post completo tal como está guardado, con su `sha`, o `null` si no existe. */
@@ -197,16 +201,9 @@ export async function readPost(
   github: GitHubService,
   id: string
 ): Promise<{ data: Record<string, unknown>; sha: string } | null> {
-  try {
-    return await github.getFileContent<Record<string, unknown>>(
-      `posts/${id}.json`
-    );
-  } catch {
-    // Igual que `eventExists`: esto también se traga un fallo de red. Quien
-    // llama solo pierde el `sha`, y entonces `putFile` falla por su cuenta —
-    // no se pisa nada sin querer.
-    return null;
-  }
+  return github.getFileContentIfExists<Record<string, unknown>>(
+    `posts/${id}.json`
+  );
 }
 
 export async function postExists(
@@ -252,13 +249,18 @@ export async function publishPost(
   );
 }
 
-/** Borra el post y su entrada del índice. `false` si no había tal post. */
+/**
+ * Borra el post y su entrada del índice.
+ *
+ * Devuelve el post que había, para que quien llama pueda decidir con él —por
+ * ejemplo si hace falta reconstruir el sitio—, o `null` si no existía.
+ */
 export async function removePost(
   github: GitHubService,
   id: string
-): Promise<boolean> {
+): Promise<Record<string, unknown> | null> {
   const existing = await readPost(github, id);
-  if (!existing) return false;
+  if (!existing) return null;
 
   await github.deleteFile(
     `posts/${id}.json`,
@@ -277,5 +279,5 @@ export async function removePost(
     );
   }
 
-  return true;
+  return existing.data;
 }

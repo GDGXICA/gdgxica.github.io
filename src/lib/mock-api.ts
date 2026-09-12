@@ -54,12 +54,13 @@ export const mockApi = {
   createPost: () => ok({ id: "nuevo-post" }),
   updatePost: () => ok({ id: "actualizado" }),
   deletePost: () => ok(null),
-  // Una imagen de 1x1 en gris, para que la vista previa enseñe algo real sin
-  // subir nada.
+  // Una URL https de verdad, no un `data:`. Con un data: URL el markdown
+  // insertado (`![](data:…)`) lo rechazaba el propio validador del editor y
+  // dejaba el botón de guardar bloqueado sin forma obvia de salir.
   uploadPostImage: () =>
     ok({
       path: "posts/images/preview.png",
-      url: "data:image/gif;base64,R0lGODlhAQABAIAAAMLCwgAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==",
+      url: "https://gdgica.com/gdg-logo.png",
     }),
 
   listSponsors: () => ok(MOCK_SPONSORS),

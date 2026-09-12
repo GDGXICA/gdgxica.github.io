@@ -183,7 +183,9 @@ export async function deletePost(req: Request, res: Response) {
       return;
     }
 
-    triggerRebuildAndLog(github);
+    // Mismo criterio que al crear y al editar: el sitio nunca enseñó un
+    // borrador, así que borrarlo no cambia nada que reconstruir.
+    if (removed.status === "published") triggerRebuildAndLog(github);
 
     await writeAuditLog(
       {
@@ -191,7 +193,7 @@ export async function deletePost(req: Request, res: Response) {
         performedBy: user.uid,
         targetId: id,
         targetType: "post",
-        details: {},
+        details: { status: String(removed.status ?? "") },
       },
       req
     );

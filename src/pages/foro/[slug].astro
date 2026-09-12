@@ -19,13 +19,16 @@ const { Content } = await render(post);
 
 // Tres más, las más recientes que no sean esta. Se calcula aquí y no en el
 // loader porque depende de qué post se está pintando.
+// Una fecha ausente o ilegible daría NaN, y un comparador que devuelve NaN
+// deja el orden del vecindario entero en manos de la implementación de sort.
+const time = (iso: string) => {
+  const ms = Date.parse(iso || "");
+  return Number.isNaN(ms) ? 0 : ms;
+};
+
 const related = (await getCollection("posts"))
   .filter((other) => other.id !== post.id)
-  .sort(
-    (a, b) =>
-      Date.parse(b.data.publishedAt || "") -
-      Date.parse(a.data.publishedAt || "")
-  )
+  .sort((a, b) => time(b.data.publishedAt) - time(a.data.publishedAt))
   .slice(0, 3);
 
 const url = `https://gdgica.com/foro/${post.id}/`;

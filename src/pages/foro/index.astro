@@ -9,9 +9,18 @@ import { getCollection } from "astro:content";
 import { fetchLinks } from "@/loaders/transform-site-config";
 
 // Más recientes primero. El loader ya dejó fuera los borradores.
+//
+// `publishedAt` puede faltar en un post commiteado a mano, y `Date.parse` de
+// algo ilegible da NaN: un comparador que devuelve NaN deja el orden de todo
+// el vecindario a merced de la implementación de sort, no solo el del post sin
+// fecha. Con 0, los que no tienen fecha caen al final y de forma estable.
+const time = (iso: string) => {
+  const ms = Date.parse(iso || "");
+  return Number.isNaN(ms) ? 0 : ms;
+};
+
 const posts = (await getCollection("posts")).sort(
-  (a, b) =>
-    Date.parse(b.data.publishedAt || "") - Date.parse(a.data.publishedAt || "")
+  (a, b) => time(b.data.publishedAt) - time(a.data.publishedAt)
 );
 
 const links = await fetchLinks();

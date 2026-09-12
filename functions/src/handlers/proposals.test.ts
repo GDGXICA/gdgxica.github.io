@@ -430,6 +430,64 @@ describe("publishProposal", () => {
     });
   });
 
+  // El post lo escribió quien propuso, no quien pulsa publicar. El camino
+  // directo firma con el token; aquí el equivalente es el doc de la propuesta,
+  // y sin esto el post salía sin firma en la tarjeta ni en el JSON-LD.
+  it("firma un post publicado con quien lo propuso", async () => {
+    seedApproved({
+      type: "post",
+      payload: {
+        id: "mi-post",
+        title: "Mi post",
+        body: "Un cuerpo normal.",
+      },
+      createdByName: "Colaboradora Externa",
+    });
+
+    const res = buildRes();
+    await handler.publishProposal(
+      buildReq("organizer", "org", {}, { id: "p1" }),
+      res
+    );
+
+    expect(res.__body?.success).toBe(true);
+    expect(published[0].kind).toBe("post");
+    expect(published[0].payload).toMatchObject({
+      id: "mi-post",
+      author_name: "Colaboradora Externa",
+      // Publicar ES la decisión de publicar: el estado no puede quedarse en
+      // borrador después de aprobarlo.
+      status: "published",
+    });
+    expect(
+      Date.parse(published[0].payload.published_at as string)
+    ).not.toBeNaN();
+  });
+
+  it("rechaza un post propuesto con HTML en el cuerpo", async () => {
+    seedApproved({
+      type: "post",
+      payload: {
+        id: "malo",
+        title: "Malo",
+        // El bypass de la línea indentada tras un párrafo, que la primera
+        // versión de la validación daba por limpio.
+        body: "hola\n    <script>alert(1)</script>",
+      },
+    });
+
+    const res = buildRes();
+    await handler.publishProposal(
+      buildReq("organizer", "org", {}, { id: "p1" }),
+      res
+    );
+
+    // La revalidación al publicar es lo que lo para: pueden pasar días entre
+    // enviar y publicar, y la regla pudo cambiar entremedias.
+    expect(res.__status).toBe(422);
+    expect(published).toHaveLength(0);
+  });
+
   it("solo publica una propuesta aprobada", async () => {
     seedApproved({ status: "submitted" });
     const res = buildRes();

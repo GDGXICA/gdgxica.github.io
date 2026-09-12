@@ -16,6 +16,12 @@ const STATUS: Record<string, { label: string; className: string }> = {
   },
 };
 
+/** Milisegundos de una fecha ISO; 0 si falta o es ilegible. */
+function time(iso: string): number {
+  const ms = Date.parse(iso || "");
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
 function formatDate(iso: string): string {
   if (!iso) return "—";
   const ms = Date.parse(iso);
@@ -63,10 +69,9 @@ export function PostList() {
   // Más recientes primero, como en el sitio.
   const ordered = useMemo(
     () =>
-      [...posts].sort(
-        (a, b) =>
-          Date.parse(b.published_at || "") - Date.parse(a.published_at || "")
-      ),
+      // Con NaN en el comparador —una fecha ausente— el orden de toda la tabla
+      // queda a merced de la implementación de sort, no solo el de esa fila.
+      [...posts].sort((a, b) => time(b.published_at) - time(a.published_at)),
     [posts]
   );
 

@@ -11,6 +11,15 @@ vi.mock("../fetch-gdg-data", async (importOriginal) => {
 });
 
 import { deriveExcerpt, postsLoader, readingMinutes } from "../transform-posts";
+import { GdgDataError } from "../fetch-gdg-data";
+
+/** Lo que lanza el repo de datos cuando el fichero NO está. */
+const notFound = (path: string) =>
+  new GdgDataError(`Failed to fetch ${path}: 404`, true, 404);
+
+/** Lo que lanza cuando no se pudo leer: red, 5xx, cuota del CDN. */
+const unreachable = (path: string) =>
+  new GdgDataError(`Failed to fetch ${path}: 503`, false, 503);
 
 interface StoredEntry {
   id: string;
@@ -46,8 +55,16 @@ function harness() {
         keys: () => [...entries.keys()],
       },
       parseData: async ({ data }: { data: Record<string, unknown> }) => data,
+      // Imita a un renderizador de verdad en lo que importa aquí: envuelve en
+      // una etiqueta que la comprobación del HTML admite y ESCAPA el texto,
+      // que es lo que hace cualquier renderizador con el contenido de un
+      // bloque de código. Sin escapar, el fake se inventaría un `<script>` que
+      // el renderizador real nunca habría emitido.
       renderMarkdown: async (body: string) => ({
-        html: `<rendered>${body}</rendered>`,
+        html: `<p>${body
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")}</p>`,
       }),
       logger: {
         info: (message: string) => logs.push({ level: "info", message }),
@@ -71,7 +88,7 @@ function stubRepo(posts: Record<string, unknown>[]) {
       );
     }
     const post = posts.find((p) => `posts/${p.id}.json` === path);
-    if (!post) return Promise.reject(new Error("404"));
+    if (!post) return Promise.reject(notFound(path));
     return Promise.resolve(post);
   });
 }
@@ -97,6 +114,28 @@ describe("postsLoader", () => {
     expect(entry?.rendered?.html).toContain("# Hola");
   });
 
+  // La barrera que de verdad protege: aunque la comprobación del texto dejara
+  // pasar algo —es una aproximación de CommonMark—, el HTML generado se revisa
+  // igual antes de guardarlo.
+  it("no publica un post cuyo HTML renderizado trae algo que no admitimos", async () => {
+    const h = harness();
+    mocks.fetchGdgData.mockImplementation((path: string) => {
+      if (path === "posts/index.json") {
+        return Promise.resolve([{ ...BASE, body: undefined }]);
+      }
+      return Promise.resolve(BASE);
+    });
+    h.context.renderMarkdown = async () => ({
+      html: '<p>hola</p><a href="javascript:alert(1)">pulsa</a>',
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await postsLoader.load(h.context as any);
+
+    expect(h.entries.size).toBe(0);
+    expect(h.logs.some((l) => l.level === "error")).toBe(true);
+  });
+
   // El filtro vive en la única puerta por la que el contenido entra al sitio.
   it("deja fuera los borradores", async () => {
     const { entries } = await load([
@@ -109,11 +148,32 @@ describe("postsLoader", () => {
 
   // Estrenar la sección no puede tumbar el build del sitio entero.
   it("tolera que el repo de datos no tenga todavía carpeta posts", async () => {
-    mocks.fetchGdgData.mockRejectedValue(new Error("404"));
+    mocks.fetchGdgData.mockRejectedValue(notFound("posts/index.json"));
     const h = harness();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await expect(postsLoader.load(h.context as any)).resolves.toBeUndefined();
     expect(h.entries.size).toBe(0);
+  });
+
+  // Un fallo transitorio del CDN durante un deploy publicaba el sitio con el
+  // foro vacío, y el único rastro era una línea `info` en el log.
+  it("NO confunde un fallo de lectura con un foro vacío", async () => {
+    mocks.fetchGdgData.mockRejectedValue(unreachable("posts/index.json"));
+    const h = harness();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await expect(postsLoader.load(h.context as any)).rejects.toThrow("503");
+  });
+
+  it("NO publica el resto si un post concreto no se pudo leer", async () => {
+    const h = harness();
+    mocks.fetchGdgData.mockImplementation((path: string) => {
+      if (path === "posts/index.json") {
+        return Promise.resolve([{ ...BASE, body: undefined }]);
+      }
+      return Promise.reject(unreachable(path));
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await expect(postsLoader.load(h.context as any)).rejects.toThrow("503");
   });
 
   it("avisa y sigue si un post del índice no tiene fichero", async () => {
@@ -126,7 +186,7 @@ describe("postsLoader", () => {
         ]);
       }
       if (path === "posts/hola-foro.json") return Promise.resolve(BASE);
-      return Promise.reject(new Error("404"));
+      return Promise.reject(notFound(path));
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await postsLoader.load(h.context as any);
