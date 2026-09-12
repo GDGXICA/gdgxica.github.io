@@ -58,6 +58,13 @@ type ParticipantDoc = Record<string, unknown>;
 interface Scene {
   instance?: Record<string, unknown>;
   participants?: Array<{ id: string; data: ParticipantDoc }>;
+  /**
+   * Si esta, la transaccion ejecuta su callback DOS veces, llamando a este
+   * hook entremedias: modela el reintento de Firestore cuando otro giro gana
+   * la carrera por `instanceRef`. El hook muta la escena como lo habria hecho
+   * ese otro giro.
+   */
+  onRetry?: () => void;
 }
 
 interface Wiring {
@@ -86,17 +93,25 @@ function wire(scene: Scene): Wiring {
     data: () => p.data,
   }));
 
+  const participantsSnapshot = () => ({
+    docs: participantDocs,
+    empty: participantDocs.length === 0,
+  });
+
   const participantsCol = {
-    get: vi.fn(async () => ({
-      docs: participantDocs,
-      empty: participantDocs.length === 0,
-    })),
+    // El handler lee participantes DENTRO de la transaccion; este `get` suelto
+    // queda a proposito para que el mismo cableado sirva tambien contra una
+    // version que lea fuera, y se pueda comprobar que el test de la carrera
+    // distingue entre ambas.
+    get: vi.fn(async () => participantsSnapshot()),
     doc: vi.fn((id: string) => ({ __kind: "participant", id })),
   };
 
   const runTransaction = vi.fn(async (cb: (tx: unknown) => unknown) => {
     const tx = {
-      get: vi.fn(async () => instanceSnap()),
+      get: vi.fn(async (ref: unknown) =>
+        ref === participantsCol ? participantsSnapshot() : instanceSnap()
+      ),
       update: vi.fn(
         (
           ref: { __kind?: string; id?: string },
@@ -110,6 +125,15 @@ function wire(scene: Scene): Wiring {
         }
       ),
     };
+
+    const first = await cb(tx);
+    if (!scene.onRetry) return first;
+
+    // Firestore descarta las escrituras del intento que perdio y vuelve a
+    // ejecutar el callback contra datos frescos.
+    scene.onRetry();
+    instanceUpdates.length = 0;
+    participantUpdates.length = 0;
     return cb(tx);
   });
 
@@ -254,6 +278,45 @@ describe("minigameRoulette.spin", () => {
       expect(
         (res.__body as { data: { spinNumber: number } }).data.spinNumber
       ).toBe(2);
+    });
+
+    // La carrera: dos giros simultaneos (dos organizadores con el panel
+    // abierto, o el proyector y el panel) leian la misma lista. Cuando el
+    // ganador se elegia FUERA de la transaccion, el reintento de Firestore
+    // repetia ese mismo ganador y solo le pisaba el spinNumber — misma
+    // persona premiada dos veces y otro elegible saltado.
+    it("vuelve a sortear cuando la transaccion reintenta", async () => {
+      vi.spyOn(Math, "random").mockReturnValue(0);
+      const participants = [
+        { id: "uid-a", data: JOINED("a") },
+        { id: "uid-b", data: JOINED("b") },
+      ];
+      const w = wire({
+        instance: LIVE,
+        participants,
+        onRetry: () => {
+          // El giro que gano la carrera ya se llevo a "a".
+          participants[0].data = {
+            ...participants[0].data,
+            rouletteWonAt: SERVER_TS,
+            rouletteSpinNumber: 1,
+          };
+        },
+      });
+      const res = buildRes();
+      await handler.spin(buildReq(), res);
+
+      // Math.random() === 0 elige siempre el primer elegible. En el reintento
+      // "a" ya no lo es, asi que el premio tiene que irse a "b".
+      expect((res.__body as { data: { winnerId: string } }).data.winnerId).toBe(
+        "uid-b"
+      );
+      expect(w.participantUpdates).toEqual([
+        {
+          id: "uid-b",
+          data: { rouletteWonAt: SERVER_TS, rouletteSpinNumber: 1 },
+        },
+      ]);
     });
 
     it("400 cuando no hay ningun participante", async () => {

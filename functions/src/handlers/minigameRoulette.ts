@@ -52,33 +52,35 @@ export async function spin(req: Request, res: Response) {
     // consulta no veía a nadie y la ruleta no giraba jamás — devolvía "No hay
     // participantes elegibles" con la sala llena.
     //
-    // Filtrar aquí, además de tratar ambas formas por igual, arregla a los
-    // participantes ya apuntados sin tener que rellenarles el campo. Es la
+    // Filtrar en memoria, además de tratar ambas formas por igual, arregla a
+    // los participantes ya apuntados sin rellenarles el campo. Es la
     // misma regla que ya aplicaba el cliente en useRouletteParticipants.ts,
     // que por eso pintaba elegibles y habilitaba el botón mientras el
     // servidor rechazaba el giro.
     const participantsCol = instanceRef.collection("participants");
-    const participantsSnap = await participantsCol.get();
-
-    const eligible = participantsSnap.docs.filter((doc) => {
-      const wonAt = (doc.data() as { rouletteWonAt?: unknown }).rouletteWonAt;
-      return wonAt === null || wonAt === undefined;
-    });
-
-    if (eligible.length === 0) {
-      res
-        .status(400)
-        .json({ success: false, error: "No hay participantes elegibles" });
-      return;
-    }
-
-    const winner = eligible[Math.floor(Math.random() * eligible.length)];
-    const winnerData = winner.data() as { alias?: string };
-    const alias = winnerData.alias ?? "Anónimo";
     const now = FieldValue.serverTimestamp();
 
-    const spinNumber = await db.runTransaction(async (tx) => {
+    // Leer participantes y sortear van DENTRO de la transacción. Elegir fuera
+    // y escribir dentro parece equivalente y no lo es: dos giros simultáneos
+    // —dos organizadores con el panel abierto, o el proyector y el panel; el
+    // `disabled` del botón solo frena a un cliente— leían la misma lista y
+    // podían sacar a la misma persona. Las dos transacciones chocan en
+    // `instanceRef` y una reintenta, pero el ganador estaba calculado FUERA
+    // del callback, así que el reintento repetía el mismo y solo le pisaba
+    // `rouletteSpinNumber`: la misma persona premiada dos veces, otro
+    // elegible saltado en silencio y `spinCount` llegando a 2. Sorteando
+    // aquí, el reintento vuelve a leer y vuelve a sortear.
+    const outcome = await db.runTransaction(async (tx) => {
       const freshSnap = await tx.get(instanceRef);
+      const participantsSnap = await tx.get(participantsCol);
+
+      const eligible = participantsSnap.docs.filter((doc) => {
+        const wonAt = (doc.data() as { rouletteWonAt?: unknown }).rouletteWonAt;
+        return wonAt === null || wonAt === undefined;
+      });
+      if (eligible.length === 0) return null;
+
+      const winner = eligible[Math.floor(Math.random() * eligible.length)];
       const spinCount =
         ((freshSnap.data() as { spinCount?: number })?.spinCount ?? 0) + 1;
 
@@ -92,8 +94,19 @@ export async function spin(req: Request, res: Response) {
         rouletteSpinNumber: spinCount,
       });
 
-      return spinCount;
+      return {
+        winnerId: winner.id,
+        alias: (winner.data() as { alias?: string }).alias ?? "Anónimo",
+        spinNumber: spinCount,
+      };
     });
+
+    if (!outcome) {
+      res
+        .status(400)
+        .json({ success: false, error: "No hay participantes elegibles" });
+      return;
+    }
 
     await writeAuditLog(
       {
@@ -101,16 +114,18 @@ export async function spin(req: Request, res: Response) {
         performedBy: user.uid,
         targetId: id,
         targetType: "minigame_instance",
-        details: { slug, winnerId: winner.id, alias, spinNumber },
+        details: {
+          slug,
+          winnerId: outcome.winnerId,
+          alias: outcome.alias,
+          spinNumber: outcome.spinNumber,
+        },
         timestamp: now,
       },
       req
     );
 
-    res.json({
-      success: true,
-      data: { winnerId: winner.id, alias, spinNumber },
-    });
+    res.json({ success: true, data: outcome });
   } catch (err) {
     res.status(500).json({ success: false, error: safeError(err) });
   }
