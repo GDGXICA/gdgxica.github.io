@@ -1,15 +1,15 @@
-import nodemailer from "nodemailer";
+import nodemailer, { type Transporter } from "nodemailer";
 import { GMAIL_USER, GMAIL_APP_PASSWORD } from "../config";
 
 // Single transporter reused across invocations within a warm instance.
 // Created lazily so the secrets are only read when a send actually
 // happens (and so importing this module never throws at deploy time).
-let transporter: nodemailer.Transporter | null = null;
+let transporter: Transporter | null = null;
 
 // Exported so credentialEmail.ts sends through the SAME pooled connection.
 // A second transport would authenticate separately and reintroduce exactly
 // the "454-4.7.0 Too many login attempts" failure the pool exists to avoid.
-export function getTransporter(): nodemailer.Transporter {
+export function getTransporter(): Transporter {
   if (transporter) return transporter;
   // Pool a single authenticated connection across messages. Without
   // pooling, every sendMail opens TCP+TLS+AUTH from scratch; with the
