@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { AuthProvider, DevAuthProvider, useAuth } from "./AuthProvider";
 import { LoginScreen } from "./LoginScreen";
 import { isDevPreview } from "@/lib/api";
@@ -161,8 +161,17 @@ function renderPage(page: string, guards: Guards | null) {
 }
 
 function AdminContent({ page, currentPath }: Props) {
-  const { user, role, profile, loading, canAccessPanel, can, signOut } =
-    useAuth();
+  const {
+    user,
+    role,
+    profile,
+    profileError,
+    retryProfile,
+    loading,
+    canAccessPanel,
+    can,
+    signOut,
+  } = useAuth();
 
   if (loading) {
     return (
@@ -174,6 +183,21 @@ function AdminContent({ page, currentPath }: Props) {
 
   if (!user) {
     return <LoginScreen />;
+  }
+
+  // ANTES que la pantalla de permisos, y no después: si el perfil no se pudo
+  // leer no sabemos qué permisos tiene esta cuenta, así que decir «no tienes
+  // permisos» sería afirmar algo que no comprobamos. Pasó en producción — a
+  // un admin le falló la lectura en el wifi del evento, leyó que no tenía
+  // acceso y pidió permisos que ya tenía.
+  if (profileError) {
+    return (
+      <ProfileUnavailable
+        email={user.email}
+        onRetry={retryProfile}
+        signOut={signOut}
+      />
+    );
   }
 
   if (!canAccessPanel) {
@@ -232,6 +256,62 @@ function DevContent({ page, currentPath }: Props) {
       </div>
       {renderPage(page, null)}
     </AdminShell>
+  );
+}
+
+/**
+ * No pudimos leer `users/{uid}`. No es lo mismo que no tener permisos, y por
+ * eso no comparte pantalla con «Acceso restringido»: aquí la acción útil es
+ * reintentar, no pedir acceso.
+ */
+function ProfileUnavailable({
+  email,
+  onRetry,
+  signOut,
+}: {
+  email: string | null;
+  onRetry: () => Promise<void>;
+  signOut: () => void;
+}) {
+  const [retrying, setRetrying] = useState(false);
+
+  async function handleRetry() {
+    setRetrying(true);
+    await onRetry();
+    setRetrying(false);
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-md rounded-xl bg-white p-8 text-center shadow-lg dark:bg-gray-800">
+        <p className="text-4xl">📡</p>
+        <h1 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">
+          No pudimos cargar tu perfil
+        </h1>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">
+          Tu sesion sigue abierta, pero no se pudo leer tu cuenta. Suele ser la
+          conexion. Reintenta en un momento; tus permisos no han cambiado.
+        </p>
+        <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">
+          Sesion: {email}
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <button
+            onClick={handleRetry}
+            disabled={retrying}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+          >
+            {retrying ? "Reintentando…" : "Reintentar"}
+          </button>
+          <button
+            onClick={signOut}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            Cerrar sesion
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

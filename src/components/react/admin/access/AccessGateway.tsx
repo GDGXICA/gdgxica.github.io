@@ -26,7 +26,9 @@ function Spinner() {
 
 /** Formulario público de solicitud de acceso. */
 function RequestForm() {
-  const { user, loading, canAccessPanel } = useAuth();
+  const { user, loading, canAccessPanel, profileError, retryProfile } =
+    useAuth();
+  const [retrying, setRetrying] = useState(false);
   const [existing, setExisting] = useState<{ status: string } | null>(null);
   const [checking, setChecking] = useState(true);
   const [role, setRole] = useState<Role>("contributor");
@@ -52,6 +54,43 @@ function RequestForm() {
 
   if (loading || checking) return <Spinner />;
   if (!user) return <LoginScreen />;
+
+  // Sin perfil legible no sabemos si esta persona YA tiene acceso, y
+  // ofrecerle el formulario es exactamente lo que metió en la cola una
+  // solicitud de organizer firmada por un administrador.
+  if (profileError) {
+    return (
+      <Card>
+        <p className="text-4xl">📡</p>
+        <h1 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">
+          No pudimos cargar tu perfil
+        </h1>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">
+          No se pudo leer tu cuenta, y sin eso no sabemos si ya tienes acceso.
+          Suele ser la conexion: reintenta en un momento.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <button
+            onClick={async () => {
+              setRetrying(true);
+              await retryProfile();
+              setRetrying(false);
+            }}
+            disabled={retrying}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+          >
+            {retrying ? "Reintentando…" : "Reintentar"}
+          </button>
+          <a
+            href="/"
+            className="inline-block rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            Volver al sitio
+          </a>
+        </div>
+      </Card>
+    );
+  }
 
   if (canAccessPanel) {
     return (
