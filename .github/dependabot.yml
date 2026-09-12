@@ -11,6 +11,17 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    ignore:
+      # firebase-admin 14 removed the legacy namespace: admin.firestore and
+      # admin.auth are gone (undefined at runtime, not just a type change),
+      # and 21 files under functions/src still reach for them. The bump
+      # passes CI green because the tests mock firebase-admin and CI never
+      # runs tsc -- it only breaks in deploy.yml, on main.
+      # Patches and minors on 13.x still come through; only the major is
+      # held back. Remove this once the modular migration
+      # (getFirestore/getAuth from firebase-admin/<service>) lands.
+      - dependency-name: "firebase-admin"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: "/"
