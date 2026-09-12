@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import {
   TYPE_COLORS,
@@ -24,6 +24,19 @@ export function AttachTemplateModal({
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // `onError` se lee desde una ref, y NO va en las dependencias del efecto de
+  // abajo. Teniéndolo ahí, la garantía de "esto se pide una sola vez" quedaba
+  // en manos de quien renderiza el modal: bastaba con pasar una flecha nueva
+  // en cada render para que un fallo se realimentara —onError → toast →
+  // render del padre → nueva identidad → refetch— a ~2.5 req/s contra la API.
+  // El padre además la memoiza, pero la garantía tiene que vivir aquí, junto
+  // al efecto, y no depender de que ningún llamador futuro se acuerde.
+  const onErrorRef = useRef(onError);
+  useEffect(() => {
+    onErrorRef.current = onError;
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -33,14 +46,22 @@ export function AttachTemplateModal({
       if (res.success && Array.isArray(res.data)) {
         setTemplates(res.data as Template[]);
       } else {
-        onError(res.error || "Error al cargar plantillas");
+        const message = res.error || "Error al cargar plantillas";
+        // Se guarda además de avisar al padre. El toast se desvanece a los 5
+        // segundos y, sin esto, lo único que quedaba en pantalla era el
+        // estado vacío: «No hay plantillas disponibles, crea una en
+        // /admin/minigame-templates» — que le dice a alguien que acaba de
+        // recibir un 403 que no existen plantillas, y lo manda a una página
+        // para la que probablemente tampoco tiene permiso.
+        setLoadError(message);
+        onErrorRef.current(message);
       }
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [onError]);
+  }, []);
 
   const available = useMemo(
     () =>
@@ -91,7 +112,12 @@ export function AttachTemplateModal({
               Cargando plantillas...
             </p>
           )}
-          {!loading && available.length === 0 && (
+          {!loading && loadError && (
+            <p className="py-6 text-center text-sm text-red-600 dark:text-red-400">
+              {loadError}
+            </p>
+          )}
+          {!loading && !loadError && available.length === 0 && (
             <p className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
               No hay plantillas disponibles. Crea una en{" "}
               <a
