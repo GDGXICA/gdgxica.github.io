@@ -30,11 +30,17 @@ interface AuthContextType {
   /** Doc `users/{uid}` completo, o `null` si aún no cargó. */
   profile: PermissionSubject | null;
   /**
-   * `true` cuando el perfil NO se pudo leer: red caída, un chunk de Firebase
-   * que no cargó, IndexedDB inaccesible. Es lo contrario de "lo leímos y no
-   * tiene permisos", y la UI tiene que distinguirlos. Sin esta bandera un
-   * fallo de lectura se pintaba como «Acceso restringido», idéntico a una
-   * cuenta sin permisos, y la persona creía que se los habían quitado.
+   * `true` cuando el perfil NO se pudo leer: se cayó la red, el chunk de
+   * Firestore no cargó, IndexedDB no está disponible. Es lo contrario de "lo
+   * leímos y no tiene permisos", y la UI tiene que distinguirlos: sin esta
+   * bandera un fallo de lectura se pintaba como «Acceso restringido»,
+   * idéntico a una cuenta sin permisos, y la persona creía que se los habían
+   * quitado.
+   *
+   * NO cubre que falle el chunk de AUTH. `onAuthStateChanged` en
+   * src/lib/auth.ts no encadena `.catch()`, así que si `getAuth()` rechaza el
+   * observador nunca llega a dispararse, `loading` se queda en `true` y lo
+   * que se ve es un spinner eterno. Es un agujero distinto y anterior a esto.
    */
   profileError: boolean;
   /** Reintenta leer el perfil, sin recargar la página. */
@@ -147,9 +153,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const retryProfile = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
+    // No toca `loading`: eso significa "todavía no sabemos quién es", y aquí
+    // ya lo sabemos — lo único que se recarga es el perfil. Al ponerlo, el
+    // panel cambiaba a su spinner de pantalla completa y desmontaba la
+    // tarjeta del reintento antes de que llegara a pintar su propio estado.
     await loadProfile(user.uid);
-    setLoading(false);
   }, [user, loadProfile]);
 
   useEffect(() => {

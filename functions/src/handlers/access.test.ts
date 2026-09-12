@@ -294,6 +294,39 @@ describe("createRequest", () => {
     expect(res.__status).toBe(400);
   });
 
+  // La guarda mira si el rol PEDIDO anade algo, no si la cuenta ya entra al
+  // panel. Paso en produccion: a un admin le fallo la lectura de su perfil,
+  // el panel lo leyo como "sin permisos" y le ofrecio el formulario — quedo
+  // una solicitud de organizer pendiente firmada por un administrador.
+  it("rechaza a quien ya tiene todo lo que pide", async () => {
+    docs.set("users/u1", { role: "admin", status: "active" });
+    const res = buildRes();
+    await handler.createRequest(
+      buildReq({
+        body: { requestedRole: "organizer", motivo: "quiero organizar" },
+      }),
+      res
+    );
+    expect(res.__status).toBe(409);
+    expect(docs.get("access_requests/u1")).toBeUndefined();
+  });
+
+  it("deja a un contributor pedir organizer, que si le anade", async () => {
+    docs.set("users/u1", { role: "contributor", status: "active" });
+    const res = buildRes();
+    await handler.createRequest(
+      buildReq({
+        body: { requestedRole: "organizer", motivo: "llevo dos eventos ya" },
+      }),
+      res
+    );
+    expect(res.__status).toBe(201);
+    expect(docs.get("access_requests/u1")).toMatchObject({
+      status: "pending",
+      requestedRole: "organizer",
+    });
+  });
+
   it("no permite reabrir una solicitud ya aprobada", async () => {
     docs.set("access_requests/u1", { status: "approved" });
     const res = buildRes();
