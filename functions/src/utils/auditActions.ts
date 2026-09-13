@@ -53,6 +53,12 @@ export const AUDIT_ACTIONS = [
   "team.create",
   "team.update",
   "team.delete",
+  "post.create",
+  "post.update",
+  "post.delete",
+  // La imagen es contenido publicado igual que el post: se sube al bucket y
+  // queda accesible por URL pública, así que deja fila propia.
+  "post.image.upload",
   "location.create",
   "location.update",
   "location.delete",

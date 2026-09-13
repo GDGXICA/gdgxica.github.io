@@ -49,6 +49,30 @@ export interface CredentialCreatePayload {
   credentialImageDataUrl: string | null;
 }
 
+/**
+ * Un post del foro, tal como lo guarda el repo de datos.
+ *
+ * Espeja `postSchema` en functions/src/schemas/index.ts. `updated_at` lo pone
+ * el servidor pero viaja de vuelta al guardar, porque el editor devuelve el
+ * post entero tal como lo cargó.
+ */
+export interface Post {
+  id: string;
+  title: string;
+  excerpt: string;
+  cover_image_url: string;
+  tags: string[];
+  author_name: string;
+  author_photo_url: string;
+  published_at: string;
+  status: "draft" | "published";
+  body: string;
+  updated_at?: string;
+}
+
+/** Lo que devuelve el índice: un post sin su cuerpo. */
+export type PostSummary = Omit<Post, "body">;
+
 async function request<T>(
   method: string,
   path: string,
@@ -123,6 +147,20 @@ const realApi = {
   updateSpeaker: (id: string, data: unknown) =>
     request("PUT", `/speakers/${id}`, data),
   deleteSpeaker: (id: string) => request("DELETE", `/speakers/${id}`),
+
+  // Posts del foro. `listPosts` devuelve el índice (sin cuerpos) y `getPost`
+  // el post entero: el listado del panel no necesita el markdown de cada uno.
+  listPosts: () => request<PostSummary[]>("GET", "/posts"),
+  getPost: (id: string) => request<Post>("GET", `/posts/${id}`),
+  createPost: (data: unknown) => request("POST", "/posts", data),
+  updatePost: (id: string, data: unknown) =>
+    request("PUT", `/posts/${id}`, data),
+  deletePost: (id: string) => request("DELETE", `/posts/${id}`),
+  // Devuelve la URL pública ya lista para pegar en el markdown.
+  uploadPostImage: (dataUrl: string) =>
+    request<{ path: string; url: string }>("POST", "/posts/images", {
+      dataUrl,
+    }),
 
   // Sponsors
   listSponsors: () => request("GET", "/sponsors"),

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { validateUrl, validateMapEmbedUrl } from "../middleware/validate";
+import { MARKDOWN_ISSUE_MESSAGES, findMarkdownIssue } from "../utils/markdown";
 
 // Reused primitives ---------------------------------------------------------
 
@@ -22,6 +23,29 @@ const urlText = (max: number) =>
 const mapEmbedText = (max: number) =>
   shortText(max).refine(validateMapEmbedUrl, {
     message: "must be a https://www.google.com/maps/... URL",
+  });
+
+// Fecha ISO 8601, tal como la produce `Date.prototype.toISOString()`. Se
+// valida en vez de aceptar texto libre porque el sitio ordena y formatea por
+// ella: una fecha ilegible mandaría el post al final de la lista sin decir por
+// qué.
+const isoText = shortText(40).refine(
+  (value) => value === "" || !Number.isNaN(Date.parse(value)),
+  { message: "must be an ISO 8601 date" }
+);
+
+// Cuerpo markdown sin HTML en crudo. El mensaje nombra el problema concreto
+// para que el autor sepa qué corregir; un "invalid body" genérico, en un texto
+// de miles de caracteres, no es accionable.
+const markdownText = (max: number) =>
+  longText(max).superRefine((value, ctx) => {
+    const issue = findMarkdownIssue(value);
+    if (issue) {
+      ctx.addIssue({
+        code: "custom",
+        message: MARKDOWN_ISSUE_MESSAGES[issue.kind],
+      });
+    }
   });
 
 // Schemas -------------------------------------------------------------------
@@ -142,6 +166,72 @@ export const speakerSchema = z
     // fuera, así que el esquema los acota a http(s).
     social_links: z.record(shortText(50), urlText(2000)).default({}),
     talk_ids: z.array(shortText(200)).max(100).default([]),
+  })
+  .strict();
+
+/**
+ * Un post del foro.
+ *
+ * El cuerpo es markdown y se renderiza a HTML en el build del sitio, así que
+ * el esquema es el sitio donde se rechaza el HTML en crudo: es el único punto
+ * por el que pasan los dos caminos de escritura —el organizador que publica
+ * directo y la propuesta de un colaborador que otro publica después—. Ver
+ * `utils/markdown.ts`.
+ */
+export const postSchema = z
+  .object({
+    id: safeId,
+    title: shortText(200).min(1),
+    // Sale en la tarjeta del listado y como `og:description`. Si viene vacío,
+    // el sitio cae al principio del cuerpo.
+    excerpt: shortText(500).default(""),
+    cover_image_url: urlText(2000).default(""),
+    tags: z.array(shortText(50)).max(10).default([]),
+    author_name: shortText(200).default(""),
+    author_photo_url: urlText(2000).default(""),
+    // ISO 8601. Vacío —el default— significa "ahora", y lo estampa el handler
+    // al guardar; indicarla a mano sirve para conservar la fecha original al
+    // reeditar un post viejo.
+    published_at: isoText.default(""),
+    // Un borrador vive en el repo de datos pero el loader del sitio lo filtra,
+    // así que no llega a publicarse. Ojo: "borrador" es "no sale en el sitio",
+    // no "secreto" — el repo de datos es público.
+    status: z.enum(["draft", "published"]).default("draft"),
+    body: markdownText(50000),
+    // Lo estampa el servidor en cada escritura. Está en el esquema —que es
+    // .strict()— porque el editor carga el post, lo esparce y lo devuelve
+    // entero al guardar: sin esta clave, editar un post ya guardado daría 400.
+    updated_at: isoText.optional(),
+  })
+  .strict();
+
+export type PostInput = z.infer<typeof postSchema>;
+
+/**
+ * Subida de una imagen de post.
+ *
+ * Tres formatos, y el MIME del prefijo NO se cree: el handler verifica los
+ * bytes de cabecera y guarda con el tipo que salga de ellos (ver
+ * `services/postImages.ts`). Fijarlos aquí sirve para rechazar barato lo que
+ * ni siquiera lo aparenta.
+ *
+ * El tope en caracteres acota los bytes decodificados a unos 450 KB —base64
+ * infla 4/3— y deja holgura frente al `express.json({ limit: "1mb" })` de
+ * index.ts. El editor reescala antes de subir, así que una foto de móvil llega
+ * muy por debajo; el tope está para que una petición fabricada no pueda
+ * acercarse al límite de Express y morir con un error que no explica nada.
+ */
+const POST_IMAGE_DATAURL_RE =
+  /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+
+export const MAX_POST_IMAGE_DATAURL_CHARS = 620_000;
+
+export const postImageSchema = z
+  .object({
+    dataUrl: z
+      .string()
+      .regex(POST_IMAGE_DATAURL_RE)
+      .max(MAX_POST_IMAGE_DATAURL_CHARS),
   })
   .strict();
 

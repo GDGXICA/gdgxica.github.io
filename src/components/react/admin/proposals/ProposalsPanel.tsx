@@ -1,11 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { api, type Post } from "@/lib/api";
+import { renderMarkdownPreview } from "@/lib/markdown";
+import { PostEditor } from "../posts/PostEditor";
 import { Toast } from "../ui/Toast";
 import { useAuth } from "../AuthProvider";
 
+type ProposalType = "event" | "speaker" | "post";
+
+const TYPE_LABELS: Record<ProposalType, string> = {
+  event: "Evento",
+  speaker: "Speaker",
+  post: "Post del foro",
+};
+
 interface Proposal {
   id: string;
-  type: "event" | "speaker";
+  type: ProposalType;
   status: string;
   createdBy: string;
   createdByName?: string;
@@ -64,7 +74,7 @@ export function ProposalsPanel() {
   } | null>(null);
 
   const [creating, setCreating] = useState(false);
-  const [newType, setNewType] = useState<"event" | "speaker">("event");
+  const [newType, setNewType] = useState<ProposalType>("event");
   const [draft, setDraft] = useState("");
 
   const load = useCallback(async () => {
@@ -164,34 +174,57 @@ export function ProposalsPanel() {
             ? "Propuestas de contenido enviadas por la comunidad. Aprobar no publica: publicar es un segundo paso explícito."
             : "Tus propuestas. Un organizador las revisa antes de que aparezcan en el sitio."}
         </p>
-        <button
-          onClick={() => setCreating((v) => !v)}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          {creating ? "Cancelar" : "Nueva propuesta"}
-        </button>
-      </div>
-
-      {creating && (
-        <form
-          onSubmit={submitNew}
-          className="mb-8 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
-        >
-          <div className="mb-3 flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-900 dark:text-white">
-              Tipo
-            </label>
+        <div className="flex items-center gap-2">
+          {creating && (
             <select
               value={newType}
-              onChange={(e) =>
-                setNewType(e.target.value as "event" | "speaker")
-              }
+              onChange={(e) => setNewType(e.target.value as ProposalType)}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             >
               <option value="event">Evento</option>
               <option value="speaker">Speaker</option>
+              <option value="post">Post del foro</option>
             </select>
-          </div>
+          )}
+          <button
+            onClick={() => setCreating((v) => !v)}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            {creating ? "Cancelar" : "Nueva propuesta"}
+          </button>
+        </div>
+      </div>
+
+      {creating && newType === "post" && (
+        <div className="mb-8">
+          <PostEditor
+            initial={null}
+            heading="Proponer un post"
+            submitLabel="Enviar a revisión"
+            // Publicar la decide quien revisa, no quien propone.
+            showStatus={false}
+            onCancel={() => setCreating(false)}
+            onError={(message) => setToast({ message, type: "error" })}
+            onSubmit={async (post) => {
+              const res = await api.createProposal("post", post);
+              if (!res.success) return res.error || "No se pudo enviar";
+              setCreating(false);
+              setToast({
+                message: "Propuesta enviada a revisión",
+                type: "success",
+              });
+              load();
+              return null;
+            }}
+          />
+        </div>
+      )}
+
+      {creating && newType !== "post" && (
+        <form
+          onSubmit={submitNew}
+          className="mb-8 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
+        >
           <textarea
             required
             rows={10}
@@ -246,7 +279,7 @@ export function ProposalsPanel() {
                       {title}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {p.type === "event" ? "Evento" : "Speaker"}
+                      {TYPE_LABELS[p.type] ?? p.type}
                       {canReview &&
                         ` · ${p.createdByName || p.createdByEmail || p.createdBy}`}
                       {" · "}
@@ -270,9 +303,13 @@ export function ProposalsPanel() {
                   <summary className="cursor-pointer text-xs text-gray-500 dark:text-gray-400">
                     Ver contenido
                   </summary>
-                  <pre className="mt-2 overflow-x-auto rounded-lg bg-gray-50 p-3 text-xs text-gray-700 dark:bg-gray-900 dark:text-gray-300">
-                    {JSON.stringify(p.payload, null, 2)}
-                  </pre>
+                  {p.type === "post" ? (
+                    <PostProposalBody payload={p.payload} />
+                  ) : (
+                    <pre className="mt-2 overflow-x-auto rounded-lg bg-gray-50 p-3 text-xs text-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                      {JSON.stringify(p.payload, null, 2)}
+                    </pre>
+                  )}
                 </details>
 
                 {canReview && (
@@ -317,6 +354,45 @@ export function ProposalsPanel() {
             );
           })}
         </ul>
+      )}
+    </div>
+  );
+}
+
+/**
+ * El cuerpo de un post propuesto, renderizado.
+ *
+ * Revisar un post leyendo su JSON —con el markdown en una sola línea y los
+ * saltos escapados— es irrevisable, y eso es justo lo que hay que mirar antes
+ * de publicar lo que ha escrito alguien de fuera.
+ *
+ * Se pinta DENTRO de la sesión de quien revisa, así que pasa por el mismo
+ * `renderMarkdownPreview` que el editor: valida antes de renderizar y se niega
+ * a devolver HTML si el cuerpo trae etiquetas en crudo. Ver src/lib/markdown.ts.
+ */
+function PostProposalBody({ payload }: { payload: Record<string, unknown> }) {
+  const post = payload as unknown as Partial<Post>;
+  const preview = renderMarkdownPreview(post.body ?? "");
+
+  return (
+    <div className="mt-2 rounded-lg bg-gray-50 p-4 dark:bg-gray-900">
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        /foro/{post.id} · {(post.tags ?? []).join(", ") || "sin etiquetas"}
+      </p>
+      {post.excerpt && (
+        <p className="mt-2 text-sm text-gray-600 italic dark:text-gray-400">
+          {post.excerpt}
+        </p>
+      )}
+      {"html" in preview ? (
+        <div
+          className="prose prose-sm dark:prose-invert mt-3 max-w-none"
+          dangerouslySetInnerHTML={{ __html: preview.html }}
+        />
+      ) : (
+        <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
+          No se puede previsualizar: {preview.error}
+        </p>
       )}
     </div>
   );

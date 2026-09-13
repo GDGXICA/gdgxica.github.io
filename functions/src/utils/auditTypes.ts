@@ -152,6 +152,7 @@ const CATEGORY_BY_PREFIX: ReadonlyArray<[string, AuditCategory]> = [
   ["speaker.", "content"],
   ["sponsor.", "content"],
   ["team.", "content"],
+  ["post.", "content"],
   ["location.", "content"],
   ["form.", "content"],
   ["stats.", "content"],

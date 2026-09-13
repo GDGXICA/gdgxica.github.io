@@ -46,6 +46,12 @@ const NAV_ITEMS: {
     permission: "speakers:read",
   },
   {
+    label: "Foro",
+    href: "/admin/posts",
+    icon: "📝",
+    permission: "posts:read",
+  },
+  {
     label: "Ubicaciones",
     href: "/admin/locations",
     icon: "📍",

@@ -45,6 +45,40 @@ export class GitHubService {
     return { data: JSON.parse(content) as T, sha: file.sha };
   }
 
+  /**
+   * Como `getFileContent`, pero `null` cuando el fichero NO EXISTE — y solo
+   * entonces.
+   *
+   * La diferencia importa: quien llama suele usar "no existe" para decidir si
+   * crea o actualiza, y un `try/catch` alrededor de `getFileContent` mete en
+   * ese mismo saco los fallos de red y los 5xx de GitHub. Con eso, un fallo
+   * transitorio se leía como "no hay índice" y la escritura siguiente lo
+   * reemplazaba por uno vacío o se saltaba en silencio.
+   */
+  async getFileContentIfExists<T>(
+    path: string
+  ): Promise<{ data: T; sha: string } | null> {
+    const url = `${GITHUB_API_BASE}/repos/${GITHUB_DATA_REPO}/contents/${path}`;
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `token ${this.token}`,
+        Accept: "application/vnd.github.v3+json",
+      },
+    });
+
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      throw new Error(
+        `GitHub API GET ${url}: ${res.status} ${await res.text()}`
+      );
+    }
+
+    const file = (await res.json()) as GitHubFileResponse;
+    const content = Buffer.from(file.content, "base64").toString("utf-8");
+    return { data: JSON.parse(content) as T, sha: file.sha };
+  }
+
   async putFile(
     path: string,
     content: string,

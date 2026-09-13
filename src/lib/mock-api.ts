@@ -13,10 +13,17 @@ import {
   MOCK_FORMS,
   MOCK_FORM_RESPONSES,
   MOCK_LOCATIONS,
+  MOCK_POSTS,
 } from "./mock-data";
 
 function ok<T>(data: T) {
   return Promise.resolve({ success: true as const, data });
+}
+
+function withoutBody(post: (typeof MOCK_POSTS)[number]) {
+  const summary: Record<string, unknown> = { ...post };
+  delete summary.body;
+  return summary;
 }
 
 export const mockApi = {
@@ -38,6 +45,23 @@ export const mockApi = {
   addSpeaker: () => ok({ id: "new-speaker" }),
   updateSpeaker: () => ok({ id: "updated" }),
   deleteSpeaker: () => ok(null),
+
+  // El índice del repo de datos no lleva el cuerpo, y el mock tampoco: así el
+  // panel en preview se comporta igual que contra la API de verdad.
+  listPosts: () => ok(MOCK_POSTS.map(withoutBody)),
+  getPost: (id: string) =>
+    ok(MOCK_POSTS.find((p) => p.id === id) ?? MOCK_POSTS[0]),
+  createPost: () => ok({ id: "nuevo-post" }),
+  updatePost: () => ok({ id: "actualizado" }),
+  deletePost: () => ok(null),
+  // Una URL https de verdad, no un `data:`. Con un data: URL el markdown
+  // insertado (`![](data:…)`) lo rechazaba el propio validador del editor y
+  // dejaba el botón de guardar bloqueado sin forma obvia de salir.
+  uploadPostImage: () =>
+    ok({
+      path: "posts/images/preview.png",
+      url: "https://gdgica.com/gdg-logo.png",
+    }),
 
   listSponsors: () => ok(MOCK_SPONSORS),
   addSponsor: () => ok({ name: "new" }),

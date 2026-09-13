@@ -21,6 +21,9 @@ export const PERMISSIONS = [
   "sponsors:delete",
   "team:read",
   "team:write",
+  "posts:read",
+  "posts:write",
+  "posts:delete",
   "stats:read",
   "stats:write",
   "locations:read",
@@ -93,7 +96,7 @@ export const ROLE_DESCRIPTIONS: Record<Role, string> = {
   member:
     "Participa en eventos y minijuegos. Sin acceso al panel de administración.",
   contributor:
-    "Propone eventos y speakers como borradores. Un organizador revisa y publica. No accede a datos personales.",
+    "Propone eventos, speakers y posts del foro como borradores. Un organizador revisa y publica. No accede a datos personales.",
   volunteer:
     "Opera el check-in y los minijuegos, solo en los eventos donde está asignado y mientras dure la asignación.",
   organizer:
@@ -113,6 +116,8 @@ const ORGANIZER_GLOBAL: readonly Permission[] = [
   "speakers:read",
   "speakers:write",
   "team:read",
+  "posts:read",
+  "posts:write",
   "stats:read",
   "locations:read",
   "locations:write",
