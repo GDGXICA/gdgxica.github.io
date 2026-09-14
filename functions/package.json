@@ -22,7 +22,7 @@
     "googleapis": "^178.1.1",
     "nodemailer": "^10.0.1",
     "pdf-lib": "^1.17.1",
-    "zod": "^4.4.3"
+    "zod": "^4.6.2"
   },
   "overrides": {
     "protobufjs": "8.6.6",
