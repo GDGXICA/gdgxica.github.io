@@ -1,0 +1,34 @@
+---
+import { getCollection } from "astro:content";
+import Layout from "@/layouts/Layout.astro";
+import { MuralGallery } from "@/components/react/event/mural/MuralGallery";
+
+export async function getStaticPaths() {
+  const events = await getCollection("events");
+  return events
+    .filter((event) => event.data.mural?.enabled === true)
+    .map((event) => ({ params: { slug: event.id }, props: { event } }));
+}
+
+const { event } = Astro.props;
+---
+
+<Layout
+  title={`Fotos · ${event.data.name}`}
+  description={`Las fotos que compartió la comunidad en ${event.data.name}.`}
+  url={`https://gdgica.com/events/${event.id}/fotos`}
+>
+  <main class="container mx-auto px-4 py-10">
+    <a
+      href={`/events/${event.id}`}
+      class="text-sm text-blue-600 hover:underline">← {event.data.name}</a
+    >
+    <h1 class="mt-2 text-3xl font-bold">Fotos de la comunidad</h1>
+    <p class="mt-2 mb-8 max-w-2xl text-gray-600 dark:text-gray-400">
+      Las subieron los asistentes durante el evento y pasaron por revisión. Si
+      sale alguna tuya y prefieres que no esté, escríbenos y la quitamos.
+    </p>
+
+    <MuralGallery client:visible slug={event.id} eventName={event.data.name} />
+  </main>
+</Layout>

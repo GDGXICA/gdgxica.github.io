@@ -40,7 +40,7 @@ service cloud.firestore {
     function roleHasGlobal(role, perm) {
       return role == 'admin'
           || (role == 'organizer'
-              && perm in ['roster:read', 'checkin:operate']);
+              && perm in ['roster:read', 'checkin:operate', 'mural:moderate']);
     }
 
     // Roles whose permission only applies inside an assigned event.
@@ -419,6 +419,24 @@ service cloud.firestore {
       match /credentialMeta/{docId} {
         allow read: if canOnEvent('roster:read', eventSlug);
         allow write: if false;
+      }
+
+      match /muralPhotos/{photoId} {
+        allow read: if resource.data.status == 'approved'
+                    || (request.auth != null
+                        && resource.data.uid == request.auth.uid)
+                    || canOnEvent('mural:moderate', eventSlug);
+
+        allow write: if false;
+      }
+
+      match /muralMeta/{docId} {
+        allow read: if true;
+        allow write: if false;
+      }
+
+      match /muralUploaders/{uploaderUid} {
+        allow read, write: if false;
       }
     }
 

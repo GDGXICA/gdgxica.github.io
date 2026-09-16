@@ -36,6 +36,12 @@ import {
   statsSchema,
   postSchema,
   postImageSchema,
+  muralPhotoSchema,
+  muralRemovalRequestSchema,
+  muralReviewSchema,
+  muralTakedownSchema,
+  muralSettingsSchema,
+  muralUploaderBlockSchema,
 } from "./schemas";
 import { register } from "./handlers/auth";
 import * as events from "./handlers/events";
@@ -61,6 +67,7 @@ import * as minigameBingo from "./handlers/minigameBingo";
 import * as certificates from "./handlers/certificates";
 import * as checkin from "./handlers/checkin";
 import * as credentials from "./handlers/credentials";
+import * as mural from "./handlers/mural";
 import * as emailSettings from "./handlers/emailSettings";
 
 admin.initializeApp();
@@ -266,6 +273,51 @@ const credentialLimiter = rateLimit({
       "Demasiados intentos desde esta red. Si estás en una red compartida " +
       "(universidad u oficina), escríbenos a aalvaropc@gmail.com.",
   },
+});
+
+const muralUploadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip ?? "unknown")}`,
+  handler: limitExceeded("mural_upload"),
+  message: {
+    success: false,
+    code: "rate_ip",
+    error:
+      "Hay muchas subidas desde esta red a la vez. Espera unos segundos y " +
+      "vuelve a intentarlo.",
+  },
+});
+
+const muralRequestLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const uid = (req as { user?: { uid?: string } }).user?.uid;
+    return uid ? `u:${uid}` : `ip:${ipKeyGenerator(req.ip ?? "unknown")}`;
+  },
+  handler: limitExceeded("mural_request"),
+  message: {
+    success: false,
+    error: "Demasiadas peticiones, espera un momento",
+  },
+});
+
+const muralReviewLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const uid = (req as { user?: { uid?: string } }).user?.uid;
+    return uid ? `u:${uid}` : `ip:${ipKeyGenerator(req.ip ?? "unknown")}`;
+  },
+  handler: limitExceeded("mural_review"),
+  message: { success: false, error: "Demasiadas acciones seguidas" },
 });
 
 const vid = validateParamId("id");
@@ -838,6 +890,65 @@ app.post(
   slugP,
   writeLimiter,
   credentials.reconcileCredentials
+);
+
+const muralOfEvent = () =>
+  requirePermission("mural:moderate", { scopeParam: "slug" });
+
+app.post(
+  "/api/events/:slug/mural/photos",
+  verifyAppCheck("mural"),
+  requireAuth(),
+  slugP,
+  muralUploadLimiter,
+  validateBody(muralPhotoSchema),
+  mural.uploadPhoto
+);
+
+app.post(
+  "/api/events/:slug/mural/photos/:id/removal-request",
+  requireAuth(),
+  slugP,
+  vid,
+  muralRequestLimiter,
+  validateBody(muralRemovalRequestSchema),
+  mural.requestRemoval
+);
+
+app.patch(
+  "/api/events/:slug/mural/photos/:id/review",
+  muralOfEvent(),
+  slugP,
+  vid,
+  muralReviewLimiter,
+  validateBody(muralReviewSchema),
+  mural.reviewPhoto
+);
+app.patch(
+  "/api/events/:slug/mural/photos/:id/takedown",
+  muralOfEvent(),
+  slugP,
+  vid,
+  muralReviewLimiter,
+  validateBody(muralTakedownSchema),
+  mural.takedownPhoto
+);
+app.patch(
+  "/api/events/:slug/mural/settings",
+  muralOfEvent(),
+  slugP,
+  writeLimiter,
+  validateBody(muralSettingsSchema),
+  mural.setSettings
+);
+app.patch(
+  "/api/events/:slug/mural/uploaders/:uid/block",
+  muralOfEvent(),
+  slugP,
+  vuid,
+  writeLimiter,
+  validateBody(muralUploaderBlockSchema),
+  mural.blockUploader
 );
 
 // Which service sends credential email. Global configuration rather than a

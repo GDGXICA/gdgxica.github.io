@@ -90,6 +90,13 @@ export const AUDIT_ACTIONS = [
   "credential.reconcile",
   "credential_email.drain",
 
+  "mural.photo.upload",
+  "mural.photo.review",
+  "mural.photo.takedown",
+  "mural.photo.removal_request",
+  "mural.settings.update",
+  "mural.uploader.block",
+
   // Lecturas sensibles. Son las ÚNICAS lecturas que se auditan: un GET normal
   // no deja fila, porque una por vista de página ahoga el registro y el visor
   // solo admite un filtro a la vez.

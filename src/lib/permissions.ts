@@ -42,6 +42,7 @@ export const PERMISSIONS = [
   "minigames:template:read",
   "minigames:template:write",
   "minigames:operate",
+  "mural:moderate",
   "proposals:create",
   "proposals:review",
   "users:read",
@@ -67,6 +68,7 @@ export type Permission = (typeof PERMISSIONS)[number];
 export const RULES_ENFORCED_PERMISSIONS = [
   "roster:read",
   "checkin:operate",
+  "mural:moderate",
 ] as const satisfies readonly Permission[];
 
 export const ROLES = [
@@ -129,6 +131,8 @@ const ORGANIZER_GLOBAL: readonly Permission[] = [
   "credentials:operate",
   "certificates:send",
   "minigames:operate",
+
+  "mural:moderate",
   "proposals:create",
   "proposals:review",
 ];

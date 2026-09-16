@@ -1,0 +1,33 @@
+---
+import { getCollection } from "astro:content";
+import Layout from "@/layouts/Layout.astro";
+import { MuralUploadRoot } from "@/components/react/event/mural/MuralUploadRoot";
+
+export async function getStaticPaths() {
+  const events = await getCollection("events");
+  return events
+    .filter((event) => event.data.mural?.enabled === true)
+    .map((event) => ({ params: { slug: event.id }, props: { event } }));
+}
+
+const { event } = Astro.props;
+const mural = event.data.mural!;
+---
+
+<Layout
+  title={`Sube tus fotos · ${event.data.name}`}
+  description={`Comparte tus fotos de ${event.data.name} en la pantalla del evento.`}
+  url={`https://gdgica.com/events/${event.id}/subir`}
+  noindex
+>
+  <main class="container mx-auto px-4 py-10">
+    <p class="mx-auto mb-6 max-w-md text-sm text-gray-600 dark:text-gray-400">
+      Tus fotos aparecen en la pantalla grande del evento. <strong
+        >Una persona de la organización revisa cada foto antes de que se vea</strong
+      >, así que puede tardar un momento. Si te arrepientes, desde aquí mismo
+      puedes pedir que la quitemos.
+    </p>
+
+    <MuralUploadRoot client:load slug={event.id} headline={mural.headline} />
+  </main>
+</Layout>

@@ -42,6 +42,7 @@ export const PERMISSIONS = [
   "minigames:template:read",
   "minigames:template:write",
   "minigames:operate",
+  "mural:moderate",
   "proposals:create",
   "proposals:review",
   "users:read",
@@ -76,6 +77,7 @@ export type Permission = (typeof PERMISSIONS)[number];
 export const RULES_ENFORCED_PERMISSIONS = [
   "roster:read",
   "checkin:operate",
+  "mural:moderate",
 ] as const satisfies readonly Permission[];
 
 export const ROLES = [
@@ -129,6 +131,8 @@ const ORGANIZER_GLOBAL: readonly Permission[] = [
   // PLANTILLAS siguen siendo de admin: son configuración global, no
   // operación.
   "minigames:operate",
+
+  "mural:moderate",
   // Un organizador ya puede escribir eventos directamente, así que poder
   // proponerlos no le añade alcance. Está aquí para que `organizer` contenga
   // a `contributor` y a `volunteer`: si no, la regla de no escalada le

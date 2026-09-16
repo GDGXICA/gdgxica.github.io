@@ -117,6 +117,12 @@ const NAV_ITEMS: {
     icon: "🎮",
     permission: "minigames:template:read",
   },
+  {
+    label: "Mural",
+    href: "/admin/events/mural",
+    icon: "🖼️",
+    permission: "mural:moderate",
+  },
 ];
 
 interface Props {

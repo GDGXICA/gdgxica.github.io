@@ -122,6 +122,13 @@ const events = defineCollection({
         maxCredentials: z.number().int().positive().optional(),
       })
       .optional(),
+
+    mural: z
+      .object({
+        enabled: z.boolean(),
+        headline: z.string(),
+      })
+      .optional(),
   }),
 });
 

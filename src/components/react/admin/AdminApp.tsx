@@ -17,6 +17,7 @@ import { FormViewer } from "./forms/FormViewer";
 import { LocationList } from "./locations/LocationList";
 import { MinigameTemplateList } from "./minigame-templates/MinigameTemplateList";
 import { EventMinigameManager } from "./event-minigames/EventMinigameManager";
+import { EventMuralManager } from "./event-mural/EventMuralManager";
 import { CertificateSender } from "./certificates/CertificateSender";
 import { CheckinPanel } from "./checkin/CheckinPanel";
 import { CredentialsPanel } from "./credentials/CredentialsPanel";
@@ -72,6 +73,8 @@ const PAGE_PERMISSIONS: Record<string, Permission> = {
   locations: "locations:read",
   "minigame-templates": "minigames:template:read",
   "event-minigames": "minigames:operate",
+
+  "event-mural": "mural:moderate",
   // Ver quién opera un evento va con poder ver su roster; asignar exige
   // `users:role:write` y lo comprueba el endpoint.
   "event-staff": "roster:read",
@@ -122,6 +125,8 @@ function pageContent(page: string) {
       return <MinigameTemplateList />;
     case "event-minigames":
       return <EventMinigameManager />;
+    case "event-mural":
+      return <EventMuralManager />;
     case "event-staff":
       return <EventStaffPanel />;
     case "proposals":

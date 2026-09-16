@@ -217,3 +217,65 @@ describe("readAppCheckEnforcement", () => {
     expect(await readAppCheckEnforcement()).toBe(false);
   });
 });
+
+describe("exigencia por área", () => {
+  function settings(data: Record<string, unknown>) {
+    mocks.settingsGet.mockResolvedValue({ data: () => data });
+  }
+
+  it("el área gana sobre el valor global", async () => {
+    settings({ enforce: false, areas: { mural: true } });
+    expect(await readAppCheckEnforcement("mural")).toBe(true);
+    expect(await readAppCheckEnforcement()).toBe(false);
+  });
+
+  it("un área puede quedar exenta de una exigencia global", async () => {
+    settings({ enforce: true, areas: { mural: false } });
+    expect(await readAppCheckEnforcement("mural")).toBe(false);
+    expect(await readAppCheckEnforcement()).toBe(true);
+  });
+
+  it("un área sin override cae al valor global", async () => {
+    settings({ enforce: true, areas: { mural: false } });
+    expect(await readAppCheckEnforcement("credenciales")).toBe(true);
+  });
+
+  it("sin bloque de áreas todo cae al valor global", async () => {
+    settings({ enforce: true });
+    expect(await readAppCheckEnforcement("mural")).toBe(true);
+  });
+
+  it("ignora un override que no sea booleano", async () => {
+    settings({ enforce: true, areas: { mural: "false" } });
+    expect(await readAppCheckEnforcement("mural")).toBe(true);
+
+    settings({ enforce: false, areas: "no-es-un-mapa" });
+    expect(await readAppCheckEnforcement("mural")).toBe(false);
+  });
+
+  it("el middleware rechaza solo en el área exigida", async () => {
+    mocks.verifyToken.mockRejectedValue(new Error("bad"));
+    settings({ enforce: false, areas: { mural: true } });
+
+    const blocked = buildRes();
+    const blockedNext = vi.fn();
+    await verifyAppCheck("mural")(buildReq(undefined), blocked, blockedNext);
+    expect(blockedNext).not.toHaveBeenCalled();
+    expect(blocked.__status).toBe(403);
+
+    const allowed = buildRes();
+    const allowedNext = vi.fn();
+    await verifyAppCheck()(buildReq(undefined), allowed, allowedNext);
+    expect(allowedNext).toHaveBeenCalledOnce();
+    expect(allowed.__status).toBeUndefined();
+  });
+
+  it("la caché conserva los overrides de área a través de un fallo de lectura", async () => {
+    settings({ enforce: false, areas: { mural: true } });
+    expect(await readAppCheckEnforcement("mural")).toBe(true);
+
+    enforcement("error");
+    expect(await readAppCheckEnforcement("mural")).toBe(true);
+    expect(await readAppCheckEnforcement()).toBe(false);
+  });
+});

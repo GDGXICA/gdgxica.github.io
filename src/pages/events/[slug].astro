@@ -197,6 +197,13 @@ const whatsappQrDataUrl = whatsappGroupLink
               </Button>
             )
           }
+          {
+            event.data.mural?.enabled && (
+              <Button variant="white" href={`/events/${event.id}/fotos`}>
+                Ver las fotos
+              </Button>
+            )
+          }
           <SharedButton
             client:visible
             title={event.data.name}

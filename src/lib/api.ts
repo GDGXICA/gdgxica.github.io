@@ -15,6 +15,8 @@ interface ApiResponse<T> {
   data?: T;
   error?: string;
   message?: string;
+
+  code?: string;
 }
 
 /**
@@ -113,6 +115,8 @@ async function request<T>(
       return {
         success: false,
         error: data?.error || data?.message || fallback,
+
+        ...(typeof data?.code === "string" ? { code: data.code } : {}),
       };
     }
 
@@ -439,6 +443,81 @@ const realApi = {
       stale: number;
       unusableTickets: number;
     }>("POST", `/events/${encodeURIComponent(slug)}/checkin/import`, { rows }),
+
+  uploadMuralPhoto: (
+    slug: string,
+    body: {
+      dataUrl: string;
+      alias: string;
+      width: number;
+      height: number;
+      consent: true;
+      clientRequestId: string;
+    }
+  ) =>
+    request<{ id: string; duplicate?: boolean }>(
+      "POST",
+      `/events/${encodeURIComponent(slug)}/mural/photos`,
+      body
+    ),
+
+  requestMuralRemoval: (slug: string, id: string, note: string) =>
+    request<{ alreadyGone?: boolean; alreadyRequested?: boolean }>(
+      "POST",
+      `/events/${encodeURIComponent(slug)}/mural/photos/${encodeURIComponent(id)}/removal-request`,
+      { note }
+    ),
+
+  reviewMuralPhoto: (
+    slug: string,
+    id: string,
+    decision: "approve" | "reject",
+    note = ""
+  ) =>
+    request(
+      "PATCH",
+      `/events/${encodeURIComponent(slug)}/mural/photos/${encodeURIComponent(id)}/review`,
+      { decision, note }
+    ),
+
+  takedownMuralPhoto: (
+    slug: string,
+    id: string,
+    reason: "owner_request" | "moderation" | "other",
+    note: string
+  ) =>
+    request(
+      "PATCH",
+      `/events/${encodeURIComponent(slug)}/mural/photos/${encodeURIComponent(id)}/takedown`,
+      { reason, note }
+    ),
+
+  setMuralSettings: (
+    slug: string,
+    settings: {
+      state: "closed" | "open" | "paused";
+      maxPerUid: number;
+      maxTotal: number;
+      headline: string;
+    }
+  ) =>
+    request(
+      "PATCH",
+      `/events/${encodeURIComponent(slug)}/mural/settings`,
+      settings
+    ),
+
+  blockMuralUploader: (
+    slug: string,
+    uid: string,
+    blocked: boolean,
+    note = ""
+  ) =>
+    request(
+      "PATCH",
+      `/events/${encodeURIComponent(slug)}/mural/uploaders/${encodeURIComponent(uid)}/block`,
+      { blocked, note }
+    ),
 
   // Rebuild
   triggerRebuild: () => request("POST", "/rebuild"),

@@ -1,5 +1,6 @@
 import * as admin from "firebase-admin";
 import { logger } from "firebase-functions";
+import { decodeImageDataUrl } from "./imageStorage";
 
 // Cloud Storage for the credential photo and the composed card.
 //
@@ -12,9 +13,6 @@ import { logger } from "firebase-functions";
 // the bucket and to nodemailer, which is what keeps the entire
 // image-parser CVE class out of scope — we never hand user bytes to a
 // decoder running with our privileges.
-
-/** JPEG SOI marker. The only format the schema admits. */
-const JPEG_MAGIC = [0xff, 0xd8, 0xff];
 
 export interface CredentialImagePaths {
   photoPath: string | null;
@@ -46,22 +44,7 @@ export function decodeJpegDataUrl(
   maxBytes: number
 ): Buffer | null {
   if (!dataUrl) return null;
-
-  const comma = dataUrl.indexOf(",");
-  if (comma === -1) return null;
-
-  let buffer: Buffer;
-  try {
-    buffer = Buffer.from(dataUrl.slice(comma + 1), "base64");
-  } catch {
-    return null;
-  }
-
-  if (buffer.length === 0 || buffer.length > maxBytes) return null;
-  for (let i = 0; i < JPEG_MAGIC.length; i++) {
-    if (buffer[i] !== JPEG_MAGIC[i]) return null;
-  }
-  return buffer;
+  return decodeImageDataUrl(dataUrl, maxBytes, ["jpg"])?.buffer ?? null;
 }
 
 /**
