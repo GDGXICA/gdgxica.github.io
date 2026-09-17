@@ -1,30 +1,27 @@
-/**
- * Deja una imagen elegida en el editor lista para subirla.
- *
- * Existe porque el tope del servidor (450 KB ya decodificados) y una foto de
- * móvil de 4 MB no se llevan bien: sin reescalar, la mitad de las subidas
- * rebotarían con un error que no dice qué hacer. El navegador ya tiene lienzo,
- * así que el reescalado es gratis y pasa antes de tocar la red.
- */
+import { MAX_POST_IMAGE_BYTES } from "./imageLimits";
 
-/** Debe coincidir con `MAX_IMAGE_BYTES` en functions/src/handlers/posts.ts. */
-export const MAX_UPLOAD_BYTES = 450 * 1024;
-
-/** Ancho/alto máximo. 1600 px cubre de sobra el ancho del cuerpo de un post. */
 export const MAX_DIMENSION = 1600;
 
-/** Los tres formatos que acepta la API. */
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
 
-/** Calidades que se prueban en orden hasta entrar en el tope. */
 const QUALITY_STEPS = [0.85, 0.7, 0.55];
 
-export type PreparedImage = { dataUrl: string } | { error: string };
+export interface PrepareOptions {
+  forceReencode?: boolean;
+  maxBytes?: number;
+  maxDimension?: number;
+  qualitySteps?: number[];
+}
 
-/**
- * Encaja unas dimensiones dentro de un cuadrado sin deformarlas. Una imagen
- * que ya cabe no se toca: ampliarla solo añadiría peso sin añadir detalle.
- */
+export type PreparedImage =
+  | {
+      dataUrl: string;
+
+      width: number | null;
+      height: number | null;
+    }
+  | { error: string };
+
 export function fitWithin(
   width: number,
   height: number,
@@ -39,7 +36,6 @@ export function fitWithin(
   };
 }
 
-/** Bytes que ocupa lo que codifica un data URL en base64. */
 export function decodedBytes(dataUrl: string): number {
   const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
   const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
@@ -55,21 +51,28 @@ function readAsDataUrl(file: Blob): Promise<string> {
   });
 }
 
-export async function prepareImage(file: File): Promise<PreparedImage> {
+export async function prepareImage(
+  file: File,
+  options: PrepareOptions = {}
+): Promise<PreparedImage> {
+  const {
+    forceReencode = false,
+    maxBytes = MAX_POST_IMAGE_BYTES,
+    maxDimension = MAX_DIMENSION,
+    qualitySteps = QUALITY_STEPS,
+  } = options;
+
   if (!ACCEPTED.includes(file.type)) {
     return { error: "Solo se admiten imágenes JPG, PNG o WebP" };
   }
 
-  // Si ya cabe, se sube tal cual: reescalar un PNG con transparencia a JPEG
-  // le pondría un fondo negro, y recodificar un JPEG que ya vale solo le
-  // quita calidad.
-  if (file.size <= MAX_UPLOAD_BYTES) {
-    return { dataUrl: await readAsDataUrl(file) };
+  if (!forceReencode && file.size <= maxBytes) {
+    return { dataUrl: await readAsDataUrl(file), width: null, height: null };
   }
 
   let bitmap: ImageBitmap;
   try {
-    bitmap = await createImageBitmap(file);
+    bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
   } catch {
     return { error: "No se pudo leer la imagen" };
   }
@@ -77,7 +80,7 @@ export async function prepareImage(file: File): Promise<PreparedImage> {
   const { width, height } = fitWithin(
     bitmap.width,
     bitmap.height,
-    MAX_DIMENSION
+    maxDimension
   );
 
   const canvas = document.createElement("canvas");
@@ -85,16 +88,15 @@ export async function prepareImage(file: File): Promise<PreparedImage> {
   canvas.height = height;
   const ctx = canvas.getContext("2d");
   if (!ctx) return { error: "No se pudo procesar la imagen" };
-  // Fondo blanco: la imagen sale en JPEG, que no tiene transparencia, y sin
-  // esto las zonas transparentes se vuelven negras.
+
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, width, height);
   ctx.drawImage(bitmap, 0, 0, width, height);
   bitmap.close?.();
 
-  for (const quality of QUALITY_STEPS) {
+  for (const quality of qualitySteps) {
     const dataUrl = canvas.toDataURL("image/jpeg", quality);
-    if (decodedBytes(dataUrl) <= MAX_UPLOAD_BYTES) return { dataUrl };
+    if (decodedBytes(dataUrl) <= maxBytes) return { dataUrl, width, height };
   }
 
   return {

@@ -39,37 +39,63 @@ const HEADER = "x-firebase-appcheck";
  * problema de Firestore en asistentes que no pueden sacar su credencial en
  * mitad de un evento.
  */
-let cachedEnforcement: boolean | null = null;
+interface AppCheckSettings {
+  enforce: boolean;
+
+  areas: Record<string, boolean>;
+}
+
+let cachedSettings: AppCheckSettings | null = null;
 
 /** Solo para los tests: olvida el valor cacheado. */
 export function __resetAppCheckCache(): void {
-  cachedEnforcement = null;
+  cachedSettings = null;
 }
 
-export async function readAppCheckEnforcement(): Promise<boolean> {
+function parseSettings(
+  data: Record<string, unknown> | undefined
+): AppCheckSettings {
+  const areas: Record<string, boolean> = {};
+  const raw = data?.areas;
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    for (const [area, value] of Object.entries(
+      raw as Record<string, unknown>
+    )) {
+      if (typeof value === "boolean") areas[area] = value;
+    }
+  }
+  return { enforce: data?.enforce === true, areas };
+}
+
+function resolveFor(settings: AppCheckSettings, area?: string): boolean {
+  if (area !== undefined && area in settings.areas) return settings.areas[area];
+  return settings.enforce;
+}
+
+export async function readAppCheckEnforcement(area?: string): Promise<boolean> {
   try {
     const snap = await admin
       .firestore()
       .collection("settings")
       .doc("appcheck")
       .get();
-    cachedEnforcement = snap.data()?.enforce === true;
-    return cachedEnforcement;
+    cachedSettings = parseSettings(snap.data());
+    return resolveFor(cachedSettings, area);
   } catch (err) {
-    if (cachedEnforcement !== null) {
+    if (cachedSettings !== null) {
       // Se conserva la última decisión conocida en vez de abrir el paso.
       logger.warn(
         "Could not read the App Check enforcement setting; keeping the last known value",
-        { err, enforce: cachedEnforcement }
+        { err, area, enforce: resolveFor(cachedSettings, area) }
       );
-      return cachedEnforcement;
+      return resolveFor(cachedSettings, area);
     }
     // Sin valor previo: se abre, con ruido. La alternativa —cerrar sin saber si
     // la exigencia estaba activada— rompería el registro público por un fallo
     // que puede no tener nada que ver.
     logger.warn(
       "Could not read the App Check enforcement setting and there is no cached value",
-      { err }
+      { err, area }
     );
     return false;
   }
@@ -82,7 +108,7 @@ export async function readAppCheckEnforcement(): Promise<boolean> {
  * Unverified traffic is logged either way, so the decision to enforce can
  * be made against real numbers rather than a guess.
  */
-export function verifyAppCheck() {
+export function verifyAppCheck(area?: string) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const token = req.header(HEADER);
     let verified = false;
@@ -103,7 +129,7 @@ export function verifyAppCheck() {
       return;
     }
 
-    const enforce = await readAppCheckEnforcement();
+    const enforce = await readAppCheckEnforcement(area);
 
     // Nivel `log-only`: estos endpoints son públicos, así que provocar esto no
     // cuesta nada ni requiere cuenta. Escribirlo en Firestore le daría a
@@ -115,7 +141,11 @@ export function verifyAppCheck() {
     // reCAPTCHA falla. Un evento en marcha no es el momento de descubrirlo.
     recordSecurityEvent({
       event: "security.appcheck.missing",
-      details: { hadToken: Boolean(token), enforced: enforce },
+      details: {
+        hadToken: Boolean(token),
+        enforced: enforce,
+        area: area ?? null,
+      },
       req,
     });
 

@@ -70,6 +70,10 @@ interface ExternalEvent {
     group_letters?: string[];
     max_credentials?: number;
   };
+  mural?: {
+    enabled?: boolean;
+    headline?: string;
+  };
 }
 
 interface ExternalSpeaker {
@@ -169,6 +173,16 @@ function transformEvent(
     speakers,
     sponsors,
     credential: buildCredential(event),
+    mural: buildMural(event),
+  };
+}
+
+function buildMural(event: ExternalEvent) {
+  if (!event.mural) return undefined;
+
+  return {
+    enabled: event.mural.enabled ?? false,
+    headline: event.mural.headline || `Fotos de ${event.title}`,
   };
 }
 

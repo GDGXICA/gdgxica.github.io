@@ -198,5 +198,12 @@ export const mockApi = {
       unusableTickets: 0,
     }),
 
+  uploadMuralPhoto: () => ok({ id: "mural_mock" }),
+  requestMuralRemoval: () => ok({ alreadyRequested: false }),
+  reviewMuralPhoto: () => ok(null),
+  takedownMuralPhoto: () => ok(null),
+  setMuralSettings: () => ok(null),
+  blockMuralUploader: () => ok(null),
+
   triggerRebuild: () => ok(null),
 };

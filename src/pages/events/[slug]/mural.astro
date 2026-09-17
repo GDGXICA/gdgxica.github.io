@@ -1,0 +1,36 @@
+---
+import { getCollection } from "astro:content";
+import QRCode from "qrcode";
+import ProjectorLayout from "@/layouts/ProjectorLayout.astro";
+import { MuralProjectorView } from "@/components/react/event/mural/MuralProjectorView";
+
+export async function getStaticPaths() {
+  const events = await getCollection("events");
+  return events
+    .filter((event) => event.data.mural?.enabled === true)
+    .map((event) => ({ params: { slug: event.id }, props: { event } }));
+}
+
+const { slug } = Astro.params;
+const { event } = Astro.props;
+const mural = event.data.mural!;
+const uploadUrl = `https://gdgica.com/events/${slug}/subir`;
+
+const qrDataUrl = await QRCode.toDataURL(uploadUrl, {
+  errorCorrectionLevel: "H",
+  margin: 1,
+  width: 512,
+  color: { dark: "#000000", light: "#ffffff" },
+});
+---
+
+<ProjectorLayout title={`Mural · ${event.data.name}`}>
+  <MuralProjectorView
+    client:load
+    slug={slug!}
+    eventName={event.data.name}
+    headline={mural.headline}
+    uploadUrl={uploadUrl}
+    qrDataUrl={qrDataUrl}
+  />
+</ProjectorLayout>

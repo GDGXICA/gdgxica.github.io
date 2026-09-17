@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { api, type Post } from "@/lib/api";
 import { renderMarkdownPreview } from "@/lib/markdown";
 import { FormField } from "../ui/FormField";
-import { prepareImage } from "./prepareImage";
+import { prepareImage } from "@/lib/prepareImage";
 import { slugify, slugifyWhileTyping } from "./slugify";
 
 interface Props {

@@ -552,3 +552,4 @@ export type CheckinImportBody = z.infer<typeof checkinImportSchema>;
 // Attendee credentials live in their own file — this one is already long,
 // and minigameTemplate.test.ts established per-topic modules here.
 export * from "./credentials";
+export * from "./mural";

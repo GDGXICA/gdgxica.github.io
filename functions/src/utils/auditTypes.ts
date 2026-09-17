@@ -162,6 +162,8 @@ const CATEGORY_BY_PREFIX: ReadonlyArray<[string, AuditCategory]> = [
   ["minigame_participant.", "minigame"],
   ["credential.", "operations"],
   ["credential_email.", "operations"],
+
+  ["mural.", "operations"],
   ["certificate.", "operations"],
   ["checkin.", "operations"],
   ["settings.", "operations"],

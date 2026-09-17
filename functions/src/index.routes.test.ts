@@ -106,6 +106,13 @@ const AUDITED_ROUTES = [
   "POST /api/events/:slug/credentials/:id/email/retry",
   "POST /api/events/:slug/credentials/reminders",
   "POST /api/events/:slug/credentials/reconcile",
+
+  "POST /api/events/:slug/mural/photos",
+  "POST /api/events/:slug/mural/photos/:id/removal-request",
+  "PATCH /api/events/:slug/mural/photos/:id/review",
+  "PATCH /api/events/:slug/mural/photos/:id/takedown",
+  "PATCH /api/events/:slug/mural/settings",
+  "PATCH /api/events/:slug/mural/uploaders/:uid/block",
   "PUT /api/settings/email",
   "POST /api/events/:slug/minigames/:id/roulette/spin",
   "POST /api/events/:slug/minigames/:id/bingo/draw",

@@ -10,9 +10,10 @@ interface Props {
   image?: string;
   url: string;
   schema?: object | object[];
+  noindex?: boolean;
 }
 
-const { title, description, image, url, schema } = Astro.props;
+const { title, description, image, url, schema, noindex } = Astro.props;
 ---
 
 <!doctype html>
@@ -28,6 +29,7 @@ const { title, description, image, url, schema } = Astro.props;
 
     <title>{title}</title>
     <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
     <link
       rel="alternate"
       type="application/rss+xml"

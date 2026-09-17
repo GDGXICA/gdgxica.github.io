@@ -10,6 +10,7 @@ import {
   readPostIndex,
   removePost,
 } from "../services/publish";
+import { MAX_POST_IMAGE_BYTES } from "../services/imageLimits";
 import { decodeImageDataUrl, savePostImage } from "../services/postImages";
 import { GITHUB_TOKEN } from "../config";
 import type { PostInput } from "../schemas";
@@ -29,7 +30,7 @@ import type { PostInput } from "../schemas";
  * `MAX_POST_IMAGE_DATAURL_CHARS` del esquema: el esquema acota lo que entra
  * por el cable y esto lo que acaba en el bucket.
  */
-const MAX_IMAGE_BYTES = 450 * 1024;
+const MAX_IMAGE_BYTES = MAX_POST_IMAGE_BYTES;
 
 /**
  * El listado devuelve el ÍNDICE, sin cuerpos: el panel pinta una tabla, y

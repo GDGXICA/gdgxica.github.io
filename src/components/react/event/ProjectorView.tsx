@@ -4,6 +4,7 @@ import type {
   QuizConfig,
   WordCloudConfig,
 } from "../admin/minigame-templates/types";
+import { HeroQr } from "./HeroQr";
 import { useAggregates } from "./useAggregates";
 import { useBingoWinners, type BingoWinner } from "./useBingoWinners";
 import { useLiveMinigames } from "./useLiveMinigames";
@@ -53,7 +54,7 @@ export function ProjectorView({ slug, eventName, joinUrl, qrDataUrl }: Props) {
         </div>
       </header>
 
-      {!hasLive && <HeroQr qrDataUrl={qrDataUrl} joinUrl={joinUrl} />}
+      {!hasLive && <HeroQr qrDataUrl={qrDataUrl} url={joinUrl} />}
 
       {hasLive && (
         <main className="flex-1 p-8">
@@ -134,28 +135,6 @@ export function ProjectorView({ slug, eventName, joinUrl, qrDataUrl }: Props) {
 }
 
 export default ProjectorView;
-
-function HeroQr({
-  qrDataUrl,
-  joinUrl,
-}: {
-  qrDataUrl: string;
-  joinUrl: string;
-}) {
-  return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-8 p-8 text-center">
-      <p className="text-2xl text-white/70">Escanea para participar</p>
-      <div className="h-[60vh] max-h-[640px] w-[60vh] max-w-[640px] rounded-2xl bg-white p-6">
-        <img
-          src={qrDataUrl}
-          alt="QR de unión"
-          className="h-full w-full object-contain"
-        />
-      </div>
-      <p className="font-mono text-xl text-white/80">{joinUrl}</p>
-    </main>
-  );
-}
 
 // ---- Poll --------------------------------------------------------------
 
