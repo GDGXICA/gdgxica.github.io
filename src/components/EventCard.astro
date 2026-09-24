@@ -20,74 +20,141 @@ const {
   tags,
   slug,
 } = Astro.props;
+
+const registrationPercent =
+  maxParticipants > 0
+    ? Math.min(100, Math.round((participants / maxParticipants) * 100))
+    : 0;
 ---
 
 {
   isHorizontal ? (
-    <article class="border-gray-custom relative overflow-hidden rounded-lg border bg-white shadow-sm md:flex">
-      <div class="bg-gray-100 md:basis-1/2">
+    <article class="border-gray-custom relative overflow-hidden rounded-2xl border bg-white text-left shadow-[0_20px_60px_rgba(15,23,42,0.10)] lg:grid lg:grid-cols-[minmax(0,1.08fr)_minmax(380px,0.92fr)]">
+      <div class="relative min-h-[340px] overflow-hidden bg-slate-950 lg:min-h-[500px]">
         <img
           src={image || "/placeholder.svg"}
-          class="h-full w-full rounded-t-lg object-contain md:rounded-none md:rounded-tl-lg md:rounded-bl-lg"
-          width={385}
-          height={192}
-          alt={`Foto del evento de ${name}`}
+          class="absolute inset-0 h-full w-full scale-110 object-cover opacity-45 blur-2xl"
+          width={640}
+          height={500}
+          alt=""
+          aria-hidden="true"
           loading="lazy"
           decoding="async"
         />
+        <div class="absolute inset-0 bg-gradient-to-br from-slate-950/25 via-transparent to-blue-950/35" />
+        <img
+          src={image || "/placeholder.svg"}
+          class="relative z-10 h-full min-h-[340px] w-full object-contain p-5 lg:min-h-[500px] lg:p-8"
+          width={640}
+          height={500}
+          alt={`Imagen del evento ${name}`}
+          loading="lazy"
+          decoding="async"
+        />
+        <div class="absolute inset-x-0 bottom-0 z-20 h-24 bg-gradient-to-t from-slate-950/45 to-transparent" />
       </div>
-      <div class="basis-1/2">
-        <div class="p-6">
-          <div class="mb-4 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <Tag label="DevFest" type="devfest" />
-              <Tag label="Próximo" type="upcoming" />
-            </div>
-            <Tag label="Destacado" type="devfest" isHighLight={isHighlight} />
+      <div class="flex min-w-0 flex-col p-6 sm:p-8 lg:p-10">
+        <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-2">
+            {category && <Tag label={category.label} type={category.type} />}
+            {status && <Tag label={status.label} type={status.type} />}
           </div>
-          <p class="text-primary mb-1 text-start text-2xl font-bold">{name}</p>
-          <p class="text-secondary mb-6 text-start">{shortDescription}</p>
-          <ul class="text-secondary mb-4 flex flex-col gap-3">
-            <li class="flex items-center gap-3">
-              <Calendar stroke-width={1.5} size={16} color="#2463EB" />
-              {date}
-            </li>
-            <li class="flex items-center gap-3">
-              <Clock stroke-width={1.5} size={16} color="#EF4444" />
-              {time}
-            </li>
-            {isVirtual ? (
-              <li class="flex items-center gap-3">
-                <Globe stroke-width={1.5} size={16} color="#16A34A" />
-                Evento Virtual
-              </li>
-            ) : (
-              <li class="flex items-center gap-3">
-                <MapPin stroke-width={1.5} size={16} color="#16A34A" />
-                {location.name}
-              </li>
-            )}
-            <li class="flex items-center gap-3">
-              <Users stroke-width={1.5} size={16} color="#EBB308" />
-              {participants}/{maxParticipants} registrados
-            </li>
-          </ul>
-          {tags.length > 0 && (
-            <ul class="mb-4 flex flex-wrap gap-1">
-              {tags.map((tag: string) => (
-                <li>
-                  <Tag label={tag} />
-                </li>
-              ))}
-            </ul>
+          {isHighlight && (
+            <Tag label="Destacado" type="devfest" isHighLight={true} />
           )}
+        </div>
 
-          <p class="grid">
-            <Button variant="solid" href={`/events/${slug}`}>
-              <Ticket stroke-width={1.5} />
-              Ver Detalles
-            </Button>
+        <div>
+          <h2 class="text-primary text-3xl leading-tight font-bold tracking-tight">
+            {name}
+          </h2>
+          <p class="text-secondary mt-3 text-base leading-7">
+            {shortDescription}
           </p>
+        </div>
+
+        <ul class="text-secondary mt-7 grid gap-4 text-sm sm:text-base">
+          <li class="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
+            <Calendar
+              class="mt-0.5"
+              stroke-width={1.8}
+              size={19}
+              color="#2463EB"
+            />
+            <span class="leading-6">{date}</span>
+          </li>
+          <li class="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
+            <Clock
+              class="mt-0.5"
+              stroke-width={1.8}
+              size={19}
+              color="#EF4444"
+            />
+            <span class="leading-6">{time}</span>
+          </li>
+          {isVirtual ? (
+            <li class="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
+              <Globe
+                class="mt-0.5"
+                stroke-width={1.8}
+                size={19}
+                color="#16A34A"
+              />
+              <span class="leading-6">Evento virtual</span>
+            </li>
+          ) : (
+            <li class="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
+              <MapPin
+                class="mt-0.5"
+                stroke-width={1.8}
+                size={19}
+                color="#16A34A"
+              />
+              <span class="leading-6">{location.name}</span>
+            </li>
+          )}
+          <li class="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
+            <Users
+              class="mt-0.5"
+              stroke-width={1.8}
+              size={19}
+              color="#EBB308"
+            />
+            <div>
+              <div class="flex items-center justify-between gap-4 leading-6">
+                <span>{participants} personas registradas</span>
+                <span class="text-tertiary text-sm">
+                  {maxParticipants} cupos
+                </span>
+              </div>
+              <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  class="bg-google-yellow h-full rounded-full"
+                  style={`width: ${registrationPercent}%`}
+                />
+              </div>
+            </div>
+          </li>
+        </ul>
+
+        {tags.length > 0 && (
+          <ul class="mt-6 flex flex-wrap gap-2">
+            {tags.map((tag: string) => (
+              <li>
+                <Tag label={tag} />
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div class="mt-8 lg:mt-auto lg:pt-8">
+          <a
+            href={`/events/${slug}`}
+            class="bg-google-blue inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold text-white shadow-[0_10px_24px_rgba(36,99,235,0.2)] transition hover:-translate-y-0.5 hover:bg-blue-700"
+          >
+            <Ticket stroke-width={1.8} size={20} />
+            Ver detalles del evento
+          </a>
         </div>
       </div>
     </article>
