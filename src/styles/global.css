@@ -82,10 +82,88 @@ body {
   animation: bingo-tumble 1.8s ease-in-out infinite;
 }
 
+@keyframes credential-confetti-fall {
+  0% {
+    transform: translate3d(0, -8vh, 0) rotate(0deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--confetti-drift), 108vh, 0)
+      rotate(var(--confetti-turn));
+    opacity: 0;
+  }
+}
+
+.animate-credential-confetti {
+  animation: credential-confetti-fall 2.4s cubic-bezier(0.15, 0.7, 0.35, 1) both;
+}
+
+@keyframes credential-modal-card-in {
+  0% {
+    transform: translateY(3rem) scale(0.82) rotateX(10deg) rotateY(-8deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1) rotateX(0deg) rotateY(0deg);
+    opacity: 1;
+  }
+}
+
+.animate-credential-modal-card {
+  animation: credential-modal-card-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  perspective: 1400px;
+}
+
+.credential-card-tilt {
+  --card-rotate-x: 0deg;
+  --card-rotate-y: 0deg;
+  --card-shine-x: 50%;
+  --card-shine-y: 35%;
+  transform: rotateX(var(--card-rotate-x)) rotateY(var(--card-rotate-y));
+  transform-style: preserve-3d;
+  transition: transform 140ms ease-out;
+  will-change: transform;
+}
+
+.credential-card-shine {
+  background:
+    radial-gradient(
+      circle at var(--card-shine-x) var(--card-shine-y),
+      rgb(255 255 255 / 0.34),
+      transparent 24%
+    ),
+    linear-gradient(
+      115deg,
+      transparent 35%,
+      rgb(255 255 255 / 0.18),
+      transparent 65%
+    );
+  mix-blend-mode: soft-light;
+}
+
+.credential-modal-grid {
+  background-image:
+    linear-gradient(rgb(96 165 250 / 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(96 165 250 / 0.07) 1px, transparent 1px);
+  background-position: center;
+  background-size: 42px 42px;
+  mask-image: radial-gradient(circle at center, black, transparent 72%);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-bingo-ball-drop,
   .animate-bingo-ball-pulse,
-  .animate-bingo-tumble {
+  .animate-bingo-tumble,
+  .animate-credential-confetti,
+  .animate-credential-modal-card {
     animation: none;
+  }
+
+  .credential-card-tilt {
+    transform: none;
+    transition: none;
   }
 }

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { createHash } from "node:crypto";
 import * as admin from "firebase-admin";
 import { logger } from "firebase-functions";
 import { FieldValue } from "firebase-admin/firestore";
@@ -8,6 +9,7 @@ import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import {
   MASCOT_IDS,
+  MASCOT_IDS_V1,
   letterForSequence,
   mascotForCredentialId,
 } from "../services/credentialSequence";
@@ -63,6 +65,12 @@ class CredentialCapReached extends Error {
   }
 }
 
+class CredentialSubmissionConflict extends Error {
+  constructor() {
+    super("credential submission id conflict");
+  }
+}
+
 /**
  * POST /api/events/:slug/credentials
  *
@@ -71,11 +79,10 @@ class CredentialCapReached extends Error {
  * signInAnonymouslyIfNeeded() first and requireAuth() skips the Firestore
  * role read.
  *
- * NOT idempotent, and deliberately so: an attendee may legitimately
- * regenerate a credential after fixing a typo, and a duplicate DNI must be
- * storable so the panel can surface it as a conflict. Blocking duplicates
- * would let anyone lock a real person out of registering by claiming their
- * number first.
+ * Idempotent for a single submit attempt through `submissionId`. A deliberate
+ * regeneration gets a new id, so duplicate DNIs remain storable and visible
+ * to the reconciliation panel without a lost HTTP response creating a second
+ * record or consuming another group sequence.
  */
 export async function createCredential(req: Request, res: Response) {
   try {
@@ -106,7 +113,10 @@ export async function createCredential(req: Request, res: Response) {
     }
 
     const counterRef = eventRef.collection("credentialMeta").doc("counters");
-    const credentialRef = eventRef.collection("credentials").doc();
+    const credentialRef = eventRef
+      .collection("credentials")
+      .doc(body.submissionId);
+    const submissionFingerprint = fingerprintSubmission(body);
 
     // The sequence number must be readable in the same write that stamps
     // it onto the credential, so a transaction is structurally required.
@@ -116,8 +126,25 @@ export async function createCredential(req: Request, res: Response) {
     // write/s per document and max_participants is in the hundreds.
     let sequenceNumber = 0;
     let groupLetter = letters[0] ?? "A";
+    let created = false;
+    let existingPhotoPath: string | null = null;
 
     await db.runTransaction(async (tx) => {
+      const existingSnap = await tx.get(credentialRef);
+      if (existingSnap.exists) {
+        const existing = existingSnap.data() ?? {};
+        if (
+          existing.createdByUid !== user.uid ||
+          existing.submissionFingerprint !== submissionFingerprint
+        ) {
+          throw new CredentialSubmissionConflict();
+        }
+        sequenceNumber = Number(existing.sequenceNumber) || 0;
+        groupLetter = String(existing.groupLetter || letters[0] || "A");
+        existingPhotoPath = (existing.photoPath as string | null) ?? null;
+        return;
+      }
+
       const counterSnap = await tx.get(counterRef);
       const next =
         ((counterSnap.data()?.nextSequence as number | undefined) ?? 0) + 1;
@@ -132,9 +159,12 @@ export async function createCredential(req: Request, res: Response) {
 
       sequenceNumber = next;
       groupLetter = letterForSequence(next, letters);
+      created = true;
 
       tx.set(counterRef, { nextSequence: next }, { merge: true });
       tx.create(credentialRef, {
+        submissionId: body.submissionId,
+        submissionFingerprint,
         dni: body.dni,
         dniNormalized: normalizeDni(body.dni),
         firstName: body.firstName,
@@ -199,12 +229,12 @@ export async function createCredential(req: Request, res: Response) {
         updatedAt: FieldValue.serverTimestamp(),
         createdByUid: user.uid,
         source: "web",
-        schemaVersion: 1,
+        schemaVersion: 2,
       });
     });
 
     // Outside the transaction on purpose (see saveCredentialImages).
-    if (photo || credentialImage) {
+    if ((photo && (created || !existingPhotoPath)) || credentialImage) {
       const paths = await saveCredentialImages(slug, credentialRef.id, {
         photo,
         credential: credentialImage,
@@ -221,22 +251,24 @@ export async function createCredential(req: Request, res: Response) {
     // No DNI, name or email in the audit details: audit_log is readable by
     // a different set of eyes than the credentials collection, and the
     // document id is enough to trace the record.
-    await writeAuditLog(
-      {
-        action: "credential.create",
-        performedBy: user.uid,
-        targetId: credentialRef.id,
-        targetType: "credential",
-        details: {
-          eventSlug: slug,
-          sequenceNumber,
-          groupLetter,
-          avatarKind: body.avatarKind,
-          hasPhoto: Boolean(photo),
+    if (created) {
+      await writeAuditLog(
+        {
+          action: "credential.create",
+          performedBy: user.uid,
+          targetId: credentialRef.id,
+          targetType: "credential",
+          details: {
+            eventSlug: slug,
+            sequenceNumber,
+            groupLetter,
+            avatarKind: body.avatarKind,
+            hasPhoto: Boolean(photo),
+          },
         },
-      },
-      req
-    );
+        req
+      );
+    }
 
     res.json({
       success: true,
@@ -256,8 +288,28 @@ export async function createCredential(req: Request, res: Response) {
       });
       return;
     }
+    if (err instanceof CredentialSubmissionConflict) {
+      res.status(409).json({
+        success: false,
+        error:
+          "Los datos cambiaron durante el envío. Revisa el formulario e inténtalo de nuevo.",
+      });
+      return;
+    }
+    logger.error("credential.create.failed", {
+      eventSlug: req.params.slug,
+      requestId: req.auditContext?.requestId,
+      stage: "create",
+      err,
+    });
     res.status(500).json({ success: false, error: safeError(err) });
   }
+}
+
+function fingerprintSubmission(body: CredentialCreateInput): string {
+  return createHash("sha256")
+    .update(JSON.stringify({ ...body, submissionId: undefined }))
+    .digest("hex");
 }
 
 /**
@@ -469,7 +521,10 @@ export async function moderatePhoto(req: Request, res: Response) {
         // Swap to a deterministic mascot so the attendee is shown the same
         // replacement every time, and re-queue the notification.
         avatarKind: "mascot",
-        mascotId: mascotForCredentialId(id, MASCOT_IDS),
+        mascotId: mascotForCredentialId(
+          id,
+          Number(snap.data()?.schemaVersion) >= 2 ? MASCOT_IDS : MASCOT_IDS_V1
+        ),
         emailStatus: "queued",
         emailTemplate: "photo_removed",
         emailAttempts: 0,

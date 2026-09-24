@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // A shared call log so the ORDER of signInAnonymouslyIfNeeded vs
@@ -44,7 +51,9 @@ const EVENT = JSON.stringify({
 async function reachStepTwo(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("Nombre"), "Alvaro");
   await user.type(screen.getByLabelText("Apellido"), "Pena");
-  await user.click(screen.getByRole("button", { name: /generar credencial/i }));
+  await user.click(
+    screen.getByRole("button", { name: /continuar con mis datos/i })
+  );
 }
 
 async function fillRegistration(user: ReturnType<typeof userEvent.setup>) {
@@ -58,13 +67,11 @@ async function fillRegistration(user: ReturnType<typeof userEvent.setup>) {
     "redes_sociales"
   );
   await user.selectOptions(
-    screen.getByLabelText("Mi nivel de experiencia en desarrollo es…"),
+    screen.getByLabelText("Experiencia en desarrollo"),
     "3_5"
   );
   await user.selectOptions(
-    screen.getByLabelText(
-      "¿Qué tan familiarizado estás con las Google Developer Tools?"
-    ),
+    screen.getByLabelText("Experiencia con Google Developer Tools"),
     "intermedia"
   );
 }
@@ -103,13 +110,15 @@ describe("CredentialPage — step 1", () => {
     // The ordering is the conversion decision: the attendee gets their
     // shareable image before being asked for a DNI.
     expect(screen.queryByLabelText("DNI")).toBeNull();
-    expect(screen.getByText("Crea tu credencial")).toBeInTheDocument();
+    expect(screen.getByText("Hazla tuya")).toBeInTheDocument();
   });
 
   it("keeps the generate button disabled until there is a name", async () => {
     const user = userEvent.setup();
     render(<CredentialPage event={EVENT} />);
-    const button = screen.getByRole("button", { name: /generar credencial/i });
+    const button = screen.getByRole("button", {
+      name: /continuar con mis datos/i,
+    });
     expect(button).toBeDisabled();
 
     await user.type(screen.getByLabelText("Nombre"), "Alvaro");
@@ -122,7 +131,7 @@ describe("CredentialPage — step 1", () => {
     render(<CredentialPage event={EVENT} />);
     await user.type(screen.getByLabelText(/usuario de github/i), "-malo");
     expect(
-      screen.getByText("Ese usuario de GitHub no es válido")
+      screen.getByText(/Ese usuario de GitHub no es válido/)
     ).toBeInTheDocument();
   });
 
@@ -143,7 +152,7 @@ describe("CredentialPage — submission", () => {
     await fillRegistration(user);
     await checkAllConsents(user);
     await user.click(
-      screen.getByRole("button", { name: /guardar y continuar/i })
+      screen.getByRole("button", { name: /crear mi credencial/i })
     );
 
     await waitFor(() => expect(calls).toContain("createCredential"));
@@ -156,7 +165,7 @@ describe("CredentialPage — submission", () => {
     await reachStepTwo(user);
     await fillRegistration(user);
     await user.click(
-      screen.getByRole("button", { name: /guardar y continuar/i })
+      screen.getByRole("button", { name: /crear mi credencial/i })
     );
 
     expect(mocks.createCredential).not.toHaveBeenCalled();
@@ -170,10 +179,12 @@ describe("CredentialPage — submission", () => {
     await reachStepTwo(user);
     await fillRegistration(user);
     await user.click(
-      screen.getByRole("button", { name: /guardar y continuar/i })
+      screen.getByRole("button", { name: /crear mi credencial/i })
     );
 
-    expect(screen.getByText(/falta aceptar/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/debes aceptar las condiciones/i)
+    ).toBeInTheDocument();
   });
 
   it("sends the policy version the server enum accepts", async () => {
@@ -183,7 +194,7 @@ describe("CredentialPage — submission", () => {
     await fillRegistration(user);
     await checkAllConsents(user);
     await user.click(
-      screen.getByRole("button", { name: /guardar y continuar/i })
+      screen.getByRole("button", { name: /crear mi credencial/i })
     );
 
     await waitFor(() => expect(mocks.createCredential).toHaveBeenCalled());
@@ -205,7 +216,7 @@ describe("CredentialPage — submission", () => {
     await fillRegistration(user);
     await checkAllConsents(user);
     await user.click(
-      screen.getByRole("button", { name: /guardar y continuar/i })
+      screen.getByRole("button", { name: /crear mi credencial/i })
     );
 
     expect(
@@ -228,19 +239,53 @@ describe("CredentialPage — submission", () => {
     await fillRegistration(user);
     await checkAllConsents(user);
     await user.click(
-      screen.getByRole("button", { name: /guardar y continuar/i })
+      screen.getByRole("button", { name: /crear mi credencial/i })
     );
 
     expect(
-      await screen.findByText(/no se pudo conectar con el servidor/i)
+      await screen.findByText(/no pudimos verificar tu sesión/i)
     ).toBeInTheDocument();
     // Usable again rather than stuck on "Guardando…", so the attendee can
     // retry once the network recovers.
     expect(
-      screen.getByRole("button", { name: /guardar y continuar/i })
+      screen.getByRole("button", { name: /crear mi credencial/i })
     ).toBeEnabled();
     // The registration never left the browser, so nothing was half-created.
     expect(mocks.createCredential).not.toHaveBeenCalled();
+  });
+
+  it("recovers when anonymous sign-in never settles", async () => {
+    mocks.signInAnonymouslyIfNeeded.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    render(<CredentialPage event={EVENT} />);
+    await reachStepTwo(user);
+    await fillRegistration(user);
+    await checkAllConsents(user);
+
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(
+        screen.getByRole("button", { name: /crear mi credencial/i })
+      );
+
+      expect(
+        screen.getByRole("button", { name: /verificando sesión/i })
+      ).toBeDisabled();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10_000);
+      });
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /verificación de sesión tardó demasiado/i
+      );
+      expect(
+        screen.getByRole("button", { name: /crear mi credencial/i })
+      ).toBeEnabled();
+      expect(mocks.createCredential).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -256,7 +301,7 @@ describe("CredentialPage — accesibilidad de los errores", () => {
     await fillRegistration(user);
     await checkAllConsents(user);
     await user.click(
-      screen.getByRole("button", { name: /guardar y continuar/i })
+      screen.getByRole("button", { name: /crear mi credencial/i })
     );
 
     // El botón conserva el foco, así que sin role="alert" el lector de
@@ -282,59 +327,52 @@ describe("CredentialPage — accesibilidad de los errores", () => {
     );
   });
 
-  it("saca del foco el enlace de descarga mientras no hay imagen", async () => {
+  it("oculta las acciones de la credencial antes de guardar", async () => {
     const user = userEvent.setup();
     render(<CredentialPage event={EVENT} />);
     await reachStepTwo(user);
 
-    // jsdom no implementa getContext, así que aquí no hay tarjeta compuesta:
-    // es exactamente el estado en el que el enlace debe estar inerte.
-    const download = screen.getByText("Descargar credencial");
-    expect(download).not.toHaveAttribute("href");
-    expect(download).toHaveAttribute("aria-disabled", "true");
+    expect(screen.queryByText("Descargar imagen")).toBeNull();
+    expect(screen.queryByText("Compartir")).toBeNull();
+    expect(screen.queryByText("Copiar enlace")).toBeNull();
   });
 });
 
 describe("CredentialPage — success", () => {
-  it("says plainly that the credential does not register anybody", async () => {
-    // The whole risk of the hybrid funnel is someone believing the
-    // credential is proof of registration.
+  it("explains that the organizer will complete the official registration", async () => {
     const user = userEvent.setup();
     render(<CredentialPage event={EVENT} />);
     await reachStepTwo(user);
     await fillRegistration(user);
     await checkAllConsents(user);
     await user.click(
-      screen.getByRole("button", { name: /guardar y continuar/i })
+      screen.getByRole("button", { name: /crear mi credencial/i })
     );
 
     expect(
-      await screen.findByText("Todavía no estás inscrito")
+      await screen.findByText("Registro oficial en proceso")
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/cierra la sesión a los 15 minutos/i)
+      screen.getByText(/no necesitas llenar otro formulario/i)
     ).toBeInTheDocument();
   });
 
-  it("links to the official panel with a safe external target", async () => {
+  it("does not send the attendee back to the official panel", async () => {
     const user = userEvent.setup();
     render(<CredentialPage event={EVENT} />);
     await reachStepTwo(user);
     await fillRegistration(user);
     await checkAllConsents(user);
     await user.click(
-      screen.getByRole("button", { name: /guardar y continuar/i })
+      screen.getByRole("button", { name: /crear mi credencial/i })
     );
 
-    const cta = await screen.findByRole("link", {
-      name: /completar mi inscripción oficial/i,
-    });
-    expect(cta).toHaveAttribute(
-      "href",
-      "https://gdg.community.dev/devfest-ica-2026"
-    );
-    expect(cta).toHaveAttribute("target", "_blank");
-    expect(cta).toHaveAttribute("rel", "noopener noreferrer");
+    await screen.findByText("Registro oficial en proceso");
+    expect(
+      screen.queryByRole("link", {
+        name: /completar mi inscripción oficial/i,
+      })
+    ).toBeNull();
   });
 
   it("shows the assigned group letter returned by the server", async () => {
@@ -344,10 +382,10 @@ describe("CredentialPage — success", () => {
     await fillRegistration(user);
     await checkAllConsents(user);
     await user.click(
-      screen.getByRole("button", { name: /guardar y continuar/i })
+      screen.getByRole("button", { name: /crear mi credencial/i })
     );
 
-    await screen.findByText("Todavía no estás inscrito");
+    await screen.findByText("Registro oficial en proceso");
     expect(screen.getByText("Q")).toBeInTheDocument();
   });
 });
@@ -363,7 +401,7 @@ describe("CredentialPage — adjuntar la tarjeta", () => {
     await fillRegistration(user);
     await checkAllConsents(user);
     await user.click(
-      screen.getByRole("button", { name: /guardar y continuar/i })
+      screen.getByRole("button", { name: /crear mi credencial/i })
     );
 
     await waitFor(() => expect(mocks.createCredential).toHaveBeenCalled());
@@ -378,10 +416,10 @@ describe("CredentialPage — adjuntar la tarjeta", () => {
     await fillRegistration(user);
     await checkAllConsents(user);
     await user.click(
-      screen.getByRole("button", { name: /guardar y continuar/i })
+      screen.getByRole("button", { name: /crear mi credencial/i })
     );
 
-    await screen.findByText("Todavía no estás inscrito");
+    await screen.findByText("Registro oficial en proceso");
     // En jsdom no hay canvas, asi que el adjunto puede no dispararse; lo
     // que si debe cumplirse es el orden cuando ocurre.
     const attachAt = calls.indexOf("attachCredentialImage");

@@ -3,9 +3,9 @@ export interface CredentialEventInfo {
   eventName: string;
   eventDateLabel: string;
   headline: string;
-  /** Official Bevy/Google panel. The only thing that actually registers. */
+  /** Official Bevy/Google panel, used by the organizer workflow. */
   registrationUrl: string;
-  /** Build-time QR of registrationUrl, as a same-origin data URL. */
+  /** Build-time QR of the public event page, as a same-origin data URL. */
   qrDataUrl: string | null;
 }
 
@@ -30,8 +30,6 @@ export interface RegistrationFields {
   yearsExperience: string;
   googleToolsLevel: string;
 }
-
-export type ConsentState = Record<string, boolean>;
 
 export const HEARD_ABOUT_OPTIONS = [
   { value: "redes_sociales", label: "Redes sociales" },

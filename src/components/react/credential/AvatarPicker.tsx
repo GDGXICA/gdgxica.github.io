@@ -67,7 +67,9 @@ export function AvatarPicker({
 
   return (
     <fieldset className="flex flex-col gap-3">
-      <legend className="text-primary text-sm font-semibold">Tu avatar</legend>
+      <legend className="text-primary text-sm font-semibold">
+        Elige tu avatar
+      </legend>
 
       {/* Mascots first and selected by default. Photo is the deliberate
           opt-in, which keeps the moderation queue small. */}
@@ -81,8 +83,10 @@ export function AvatarPicker({
                 onClick={() => onPickMascot(m.id)}
                 aria-pressed={selected}
                 aria-label={m.label}
-                className={`w-full overflow-hidden rounded-full border-2 transition ${
-                  selected ? "border-google-blue" : "border-transparent"
+                className={`w-full overflow-hidden rounded-full border-2 bg-gray-50 shadow-sm transition hover:-translate-y-0.5 hover:shadow ${
+                  selected
+                    ? "border-google-blue ring-google-blue/15 ring-4"
+                    : "border-transparent"
                 }`}
               >
                 {/* object-cover so a future asset that is not perfectly
@@ -105,7 +109,7 @@ export function AvatarPicker({
       {/* Attribution sits next to the use, not three clicks away. Several of
           these licences require the credit to be given wherever the art is
           used, so this link is an obligation rather than a courtesy. */}
-      <p className="text-tertiary text-xs">
+      <p className="text-tertiary text-xs leading-5">
         Mascotas de Go, Rust, Linux y Android usadas con licencia abierta.{" "}
         <a href="/creditos" className="hover:text-google-blue underline">
           Ver créditos y licencias
@@ -128,7 +132,7 @@ export function AvatarPicker({
           type="button"
           disabled={busy}
           onClick={() => inputRef.current?.click()}
-          className="border-gray-custom text-secondary rounded-lg border px-3 py-2 text-sm disabled:opacity-50"
+          className="border-gray-custom text-secondary min-h-11 rounded-xl border bg-white px-4 py-2 text-sm font-medium shadow-sm disabled:opacity-50"
         >
           {busy ? "Procesando…" : "Subir mi foto (opcional)"}
         </button>

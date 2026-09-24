@@ -10,6 +10,7 @@ import {
 const JPEG = "data:image/jpeg;base64,/9j/4AAQSkZJRg==";
 
 const VALID = {
+  submissionId: "0f966bde-2e21-4ba9-a986-4471b0529170",
   firstName: "Alvaro",
   lastName: "Pena",
   dni: "12345678",
@@ -52,6 +53,13 @@ describe("credentialCreateSchema", () => {
   it("rejects an unknown key", () => {
     const r = credentialCreateSchema.safeParse({ ...VALID, nickname: "al" });
     expect(r.success).toBe(false);
+  });
+
+  it("requires a UUID submission id for safe idempotent retries", () => {
+    expect(
+      credentialCreateSchema.safeParse({ ...VALID, submissionId: "not-a-uuid" })
+        .success
+    ).toBe(false);
   });
 
   describe("consent", () => {

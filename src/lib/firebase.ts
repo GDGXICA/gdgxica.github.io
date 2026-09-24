@@ -81,13 +81,37 @@ async function getAppCheck() {
 export async function getAppCheckToken(): Promise<string | null> {
   if (USE_EMULATOR) return null;
   try {
-    const appCheck = await getAppCheck();
-    const { getToken } = await import("firebase/app-check");
-    const result = await getToken(appCheck, /* forceRefresh */ false);
-    return result.token;
+    return await withTimeout(
+      (async () => {
+        const appCheck = await getAppCheck();
+        const { getToken } = await import("firebase/app-check");
+        const result = await getToken(appCheck, /* forceRefresh */ false);
+        return result.token;
+      })(),
+      3_000
+    );
   } catch {
     return null;
   }
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(
+      () => reject(new Error("Firebase operation timed out")),
+      timeoutMs
+    );
+    promise.then(
+      (value) => {
+        clearTimeout(timeout);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      }
+    );
+  });
 }
 let _authEmulatorConnected = false;
 let _dbPromise: Promise<import("firebase/firestore").Firestore> | null = null;

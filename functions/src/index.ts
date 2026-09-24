@@ -816,7 +816,7 @@ app.post(
 // Public credential submission — accepts any Firebase token (incl. anon).
 app.post(
   "/api/events/:slug/credentials",
-  verifyAppCheck(),
+  verifyAppCheck("credenciales"),
   requireAuth(),
   slugP,
   credentialLimiter,
@@ -830,7 +830,7 @@ app.post(
 // handler pins the write to the anonymous UID that created the record.
 app.patch(
   "/api/events/:slug/credentials/:id/image",
-  verifyAppCheck(),
+  verifyAppCheck("credenciales"),
   requireAuth(),
   slugP,
   vid,

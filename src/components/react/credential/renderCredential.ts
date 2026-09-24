@@ -17,61 +17,61 @@ export const CREDENTIAL_LAYOUT = {
   // without cropping, so a shared credential is never cut off.
   width: 1080,
   height: 1350,
-  background: "#ffffff",
+  background: "#f3f6fb",
   fontFamily: "'Geist Variable', sans-serif",
 
   headline: {
-    x: 80,
-    y: 150,
-    size: 40,
+    x: 82,
+    y: 142,
+    size: 34,
     maxWidth: 700,
     color: "#4b5563",
   },
   eventName: {
-    x: 80,
-    y: 226,
-    sizes: [64, 56, 48, 40],
+    x: 82,
+    y: 214,
+    sizes: [60, 54, 48, 40],
     maxWidth: 780,
     color: "#111827",
   },
   // Decorative corner arcs in the brand colors.
   corner: {
-    cx: 1080,
-    cy: 0,
-    radii: [300, 232, 164, 96],
-    lineWidth: 26,
+    cx: 1048,
+    cy: 32,
+    radii: [260, 202, 144, 86],
+    lineWidth: 22,
   },
   avatar: {
     cx: 540,
-    cy: 610,
-    r: 190,
-    ringWidth: 16,
+    cy: 535,
+    r: 172,
+    ringWidth: 14,
     // Gap between ring segments, in radians.
     ringGap: 0.06,
   },
   name: {
     x: 540,
-    y: 900,
-    sizes: [76, 64, 54, 44],
+    y: 800,
+    sizes: [72, 62, 52, 44],
     maxWidth: 900,
     color: "#111827",
   },
   handle: {
     x: 540,
-    y: 962,
-    size: 36,
+    y: 858,
+    size: 32,
     color: "#4b5563",
   },
   group: {
     cx: 148,
-    cy: 1128,
-    r: 74,
-    size: 68,
-    label: { y: 1232, size: 22, color: "#71717a" },
+    cy: 1112,
+    r: 66,
+    size: 58,
+    label: { y: 1204, size: 19, color: "#71717a" },
   },
   eventDate: {
     x: 268,
-    y: 1108,
+    y: 1090,
     // 30px over 560 fits a full Spanish long date ("sabado, 21 de
     // noviembre de 2026") without ellipsis; at 32/480 it lost the year.
     size: 30,
@@ -80,15 +80,15 @@ export const CREDENTIAL_LAYOUT = {
   },
   cta: {
     x: 268,
-    y: 1158,
+    y: 1143,
     size: 25,
     color: "#4b5563",
     maxWidth: 560,
   },
   qr: {
-    x: 856,
-    y: 1046,
-    size: 152,
+    x: 852,
+    y: 1038,
+    size: 156,
     quietZone: 10,
   },
   brandBar: {
@@ -216,13 +216,127 @@ export function drawCredential(
   ctx.fillStyle = layout.background;
   ctx.fillRect(0, 0, layout.width, layout.height);
 
+  // A contained white card gives the exported image the same calm surface
+  // hierarchy as the builder instead of leaving every element floating in a
+  // large empty canvas.
+  ctx.save();
+  ctx.shadowColor = "rgba(17, 24, 39, 0.10)";
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 8;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(32, 32, layout.width - 64, layout.height - 64);
+  ctx.restore();
+
+  drawTechLayer(ctx, layout, fontFamily);
   drawCornerArcs(ctx, layout);
   drawHeader(ctx, input, layout, fontFamily);
+  drawAvatarHalo(ctx, layout);
   drawAvatar(ctx, input, layout, fontFamily);
   drawIdentity(ctx, input, layout, fontFamily);
   drawFooter(ctx, input, layout, fontFamily);
   drawBrandBar(ctx, layout);
 
+  ctx.restore();
+}
+
+/**
+ * Low-contrast circuit pattern behind the content.
+ *
+ * It is deliberately built from primitive fills instead of a raster texture,
+ * so the exported credential stays sharp at every size and adds no asset
+ * request to the live preview.
+ */
+function drawTechLayer(
+  ctx: CanvasRenderingContext2D,
+  layout: CredentialLayout,
+  fontFamily: string
+): void {
+  ctx.save();
+
+  // Dot matrix: visible enough to give the card depth, quiet enough to keep
+  // names and QR codes crisp.
+  ctx.fillStyle = "rgba(36, 99, 235, 0.055)";
+  for (let y = 300; y <= 930; y += 42) {
+    for (let x = 76; x <= 1004; x += 42) {
+      ctx.fillRect(x, y, 4, 4);
+    }
+  }
+
+  // Short circuit traces framing the central identity area.
+  ctx.fillStyle = "rgba(36, 99, 235, 0.11)";
+  const traces = [
+    [76, 348, 154, 3],
+    [76, 348, 3, 82],
+    [850, 352, 154, 3],
+    [1001, 352, 3, 82],
+    [76, 862, 122, 3],
+    [76, 786, 3, 79],
+    [882, 862, 122, 3],
+    [1001, 786, 3, 79],
+  ] as const;
+  traces.forEach(([x, y, width, height]) => ctx.fillRect(x, y, width, height));
+
+  const nodes = [
+    [230, 349],
+    [850, 353],
+    [198, 863],
+    [882, 863],
+    [78, 430],
+    [1002, 434],
+    [78, 786],
+    [1002, 786],
+  ] as const;
+  nodes.forEach(([x, y], index) => {
+    ctx.beginPath();
+    ctx.arc(x, y, index % 3 === 0 ? 7 : 5, 0, Math.PI * 2);
+    ctx.fillStyle = `${BRAND_COLORS[index % BRAND_COLORS.length]}33`;
+    ctx.fill();
+  });
+
+  ctx.font = `600 18px ${fontFamily}`;
+  ctx.fillStyle = "rgba(36, 99, 235, 0.55)";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText("GDG ICA  //  BUILD · CONNECT · CREATE", 82, 286);
+
+  ctx.restore();
+}
+
+function drawAvatarHalo(
+  ctx: CanvasRenderingContext2D,
+  layout: CredentialLayout
+): void {
+  const { avatar } = layout;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(avatar.cx, avatar.cy, avatar.r + 52, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(36, 99, 235, 0.045)";
+  ctx.fill();
+
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "rgba(36, 99, 235, 0.12)";
+  ctx.beginPath();
+  ctx.arc(avatar.cx, avatar.cy, avatar.r + 78, -0.2, Math.PI * 0.7);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(avatar.cx, avatar.cy, avatar.r + 78, Math.PI * 0.95, Math.PI * 1.85);
+  ctx.stroke();
+
+  [0.12, 0.62, 1.12, 1.62].forEach((turn, index) => {
+    const angle = turn * Math.PI;
+    const radius = avatar.r + 78;
+    ctx.beginPath();
+    ctx.arc(
+      avatar.cx + Math.cos(angle) * radius,
+      avatar.cy + Math.sin(angle) * radius,
+      8,
+      0,
+      Math.PI * 2
+    );
+    ctx.fillStyle = BRAND_COLORS[index];
+    ctx.fill();
+  });
   ctx.restore();
 }
 
@@ -397,15 +511,21 @@ function drawFooter(
 ): void {
   const { group } = layout;
 
+  ctx.save();
+  ctx.fillStyle = "#f8fafc";
+  ctx.fillRect(64, 992, 952, 230);
+  ctx.restore();
+
   // Group letter badge.
   ctx.save();
   ctx.beginPath();
   ctx.arc(group.cx, group.cy, group.r, 0, Math.PI * 2);
   ctx.closePath();
-  ctx.fillStyle = BRAND_COLORS[0];
+  const groupPending = input.groupLetter === "—";
+  ctx.fillStyle = groupPending ? "#e5e7eb" : BRAND_COLORS[0];
   ctx.fill();
 
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = groupPending ? "#4b5563" : "#ffffff";
   ctx.font = `700 ${group.size}px ${fontFamily}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -414,7 +534,11 @@ function drawFooter(
   ctx.font = `500 ${group.label.size}px ${fontFamily}`;
   ctx.fillStyle = group.label.color;
   ctx.textBaseline = "alphabetic";
-  ctx.fillText("TU GRUPO", group.cx, group.label.y);
+  ctx.fillText(
+    groupPending ? "AL GUARDAR" : "TU GRUPO",
+    group.cx,
+    group.label.y
+  );
   ctx.restore();
 
   ctx.save();
@@ -446,9 +570,7 @@ function drawFooter(
   ctx.fillText(cta.text, layout.cta.x, layout.cta.y);
   ctx.restore();
 
-  // QR of the official registration URL. Printed on the card itself so
-  // every share carries the funnel back to the panel that actually
-  // registers people. Skipped without throwing when absent.
+  // QR of the public event page. Skipped without throwing when absent.
   if (input.qrImage) {
     const { qr } = layout;
     ctx.save();

@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type CSSProperties } from "react";
 import { api } from "@/lib/api";
 import { signInAnonymouslyIfNeeded } from "@/lib/firebase";
 import { PRIVACY_POLICY_VERSION } from "@/lib/consent";
-import { CredentialForm } from "./CredentialForm";
+import { CredentialForm, type SubmitPhase } from "./CredentialForm";
 import { CredentialPreview } from "./CredentialPreview";
 import { ShareBar } from "./ShareBar";
 import { DEFAULT_MASCOT_ID, findMascot } from "./mascots";
@@ -13,13 +13,11 @@ import { MAX_CREDENTIAL_DATAURL_CHARS } from "./limits";
 import type { CredentialRenderInput } from "./renderCredential";
 import type {
   CardFields,
-  ConsentState,
   CredentialEventInfo,
   RegistrationFields,
 } from "./types";
 
 interface Props {
-  /** Serialized as JSON by the Astro page — see the note in the .astro. */
   event: string;
 }
 
@@ -42,10 +40,9 @@ const EMPTY_REGISTRATION: RegistrationFields = {
   googleToolsLevel: "",
 };
 
+const AUTH_TIMEOUT_MS = 10_000;
+
 export function CredentialPage({ event: eventJson }: Props) {
-  // Astro serializes island props, and complex objects round-trip more
-  // predictably as a JSON string — the same workaround SharedButton.jsx
-  // uses for its hashtags array.
   const event = useMemo<CredentialEventInfo>(
     () => JSON.parse(eventJson) as CredentialEventInfo,
     [eventJson]
@@ -54,19 +51,18 @@ export function CredentialPage({ event: eventJson }: Props) {
   const [card, setCard] = useState<CardFields>(EMPTY_CARD);
   const [registration, setRegistration] =
     useState<RegistrationFields>(EMPTY_REGISTRATION);
-  const [consents, setConsents] = useState<ConsentState>({});
+  const [consentAccepted, setConsentAccepted] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitPhase, setSubmitPhase] = useState<SubmitPhase>("idle");
   const [serverError, setServerError] = useState<string | null>(null);
   const [done, setDone] = useState<{ groupLetter: string } | null>(null);
+  const submissionIdRef = useRef<string | null>(null);
 
   const fontsReady = useFontsReady();
-
   const avatarSrc =
     card.avatarKind === "photo" && card.photoDataUrl
       ? card.photoDataUrl
       : (findMascot(card.mascotId)?.src ?? null);
-
   const avatar = useDecodedImage(avatarSrc);
   const qrImage = useDecodedImage(event.qrDataUrl);
 
@@ -78,40 +74,41 @@ export function CredentialPage({ event: eventJson }: Props) {
       firstName: card.firstName || "Tu nombre",
       lastName: card.lastName || "",
       githubUsername: card.githubUsername.trim() || null,
-      groupLetter: done?.groupLetter ?? "?",
+      groupLetter: done?.groupLetter ?? "—",
       avatar,
       qrImage,
-      ctaLabel: "Inscríbete en gdgica.com",
+      ctaLabel: "Conoce el evento en gdgica.com",
     }),
     [event, card, avatar, qrImage, done]
   );
 
   const exportedImage = useMemo(() => {
-    if (step === 1 || typeof document === "undefined") return null;
+    if (!done || typeof document === "undefined") return null;
     try {
       const canvas = renderToCanvas(renderInput);
       return encodeUnderBudget(canvas, MAX_CREDENTIAL_DATAURL_CHARS);
     } catch {
       return null;
     }
-  }, [renderInput, step]);
+  }, [done, renderInput]);
+
+  const invalidateSubmission = () => {
+    submissionIdRef.current = null;
+    setServerError(null);
+  };
 
   const submit = async () => {
-    setSubmitting(true);
     setServerError(null);
+    setSubmitPhase("auth");
 
-    // Everything below runs inside try/finally so `submitting` is ALWAYS
-    // cleared. signInAnonymouslyIfNeeded throws on a blocked or offline
-    // identitytoolkit — an ad blocker or a corporate proxy is enough — and
-    // without this the button sat on "Guardando…" forever with no message,
-    // which reads as a hung page at the exact moment someone is registering.
     try {
-      // MUST come first: request() in src/lib/api.ts hard-returns
-      // { success: false, error: "Not authenticated" } with no token, which
-      // would surface as an English string in a Spanish form.
-      await signInAnonymouslyIfNeeded();
+      await withTimeout(signInAnonymouslyIfNeeded(), AUTH_TIMEOUT_MS);
+      setSubmitPhase("saving");
 
+      const submissionId =
+        submissionIdRef.current ?? (submissionIdRef.current = newUuid());
       const res = await api.createCredential(event.slug, {
+        submissionId,
         firstName: card.firstName.trim(),
         lastName: card.lastName.trim(),
         dni: registration.dni.trim(),
@@ -131,24 +128,18 @@ export function CredentialPage({ event: eventJson }: Props) {
         avatarKind: card.avatarKind,
         mascotId: card.avatarKind === "mascot" ? card.mascotId : null,
         photoDataUrl: card.avatarKind === "photo" ? card.photoDataUrl : null,
-        // Always null here: the card is attached below, once the server
-        // has told us the group letter. Sending it now would store a copy
-        // with a placeholder in place of the letter.
         credentialImageDataUrl: null,
       });
 
       if (!res.success) {
-        setServerError(res.error ?? "No pudimos guardar tu inscripción.");
+        setServerError(res.error ?? "No pudimos crear tu credencial.");
         return;
       }
-      const groupLetter = res.data?.groupLetter ?? "?";
+
+      const groupLetter = res.data?.groupLetter ?? "—";
       const credentialId = res.data?.credentialId;
       setDone({ groupLetter });
 
-      // The card is attached in a SECOND call rather than sent with create.
-      // The group letter comes from a server-assigned sequence number, so a
-      // card rendered before the response carries a placeholder where the
-      // letter belongs — the first end-to-end run stored exactly that.
       if (credentialId) {
         try {
           const canvas = renderToCanvas({ ...renderInput, groupLetter });
@@ -157,132 +148,270 @@ export function CredentialPage({ event: eventJson }: Props) {
             MAX_CREDENTIAL_DATAURL_CHARS
           );
           if (encoded) {
-            // Not awaited into the UI path: the attendee already has their
-            // credential on screen, and a failed attach must not turn a
-            // successful registration into an error message.
             void api.attachCredentialImage(event.slug, credentialId, {
               credentialImageDataUrl: encoded.dataUrl,
             });
           }
         } catch {
-          // Same reasoning — the registration is the part that matters.
+          // The registration is already safe; attaching the JPEG is best effort.
         }
       }
-    } catch {
-      // Only reachable when something outside request() throws — request()
-      // already turns fetch failures into an { success: false } response.
-      // Same wording as api.ts so the attendee sees one consistent message.
-      setServerError("No se pudo conectar con el servidor.");
+    } catch (error) {
+      setServerError(
+        error instanceof Error && error.message === "AUTH_TIMEOUT"
+          ? "La verificación de sesión tardó demasiado. Revisa tu conexión e inténtalo de nuevo."
+          : "No pudimos verificar tu sesión. Recarga la página e inténtalo de nuevo."
+      );
     } finally {
-      setSubmitting(false);
+      setSubmitPhase("idle");
     }
   };
 
   const fileName = `credencial-${event.slug}.jpg`;
-
-  // Built here rather than inside the preview because only this component
-  // knows whether the name on the card is real or the visual placeholder.
   const typedName = `${card.firstName} ${card.lastName}`.trim();
   const previewLabel = typedName
     ? `Vista previa de la credencial de ${typedName}`
     : "Vista previa de tu credencial";
 
   return (
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-      <div className="flex flex-col gap-4">
-        <CredentialPreview
-          input={renderInput}
-          fontsReady={fontsReady}
-          label={previewLabel}
-        />
-        {step === 2 && (
-          <ShareBar
-            imageDataUrl={exportedImage?.dataUrl ?? null}
-            fileName={fileName}
-            shareText={`${event.headline} — ${event.eventName}`}
-            pageUrl={typeof window !== "undefined" ? window.location.href : "/"}
-          />
-        )}
-      </div>
+    <div className="mx-auto max-w-[1180px]">
+      {done && <Confetti />}
+      <Progress current={done ? 3 : step} />
 
-      <div>
-        {done ? (
-          <SuccessPanel event={event} groupLetter={done.groupLetter} />
-        ) : (
-          <CredentialForm
-            card={card}
-            onCardChange={(patch) => setCard((c) => ({ ...c, ...patch }))}
-            registration={registration}
-            onRegistrationChange={(patch) =>
-              setRegistration((r) => ({ ...r, ...patch }))
-            }
-            consents={consents}
-            onConsentChange={(id, value) =>
-              setConsents((c) => ({ ...c, [id]: value }))
-            }
-            step={step}
-            onGenerate={() => setStep(2)}
-            onSubmit={submit}
-            submitting={submitting}
-            serverError={serverError}
-          />
-        )}
+      <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-12 lg:gap-10">
+        <section className="border-gray-custom rounded-2xl border bg-white p-5 shadow-sm sm:p-7 lg:col-span-7">
+          {done ? (
+            <SuccessPanel groupLetter={done.groupLetter} />
+          ) : (
+            <CredentialForm
+              card={card}
+              onCardChange={(patch) => {
+                invalidateSubmission();
+                setCard((current) => ({ ...current, ...patch }));
+              }}
+              registration={registration}
+              onRegistrationChange={(patch) => {
+                invalidateSubmission();
+                setRegistration((current) => ({ ...current, ...patch }));
+              }}
+              consentAccepted={consentAccepted}
+              onConsentChange={(value) => {
+                invalidateSubmission();
+                setConsentAccepted(value);
+              }}
+              step={step}
+              onContinue={() => setStep(2)}
+              onBack={() => setStep(1)}
+              onSubmit={submit}
+              submitPhase={submitPhase}
+              serverError={serverError}
+            />
+          )}
+        </section>
+
+        <aside className="lg:sticky lg:top-6 lg:col-span-5">
+          <div className="border-gray-custom rounded-2xl border bg-white p-3 shadow-sm sm:p-4">
+            <div className="mb-3 flex items-center justify-between px-1">
+              <p className="text-primary text-sm font-semibold">Vista previa</p>
+              <span className="text-tertiary text-xs">Formato 4:5</span>
+            </div>
+            <CredentialPreview
+              input={renderInput}
+              fontsReady={fontsReady}
+              label={previewLabel}
+            />
+          </div>
+
+          {done && (
+            <div className="mt-4">
+              <ShareBar
+                imageDataUrl={exportedImage?.dataUrl ?? null}
+                fileName={fileName}
+                shareText={`${event.headline} — ${event.eventName}`}
+                pageUrl={
+                  typeof window !== "undefined" ? window.location.href : "/"
+                }
+              />
+            </div>
+          )}
+        </aside>
       </div>
     </div>
   );
 }
 
-/**
- * The success screen is blunt on purpose.
- *
- * The whole risk of this hybrid funnel is someone filling our form, never
- * touching the official panel, and arriving on the day believing they are
- * registered. That is worse than never having a form at all, so the
- * registration CTA is the largest thing here and the wording leaves no
- * room to read the credential as proof of anything.
- */
-function SuccessPanel({
-  event,
-  groupLetter,
-}: {
-  event: CredentialEventInfo;
-  groupLetter: string;
-}) {
+function Progress({ current }: { current: 1 | 2 | 3 }) {
+  const steps = ["Personaliza", "Tus datos", "Lista"];
   return (
-    <div className="flex flex-col gap-4">
-      <h2 className="text-primary text-2xl font-bold">
-        ¡Listo! Tu credencial ya es tuya
-      </h2>
-      <p className="text-secondary text-sm">
-        Descárgala y compártela. También te la enviamos por correo.
-      </p>
+    <ol className="mx-auto flex max-w-2xl items-center" aria-label="Progreso">
+      {steps.map((label, index) => {
+        const number = (index + 1) as 1 | 2 | 3;
+        const active = number <= current;
+        return (
+          <li
+            key={label}
+            className={`flex items-center ${index < steps.length - 1 ? "flex-1" : ""}`}
+            aria-current={number === current ? "step" : undefined}
+          >
+            <span
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                active
+                  ? "bg-google-blue text-white"
+                  : "border-gray-custom text-tertiary border bg-white"
+              }`}
+            >
+              {number < current ? "✓" : number}
+            </span>
+            <span
+              className={`ml-2 hidden text-xs font-semibold sm:inline ${active ? "text-primary" : "text-tertiary"}`}
+            >
+              {label}
+            </span>
+            {index < steps.length - 1 && (
+              <span
+                className={`mx-3 h-px flex-1 ${number < current ? "bg-google-blue" : "bg-gray-200"}`}
+              />
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
-      <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-5">
-        <p className="font-bold text-amber-900">Todavía no estás inscrito</p>
-        <p className="mt-1 text-sm text-amber-900">
-          Tu inscripción se completa en el panel oficial del evento. Generar la
-          credencial no te registra.
+function SuccessPanel({ groupLetter }: { groupLetter: string }) {
+  return (
+    <div className="flex flex-col gap-5" role="status">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 via-white to-blue-50 px-6 py-8 text-center">
+        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl text-emerald-600 shadow-[0_10px_30px_rgba(22,163,74,0.18)] ring-1 ring-emerald-100">
+          ✓
+        </span>
+        <p className="text-google-green mt-5 text-xs font-bold tracking-[0.18em] uppercase">
+          Todo salió bien
         </p>
-        <a
-          href={event.registrationUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="bg-google-blue mt-4 inline-block rounded-lg px-5 py-3 font-semibold text-white"
-        >
-          Completar mi inscripción oficial
-        </a>
-        <p className="mt-3 text-xs text-amber-900">
-          Ese panel cierra la sesión a los 15 minutos, así que ten tus datos a
-          la mano antes de empezar.
+        <h1 className="text-primary mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+          ¡Tu credencial está lista!
+        </h1>
+        <p className="text-secondary mx-auto mt-3 max-w-md text-sm leading-6">
+          Guárdala, compártela y revisa tu correo. También te enviaremos una
+          copia para que siempre la tengas a mano.
         </p>
       </div>
 
-      <p className="text-secondary text-sm">
-        Tu grupo para las dinámicas del evento es el{" "}
-        <strong className="text-primary">{groupLetter}</strong>.
-      </p>
+      <div className="bg-google-blue flex items-center gap-5 rounded-2xl p-5 text-white shadow-[0_12px_30px_rgba(36,99,235,0.18)]">
+        <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-3xl font-bold text-blue-600 shadow-sm">
+          {groupLetter}
+        </span>
+        <div>
+          <p className="text-xs font-bold tracking-[0.14em] text-blue-100 uppercase">
+            Tu equipo para las dinámicas
+          </p>
+          <p className="mt-1 text-lg font-semibold">Grupo {groupLetter}</p>
+          <p className="mt-1 text-sm text-blue-100">
+            Recuerda esta letra para las actividades del evento.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex gap-4 rounded-2xl border border-blue-100 bg-blue-50/70 p-5">
+        <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-blue-600 shadow-sm">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className="h-5 w-5"
+            aria-hidden="true"
+          >
+            <path d="M12 8v4l2.5 1.5" />
+            <circle cx="12" cy="12" r="9" />
+          </svg>
+        </span>
+        <div>
+          <p className="text-primary font-bold">Registro oficial en proceso</p>
+          <p className="text-secondary mt-1 text-sm leading-6">
+            El equipo de GDG ICA usará los datos que enviaste para completar tu
+            inscripción en el panel oficial. No necesitas llenar otro
+            formulario.
+          </p>
+          <p className="text-google-blue mt-2 text-xs font-semibold">
+            Te confirmaremos por correo cuando la carga esté completada.
+          </p>
+        </div>
+      </div>
     </div>
   );
+}
+
+const CONFETTI_COLORS = ["#2463eb", "#ef4444", "#ebb308", "#16a34a"];
+
+function Confetti() {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none fixed inset-0 z-50 overflow-hidden motion-reduce:hidden"
+    >
+      {Array.from({ length: 36 }, (_, index) => {
+        const style = {
+          left: `${(index * 29 + 7) % 100}%`,
+          width: `${6 + (index % 4) * 2}px`,
+          height: `${10 + (index % 3) * 3}px`,
+          backgroundColor: CONFETTI_COLORS[index % CONFETTI_COLORS.length],
+          animationDelay: `${(index % 12) * 55}ms`,
+          animationDuration: `${1900 + (index % 7) * 130}ms`,
+          "--confetti-drift": `${((index * 37) % 180) - 90}px`,
+          "--confetti-turn": `${540 + (index % 5) * 180}deg`,
+        } as CSSProperties;
+
+        return (
+          <span
+            key={index}
+            className="animate-credential-confetti absolute -top-8 rounded-sm"
+            style={style}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(
+      () => reject(new Error("AUTH_TIMEOUT")),
+      timeoutMs
+    );
+    promise.then(
+      (value) => {
+        clearTimeout(timeout);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      }
+    );
+  });
+}
+
+function newUuid(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  const bytes = new Uint8Array(16);
+  if (typeof globalThis.crypto?.getRandomValues === "function") {
+    globalThis.crypto.getRandomValues(bytes);
+  } else {
+    for (let index = 0; index < bytes.length; index++) {
+      bytes[index] = Math.floor(Math.random() * 256);
+    }
+  }
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0"));
+  return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex
+    .slice(6, 8)
+    .join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10).join("")}`;
 }
 
 export default CredentialPage;

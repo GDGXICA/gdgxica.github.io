@@ -44,6 +44,10 @@ export const KNOWN_POLICY_VERSIONS = ["2026-08-01"] as const;
 
 export const credentialCreateSchema = z
   .object({
+    // Generated once per submit attempt and reused on network retries. This
+    // prevents a lost response from consuming a second sequence number while
+    // still allowing an attendee to deliberately create a corrected card.
+    submissionId: z.string().uuid(),
     firstName: z.string().trim().min(1).max(60),
     lastName: z.string().trim().min(1).max(60),
     dni: z.string().trim().regex(DNI_RE),
