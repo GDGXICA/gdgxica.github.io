@@ -1,12 +1,12 @@
 ---
-
+const { wide = false } = Astro.props;
 ---
 
 <section
   class="bg-gradient-to-br from-[#EFF6FF] via-[#FFFFFF] to-[#F0FDF4] py-10 md:py-20"
 >
   <div class="container">
-    <div class="mx-auto max-w-[768px] text-center">
+    <div class={wide ? "w-full" : "mx-auto max-w-[768px] text-center"}>
       <slot />
     </div>
   </div>
