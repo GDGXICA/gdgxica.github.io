@@ -71,11 +71,14 @@ export function ShareBar({
   };
 
   return (
-    <div className="border-gray-custom flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm">
-      <p className="text-primary text-sm font-semibold">
-        Tu credencial está lista
-      </p>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+    <div className="border-gray-custom flex flex-col gap-4 rounded-2xl border bg-white p-5 shadow-sm">
+      <div>
+        <p className="text-primary font-bold">Guárdala y compártela</p>
+        <p className="text-tertiary mt-1 text-xs leading-5">
+          Descarga la imagen en alta calidad o envíala directamente a tus redes.
+        </p>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
         {/* No href at all while there is no image, rather than href="#" with
             aria-disabled. An anchor without href is not a link: it leaves the
             tab order and cannot be activated. With "#" it stayed focusable and
@@ -85,26 +88,29 @@ export function ShareBar({
           href={imageDataUrl ?? undefined}
           download={imageDataUrl ? fileName : undefined}
           aria-disabled={!imageDataUrl}
-          className={`bg-google-green flex min-h-11 items-center justify-center rounded-xl px-4 py-3 text-center text-sm font-semibold text-white ${
+          className={`bg-google-blue col-span-2 flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-center text-sm font-bold text-white shadow-[0_10px_24px_rgba(36,99,235,0.2)] transition hover:-translate-y-0.5 hover:bg-blue-700 ${
             imageDataUrl ? "" : "opacity-50"
           }`}
         >
-          Descargar credencial
+          <DownloadIcon />
+          Descargar imagen
         </a>
         <button
           type="button"
           onClick={share}
           disabled={!imageDataUrl}
-          className="bg-google-blue min-h-11 rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+          className="border-gray-custom text-primary flex min-h-12 items-center justify-center gap-2 rounded-2xl border bg-white px-4 py-3 text-sm font-semibold transition hover:border-blue-200 hover:bg-blue-50 disabled:opacity-50"
         >
+          <ShareIcon />
           Compartir
         </button>
         <button
           type="button"
           onClick={copyLink}
-          className="border-gray-custom text-secondary min-h-11 rounded-xl border px-4 py-3 text-sm font-medium"
+          className="border-gray-custom text-primary flex min-h-12 items-center justify-center gap-2 rounded-2xl border bg-white px-4 py-3 text-sm font-semibold transition hover:border-blue-200 hover:bg-blue-50"
         >
-          {copied ? "Enlace copiado" : "Copiar enlace del evento"}
+          <LinkIcon />
+          {copied ? "Copiado" : "Copiar enlace"}
         </button>
       </div>
       {/* Announced, not just drawn: every message here reports the outcome of
@@ -115,6 +121,55 @@ export function ShareBar({
         </p>
       )}
     </div>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14" />
+    </svg>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <circle cx="18" cy="5" r="2.5" />
+      <circle cx="6" cy="12" r="2.5" />
+      <circle cx="18" cy="19" r="2.5" />
+      <path d="m8.2 10.8 7.6-4.5M8.2 13.2l7.6 4.5" />
+    </svg>
+  );
+}
+
+function LinkIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1" />
+      <path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1" />
+    </svg>
   );
 }
 

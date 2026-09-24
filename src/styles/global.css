@@ -82,10 +82,30 @@ body {
   animation: bingo-tumble 1.8s ease-in-out infinite;
 }
 
+@keyframes credential-confetti-fall {
+  0% {
+    transform: translate3d(0, -8vh, 0) rotate(0deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--confetti-drift), 108vh, 0)
+      rotate(var(--confetti-turn));
+    opacity: 0;
+  }
+}
+
+.animate-credential-confetti {
+  animation: credential-confetti-fall 2.4s cubic-bezier(0.15, 0.7, 0.35, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-bingo-ball-drop,
   .animate-bingo-ball-pulse,
-  .animate-bingo-tumble {
+  .animate-bingo-tumble,
+  .animate-credential-confetti {
     animation: none;
   }
 }

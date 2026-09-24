@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type CSSProperties } from "react";
 import { api } from "@/lib/api";
 import { signInAnonymouslyIfNeeded } from "@/lib/firebase";
 import { PRIVACY_POLICY_VERSION } from "@/lib/consent";
@@ -77,7 +77,7 @@ export function CredentialPage({ event: eventJson }: Props) {
       groupLetter: done?.groupLetter ?? "—",
       avatar,
       qrImage,
-      ctaLabel: "Inscríbete en gdgica.com",
+      ctaLabel: "Conoce el evento en gdgica.com",
     }),
     [event, card, avatar, qrImage, done]
   );
@@ -175,12 +175,13 @@ export function CredentialPage({ event: eventJson }: Props) {
 
   return (
     <div className="mx-auto max-w-[1180px]">
+      {done && <Confetti />}
       <Progress current={done ? 3 : step} />
 
       <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-12 lg:gap-10">
         <section className="border-gray-custom rounded-2xl border bg-white p-5 shadow-sm sm:p-7 lg:col-span-7">
           {done ? (
-            <SuccessPanel event={event} groupLetter={done.groupLetter} />
+            <SuccessPanel groupLetter={done.groupLetter} />
           ) : (
             <CredentialForm
               card={card}
@@ -278,60 +279,98 @@ function Progress({ current }: { current: 1 | 2 | 3 }) {
   );
 }
 
-function SuccessPanel({
-  event,
-  groupLetter,
-}: {
-  event: CredentialEventInfo;
-  groupLetter: string;
-}) {
+function SuccessPanel({ groupLetter }: { groupLetter: string }) {
   return (
-    <div className="flex flex-col gap-6" role="status">
-      <div className="flex items-start gap-4">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-100 text-2xl text-green-700">
+    <div className="flex flex-col gap-5" role="status">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 via-white to-blue-50 px-6 py-8 text-center">
+        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl text-emerald-600 shadow-[0_10px_30px_rgba(22,163,74,0.18)] ring-1 ring-emerald-100">
           ✓
         </span>
+        <p className="text-google-green mt-5 text-xs font-bold tracking-[0.18em] uppercase">
+          Todo salió bien
+        </p>
+        <h1 className="text-primary mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+          ¡Tu credencial está lista!
+        </h1>
+        <p className="text-secondary mx-auto mt-3 max-w-md text-sm leading-6">
+          Guárdala, compártela y revisa tu correo. También te enviaremos una
+          copia para que siempre la tengas a mano.
+        </p>
+      </div>
+
+      <div className="bg-google-blue flex items-center gap-5 rounded-2xl p-5 text-white shadow-[0_12px_30px_rgba(36,99,235,0.18)]">
+        <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-3xl font-bold text-blue-600 shadow-sm">
+          {groupLetter}
+        </span>
         <div>
-          <p className="text-google-green text-xs font-bold tracking-[0.16em] uppercase">
-            Credencial creada
+          <p className="text-xs font-bold tracking-[0.14em] text-blue-100 uppercase">
+            Tu equipo para las dinámicas
           </p>
-          <h1 className="text-primary mt-1 text-3xl font-bold tracking-tight">
-            ¡Ya es tuya!
-          </h1>
-          <p className="text-secondary mt-2 text-sm leading-6">
-            Ya puedes descargarla y compartirla. También la enviaremos a tu
-            correo.
+          <p className="mt-1 text-lg font-semibold">Grupo {groupLetter}</p>
+          <p className="mt-1 text-sm text-blue-100">
+            Recuerda esta letra para las actividades del evento.
           </p>
         </div>
       </div>
 
-      <div className="rounded-2xl bg-blue-50 p-5">
-        <p className="text-secondary text-xs font-bold tracking-widest uppercase">
-          Tu grupo para las dinámicas
-        </p>
-        <p className="text-google-blue mt-1 text-4xl font-bold">
-          {groupLetter}
-        </p>
+      <div className="flex gap-4 rounded-2xl border border-blue-100 bg-blue-50/70 p-5">
+        <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-blue-600 shadow-sm">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className="h-5 w-5"
+            aria-hidden="true"
+          >
+            <path d="M12 8v4l2.5 1.5" />
+            <circle cx="12" cy="12" r="9" />
+          </svg>
+        </span>
+        <div>
+          <p className="text-primary font-bold">Registro oficial en proceso</p>
+          <p className="text-secondary mt-1 text-sm leading-6">
+            El equipo de GDG ICA usará los datos que enviaste para completar tu
+            inscripción en el panel oficial. No necesitas llenar otro
+            formulario.
+          </p>
+          <p className="text-google-blue mt-2 text-xs font-semibold">
+            Te confirmaremos por correo cuando la carga esté completada.
+          </p>
+        </div>
       </div>
+    </div>
+  );
+}
 
-      <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5">
-        <p className="font-bold text-amber-950">Aún falta tu inscripción</p>
-        <p className="mt-2 text-sm leading-6 text-amber-900">
-          La credencial no reserva una entrada. Completa el registro en el panel
-          oficial del evento para asegurar tu participación.
-        </p>
-        <a
-          href={event.registrationUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="bg-google-blue mt-4 inline-flex min-h-12 items-center justify-center rounded-xl px-5 py-3 font-semibold text-white shadow-sm hover:bg-blue-700"
-        >
-          Completar mi inscripción oficial
-        </a>
-        <p className="mt-3 text-xs leading-5 text-amber-800">
-          El panel oficial cierra la sesión después de 15 minutos.
-        </p>
-      </div>
+const CONFETTI_COLORS = ["#2463eb", "#ef4444", "#ebb308", "#16a34a"];
+
+function Confetti() {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none fixed inset-0 z-50 overflow-hidden motion-reduce:hidden"
+    >
+      {Array.from({ length: 36 }, (_, index) => {
+        const style = {
+          left: `${(index * 29 + 7) % 100}%`,
+          width: `${6 + (index % 4) * 2}px`,
+          height: `${10 + (index % 3) * 3}px`,
+          backgroundColor: CONFETTI_COLORS[index % CONFETTI_COLORS.length],
+          animationDelay: `${(index % 12) * 55}ms`,
+          animationDuration: `${1900 + (index % 7) * 130}ms`,
+          "--confetti-drift": `${((index * 37) % 180) - 90}px`,
+          "--confetti-turn": `${540 + (index % 5) * 180}deg`,
+        } as CSSProperties;
+
+        return (
+          <span
+            key={index}
+            className="animate-credential-confetti absolute -top-8 rounded-sm"
+            style={style}
+          />
+        );
+      })}
     </div>
   );
 }

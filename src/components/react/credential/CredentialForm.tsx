@@ -214,8 +214,8 @@ export function CredentialForm({
               Completa tus datos
             </h1>
             <p className="text-secondary mt-2 max-w-xl text-sm leading-6">
-              Los usaremos para emitir tu credencial. Después podrás completar
-              tu inscripción oficial al evento.
+              Los usaremos para emitir tu credencial y para que el equipo de GDG
+              ICA complete tu registro oficial al evento.
             </p>
           </div>
           <button

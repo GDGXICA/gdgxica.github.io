@@ -332,16 +332,14 @@ describe("CredentialPage — accesibilidad de los errores", () => {
     render(<CredentialPage event={EVENT} />);
     await reachStepTwo(user);
 
-    expect(screen.queryByText("Descargar credencial")).toBeNull();
+    expect(screen.queryByText("Descargar imagen")).toBeNull();
     expect(screen.queryByText("Compartir")).toBeNull();
-    expect(screen.queryByText("Copiar enlace del evento")).toBeNull();
+    expect(screen.queryByText("Copiar enlace")).toBeNull();
   });
 });
 
 describe("CredentialPage — success", () => {
-  it("says plainly that the credential does not register anybody", async () => {
-    // The whole risk of the hybrid funnel is someone believing the
-    // credential is proof of registration.
+  it("explains that the organizer will complete the official registration", async () => {
     const user = userEvent.setup();
     render(<CredentialPage event={EVENT} />);
     await reachStepTwo(user);
@@ -352,14 +350,14 @@ describe("CredentialPage — success", () => {
     );
 
     expect(
-      await screen.findByText("Aún falta tu inscripción")
+      await screen.findByText("Registro oficial en proceso")
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/cierra la sesión después de 15 minutos/i)
+      screen.getByText(/no necesitas llenar otro formulario/i)
     ).toBeInTheDocument();
   });
 
-  it("links to the official panel with a safe external target", async () => {
+  it("does not send the attendee back to the official panel", async () => {
     const user = userEvent.setup();
     render(<CredentialPage event={EVENT} />);
     await reachStepTwo(user);
@@ -369,15 +367,12 @@ describe("CredentialPage — success", () => {
       screen.getByRole("button", { name: /crear mi credencial/i })
     );
 
-    const cta = await screen.findByRole("link", {
-      name: /completar mi inscripción oficial/i,
-    });
-    expect(cta).toHaveAttribute(
-      "href",
-      "https://gdg.community.dev/devfest-ica-2026"
-    );
-    expect(cta).toHaveAttribute("target", "_blank");
-    expect(cta).toHaveAttribute("rel", "noopener noreferrer");
+    await screen.findByText("Registro oficial en proceso");
+    expect(
+      screen.queryByRole("link", {
+        name: /completar mi inscripción oficial/i,
+      })
+    ).toBeNull();
   });
 
   it("shows the assigned group letter returned by the server", async () => {
@@ -390,7 +385,7 @@ describe("CredentialPage — success", () => {
       screen.getByRole("button", { name: /crear mi credencial/i })
     );
 
-    await screen.findByText("Aún falta tu inscripción");
+    await screen.findByText("Registro oficial en proceso");
     expect(screen.getByText("Q")).toBeInTheDocument();
   });
 });
@@ -424,7 +419,7 @@ describe("CredentialPage — adjuntar la tarjeta", () => {
       screen.getByRole("button", { name: /crear mi credencial/i })
     );
 
-    await screen.findByText("Aún falta tu inscripción");
+    await screen.findByText("Registro oficial en proceso");
     // En jsdom no hay canvas, asi que el adjunto puede no dispararse; lo
     // que si debe cumplirse es el orden cuando ocurre.
     const attachAt = calls.indexOf("attachCredentialImage");

@@ -12,10 +12,10 @@ import {
 // every interpolated body value. Attendee names come straight from a public
 // form, so that hardening is not optional here.
 //
-// The body's real job is the funnel. The largest element after the greeting
-// is the "completa tu inscripción oficial" button: the credential alone
-// does NOT register anybody, and an attendee who believes otherwise is
-// worse off than one who never filled the form.
+// The public form captures the fields the organizer later uploads to Bevy.
+// The first email therefore confirms receipt and sets the expectation that
+// GDG ICA completes the official registration; it must not send the attendee
+// through the same questionnaire a second time.
 
 export type CredentialEmailTemplate =
   "credential" | "photo_removed" | "reminder";
@@ -90,21 +90,18 @@ export async function sendCredentialEmail(
 }
 
 function credentialBody(
-  mail: CredentialEmail,
+  _mail: CredentialEmail,
   eventName: string,
   firstName: string
 ) {
-  const url = mail.registrationUrl;
-  const letter = singleLine(mail.groupLetter);
+  const letter = singleLine(_mail.groupLetter);
 
   const text =
     `Hola ${firstName},\n\n` +
     `Aqui tienes tu credencial de ${eventName}. Compartela donde quieras.\n\n` +
-    `FALTA UN PASO: tu inscripcion oficial se completa en el panel del ` +
-    `evento. Generar la credencial no te inscribe.\n` +
-    `${url}\n\n` +
-    `Ese panel cierra la sesion a los 15 minutos, asi que ten tus datos a ` +
-    `mano antes de empezar.\n\n` +
+    `Recibimos tus datos. El equipo de GDG ICA completara tu inscripcion ` +
+    `en el panel oficial del evento; no necesitas llenar otro formulario.\n\n` +
+    `Te confirmaremos por correo cuando la carga este completada.\n\n` +
     `Tu grupo para las dinamicas es el ${letter}.\n\n` +
     `Nos vemos,\nComunidad GDG ICA`;
 
@@ -112,16 +109,10 @@ function credentialBody(
     `<p>Hola <strong>${htmlEscape(firstName)}</strong>,</p>` +
     `<p>Aquí tienes tu credencial de <strong>${htmlEscape(eventName)}</strong>. ` +
     `Compártela donde quieras.</p>` +
-    `<table role="presentation" cellpadding="0" cellspacing="0" ` +
-    `style="margin:24px 0"><tr><td style="background:#2463eb;border-radius:8px">` +
-    `<a href="${htmlEscape(url)}" ` +
-    `style="display:inline-block;padding:16px 28px;color:#ffffff;` +
-    `font-size:17px;font-weight:700;text-decoration:none">` +
-    `Completa tu inscripción oficial</a></td></tr></table>` +
-    `<p><strong>Falta un paso.</strong> Generar la credencial no te inscribe: ` +
-    `tu registro se completa en el panel del evento. Ese panel cierra la ` +
-    `sesión a los <strong>15 minutos</strong>, así que ten tus datos a mano ` +
-    `antes de empezar.</p>` +
+    `<p><strong>Recibimos tus datos.</strong> El equipo de GDG ICA completará ` +
+    `tu inscripción en el panel oficial del evento; no necesitas llenar otro ` +
+    `formulario.</p>` +
+    `<p>Te confirmaremos por correo cuando la carga esté completada.</p>` +
     `<p>Tu grupo para las dinámicas es el ` +
     `<strong>${htmlEscape(letter)}</strong>.</p>` +
     `<p>Nos vemos,<br/>Comunidad GDG ICA</p>`;

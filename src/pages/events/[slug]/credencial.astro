@@ -23,11 +23,12 @@ const credential = event.data.credential!;
 // data: URL so the canvas can draw it same-origin — a remote image would
 // taint the canvas and make toDataURL throw at export time.
 //
-// Printing the registration QR on the card itself is what makes every
-// shared credential carry the funnel back to the panel that actually
-// registers people.
-const qrDataUrl = event.data.registerFormLink
-  ? await QRCode.toDataURL(event.data.registerFormLink, {
+// The organizer completes the official registration from the credential
+// queue, so the QR returns to the public event page instead of asking the
+// attendee to submit the same information again in Bevy.
+const eventPageUrl = new URL(`/events/${event.id}/`, Astro.site).toString();
+const qrDataUrl = eventPageUrl
+  ? await QRCode.toDataURL(eventPageUrl, {
       errorCorrectionLevel: "M",
       margin: 0,
       width: 512,
