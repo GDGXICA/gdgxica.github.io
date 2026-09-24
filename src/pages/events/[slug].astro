@@ -153,7 +153,7 @@ const whatsappQrDataUrl = whatsappGroupLink
       height={1080}
     />
     <div class="relative z-[2] container">
-      <div class="max-w-[768px]">
+      <div class="max-w-[768px] lg:max-w-[960px]">
         <div class="mb-4 flex gap-2">
           {
             event.data.category && (
@@ -175,10 +175,10 @@ const whatsappQrDataUrl = whatsappGroupLink
         <h1 class="mb-4 text-4xl font-bold text-white lg:text-5xl">
           {event.data.name}
         </h1>
-        <p class="mb-6 text-xl text-white">
+        <p class="mb-6 max-w-[768px] text-xl text-white">
           {event.data.shortDescription}
         </p>
-        <div class="flex flex-col gap-4 md:flex-row">
+        <div class="flex flex-col gap-4 md:flex-row md:flex-wrap">
           <Button
             variant="solid"
             href={event.data.registerFormLink}

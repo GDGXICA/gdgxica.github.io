@@ -60,10 +60,10 @@ const data = {
 <header class="border-gray-custom border-b bg-white py-4">
   <div class="mx-auto max-w-[1400px] px-4">
     <div class="flex items-center justify-between">
-      <a href="/" class="flex items-center gap-3 lg:basis-1/3">
+      <a href="/" class="flex items-center gap-3 min-[1360px]:basis-1/3">
         <img
           src={data.logo.image}
-          class="h-[40px] w-[40px] lg:h-[64px] lg:w-[64px]"
+          class="h-[40px] w-[40px] min-[1360px]:h-[64px] min-[1360px]:w-[64px]"
           width={64}
           height={64}
           alt={data.logo.imageAlt}
@@ -76,9 +76,9 @@ const data = {
       <nav
         id="navigation"
         aria-label="Navegación principal"
-        class="fixed inset-0 top-[77px] z-10 flex grow translate-x-full flex-col justify-start gap-6 bg-white px-4 py-10 transition-all md:gap-0 lg:static lg:translate-0 lg:flex-row lg:items-center lg:justify-between lg:py-0"
+        class="fixed inset-0 top-[77px] z-10 flex grow translate-x-full flex-col justify-start gap-6 bg-white px-4 py-10 min-[1360px]:static min-[1360px]:translate-0 min-[1360px]:flex-row min-[1360px]:items-center min-[1360px]:justify-between min-[1360px]:py-0 md:gap-0"
       >
-        <ul class="flex flex-col gap-6 lg:flex-row">
+        <ul class="flex flex-col gap-6 min-[1360px]:flex-row">
           {
             data.links.map((link) => (
               <li>
@@ -94,7 +94,7 @@ const data = {
             ))
           }
         </ul>
-        <div class="flex flex-col gap-3 lg:flex-row">
+        <div class="flex flex-col gap-3 min-[1360px]:flex-row">
           <Button
             variant="solid"
             href={data.buttonMember.url}
@@ -111,7 +111,11 @@ const data = {
           </Button>
         </div>
       </nav>
-      <button id="hamburgerButton" class="lg:hidden" aria-label="Abrir menú">
+      <button
+        id="hamburgerButton"
+        class="min-[1360px]:hidden"
+        aria-label="Abrir menú"
+      >
         <Menu stroke-width={1.5} />
       </button>
     </div>
@@ -124,14 +128,28 @@ const data = {
 
     if (!menuButton || !menuNavigation) return;
 
+    const animateMenuChange = () => {
+      menuNavigation.classList.add("transition-transform");
+      menuNavigation.addEventListener(
+        "transitionend",
+        () => menuNavigation.classList.remove("transition-transform"),
+        { once: true }
+      );
+    };
+
     // Toggle menú
     menuButton.onclick = () => {
+      if (window.matchMedia("(min-width: 1360px)").matches) return;
+      animateMenuChange();
       menuNavigation.classList.toggle("translate-x-full");
     };
 
     // Cerrar menú al hacer click en un link
     menuNavigation.querySelectorAll("a").forEach((link) => {
       link.onclick = () => {
+        if (!window.matchMedia("(min-width: 1360px)").matches) {
+          animateMenuChange();
+        }
         menuNavigation.classList.add("translate-x-full");
       };
     });
