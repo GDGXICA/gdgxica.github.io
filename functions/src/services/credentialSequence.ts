@@ -41,11 +41,11 @@ export function letterForSequence(
  * server needs because Functions cannot import the browser bundle at
  * runtime.
  *
- * ORDER IS PART OF THE CONTRACT: mascotForCredentialId indexes by
- * position, so reordering this list silently reassigns the replacement
- * avatar of every credential whose photo was ever taken down.
+ * ORDER IS PART OF THE CONTRACT: mascotForCredentialId indexes by position.
+ * MASCOT_IDS_V1 stays frozen for old documents while MASCOT_IDS mirrors the
+ * current client catalog used by schema-v2 credentials.
  */
-export const MASCOT_IDS = [
+export const MASCOT_IDS_V1 = [
   "gopher",
   "ferris",
   "tux",
@@ -54,7 +54,21 @@ export const MASCOT_IDS = [
   "gdg-red-a",
   "gdg-yellow-a",
   "gdg-green-a",
-];
+] as const;
+
+// The picker may grow, but V1 must remain frozen: changing the divisor in
+// the hash would change the replacement assigned to an older credential.
+export const MASCOT_IDS = [
+  ...MASCOT_IDS_V1,
+  "gdg-brackets",
+  "gdg-terminal",
+  "gdg-cloud",
+  "gdg-nodes",
+  "gdg-layers",
+  "gdg-compass",
+  "gdg-spark",
+  "gdg-code-dots",
+] as const;
 
 /**
  * Distributes credentials whose photo was taken down across the mascot

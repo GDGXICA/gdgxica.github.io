@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { createHash } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const SERVER_TS = "__SERVER_TS__";
@@ -83,6 +84,7 @@ const NOT_JPEG_DATA_URL = `data:image/jpeg;base64,${Buffer.from(
 ).toString("base64")}`;
 
 const VALID_BODY = {
+  submissionId: "0f966bde-2e21-4ba9-a986-4471b0529170",
   firstName: "Alvaro",
   lastName: "Pena",
   dni: "12345678",
@@ -157,6 +159,7 @@ function setupFirestore(
     maxCredentials?: number;
     counterValues?: (number | undefined)[];
     attempts?: number;
+    existingCredential?: Record<string, unknown>;
   } = {}
 ): Harness {
   const harness: Harness = {
@@ -171,6 +174,7 @@ function setupFirestore(
 
   const credentialDoc = {
     id: harness.credentialId,
+    __kind: "credential",
     update: vi.fn((data: Record<string, unknown>) => {
       harness.updates.push(data);
       return Promise.resolve();
@@ -212,8 +216,16 @@ function setupFirestore(
           counterValues[Math.min(attempt, counterValues.length - 1)];
         attempt++;
         const tx = {
-          get: vi.fn(() =>
-            Promise.resolve({ data: () => ({ nextSequence: value }) })
+          get: vi.fn((ref: { __kind?: string }) =>
+            ref?.__kind === "credential"
+              ? Promise.resolve({
+                  exists: Boolean(options.existingCredential),
+                  data: () => options.existingCredential,
+                })
+              : Promise.resolve({
+                  exists: value !== undefined,
+                  data: () => ({ nextSequence: value }),
+                })
           ),
           set: vi.fn((_ref: unknown, data: Record<string, unknown>) => {
             harness.counterWrites.push(data);
@@ -366,6 +378,33 @@ describe("createCredential — sequence assignment", () => {
     const h = setupFirestore({ groupLetters: [] });
     await createCredential(buildReq(VALID_BODY), buildRes());
     expect(h.created[0].groupLetter).toBe("A");
+  });
+
+  it("returns the existing credential when the same submission is retried", async () => {
+    const fingerprint = createHash("sha256")
+      .update(JSON.stringify({ ...VALID_BODY, submissionId: undefined }))
+      .digest("hex");
+    const h = setupFirestore({
+      groupLetters: ["A", "Q"],
+      existingCredential: {
+        createdByUid: "anon-uid-1",
+        submissionFingerprint: fingerprint,
+        sequenceNumber: 9,
+        groupLetter: "A",
+        photoPath: null,
+      },
+    });
+    const res = buildRes();
+
+    await createCredential(buildReq(VALID_BODY), res);
+
+    expect(h.created).toHaveLength(0);
+    expect(h.counterWrites).toHaveLength(0);
+    expect(res.__body).toMatchObject({
+      success: true,
+      data: { sequenceNumber: 9, groupLetter: "A" },
+    });
+    expect(writeAuditLogMock).not.toHaveBeenCalled();
   });
 });
 

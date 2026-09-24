@@ -28,6 +28,8 @@ interface ApiResponse<T> {
  * call site, not round-trip as a stored `false`.
  */
 export interface CredentialCreatePayload {
+  /** Stable across retries of one submit attempt. */
+  submissionId: string;
   firstName: string;
   lastName: string;
   dni: string;
@@ -78,51 +80,82 @@ export type PostSummary = Omit<Post, "body">;
 async function request<T>(
   method: string,
   path: string,
-  body?: unknown
+  body?: unknown,
+  timeoutMs?: number
 ): Promise<ApiResponse<T>> {
-  try {
-    // Inside the try: getIdToken() reaches the network to refresh an expired
-    // token, so it throws when identitytoolkit is blocked or offline. Left
-    // outside, that throw escaped request() entirely and every caller had to
-    // guard it — which none of them did.
-    const token = await getIdToken();
-    if (!token) {
-      return { success: false, error: "Not authenticated" };
+  const controller = new AbortController();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<ApiResponse<T>>((resolve) => {
+    if (timeoutMs !== undefined) {
+      timeout = setTimeout(() => {
+        controller.abort();
+        resolve({
+          success: false,
+          error:
+            "El servidor tardó demasiado en responder. Inténtalo de nuevo.",
+        });
+      }, timeoutMs);
     }
+  });
 
-    // Proves the call came from this web app rather than a script that
-    // minted an anonymous token elsewhere. Omitted when unavailable; the
-    // server decides what that means.
-    const appCheckToken = await getAppCheckToken();
+  const operation = (async (): Promise<ApiResponse<T>> => {
+    try {
+      // Inside the try: getIdToken() reaches the network to refresh an expired
+      // token, so it throws when identitytoolkit is blocked or offline. Left
+      // outside, that throw escaped request() entirely and every caller had to
+      // guard it — which none of them did.
+      const token = await getIdToken();
+      if (!token) {
+        return { success: false, error: "Not authenticated" };
+      }
 
-    const res = await fetch(`${API_BASE}${path}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        ...(appCheckToken ? { "X-Firebase-AppCheck": appCheckToken } : {}),
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
+      // Proves the call came from this web app rather than a script that
+      // minted an anonymous token elsewhere. Omitted when unavailable; the
+      // server decides what that means.
+      const appCheckToken = await getAppCheckToken();
 
-    if (!res.ok) {
-      const fallback =
-        res.status === 401 || res.status === 403
-          ? "Sesión expirada o sin permisos. Vuelve a iniciar sesión."
-          : `Error ${res.status}`;
-      // El cuerpo puede no ser JSON (p. ej. una página de error HTML).
-      const data = await res.json().catch(() => null);
+      const res = await fetch(`${API_BASE}${path}`, {
+        method,
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          ...(appCheckToken ? { "X-Firebase-AppCheck": appCheckToken } : {}),
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+
+      if (!res.ok) {
+        const fallback =
+          res.status === 401 || res.status === 403
+            ? "Sesión expirada o sin permisos. Vuelve a iniciar sesión."
+            : `Error ${res.status}`;
+        // El cuerpo puede no ser JSON (p. ej. una página de error HTML).
+        const data = await res.json().catch(() => null);
+        return {
+          success: false,
+          error: data?.error || data?.message || fallback,
+
+          ...(typeof data?.code === "string" ? { code: data.code } : {}),
+        };
+      }
+
+      return (await res.json()) as ApiResponse<T>;
+    } catch (err) {
       return {
         success: false,
-        error: data?.error || data?.message || fallback,
-
-        ...(typeof data?.code === "string" ? { code: data.code } : {}),
+        error:
+          err instanceof DOMException && err.name === "AbortError"
+            ? "El servidor tardó demasiado en responder. Inténtalo de nuevo."
+            : "No se pudo conectar con el servidor.",
       };
     }
+  })();
 
-    return (await res.json()) as ApiResponse<T>;
-  } catch {
-    return { success: false, error: "No se pudo conectar con el servidor." };
+  try {
+    return await Promise.race([operation, timedOut]);
+  } finally {
+    if (timeout !== undefined) clearTimeout(timeout);
   }
 }
 
@@ -301,7 +334,7 @@ const realApi = {
       credentialId: string;
       sequenceNumber: number;
       groupLetter: string;
-    }>("POST", `/events/${encodeURIComponent(slug)}/credentials`, data),
+    }>("POST", `/events/${encodeURIComponent(slug)}/credentials`, data, 30_000),
 
   // Attaches the composed card after creation. A separate call because the
   // group letter comes from a server-assigned sequence number, so the
@@ -314,7 +347,8 @@ const realApi = {
     request(
       "PATCH",
       `/events/${encodeURIComponent(slug)}/credentials/${id}/image`,
-      data
+      data,
+      30_000
     ),
 
   // Credential administration (organizer-level).

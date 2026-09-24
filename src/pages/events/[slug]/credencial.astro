@@ -53,19 +53,21 @@ const metadata = {
 ---
 
 <Layout {...metadata}>
-  <main class="container py-12 md:py-20">
-    <nav class="mb-8">
-      <a
-        href={`/events/${event.id}`}
-        class="text-secondary hover:text-google-blue text-sm"
-      >
-        ← Volver a {event.data.name}
-      </a>
-    </nav>
+  <main class="min-h-screen bg-slate-50 py-8 md:py-12">
+    <div class="container">
+      <nav class="mx-auto mb-6 max-w-[1180px]">
+        <a
+          href={`/events/${event.id}`}
+          class="text-secondary hover:text-google-blue inline-flex items-center gap-2 text-sm font-medium"
+        >
+          ← Volver a {event.data.name}
+        </a>
+      </nav>
 
-    <!-- Astro serializes island props; a JSON string round-trips more
+      <!-- Astro serializes island props; a JSON string round-trips more
          predictably than a nested object, the same workaround
          SharedButton.jsx uses for its hashtags array. -->
-    <CredentialPage client:load event={JSON.stringify(eventInfo)} />
+      <CredentialPage client:load event={JSON.stringify(eventInfo)} />
+    </div>
   </main>
 </Layout>

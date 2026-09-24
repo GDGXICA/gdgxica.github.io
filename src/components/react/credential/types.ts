@@ -31,8 +31,6 @@ export interface RegistrationFields {
   googleToolsLevel: string;
 }
 
-export type ConsentState = Record<string, boolean>;
-
 export const HEARD_ABOUT_OPTIONS = [
   { value: "redes_sociales", label: "Redes sociales" },
   { value: "amigo_colega", label: "Un amigo o colega" },

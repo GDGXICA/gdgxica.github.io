@@ -1,6 +1,6 @@
 // Avatar set offered when an attendee does not upload a photo.
 //
-// Four community mascots plus four abstract shapes in Google's brand
+// Four community mascots plus twelve abstract shapes in Google's brand
 // colours. Every mascot here is used under a licence that explicitly
 // permits reuse and modification, and each one carries an attribution
 // obligation that is discharged on /creditos — which is a legal
@@ -87,6 +87,54 @@ export const MASCOTS: readonly Mascot[] = [
     label: "Órbita verde",
     brandColor: "green",
   },
+  {
+    id: "gdg-brackets",
+    src: "/credencial/mascots/gdg-brackets.png",
+    label: "Brackets de código",
+    brandColor: "blue",
+  },
+  {
+    id: "gdg-terminal",
+    src: "/credencial/mascots/gdg-terminal.png",
+    label: "Terminal",
+    brandColor: "green",
+  },
+  {
+    id: "gdg-cloud",
+    src: "/credencial/mascots/gdg-cloud.png",
+    label: "Nube",
+    brandColor: "red",
+  },
+  {
+    id: "gdg-nodes",
+    src: "/credencial/mascots/gdg-nodes.png",
+    label: "Red de nodos",
+    brandColor: "yellow",
+  },
+  {
+    id: "gdg-layers",
+    src: "/credencial/mascots/gdg-layers.png",
+    label: "Capas",
+    brandColor: "blue",
+  },
+  {
+    id: "gdg-compass",
+    src: "/credencial/mascots/gdg-compass.png",
+    label: "Brújula",
+    brandColor: "green",
+  },
+  {
+    id: "gdg-spark",
+    src: "/credencial/mascots/gdg-spark.png",
+    label: "Destello",
+    brandColor: "red",
+  },
+  {
+    id: "gdg-code-dots",
+    src: "/credencial/mascots/gdg-code-dots.png",
+    label: "Código y puntos",
+    brandColor: "yellow",
+  },
 ] as const;
 
 export const MASCOT_IDS: readonly string[] = MASCOTS.map((m) => m.id);
@@ -113,9 +161,9 @@ export function findMascot(id: string | null): Mascot | null {
  * Used when a photo is taken down: the replacement avatar has to be the
  * same every time moderation runs on that record, so re-review cannot
  * shuffle the face the attendee already saw. Mirrors
- * functions/src/services/credentialSequence.ts#mascotForCredentialId, and
- * the two are pinned to agree — list, order and hash — by the mirror test
- * in credentialSequence.test.ts.
+ * functions/src/services/credentialSequence.ts#mascotForCredentialId for new
+ * schema-v2 credentials. The server keeps the original eight-entry pool
+ * frozen for older records so expanding this picker cannot reassign them.
  */
 export function mascotForSeed(seed: string): string {
   if (MASCOT_IDS.length === 0) return DEFAULT_MASCOT_ID;

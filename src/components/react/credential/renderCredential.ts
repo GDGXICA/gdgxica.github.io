@@ -17,61 +17,61 @@ export const CREDENTIAL_LAYOUT = {
   // without cropping, so a shared credential is never cut off.
   width: 1080,
   height: 1350,
-  background: "#ffffff",
+  background: "#f3f6fb",
   fontFamily: "'Geist Variable', sans-serif",
 
   headline: {
-    x: 80,
-    y: 150,
-    size: 40,
+    x: 82,
+    y: 142,
+    size: 34,
     maxWidth: 700,
     color: "#4b5563",
   },
   eventName: {
-    x: 80,
-    y: 226,
-    sizes: [64, 56, 48, 40],
+    x: 82,
+    y: 214,
+    sizes: [60, 54, 48, 40],
     maxWidth: 780,
     color: "#111827",
   },
   // Decorative corner arcs in the brand colors.
   corner: {
-    cx: 1080,
-    cy: 0,
-    radii: [300, 232, 164, 96],
-    lineWidth: 26,
+    cx: 1048,
+    cy: 32,
+    radii: [260, 202, 144, 86],
+    lineWidth: 22,
   },
   avatar: {
     cx: 540,
-    cy: 610,
-    r: 190,
-    ringWidth: 16,
+    cy: 535,
+    r: 172,
+    ringWidth: 14,
     // Gap between ring segments, in radians.
     ringGap: 0.06,
   },
   name: {
     x: 540,
-    y: 900,
-    sizes: [76, 64, 54, 44],
+    y: 800,
+    sizes: [72, 62, 52, 44],
     maxWidth: 900,
     color: "#111827",
   },
   handle: {
     x: 540,
-    y: 962,
-    size: 36,
+    y: 858,
+    size: 32,
     color: "#4b5563",
   },
   group: {
     cx: 148,
-    cy: 1128,
-    r: 74,
-    size: 68,
-    label: { y: 1232, size: 22, color: "#71717a" },
+    cy: 1112,
+    r: 66,
+    size: 58,
+    label: { y: 1204, size: 19, color: "#71717a" },
   },
   eventDate: {
     x: 268,
-    y: 1108,
+    y: 1090,
     // 30px over 560 fits a full Spanish long date ("sabado, 21 de
     // noviembre de 2026") without ellipsis; at 32/480 it lost the year.
     size: 30,
@@ -80,15 +80,15 @@ export const CREDENTIAL_LAYOUT = {
   },
   cta: {
     x: 268,
-    y: 1158,
+    y: 1143,
     size: 25,
     color: "#4b5563",
     maxWidth: 560,
   },
   qr: {
-    x: 856,
-    y: 1046,
-    size: 152,
+    x: 852,
+    y: 1038,
+    size: 156,
     quietZone: 10,
   },
   brandBar: {
@@ -215,6 +215,17 @@ export function drawCredential(
 
   ctx.fillStyle = layout.background;
   ctx.fillRect(0, 0, layout.width, layout.height);
+
+  // A contained white card gives the exported image the same calm surface
+  // hierarchy as the builder instead of leaving every element floating in a
+  // large empty canvas.
+  ctx.save();
+  ctx.shadowColor = "rgba(17, 24, 39, 0.10)";
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 8;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(32, 32, layout.width - 64, layout.height - 64);
+  ctx.restore();
 
   drawCornerArcs(ctx, layout);
   drawHeader(ctx, input, layout, fontFamily);
@@ -397,15 +408,21 @@ function drawFooter(
 ): void {
   const { group } = layout;
 
+  ctx.save();
+  ctx.fillStyle = "#f8fafc";
+  ctx.fillRect(64, 992, 952, 230);
+  ctx.restore();
+
   // Group letter badge.
   ctx.save();
   ctx.beginPath();
   ctx.arc(group.cx, group.cy, group.r, 0, Math.PI * 2);
   ctx.closePath();
-  ctx.fillStyle = BRAND_COLORS[0];
+  const groupPending = input.groupLetter === "—";
+  ctx.fillStyle = groupPending ? "#e5e7eb" : BRAND_COLORS[0];
   ctx.fill();
 
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = groupPending ? "#4b5563" : "#ffffff";
   ctx.font = `700 ${group.size}px ${fontFamily}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -414,7 +431,11 @@ function drawFooter(
   ctx.font = `500 ${group.label.size}px ${fontFamily}`;
   ctx.fillStyle = group.label.color;
   ctx.textBaseline = "alphabetic";
-  ctx.fillText("TU GRUPO", group.cx, group.label.y);
+  ctx.fillText(
+    groupPending ? "AL GUARDAR" : "TU GRUPO",
+    group.cx,
+    group.label.y
+  );
   ctx.restore();
 
   ctx.save();
