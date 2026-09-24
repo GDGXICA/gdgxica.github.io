@@ -46,7 +46,7 @@ const metadata = {
 ---
 
 <Layout {...metadata}>
-  <HeroPage>
+  <HeroPage wide={true}>
     <div class="mx-auto max-w-[768px] text-center">
       <p
         class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-red-500 to-green-600"
@@ -87,7 +87,7 @@ const metadata = {
       {
         highLightEvent && (
           <>
-            <p class="mt-[65px] mb-8 text-2xl font-bold">
+            <p class="mt-16 mb-8 text-2xl font-bold">
               Próximo Evento Destacado
             </p>
           </>
@@ -96,7 +96,7 @@ const metadata = {
     </div>
     {
       highLightEvent && (
-        <div class="mx-auto max-w-[1152px]">
+        <div class="mx-auto max-w-[1120px]">
           <EventCard
             isHorizontal={true}
             slug={highLightEvent?.id}
