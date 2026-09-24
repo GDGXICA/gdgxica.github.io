@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { createPortal } from "react-dom";
 import { renderPreview } from "./exportCanvas";
 import type { CredentialRenderInput } from "./renderCredential";
 
@@ -108,50 +109,53 @@ export function CredentialPreview({ input, fontsReady, label }: Props) {
         </p>
       )}
 
-      {open && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-md"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Vista ampliada de la credencial"
-          onClick={() => setOpen(false)}
-        >
-          <div className="credential-modal-grid absolute inset-0" />
-          <button
-            type="button"
-            autoFocus
-            onClick={() => setOpen(false)}
-            className="absolute top-5 right-5 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-2xl text-white backdrop-blur transition hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-            aria-label="Cerrar vista ampliada"
-          >
-            ×
-          </button>
-
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
           <div
-            className="animate-credential-modal-card relative z-10"
-            onClick={(event) => event.stopPropagation()}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-md"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Vista ampliada de la credencial"
+            onClick={() => setOpen(false)}
           >
-            <div
-              ref={tiltRef}
-              onPointerMove={tilt}
-              onPointerLeave={resetTilt}
-              className="credential-card-tilt relative overflow-hidden rounded-[1.4rem] border border-white/25 bg-white shadow-[0_45px_120px_rgba(0,0,0,0.65),0_0_80px_rgba(36,99,235,0.22)]"
+            <div className="credential-modal-grid absolute inset-0" />
+            <button
+              type="button"
+              autoFocus
+              onClick={() => setOpen(false)}
+              className="absolute top-5 right-5 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-2xl text-white backdrop-blur transition hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              aria-label="Cerrar vista ampliada"
             >
-              <canvas
-                ref={modalCanvasRef}
-                role="img"
-                aria-label={label}
-                className="block h-auto max-h-[82vh] w-auto max-w-[82vw]"
-              />
-              <span className="credential-card-shine pointer-events-none absolute inset-0" />
-              <span className="pointer-events-none absolute inset-0 rounded-[1.4rem] ring-1 ring-white/45 ring-inset" />
+              ×
+            </button>
+
+            <div
+              className="animate-credential-modal-card relative z-10"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div
+                ref={tiltRef}
+                onPointerMove={tilt}
+                onPointerLeave={resetTilt}
+                className="credential-card-tilt relative overflow-hidden rounded-[1.4rem] border border-white/25 bg-white shadow-[0_45px_120px_rgba(0,0,0,0.65),0_0_80px_rgba(36,99,235,0.22)]"
+              >
+                <canvas
+                  ref={modalCanvasRef}
+                  role="img"
+                  aria-label={label}
+                  className="block h-auto max-h-[82vh] w-auto max-w-[82vw]"
+                />
+                <span className="credential-card-shine pointer-events-none absolute inset-0" />
+                <span className="pointer-events-none absolute inset-0 rounded-[1.4rem] ring-1 ring-white/45 ring-inset" />
+              </div>
+              <p className="mt-5 text-center text-xs font-medium tracking-[0.18em] text-white/60 uppercase">
+                Mueve el cursor para explorar · Esc para cerrar
+              </p>
             </div>
-            <p className="mt-5 text-center text-xs font-medium tracking-[0.18em] text-white/60 uppercase">
-              Mueve el cursor para explorar · Esc para cerrar
-            </p>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
