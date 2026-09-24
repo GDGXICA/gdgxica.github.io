@@ -147,7 +147,7 @@ export default function SharedButton({
     <Popover.Root>
       <Popover.Trigger asChild>
         <button
-          className="text-primary inline-flex items-center justify-center gap-[10px] rounded-md border border-white bg-white px-8 py-[10px] font-medium"
+          className="text-primary inline-flex items-center justify-center gap-[10px] rounded-md border border-white bg-white px-8 py-[10px] font-medium whitespace-nowrap"
           aria-label="Compartir evento"
         >
           <svg
