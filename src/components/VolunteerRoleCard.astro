@@ -16,10 +16,9 @@ interface Props {
   icon: string;
   iconColor: string;
   skills: string[];
-  commitment: string;
 }
 
-const { title, description, icon, iconColor, skills, commitment } = Astro.props;
+const { title, description, icon, iconColor, skills } = Astro.props;
 
 const ICON_MAP: Record<string, typeof Camera> = {
   camera: Camera,
@@ -62,11 +61,5 @@ const IconComponent = ICON_MAP[icon];
         ))
       }
     </ul>
-  </div>
-  <div>
-    <p class="text-primary mb-[10px] text-base font-semibold tracking-wide">
-      Compromiso
-    </p>
-    <p class="text-secondary text-sm">{commitment}</p>
   </div>
 </article>

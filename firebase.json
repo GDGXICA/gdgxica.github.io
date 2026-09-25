@@ -45,7 +45,16 @@
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "redirects": [
         { "source": "/nosotros", "destination": "/about", "type": 301 },
-        { "source": "/equipo", "destination": "/team", "type": 301 },
+        {
+          "source": "/equipo",
+          "destination": "/about#equipo",
+          "type": 301
+        },
+        {
+          "source": "/team",
+          "destination": "/about#equipo",
+          "type": 301
+        },
         {
           "source": "/patrocinadores",
           "destination": "/sponsors",
