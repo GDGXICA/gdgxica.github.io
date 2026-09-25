@@ -5,7 +5,6 @@ import CallToActionSection from "@/components/CallToActionSection.astro";
 import Button from "@/components/Button.astro";
 import HeroPage from "@/components/HeroPage.astro";
 import { HandshakeIcon } from "@lucide/astro";
-// data
 import { getCollection } from "astro:content";
 import { fetchStats, fetchLinks } from "@/loaders/transform-site-config";
 import StatsBar from "@/components/StatsBar.astro";
@@ -14,14 +13,17 @@ import VolunteerRoleCard from "@/components/VolunteerRoleCard.astro";
 const volunteersCollection = await getCollection("volunteers");
 const volunteers = volunteersCollection.map((entry) => entry.data);
 const volunteerRolesCollection = await getCollection("volunteerRoles");
-const roles = volunteerRolesCollection.map((entry) => entry.data);
+const hiddenRoleTitles = new Set(["Soporte Técnico", "Traducción y Contenido"]);
+const roles = volunteerRolesCollection
+  .map((entry) => entry.data)
+  .filter((role) => !hiddenRoleTitles.has(role.title));
 const stats = await fetchStats();
 const links = await fetchLinks();
 
 const metadata = {
-  title: "Voluntarios - Google Developer Group Ica",
+  title: "Voluntariado - Google Developer Group Ica",
   description:
-    "Conoce a los 50+ voluntarios del GDG ICA y descubre oportunidades en fotografía, soporte técnico, diseño, logística y más. Únete al equipo voluntario de Ica.",
+    "Descubre cómo aportar tu tiempo y habilidades como voluntario de GDG Ica y conoce a las personas que apoyan nuestras iniciativas.",
   image: "https://gdgica.com/gdg-logo.png",
   url: "https://gdgica.com/volunteers/",
 };
@@ -35,94 +37,103 @@ const metadata = {
       <HandshakeIcon stroke-width={1.5} size={64} color="#FFFFFF" />
     </p>
     <h1 class="mb-6 text-4xl font-bold md:text-5xl">
-      <span class="text-google-blue">Nuestros </span>
-      <span class="text-google-red">Voluntarios</span>
+      <span class="text-google-blue">Haz la diferencia como </span>
+      <span class="text-google-red">voluntario</span>
     </h1>
 
-    <p class="text-secondary mx-auto mb-12 max-w-3xl text-xl">
-      El corazón de nuestra comunidad son las personas que generosamente dedican
-      su tiempo y talento para hacer que cada evento sea especial. Conoce a los
-      voluntarios que hacen posible la magia de GDG.
+    <p class="text-secondary mx-auto mb-8 max-w-3xl text-xl">
+      El voluntariado es una forma flexible de aportar a iniciativas concretas
+      de GDG Ica. No necesitas formar parte del equipo organizador: puedes
+      colaborar desde tus habilidades, intereses y disponibilidad.
     </p>
-
-    <StatsBar
-      stats={[
-        {
-          value: `${stats.activeVolunteers}+`,
-          label: "Voluntarios activos",
-          color: "blue",
-        },
-        {
-          value: `${stats.volunteerHours}+`,
-          label: "Horas contribuidas",
-          color: "red",
-        },
-        {
-          value: `${stats.eventsSupported}+`,
-          label: "Eventos apoyados",
-          color: "yellow",
-        },
-        {
-          value: `${stats.volunteerAreas}`,
-          label: "Áreas de apoyo",
-          color: "green",
-        },
-      ]}
-    />
+    <div class="mt-12">
+      <StatsBar
+        stats={[
+          {
+            value: `${stats.activeVolunteers}+`,
+            label: "Voluntarios activos",
+            color: "blue",
+          },
+          {
+            value: `${stats.volunteerHours}+`,
+            label: "Horas contribuidas",
+            color: "red",
+          },
+          {
+            value: `${stats.eventsSupported}+`,
+            label: "Eventos apoyados",
+            color: "yellow",
+          },
+          {
+            value: `${stats.volunteerAreas}`,
+            label: "Áreas de apoyo",
+            color: "green",
+          },
+        ]}
+      />
+    </div>
   </HeroPage>
 
-  <section class="py-20">
-    <div class="container">
-      <div class="mx-auto mb-14 max-w-lg text-center">
-        <h2 class="mb-4 text-4xl font-bold">Todos Nuestros Voluntarios</h2>
-        <p class="text-secondary text-xl">
-          Conoce a todas las personas increíbles que dedican su tiempo a nuestra
-          comunidad
-        </p>
-      </div>
-
-      <!-- <div class="flex flex-wrap justify-center gap-2" id="filters">
-        <Button variant="solid" href="#" target="_blank"> Todos </Button>
-        <Button variant="outline" href="#" target="_blank"> Logística </Button>
-        <Button variant="outline" href="#" target="_blank"> Técnico </Button>
-      </div> -->
-
-      <div
-        id="volunteers-grid"
-        class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-      >
-        {volunteers.map((volunteer) => <VolunteerCard volunteer={volunteer} />)}
-      </div>
-    </div>
-  </section>
-
-  <section class="bg-section py-20">
+  <section id="oportunidades" class="bg-section scroll-mt-8 py-12 md:py-20">
     <div class="container">
       <div class="mx-auto mb-14 max-w-2xl text-center">
-        <h2 class="mb-4 text-3xl font-bold">Oportunidades de Voluntariado</h2>
+        <p class="text-google-green mb-3 font-semibold">Elige cómo aportar</p>
+        <h2 class="text-primary mb-4 text-4xl font-bold">
+          Oportunidades de voluntariado
+        </h2>
         <p class="text-secondary text-xl">
-          Encuentra la forma perfecta de contribuir a nuestra comunidad según
-          tus habilidades e intereses
+          Encuentra un área que conecte con tus habilidades e intereses y
+          descubre cómo puedes aportar.
         </p>
       </div>
 
-      <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
         {roles.map((role) => <VolunteerRoleCard {...role} />)}
       </div>
     </div>
   </section>
+
+  {
+    volunteers.length > 0 && (
+      <section class="py-12 md:py-20">
+        <div class="container">
+          <div class="mx-auto mb-14 max-w-2xl text-center">
+            <p class="text-google-blue mb-3 font-semibold">
+              Personas que ya están colaborando
+            </p>
+            <h2 class="text-primary mb-4 text-4xl font-bold">
+              Nuestra comunidad voluntaria
+            </h2>
+            <p class="text-secondary text-xl">
+              Reconocemos a quienes aportan su tiempo y talento para hacer
+              posibles nuestros eventos e iniciativas.
+            </p>
+          </div>
+
+          <div
+            id="volunteers-grid"
+            class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+          >
+            {volunteers.map((volunteer) => (
+              <VolunteerCard volunteer={volunteer} />
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   <CallToActionSection>
     <h2 class="mb-6 text-3xl font-bold text-white md:text-4xl">
-      ¿Quieres Ser Voluntario?
+      ¿Quieres colaborar con GDG Ica?
     </h2>
     <p class="mb-8 text-xl text-white">
-      Únete a nuestro increíble equipo de voluntarios y ayúdanos a crear
-      experiencias memorables para la comunidad. No importa cuánto tiempo tengas
-      disponible, ¡toda ayuda es valiosa!
+      Cuéntanos qué te interesa y cuánto tiempo puedes aportar. Buscaremos una
+      oportunidad concreta en la que puedas participar.
     </p>
     <Button variant="white" href={links.forms.volunteer} target="_blank">
       <HandshakeIcon />
-      Ser voluntario
+      Quiero ser voluntario
     </Button>
   </CallToActionSection>
 </Layout>

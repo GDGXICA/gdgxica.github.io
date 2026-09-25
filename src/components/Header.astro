@@ -1,9 +1,5 @@
 ---
-import Button from "./Button.astro";
 import { Menu } from "@lucide/astro";
-import { fetchLinks } from "@/loaders/transform-site-config";
-
-const siteLinks = await fetchLinks();
 
 const data = {
   logo: {
@@ -21,14 +17,14 @@ const data = {
     },
     {
       id: 2,
-      text: "Equipo",
-      url: "/team",
+      text: "Eventos",
+      url: "/events",
       target: "_self",
     },
     {
       id: 3,
-      text: "Eventos",
-      url: "/events",
+      text: "Voluntariado",
+      url: "/volunteers",
       target: "_self",
     },
     {
@@ -44,16 +40,6 @@ const data = {
       target: "_self",
     },
   ],
-  buttonMember: {
-    text: "¡Quiero ser miembro!",
-    url: siteLinks.forms.joinCommunity,
-    target: "_blank",
-  },
-  buttonContact: {
-    text: "Contactanos",
-    url: siteLinks.forms.contact,
-    target: "_blank",
-  },
 };
 ---
 
@@ -76,7 +62,7 @@ const data = {
       <nav
         id="navigation"
         aria-label="Navegación principal"
-        class="fixed inset-0 top-[77px] z-10 flex grow translate-x-full flex-col justify-start gap-6 bg-white px-4 py-10 min-[1360px]:static min-[1360px]:translate-0 min-[1360px]:flex-row min-[1360px]:items-center min-[1360px]:justify-between min-[1360px]:py-0 md:gap-0"
+        class="fixed inset-0 top-[77px] z-10 flex grow translate-x-full flex-col justify-start gap-6 bg-white px-4 py-10 min-[1360px]:static min-[1360px]:translate-0 min-[1360px]:flex-row min-[1360px]:items-center min-[1360px]:justify-end min-[1360px]:py-0 md:gap-0"
       >
         <ul class="flex flex-col gap-6 min-[1360px]:flex-row">
           {
@@ -94,22 +80,6 @@ const data = {
             ))
           }
         </ul>
-        <div class="flex flex-col gap-3 min-[1360px]:flex-row">
-          <Button
-            variant="solid"
-            href={data.buttonMember.url}
-            target={data.buttonMember.target}
-          >
-            {data.buttonMember.text}
-          </Button>
-          <Button
-            variant="outline"
-            href={data.buttonContact.url}
-            target={data.buttonContact.target}
-          >
-            {data.buttonContact.text}
-          </Button>
-        </div>
       </nav>
       <button
         id="hamburgerButton"

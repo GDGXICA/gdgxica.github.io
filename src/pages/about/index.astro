@@ -4,26 +4,61 @@ import HeroPage from "@/components/HeroPage.astro";
 import CallToActionSection from "@/components/CallToActionSection.astro";
 import OrganizerCard from "@/components/OrganizerCard.astro";
 import Button from "@/components/Button.astro";
-import { MapPin, Users, Calendar, User } from "@lucide/astro";
-// data
+import {
+  ArrowRight,
+  BookOpen,
+  HeartHandshake,
+  Sprout,
+  User,
+  UsersRound,
+} from "@lucide/astro";
 import { getCollection } from "astro:content";
 import { fetchStats, fetchLinks } from "@/loaders/transform-site-config";
 import { buildAboutSchema } from "@/utils/schema";
 
 const organizersCollection = await getCollection("organizers");
 const organizers = organizersCollection.map((entry) => entry.data);
-const galleryCollection = await getCollection("gallery");
-const gallery = galleryCollection.map((entry) => entry.data);
+const membersCollection = await getCollection("members");
+const members = membersCollection.map((entry) => entry.data);
+const team = [...organizers, ...members];
 const stats = await fetchStats();
 const links = await fetchLinks();
 
-import { Gallery } from "@/components/react/Gallery";
+const impactStats = [
+  {
+    value: stats.yearsActive,
+    suffix: "",
+    label: "Años creando comunidad",
+    accent: "bg-google-green",
+    valueStyle: "text-google-green",
+  },
+  {
+    value: stats.totalMembers,
+    suffix: "+",
+    label: "Miembros de la comunidad",
+    accent: "bg-google-blue",
+    valueStyle: "text-google-blue",
+  },
+  {
+    value: stats.totalEvents,
+    suffix: "+",
+    label: "Eventos realizados",
+    accent: "bg-google-red",
+    valueStyle: "text-google-red",
+  },
+  {
+    value: stats.totalSpeakers,
+    suffix: "+",
+    label: "Speakers participantes",
+    accent: "bg-google-yellow",
+    valueStyle: "text-amber-600",
+  },
+];
 
-// metadata
 const metadata = {
   title: "Nosotros - Google Developer Group Ica",
   description:
-    "Conoce la historia, misión y equipo del Google Developer Group Ica. Más de 10 años conectando desarrolladores en Ica, Perú.",
+    "Conoce la historia, el propósito y las personas que hacen posible Google Developer Group Ica desde 2015.",
   image: "https://gdgica.com/gdg-logo.png",
   url: "https://gdgica.com/about/",
   schema: buildAboutSchema(links.social),
@@ -39,153 +74,247 @@ const metadata = {
     />
     <h1 class="mb-6 text-4xl font-bold md:text-5xl">
       <span class="text-google-blue">Somos</span>
-      <span class="text-google-red">GDG</span>
+      <span class="text-google-red"> GDG Ica</span>
     </h1>
-    <p class="text-secondary mb-8 text-xl">
-      Una comunidad vibrante de desarrolladores unidos por la pasión de crear,
-      aprender y compartir conocimiento sobre las tecnologías de Google. Desde
-      2015, hemos sido el punto de encuentro para desarrolladores de todos los
-      niveles.
+    <p class="text-secondary mx-auto mb-8 max-w-3xl text-xl">
+      Una comunidad tecnológica abierta donde las personas de Ica se encuentran
+      para aprender, compartir conocimiento y crear oportunidades juntas.
     </p>
-    <div
-      class="flex flex-col items-center justify-center gap-8 md:flex-row md:gap-4"
-    >
-      <div
-        class="flex items-center gap-2 rounded-4xl bg-[#F3F4F6] px-[15px] py-[20px] text-lg text-[#1F2937] md:py-[10px]"
-      >
-        <MapPin size={20} class="font-light" />
-        <span class="text-primary font-bold">Ica, Perú</span>
-      </div>
-      <div
-        class="flex items-center gap-2 rounded-4xl bg-[#F3F4F6] px-[15px] py-[20px] text-lg text-[#1F2937] md:py-[10px]"
-      >
-        <Users size={20} class="font-light" />
-        <span class="text-primary font-bold"
-          >{stats.totalMembers}+ Miembros</span
-        >
-      </div>
-      <div
-        class="flex items-center gap-2 rounded-4xl bg-[#F3F4F6] px-[15px] py-[20px] text-lg text-[#1F2937] md:py-[10px]"
-      >
-        <Calendar size={20} class="font-light" />
-        <span class="text-primary font-bold"
-          >{stats.yearsActive} Años Activos</span
-        >
-      </div>
+    <div class="flex flex-col justify-center gap-4 sm:flex-row">
+      <Button variant="solid" href={links.community} target="_blank">
+        Únete a la comunidad
+        <ArrowRight stroke-width={1.5} />
+      </Button>
     </div>
   </HeroPage>
-  <section class="bg-section py-20">
+
+  <section id="historia" class="scroll-mt-8 py-12 md:py-20">
     <div class="container">
-      <h2 class="text-primary mb-6 text-center text-4xl font-bold">
-        Nuestros Organizadores
-      </h2>
-      <p class="text-secondary text-center text-xl">
-        Conoce a todos los miembros de nuestro equipo organizador
-      </p>
       <div
-        class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        class="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:gap-20"
       >
-        {organizers.map((organizer) => <OrganizerCard organizer={organizer} />)}
+        <div>
+          <p class="text-google-red mb-3 font-semibold">Nuestra historia</p>
+          <h2 class="text-primary text-4xl font-bold">
+            <span class="block">Tecnología con</span>
+            <span class="block">raíces en Ica</span>
+          </h2>
+        </div>
+        <div class="text-secondary space-y-4 text-lg">
+          <p>
+            GDG Ica nació en 2015 como un punto de encuentro para quienes
+            querían aprender sobre tecnología y compartir lo que sabían con
+            otras personas de la región.
+          </p>
+          <p>
+            Desde entonces organizamos eventos, talleres y conversaciones que
+            acercan a estudiantes, profesionales, speakers y aliados. Nuestro
+            propósito sigue siendo el mismo: hacer que el conocimiento circule y
+            que el talento local encuentre un espacio para crecer.
+          </p>
+        </div>
+      </div>
+
+      <div
+        class="mx-auto mt-14 max-w-6xl border-y border-gray-200 py-10 md:mt-16 md:py-12"
+        aria-label="Impacto de GDG Ica"
+      >
+        <p
+          class="text-google-blue text-center text-sm font-semibold tracking-[0.16em] uppercase"
+        >
+          Impacto en cifras
+        </p>
+        <dl class="mt-9 grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-4">
+          {
+            impactStats.map((stat) => (
+              <div class="text-center">
+                <span
+                  class:list={[
+                    "mx-auto mb-4 block h-1 w-10 rounded-full",
+                    stat.accent,
+                  ]}
+                  aria-hidden="true"
+                />
+                <dd
+                  class:list={[
+                    "text-4xl font-bold tracking-tight md:text-5xl",
+                    stat.valueStyle,
+                  ]}
+                  aria-label={`${stat.value}${stat.suffix} ${stat.label}`}
+                >
+                  <>
+                    <span data-count-up={stat.value} aria-hidden="true">
+                      {stat.value}
+                    </span>
+                    <span aria-hidden="true">{stat.suffix}</span>
+                  </>
+                </dd>
+                <dt class="text-secondary mx-auto mt-2 max-w-40 text-sm md:text-base">
+                  {stat.label}
+                </dt>
+              </div>
+            ))
+          }
+        </dl>
       </div>
     </div>
   </section>
-  <section class="py-20">
+
+  <section class="bg-section py-12 md:py-20">
     <div class="container">
-      <h2 class="text-primary mb-6 text-center text-4xl font-bold">
-        Galería de Momentos
-      </h2>
-      <p class="text-secondary text-center text-xl">
-        Revive los mejores momentos de nuestra comunidad a través de estas
-        imágenes
-      </p>
-      <!-- <div class="mt-8 flex flex-wrap justify-center gap-4">
-        <Button
-          variant="solid"
-          className="text-sm md:text-base"
-          href="#"
-          target="_blank"
-        >
-          Todos
-        </Button>
-        <Button
-          variant="outline"
-          className="text-sm md:text-base"
-          href="#"
-          target="_blank"
-        >
-          DevFest
-        </Button>
-        <Button
-          variant="outline"
-          className="text-sm md:text-base"
-          href="#"
-          target="_blank"
-        >
-          WorkShop
-        </Button>
-        <Button
-          variant="outline"
-          className="text-sm md:text-base"
-          href="#"
-          target="_blank"
-        >
-          Hackaton
-        </Button>
-        <Button
-          variant="outline"
-          className="text-sm md:text-base"
-          href="#"
-          target="_blank"
-        >
-          Networking
-        </Button>
-        <Button
-          variant="outline"
-          className="text-sm md:text-base"
-          href="#"
-          target="_blank"
-        >
-          Study Jam
-        </Button>
-        <Button
-          variant="outline"
-          className="text-sm md:text-base"
-          href="#"
-          target="_blank"
-        >
-          I/O Extended
-        </Button>
-        <Button
-          variant="outline"
-          className="text-sm md:text-base"
-          href="#"
-          target="_blank"
-        >
-          Meetup
-        </Button>
-        <Button
-          variant="outline"
-          className="text-sm md:text-base"
-          href="#"
-          target="_blank"
-        >
-          CodeLab
-        </Button>
-      </div> -->
-      <Gallery client:visible gallery={gallery} />
+      <div class="mx-auto mb-12 max-w-2xl text-center">
+        <p class="text-google-blue mb-3 font-semibold">Lo que nos mueve</p>
+        <h2 class="text-primary mb-4 text-4xl font-bold">
+          Aprender juntos transforma la comunidad
+        </h2>
+        <p class="text-secondary text-xl">
+          Todo lo que hacemos parte de tres ideas sencillas.
+        </p>
+      </div>
+
+      <div
+        class="mx-auto grid max-w-5xl divide-y divide-gray-200 md:grid-cols-3 md:divide-x md:divide-y-0"
+      >
+        <article class="px-6 py-8 text-center md:py-2">
+          <BookOpen
+            stroke-width={1.5}
+            size={44}
+            class="text-google-blue mx-auto mb-5"
+          />
+          <h3 class="text-primary mb-3 text-2xl font-bold">Aprender</h3>
+          <p class="text-secondary">
+            Acercamos conocimiento práctico mediante charlas, talleres y
+            experiencias para todos los niveles.
+          </p>
+        </article>
+        <article class="px-6 py-8 text-center md:py-2">
+          <UsersRound
+            stroke-width={1.5}
+            size={44}
+            class="text-google-red mx-auto mb-5"
+          />
+          <h3 class="text-primary mb-3 text-2xl font-bold">Conectar</h3>
+          <p class="text-secondary">
+            Reunimos a personas con intereses diversos para formar relaciones,
+            proyectos y nuevas oportunidades.
+          </p>
+        </article>
+        <article class="px-6 py-8 text-center md:py-2">
+          <Sprout
+            stroke-width={1.5}
+            size={44}
+            class="text-google-green mx-auto mb-5"
+          />
+          <h3 class="text-primary mb-3 text-2xl font-bold">Impulsar</h3>
+          <p class="text-secondary">
+            Damos espacio a nuevas voces para que el talento tecnológico local
+            crezca y se haga visible.
+          </p>
+        </article>
+      </div>
     </div>
   </section>
+
+  {
+    team.length > 0 && (
+      <section id="equipo" class="scroll-mt-8 py-12 md:py-20">
+        <div class="container">
+          <div class="mx-auto mb-12 max-w-2xl text-center">
+            <p class="text-google-green mb-3 font-semibold">
+              Las personas detrás de GDG Ica
+            </p>
+            <h2 class="text-primary mb-4 text-4xl font-bold">
+              Un equipo, un mismo propósito
+            </h2>
+            <p class="text-secondary text-xl">
+              Organizamos actividades, cuidamos la comunidad y convertimos las
+              ideas en experiencias donde más personas puedan aprender y
+              conectar.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 sm:gap-8 lg:grid-cols-3 xl:grid-cols-4">
+            {team.map((person) => (
+              <OrganizerCard organizer={person} />
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   <CallToActionSection>
     <h2 class="mb-6 text-3xl font-bold text-white md:text-4xl">
-      ¿Quieres Ser Parte de Nuestra Historia?
+      Encuentra tu forma de participar
     </h2>
     <p class="mb-8 text-xl text-white">
-      Únete a nuestra comunidad y ayúdanos a escribir el siguiente capítulo de
-      GDG. Juntos podemos crear un impacto aún mayor en el mundo del desarrollo.
+      Asiste a nuestros eventos y comparte con la comunidad, o aporta tus
+      habilidades como parte del voluntariado.
     </p>
-    <Button variant="white" href={links.forms.joinCommunity} target="_blank">
-      <User />
-      Únete a la Comunidad
-    </Button>
+    <div class="flex flex-col justify-center gap-4 sm:flex-row">
+      <Button variant="white" href={links.forms.joinCommunity} target="_blank">
+        <User />
+        Únete a la comunidad
+      </Button>
+      <Button variant="white" href="/volunteers">
+        <HeartHandshake />
+        Conoce el voluntariado
+      </Button>
+    </div>
   </CallToActionSection>
 </Layout>
+
+<script is:inline>
+  function initImpactCounters() {
+    const counters = document.querySelectorAll(
+      "[data-count-up]:not([data-count-initialized])"
+    );
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
+    if (reduceMotion || !("IntersectionObserver" in window)) {
+      counters.forEach((counter) => {
+        counter.dataset.countInitialized = "true";
+      });
+      return;
+    }
+
+    const animateCounter = (counter) => {
+      const target = Number(counter.dataset.countUp);
+      const duration = 1400;
+      const startedAt = performance.now();
+
+      const update = (now) => {
+        const progress = Math.min((now - startedAt) / duration, 1);
+        const easedProgress = 1 - Math.pow(1 - progress, 3);
+        counter.textContent = String(Math.round(target * easedProgress));
+
+        if (progress < 1) requestAnimationFrame(update);
+      };
+
+      requestAnimationFrame(update);
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+
+          animateCounter(entry.target);
+          observer.unobserve(entry.target);
+        });
+      },
+      { threshold: 0.4 }
+    );
+
+    counters.forEach((counter) => {
+      counter.dataset.countInitialized = "true";
+      counter.textContent = "0";
+      observer.observe(counter);
+    });
+  }
+
+  initImpactCounters();
+  document.addEventListener("astro:after-swap", initImpactCounters);
+</script>
