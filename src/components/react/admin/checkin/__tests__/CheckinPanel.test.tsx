@@ -204,6 +204,20 @@ describe("CheckinPanel — marking someone present", () => {
 });
 
 describe("CheckinPanel — exporting for Bevy", () => {
+  // jsdom ≥ 30.1 throws inside URL.createObjectURL(new Blob(...)) in this
+  // environment. What these tests assert is the filename and the toast, not
+  // jsdom's blob store, so the object-URL pair is replaced.
+  const realCreate = URL.createObjectURL;
+  const realRevoke = URL.revokeObjectURL;
+  beforeEach(() => {
+    URL.createObjectURL = vi.fn(() => "blob:test");
+    URL.revokeObjectURL = vi.fn();
+  });
+  afterEach(() => {
+    URL.createObjectURL = realCreate;
+    URL.revokeObjectURL = realRevoke;
+  });
+
   it("is disabled until somebody has been marked present", () => {
     render(<CheckinPanel initialSlug="devfest-ica-2026" />);
     expect(
