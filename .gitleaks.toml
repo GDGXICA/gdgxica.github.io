@@ -1,0 +1,13 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Firebase web apiKey and reCAPTCHA v3 site key: public by design, they ship in the page source"
+targetRules = ["gcp-api-key", "generic-api-key"]
+condition = "AND"
+paths = ['''^src/lib/firebase\.ts$''']
+regexTarget = "line"
+regexes = [
+  '''apiKey:\s*"AIza[0-9A-Za-z_-]{35}",?\s*$''',
+  '''const RECAPTCHA_SITE_KEY = "6L[0-9A-Za-z_-]{38}";\s*$''',
+]

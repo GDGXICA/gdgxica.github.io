@@ -1,6 +1,8 @@
 name: OSV Scanner
 
 on:
+  pull_request:
+    branches: [main]
   schedule:
     - cron: "0 8 * * 1" # weekly, Monday — same cadence as Dependabot
   workflow_dispatch:
@@ -10,6 +12,7 @@ permissions:
 
 jobs:
   scan-scheduled:
+    if: github.event_name != 'pull_request'
     permissions:
       actions: read
       contents: read
@@ -18,6 +21,17 @@ jobs:
     with:
       scan-args: |-
         -r
-        --skip-git
         ./
       fail-on-vuln: false
+
+  scan-pr:
+    if: github.event_name == 'pull_request'
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@a345acffa64b0eaede81a3d9aae6141214d9c8fc
+    with:
+      scan-args: |-
+        -r
+        ./
