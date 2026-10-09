@@ -3,6 +3,7 @@ import "@/styles/global.css";
 import Header from "@/components/Header.astro";
 import Footer from "@/components/Footer.astro";
 import { ClientRouter } from "astro:transitions";
+import { serializeJsonLd } from "@/utils/schema";
 
 interface Props {
   title: string;
@@ -52,7 +53,7 @@ const { title, description, image, url, schema, noindex } = Astro.props;
     <link rel="canonical" href={url} />
     {
       schema && (
-        <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+        <script type="application/ld+json" set:html={serializeJsonLd(schema)} />
       )
     }
     <ClientRouter />

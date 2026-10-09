@@ -4,6 +4,10 @@
 
 const SITE = "https://gdgica.com";
 
+export function serializeJsonLd(schema: object | object[]): string {
+  return JSON.stringify(schema).replace(/</g, "\\u003c");
+}
+
 /** Convierte una ruta absoluta del sitio (p. ej. "/team/foo.png") en URL absoluta. */
 function absUrl(path: string | undefined): string | undefined {
   if (!path) return undefined;
