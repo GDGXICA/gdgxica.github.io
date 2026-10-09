@@ -49,6 +49,15 @@ jobs:
       - name: Install Cloud Functions dependencies
         run: cd functions && npm ci
 
+      - name: Lint (root)
+        run: pnpm lint
+
+      - name: Lint Cloud Functions
+        run: cd functions && npm run lint
+
+      - name: Type-check Cloud Functions
+        run: cd functions && npm run build
+
       - name: Run unit tests (root)
         run: pnpm test
 
