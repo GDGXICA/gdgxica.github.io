@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   uploadMuralPhoto: vi.fn(),
   requestMuralRemoval: vi.fn(),
   prepareMuralPhoto: vi.fn(),
+  mine: [] as unknown[],
 }));
 
 vi.mock("@/lib/api", () => ({
@@ -33,7 +34,7 @@ vi.mock("../useMuralSettings", () => ({
 }));
 
 vi.mock("../useMyMuralPhotos", () => ({
-  useMyMuralPhotos: () => ({ mine: [], loading: false }),
+  useMyMuralPhotos: () => ({ mine: mocks.mine, loading: false }),
 }));
 
 vi.mock("../prepareMuralPhoto", () => ({
@@ -60,6 +61,7 @@ beforeEach(() => {
   mocks.uploadMuralPhoto.mockReset();
   mocks.requestMuralRemoval.mockReset();
   mocks.prepareMuralPhoto.mockReset();
+  mocks.mine = [];
   mocks.prepareMuralPhoto.mockResolvedValue({
     dataUrl: "data:image/jpeg;base64,AAAA",
     width: 1600,
@@ -189,5 +191,60 @@ describe("MuralUploadRoot", () => {
     render(<MuralUploadRoot slug="devfest" headline="Fotos" />);
     await waitFor(() => expect(fileInput()).toBeInTheDocument());
     expect(fileInput()).not.toHaveAttribute("capture");
+  });
+
+  it("ofrece un botón visible que abre el selector de fotos", async () => {
+    render(<MuralUploadRoot slug="devfest" headline="Fotos" />);
+    await ready();
+    const click = vi.spyOn(fileInput(), "click");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /elegir fotos/i })
+    );
+
+    expect(click).toHaveBeenCalledTimes(1);
+  });
+
+  it("sin consentimiento, el botón está desactivado y dice por qué", async () => {
+    render(<MuralUploadRoot slug="devfest" headline="Fotos" />);
+    await waitFor(() => expect(fileInput()).toBeInTheDocument());
+
+    expect(
+      screen.getByRole("button", { name: /elegir fotos/i })
+    ).toBeDisabled();
+    expect(screen.getByText(/marca la casilla/i)).toBeInTheDocument();
+  });
+
+  it("el selector de archivos oculto no recibe el foco ni se anuncia", async () => {
+    render(<MuralUploadRoot slug="devfest" headline="Fotos" />);
+    await ready();
+    expect(fileInput()).toHaveAttribute("tabindex", "-1");
+    expect(fileInput()).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("explica la revisión de fotos desde el primer momento", () => {
+    render(<MuralUploadRoot slug="devfest" headline="Fotos" />);
+    expect(
+      screen.getByText(/revisa cada foto antes de que se vea/i)
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading")).toHaveTextContent("Sube tus fotos");
+  });
+
+  it("con fotos ya subidas, invita a subir más", async () => {
+    mocks.mine = [
+      {
+        id: "p1",
+        status: "pending",
+        downloadUrl: null,
+        alias: "",
+        createdAt: null,
+      },
+    ];
+    render(<MuralUploadRoot slug="devfest" headline="Fotos" />);
+    await ready();
+
+    expect(
+      screen.getByRole("button", { name: /subir más fotos/i })
+    ).toBeEnabled();
   });
 });

@@ -21,13 +21,6 @@ const mural = event.data.mural!;
   noindex
 >
   <main class="container mx-auto px-4 py-10">
-    <p class="mx-auto mb-6 max-w-md text-sm text-gray-600 dark:text-gray-400">
-      Tus fotos aparecen en la pantalla grande del evento. <strong
-        >Una persona de la organización revisa cada foto antes de que se vea</strong
-      >, así que puede tardar un momento. Si te arrepientes, desde aquí mismo
-      puedes pedir que la quitemos.
-    </p>
-
     <MuralUploadRoot client:load slug={event.id} headline={mural.headline} />
   </main>
 </Layout>
