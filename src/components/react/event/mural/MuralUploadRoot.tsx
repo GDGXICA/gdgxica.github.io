@@ -175,14 +175,7 @@ export function MuralUploadRoot({ slug, headline }: Props) {
     [slug]
   );
 
-  if (phase === "init" || settingsLoading) {
-    return (
-      <div className="flex justify-center p-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-      </div>
-    );
-  }
-
+  const loadingView = phase === "init" || settingsLoading;
   const open = settings.state === "open";
   const canUpload = open && phase === "ready" && left > 0 && consent;
 
@@ -190,7 +183,20 @@ export function MuralUploadRoot({ slug, headline }: Props) {
     <div className="mx-auto max-w-md">
       <h1 className="text-2xl font-bold">{settings.headline || headline}</h1>
 
-      {blockedReason ? (
+      <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+        Tus fotos aparecen en la pantalla grande del evento.{" "}
+        <strong>
+          Una persona de la organización revisa cada foto antes de que se vea
+        </strong>
+        , así que puede tardar un momento. Si te arrepientes, desde aquí mismo
+        puedes pedir que la quitemos.
+      </p>
+
+      {loadingView ? (
+        <div className="flex justify-center p-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+        </div>
+      ) : blockedReason ? (
         <p className="mt-4 rounded-lg bg-amber-50 p-4 text-amber-900 dark:bg-amber-950 dark:text-amber-100">
           {blockedReason}
         </p>
@@ -235,14 +241,30 @@ export function MuralUploadRoot({ slug, headline }: Props) {
             ref={fileInput}
             type="file"
             accept="image/*"
-
             multiple
+            tabIndex={-1}
+            aria-hidden="true"
             disabled={!canUpload}
             onChange={(e) =>
               upload(Array.from(e.target.files ?? []).slice(0, left))
             }
-            className="mt-4 w-full text-sm disabled:opacity-50"
+            className="sr-only"
           />
+
+          <button
+            type="button"
+            disabled={!canUpload}
+            onClick={() => fileInput.current?.click()}
+            className="bg-google-blue mt-6 min-h-12 w-full rounded-xl px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            {mine.length > 0 ? "Subir más fotos" : "Elegir fotos"}
+          </button>
+
+          {!consent && left > 0 && (
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              Marca la casilla de arriba para elegir tus fotos.
+            </p>
+          )}
 
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             {left > 0
