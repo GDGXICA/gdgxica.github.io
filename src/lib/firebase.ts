@@ -143,6 +143,7 @@ export async function getFirestore() {
         getFirestore: firebaseGetFirestore,
         persistentLocalCache,
         persistentMultipleTabManager,
+        memoryLocalCache,
         connectFirestoreEmulator,
       } = await import("firebase/firestore");
 
@@ -170,9 +171,11 @@ export async function getFirestore() {
       let db: import("firebase/firestore").Firestore;
       try {
         db = initializeFirestore(app, {
-          localCache: persistentLocalCache({
-            tabManager: persistentMultipleTabManager(),
-          }),
+          localCache: window.location.pathname.startsWith("/admin")
+            ? persistentLocalCache({
+                tabManager: persistentMultipleTabManager(),
+              })
+            : memoryLocalCache(),
         });
       } catch {
         // Throws in Safari private mode (no IndexedDB) and if something
