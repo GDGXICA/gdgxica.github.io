@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo } from "react";
 import type { MuralPhoto } from "@/lib/mural";
 import { HeroQr } from "../HeroQr";
+import { RibbonWall } from "./RibbonWall";
+import { Spotlight } from "./Spotlight";
+import { photoAspect } from "./ribbons";
 import { useApprovedMuralPhotos } from "./useApprovedMuralPhotos";
-import {
-  EMPTY_ROTATION,
-  ROTATE_MS,
-  peekNext,
-  reconcileTiles,
-  rotateTiles,
-  type Rotation,
-} from "./wall";
+import { useFullscreen } from "./useFullscreen";
+import { useIdle } from "./useIdle";
+import { useMuralSettings } from "./useMuralSettings";
+import { usePhotoAdmission } from "./usePhotoAdmission";
+import { usePrefersReducedMotion } from "./usePrefersReducedMotion";
+import { useSpotlight } from "./useSpotlight";
 
 interface Props {
   slug: string;
@@ -20,7 +21,37 @@ interface Props {
   qrDataUrl: string;
 }
 
-const HIGHLIGHT_MS = 12_000;
+export const IDLE_MS = 3000;
+
+function naturalAspect(
+  natural: { width: number; height: number } | undefined,
+  photo: MuralPhoto
+): number {
+  const width = natural?.width || photo.width;
+  const height = natural?.height || photo.height;
+  return width > 0 && height > 0 ? width / height : 4 / 3;
+}
+
+function FullscreenIcon({ exit }: { exit: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {exit ? (
+        <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+      ) : (
+        <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+      )}
+    </svg>
+  );
+}
 
 export function MuralProjectorView({
   slug,
@@ -29,144 +60,184 @@ export function MuralProjectorView({
   uploadUrl,
   qrDataUrl,
 }: Props) {
-  const { photos } = useApprovedMuralPhotos(slug);
-  const [broken, setBroken] = useState<ReadonlySet<string>>(new Set());
-  const [rotation, setRotation] = useState<Rotation>(EMPTY_ROTATION);
-  const [fresh, setFresh] = useState<ReadonlySet<string>>(new Set());
-
-  const pool = useMemo(
-    () => photos.filter((p) => p.downloadUrl && !broken.has(p.id)),
-    [photos, broken]
+  const { photos, loading, synced } = useApprovedMuralPhotos(slug);
+  const { settings, loading: settingsLoading } = useMuralSettings(slug);
+  const { ready, broken, settled, markBroken } = usePhotoAdmission(
+    photos,
+    loading
   );
-  const poolIds = useMemo(() => pool.map((p) => p.id), [pool]);
-  const byId = useMemo(
-    () => new Map(pool.map((p) => [p.id, p] as const)),
-    [pool]
+  const spotlight = useSpotlight(photos, loading, synced, ready, broken);
+  const { immersive, toggle } = useFullscreen();
+  const idle = useIdle(IDLE_MS);
+  const reducedMotion = usePrefersReducedMotion();
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== "f") return;
+      if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) {
+        return;
+      }
+      void toggle();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [toggle]);
+
+  const title = settings.headline || headline || eventName;
+  const invite = settingsLoading ? "none" : settings.state;
+  const displayUrl = uploadUrl.replace(/^https?:\/\//, "");
+
+  const wallPhotos = useMemo(
+    () =>
+      photos.filter(
+        (p) => ready.has(p.id) && !broken.has(p.id) && !spotlight.held.has(p.id)
+      ),
+    [photos, ready, broken, spotlight.held]
   );
 
-  const poolRef = useRef<string[]>([]);
-  const freshRef = useRef<string[]>([]);
-  poolRef.current = poolIds;
+  const aspects = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const photo of wallPhotos) {
+      const natural = ready.get(photo.id);
+      map.set(
+        photo.id,
+        photoAspect(
+          natural?.width || photo.width,
+          natural?.height || photo.height
+        )
+      );
+    }
+    return map;
+  }, [wallPhotos, ready]);
 
-  const seen = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    const arrived = poolIds.filter((id) => !seen.current.has(id));
-
-    const isFirstLoad = seen.current.size === 0;
-    for (const id of poolIds) seen.current.add(id);
-
-    setRotation((r) => ({ ...r, tiles: reconcileTiles(r.tiles, poolIds) }));
-
-    if (arrived.length === 0 || isFirstLoad) return;
-
-    freshRef.current = [...arrived, ...freshRef.current];
-    setFresh((prev) => new Set([...prev, ...arrived]));
-
-    const timer = window.setTimeout(() => {
-      setFresh((prev) => {
-        const next = new Set(prev);
-        for (const id of arrived) next.delete(id);
-        return next;
-      });
-    }, HIGHLIGHT_MS);
-    return () => window.clearTimeout(timer);
-  }, [poolIds]);
-
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      setRotation((r) => {
-        const next = rotateTiles(r, poolRef.current, freshRef.current);
-
-        freshRef.current = freshRef.current.filter(
-          (candidate) => !next.tiles.includes(candidate)
-        );
-        return next;
-      });
-    }, ROTATE_MS);
-    return () => window.clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    const next = peekNext(rotation, poolIds, freshRef.current);
-    if (!next) return;
-    const photo = byId.get(next);
-    if (!photo?.downloadUrl) return;
-    const img = new Image();
-    img.src = photo.downloadUrl;
-  }, [rotation, poolIds, byId]);
-
-  const tiles = rotation.tiles
-    .map((id) => byId.get(id))
-    .filter((p): p is MuralPhoto => Boolean(p));
+  const empty = !loading && photos.every((p) => broken.has(p.id));
+  const waiting = !empty && (!settled || wallPhotos.length === 0);
+  const controls = `transition-opacity duration-300 ${
+    idle ? "pointer-events-none opacity-0" : "opacity-100"
+  }`;
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="flex items-center justify-between border-b border-white/10 px-8 py-4">
-        <div>
-          <p className="text-xs tracking-widest text-white/50 uppercase">
-            GDG ICA · Mural
-          </p>
-          <h1 className="text-2xl font-semibold">{headline || eventName}</h1>
-        </div>
-        <div className="text-right">
-          <p className="text-xs tracking-widest text-white/50 uppercase">
-            Sube tus fotos
-          </p>
-          <p className="font-mono text-sm text-white/80">{uploadUrl}</p>
-        </div>
-      </header>
+    <div
+      className={`flex h-dvh flex-col overflow-hidden bg-black text-white ${
+        idle ? "cursor-none" : ""
+      }`}
+      data-immersive={immersive || undefined}
+    >
+      {!immersive && (
+        <header className="flex items-center gap-5 px-8 pt-6 pb-4">
+          <img src="/gdg-logo.png" alt="GDG ICA" className="h-10 w-auto" />
+          <h1 className="line-clamp-2 flex-1 text-3xl leading-tight font-semibold">
+            {title}
+          </h1>
+          <button
+            type="button"
+            onClick={() => void toggle()}
+            className={`flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm text-white/80 hover:bg-white/10 ${controls}`}
+          >
+            <FullscreenIcon exit={false} />
+            Pantalla completa
+            <kbd className="rounded border border-white/30 px-1.5 text-xs">
+              F
+            </kbd>
+          </button>
+        </header>
+      )}
 
-      {tiles.length === 0 ? (
-        <HeroQr
-          qrDataUrl={qrDataUrl}
-          url={uploadUrl}
-          caption="Escanea y sube tu primera foto"
-          alt="QR para subir fotos al mural"
-        />
-      ) : (
-        <>
-          <main className="flex-1 p-6">
-            <div className="grid [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))] gap-4">
-              {tiles.map((photo) => (
-                <figure
-                  key={photo.id}
-                  className={`relative overflow-hidden rounded-2xl bg-white/5 ${
-                    fresh.has(photo.id) ? "ring-4 ring-amber-400" : ""
-                  }`}
-                >
-                  <img
-                    src={photo.downloadUrl ?? ""}
-                    alt=""
-                    className="aspect-square w-full object-cover"
-                    onError={() =>
-                      setBroken((prev) => new Set(prev).add(photo.id))
-                    }
-                  />
-                  {photo.alias && (
-                    <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 py-2 text-lg text-white">
-                      {photo.alias}
-                    </figcaption>
-                  )}
-                </figure>
-              ))}
-            </div>
-          </main>
-
-          <footer className="flex items-center justify-end gap-4 border-t border-white/10 px-8 py-4">
-            <p className="text-right text-sm text-white/70">
-              ¿Tienes fotos?
-              <br />
-              <span className="font-mono text-white">{uploadUrl}</span>
+      {empty ? (
+        invite === "open" ? (
+          <HeroQr
+            qrDataUrl={qrDataUrl}
+            url={displayUrl}
+            caption="Escanea y sube tu primera foto"
+            alt="QR para subir fotos al mural"
+          />
+        ) : (
+          <main className="flex flex-1 items-center justify-center p-8 text-center">
+            <p className="text-2xl text-white/70">
+              {invite === "paused"
+                ? "Las subidas están en pausa un momento."
+                : "Aquí aparecerán las fotos del evento."}
             </p>
-
-            <img
-              src={qrDataUrl}
-              alt=""
-              className="h-24 w-24 rounded bg-white p-1"
+          </main>
+        )
+      ) : (
+        <main className="relative min-h-0 flex-1">
+          {waiting ? (
+            <p className="flex h-full items-center justify-center text-xl text-white/50">
+              Cargando fotos…
+            </p>
+          ) : (
+            <RibbonWall
+              photos={wallPhotos}
+              aspects={aspects}
+              reducedMotion={reducedMotion}
+              paused={Boolean(spotlight.current)}
+              onBroken={markBroken}
             />
-          </footer>
-        </>
+          )}
+
+          {spotlight.current && (
+            <Spotlight
+              photo={spotlight.current}
+              aspect={naturalAspect(
+                ready.get(spotlight.current.id),
+                spotlight.current
+              )}
+              leaving={spotlight.leaving}
+            />
+          )}
+
+          {immersive && invite === "open" && (
+            <aside className="absolute right-6 bottom-6 z-30 flex flex-col items-center gap-2 rounded-2xl bg-black/70 p-3 backdrop-blur">
+              <img
+                src={qrDataUrl}
+                alt="QR para subir fotos al mural"
+                className="h-[15vh] w-[15vh] rounded-lg bg-white p-1.5"
+              />
+              <p className="text-sm font-medium">Sube tu foto</p>
+            </aside>
+          )}
+
+          {immersive && invite === "paused" && (
+            <p className="absolute right-6 bottom-6 z-30 rounded-full bg-black/70 px-4 py-2 text-sm text-white/80">
+              Subidas en pausa
+            </p>
+          )}
+
+          {immersive && (
+            <button
+              type="button"
+              onClick={() => void toggle()}
+              aria-label="Salir de pantalla completa"
+              className={`absolute top-5 right-5 z-30 flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm text-white/80 hover:bg-black/80 ${controls}`}
+            >
+              <FullscreenIcon exit />
+              Salir
+            </button>
+          )}
+        </main>
+      )}
+
+      {!immersive && !empty && invite === "open" && (
+        <footer className="flex items-center justify-end gap-5 px-8 pt-4 pb-6">
+          <div className="text-right">
+            <p className="text-lg font-medium">Sube tu foto</p>
+            <p className="text-white/60">{displayUrl}</p>
+          </div>
+          <img
+            src={qrDataUrl}
+            alt="QR para subir fotos al mural"
+            className="h-32 w-32 rounded-lg bg-white p-1.5"
+          />
+        </footer>
+      )}
+
+      {!immersive && !empty && invite === "paused" && (
+        <footer className="flex justify-end px-8 pt-4 pb-6">
+          <p className="rounded-full bg-white/10 px-4 py-2 text-white/80">
+            Subidas en pausa
+          </p>
+        </footer>
       )}
     </div>
   );

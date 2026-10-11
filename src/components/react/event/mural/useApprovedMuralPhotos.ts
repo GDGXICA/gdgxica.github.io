@@ -7,10 +7,12 @@ export const APPROVED_LIMIT = 120;
 export function useApprovedMuralPhotos(slug: string): {
   photos: MuralPhoto[];
   loading: boolean;
+  synced: boolean;
   error: string | null;
 } {
   const [photos, setPhotos] = useState<MuralPhoto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [synced, setSynced] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -31,12 +33,16 @@ export function useApprovedMuralPhotos(slug: string): {
             orderBy("approvedAt", "desc"),
             limit(APPROVED_LIMIT)
           ),
+          { includeMetadataChanges: true },
           (snap) => {
-            setPhotos(
-              snap.docs.map(
-                (d) => ({ id: d.id, ...d.data() }) as unknown as MuralPhoto
-              )
-            );
+            if (snap.docChanges().length > 0) {
+              setPhotos(
+                snap.docs.map(
+                  (d) => ({ id: d.id, ...d.data() }) as unknown as MuralPhoto
+                )
+              );
+            }
+            setSynced(!snap.metadata.fromCache);
             setLoading(false);
             setError(null);
           },
@@ -58,5 +64,5 @@ export function useApprovedMuralPhotos(slug: string): {
     };
   }, [slug]);
 
-  return { photos, loading, error };
+  return { photos, loading, synced, error };
 }
