@@ -264,8 +264,33 @@ describe("MuralProjectorView: fotos", () => {
     setPhotos([photo("a", "Ana"), photo("b", "")]);
     render(view());
     await waitFor(() => expect(tile("b")).not.toBeNull());
-    expect(screen.getByText("Ana")).toBeInTheDocument();
+    expect(screen.getAllByText("Ana").length).toBeGreaterThan(0);
     expect(tile("b")?.querySelector("figcaption")).toBeNull();
+  });
+
+  it("con pocas fotos también hay columnas en movimiento", async () => {
+    setPhotos([photo("a"), photo("b"), photo("c")]);
+    render(view());
+    await waitFor(() =>
+      expect(document.querySelector('[data-mode="ribbons"]')).not.toBeNull()
+    );
+    expect(Element.prototype.animate).toHaveBeenCalled();
+    expect(document.querySelector('[data-mode="static"]')).toBeNull();
+  });
+
+  it("el titular y el QR van sobre las fotos, sin quitarles alto", async () => {
+    setPhotos(many(6));
+    render(view());
+    await waitFor(() =>
+      expect(document.querySelector('[data-mode="ribbons"]')).not.toBeNull()
+    );
+    const header = screen.getByRole("banner");
+    const footer = screen.getByRole("contentinfo");
+    expect(header).toHaveClass("absolute");
+    expect(footer).toHaveClass("absolute");
+    expect(footer).toContainElement(screen.getByAltText(QR_ALT));
+    const wall = document.querySelector("main") as HTMLElement;
+    expect(wall).toHaveClass("absolute", "inset-0");
   });
 
   it("con muchas fotos las pone en cintas animadas", async () => {
@@ -300,6 +325,7 @@ describe("MuralProjectorView: fotos", () => {
   });
 
   it("en filas quietas, una baja no hace parpadear toda la pared", async () => {
+    mocks.reducedMotion = true;
     setPhotos([photo("a"), photo("b"), photo("c")]);
     const { rerender } = render(view());
     await waitFor(() => expect(tile("c")).not.toBeNull());

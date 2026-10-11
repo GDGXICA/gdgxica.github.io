@@ -3,6 +3,8 @@ import type { MuralPhoto } from "@/lib/mural";
 import { MuralTile } from "./MuralTile";
 import { Ribbon } from "./Ribbon";
 import {
+  columnTileHeight,
+  photoIdOf,
   reconcileWall,
   tileWidth,
   type Viewport,
@@ -14,6 +16,7 @@ interface Props {
   aspects: ReadonlyMap<string, number>;
   reducedMotion: boolean;
   paused: boolean;
+  inset?: boolean;
   onBroken: (id: string) => void;
 }
 
@@ -41,6 +44,7 @@ export function RibbonWall({
   aspects,
   reducedMotion,
   paused,
+  inset = false,
   onBroken,
 }: Props) {
   const container = useRef<HTMLDivElement>(null);
@@ -124,60 +128,99 @@ export function RibbonWall({
   const rowPhotos = useMemo(
     () =>
       (layout?.rows ?? []).map((row) =>
-        row.map((id) => byId.get(id)).filter((p): p is MuralPhoto => Boolean(p))
+        row
+          .map((key) => {
+            const photo = byId.get(photoIdOf(key));
+            if (!photo) return null;
+            return key === photo.id ? photo : { ...photo, id: key };
+          })
+          .filter((p): p is MuralPhoto => p !== null)
       ),
     [layout, byId]
   );
 
+  const columnHeights = useMemo(
+    () =>
+      layout?.mode === "ribbons"
+        ? layout.rows.map(
+            (row, i) =>
+              new Map(
+                row.map((key) => [
+                  key,
+                  columnTileHeight(
+                    aspects.get(photoIdOf(key)) ?? 4 / 3,
+                    key,
+                    layout.colWidths[i]
+                  ),
+                ])
+              )
+          )
+        : [],
+    [layout, aspects]
+  );
+
+  const reportBroken = (key: string) => onBroken(photoIdOf(key));
+
   return (
     <div
-      ref={container}
-      className="relative h-full w-full overflow-hidden"
-      data-mode={layout?.mode ?? "empty"}
-      data-rows={layout?.rows.length ?? 0}
-      data-epoch={wall?.epoch ?? 0}
+      className={`flex h-full w-full flex-col ${inset ? "pt-28 pb-44" : ""}`}
     >
-      {layout && viewport && layout.mode !== "empty" && (
-        <div
-          key={wall.epoch}
-          className="animate-mural-fade-in flex h-full w-full flex-col justify-center"
-          style={{ gap: layout.gap }}
-        >
-          {layout.mode === "ribbons"
-            ? rowPhotos.map((row, i) => (
-                <Ribbon
-                  key={i}
-                  index={i}
-                  photos={row}
-                  widths={widths}
-                  rowHeight={layout.rowHeight}
-                  gap={layout.gap}
-                  viewportWidth={viewport.width}
-                  reducedMotion={reducedMotion}
-                  paused={paused}
-                  onBroken={onBroken}
-                />
-              ))
-            : rowPhotos.map((row, i) => (
-                <div
-                  key={i}
-                  className="flex justify-center"
-                  style={{ gap: layout.gap }}
-                >
-                  {row.map((photo) => (
-                    <MuralTile
-                      key={photo.id}
-                      photo={photo}
-                      width={widths.get(photo.id) ?? layout.rowHeight}
-                      height={layout.rowHeight}
-                      entering={!shown.current.has(photo.id)}
-                      onBroken={onBroken}
-                    />
-                  ))}
-                </div>
-              ))}
-        </div>
-      )}
+      <div
+        ref={container}
+        className="relative min-h-0 w-full flex-1 overflow-hidden"
+        data-mode={layout?.mode ?? "empty"}
+        data-rows={layout?.rows.length ?? 0}
+        data-epoch={wall?.epoch ?? 0}
+      >
+        {layout && viewport && layout.mode === "ribbons" && (
+          <div
+            key={wall.epoch}
+            className="animate-mural-fade-in flex h-full w-full"
+            style={{ gap: layout.gap }}
+          >
+            {rowPhotos.map((column, i) => (
+              <Ribbon
+                key={i}
+                index={i}
+                photos={column}
+                heights={columnHeights[i]}
+                columnWidth={layout.colWidths[i]}
+                gap={layout.gap}
+                viewportHeight={viewport.height}
+                reducedMotion={reducedMotion}
+                paused={paused}
+                onBroken={reportBroken}
+              />
+            ))}
+          </div>
+        )}
+        {layout && viewport && layout.mode === "static" && (
+          <div
+            key={wall.epoch}
+            className="animate-mural-fade-in flex h-full w-full flex-col justify-center"
+            style={{ gap: layout.gap }}
+          >
+            {rowPhotos.map((row, i) => (
+              <div
+                key={i}
+                className="flex justify-center"
+                style={{ gap: layout.gap }}
+              >
+                {row.map((photo) => (
+                  <MuralTile
+                    key={photo.id}
+                    photo={photo}
+                    width={widths.get(photo.id) ?? layout.rowHeight}
+                    height={layout.rowHeight}
+                    entering={!shown.current.has(photo.id)}
+                    onBroken={onBroken}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

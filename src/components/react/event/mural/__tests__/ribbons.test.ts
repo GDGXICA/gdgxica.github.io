@@ -1,19 +1,28 @@
 import { describe, expect, it } from "vitest";
 import {
+  COLUMNS_MAX,
+  COLUMNS_MIN,
   DEFAULT_ASPECT,
-  MIN_ROW_HEIGHT,
+  RIBBON_LENGTH,
   RIBBON_LENGTH_TO_KEEP,
   STILL_MIN_HEIGHT_SHARE,
+  TILE_SCALE_MAX,
+  TILE_SCALE_MIN,
   applyMembership,
+  columnCount,
+  columnGap,
+  columnSpeed,
+  columnTileHeight,
+  columnWidths,
   distribute,
   offsetToTime,
   photoAspect,
+  photoIdOf,
   pickInsertion,
   planWall,
   reconcileWall,
   rowDirection,
   rowPeriod,
-  rowSpeed,
   screenPositions,
   timeToOffset,
   type Direction,
@@ -81,66 +90,111 @@ describe("distribute", () => {
   });
 });
 
+function columnLengths(layout: ReturnType<typeof planWall>, aspect = 1.25) {
+  return layout.rows.map((keys, i) =>
+    keys.reduce(
+      (sum, key) =>
+        sum + columnTileHeight(aspect, key, layout.colWidths[i]) + layout.gap,
+      0
+    )
+  );
+}
+
+describe("columnas", () => {
+  it("el número de columnas sigue el ancho y queda acotado", () => {
+    expect(columnCount(390)).toBe(COLUMNS_MIN);
+    expect(columnCount(1920)).toBe(5);
+    expect(columnCount(5000)).toBe(COLUMNS_MAX);
+  });
+
+  it("los anchos suman el ancho de pantalla menos los huecos y no son iguales", () => {
+    const gap = columnGap(1920);
+    const widths = columnWidths(1920, 5, gap);
+    expect(widths.reduce((a, b) => a + b, 0) + 4 * gap).toBe(1920);
+    expect(new Set(widths).size).toBeGreaterThan(1);
+  });
+
+  it("el alto de cada foto respeta su proporción con una variación acotada", () => {
+    for (const id of ["a", "b", "c", "d", "e", "f"]) {
+      const height = columnTileHeight(1.5, id, 300);
+      expect(height).toBeGreaterThanOrEqual(
+        Math.floor(300 / (1.5 * TILE_SCALE_MAX))
+      );
+      expect(height).toBeLessThanOrEqual(
+        Math.ceil(300 / (1.5 * TILE_SCALE_MIN))
+      );
+    }
+    expect(columnTileHeight(0.75, "a", 300)).toBeGreaterThan(
+      columnTileHeight(1.5, "a", 300)
+    );
+  });
+
+  it("dos fotos iguales pueden medir distinto", () => {
+    const heights = new Set(
+      Array.from({ length: 20 }, (_, i) => columnTileHeight(1.25, `p${i}`, 300))
+    );
+    expect(heights.size).toBeGreaterThan(3);
+  });
+
+  it("las repetidas conservan el id de la foto", () => {
+    expect(photoIdOf("abc")).toBe("abc");
+    expect(photoIdOf("abc~3")).toBe("abc");
+  });
+});
+
 describe("planWall", () => {
   it("sin fotos no hay pared", () => {
     expect(planWall([], FULL_HD).mode).toBe("empty");
   });
 
-  it("con pocas fotos usa filas quietas y no repite ninguna", () => {
-    const plan = planWall(photos(3), FULL_HD);
-    expect(plan.mode).toBe("static");
-    expect(plan.rows.flat()).toHaveLength(3);
-    expect(new Set(plan.rows.flat()).size).toBe(3);
-  });
-
-  it("las filas quietas caben en la pantalla", () => {
-    const plan = planWall(photos(8), FULL_HD);
-    expect(plan.mode).toBe("static");
-    for (const row of plan.rows) {
-      const width =
-        row.length * plan.rowHeight * 1.25 + (row.length - 1) * plan.gap;
-      expect(width).toBeLessThanOrEqual(FULL_HD.width);
-    }
-    const height =
-      plan.rows.length * plan.rowHeight + (plan.rows.length - 1) * plan.gap;
-    expect(height).toBeLessThanOrEqual(FULL_HD.height);
-  });
-
-  it("pasa a dos cintas y luego a tres según crece el contenido", () => {
-    expect(planWall(photos(14), FULL_HD)).toMatchObject({
-      mode: "ribbons",
-      rows: expect.any(Array),
+  for (const count of [1, 3, 8]) {
+    it(`con ${count} fotos hay columnas en movimiento que llenan la pantalla`, () => {
+      const plan = planWall(photos(count), FULL_HD);
+      expect(plan.mode).toBe("ribbons");
+      expect(plan.rows).toHaveLength(5);
+      expect(plan.repeats).toBe(true);
+      for (const length of columnLengths(plan)) {
+        expect(length).toBeGreaterThanOrEqual(RIBBON_LENGTH * FULL_HD.height);
+      }
+      const used = new Set(plan.rows.flat().map(photoIdOf));
+      expect(used.size).toBe(count);
     });
-    expect(planWall(photos(14), FULL_HD).rows).toHaveLength(2);
-    expect(planWall(photos(40), FULL_HD).rows).toHaveLength(3);
-  });
+  }
 
-  it("en cintas cada fila mide al menos dos anchos de pantalla", () => {
-    const plan = planWall(photos(40), FULL_HD);
-    const aspects = new Map(photos(40).map((p) => [p.id, p.aspect]));
-    for (const row of plan.rows) {
-      const length =
-        rowWidth(row, aspects, plan.rowHeight) + row.length * plan.gap;
-      expect(length).toBeGreaterThanOrEqual(2 * FULL_HD.width);
+  it("las repeticiones usan claves únicas dentro de cada columna", () => {
+    const plan = planWall(photos(3), FULL_HD);
+    for (const keys of plan.rows) {
+      expect(new Set(keys).size).toBe(keys.length);
     }
   });
 
-  it("el alto de fila sale del alto disponible y los huecos", () => {
-    const plan = planWall(photos(40), FULL_HD);
-    expect(plan.rowHeight * 3 + plan.gap * 2).toBeLessThanOrEqual(1080);
-    expect(plan.rowHeight).toBeGreaterThanOrEqual(MIN_ROW_HEIGHT);
+  it("las columnas contiguas no empiezan por la misma foto", () => {
+    const plan = planWall(photos(8), FULL_HD);
+    for (let i = 1; i < plan.rows.length; i++) {
+      expect(photoIdOf(plan.rows[i][0])).not.toBe(
+        photoIdOf(plan.rows[i - 1][0])
+      );
+    }
   });
 
-  it("no cambia de modo por una foto de menos (histéresis)", () => {
-    let count = 40;
-    while (planWall(photos(count - 1), FULL_HD).rows.length === 3) count--;
-    const atEdge = planWall(photos(count), FULL_HD);
-    expect(atEdge.rows).toHaveLength(3);
-    expect(planWall(photos(count - 1), FULL_HD, atEdge).rows).toHaveLength(3);
+  it("con fotos de sobra no repite ninguna", () => {
+    const list = photos(60);
+    const plan = planWall(list, FULL_HD);
+    expect(plan.repeats).toBe(false);
+    expect([...plan.rows.flat()].sort()).toEqual(list.map((p) => p.id).sort());
+    for (const length of columnLengths(plan)) {
+      expect(length).toBeGreaterThanOrEqual(RIBBON_LENGTH * FULL_HD.height);
+    }
+  });
+
+  it("en celular usa dos columnas", () => {
+    expect(planWall(photos(10), { width: 390, height: 844 }).rows).toHaveLength(
+      2
+    );
   });
 
   it("sin movimiento deja quietas las fotos más nuevas que caben", () => {
-    const plan = planWall(photos(40), FULL_HD, undefined, false);
+    const plan = planWall(photos(40), FULL_HD, false);
     expect(plan.mode).toBe("static");
     expect(plan.rowHeight).toBeGreaterThanOrEqual(
       FULL_HD.height * STILL_MIN_HEIGHT_SHARE
@@ -148,23 +202,18 @@ describe("planWall", () => {
     const shown = plan.rows.flat();
     expect(shown).toContain("p0");
     expect(shown).not.toContain("p39");
-    expect([...shown].sort()).toEqual(
-      photos(shown.length)
-        .map((p) => p.id)
-        .sort()
-    );
   });
 });
 
 describe("reconcileWall", () => {
-  it("manda una foto nueva a la fila más corta sin barajar las demás", () => {
-    const first = reconcileWall(null, photos(40), FULL_HD).layout;
-    const shortest = first.rows
-      .map((row, i) => ({ i, n: row.length }))
-      .sort((a, b) => a.n - b.n)[0].i;
+  it("manda una foto nueva a la columna más corta sin barajar las demás", () => {
+    const first = reconcileWall(null, photos(80), FULL_HD).layout;
+    expect(first.repeats).toBe(false);
+    const lengths = columnLengths(first);
+    const shortest = lengths.indexOf(Math.min(...lengths));
     const next = reconcileWall(
       first,
-      [{ id: "nueva", aspect: 1.25 }, ...photos(40)],
+      [{ id: "nueva", aspect: 1.25 }, ...photos(80)],
       FULL_HD
     );
     expect(next.replanned).toBe(false);
@@ -174,45 +223,60 @@ describe("reconcileWall", () => {
     );
   });
 
-  it("vuelve a planear si las bajas dejan una fila demasiado corta", () => {
-    const first = reconcileWall(null, photos(60), FULL_HD).layout;
+  it("con las mismas fotos no vuelve a planear", () => {
+    const first = reconcileWall(null, photos(3), FULL_HD).layout;
+    const next = reconcileWall(first, photos(3), FULL_HD);
+    expect(next.replanned).toBe(false);
+    expect(next.layout).toBe(first);
+  });
+
+  it("con repeticiones, una foto nueva re-planea", () => {
+    const first = reconcileWall(null, photos(3), FULL_HD).layout;
+    const next = reconcileWall(first, photos(4), FULL_HD);
+    expect(next.replanned).toBe(true);
+    expect(new Set(next.layout.rows.flat().map(photoIdOf)).size).toBe(4);
+  });
+
+  it("vuelve a planear si las bajas dejan una columna demasiado corta", () => {
+    const first = reconcileWall(null, photos(80), FULL_HD).layout;
     const gone = new Set(first.rows[0].slice(2));
     const next = reconcileWall(
       first,
-      photos(60).filter((p) => !gone.has(p.id)),
+      photos(80).filter((p) => !gone.has(p.id)),
       FULL_HD
     );
     expect(next.replanned).toBe(true);
-    const aspects = new Map(photos(60).map((p) => [p.id, p.aspect]));
-    for (const row of next.layout.rows) {
-      const length =
-        rowWidth(row, aspects, next.layout.rowHeight) +
-        row.length * next.layout.gap;
-      expect(length).toBeGreaterThanOrEqual(
-        RIBBON_LENGTH_TO_KEEP * FULL_HD.width
-      );
+    const lengths = columnLengths(next.layout);
+    if (!next.layout.repeats) {
+      for (const length of lengths) {
+        expect(length).toBeGreaterThanOrEqual(
+          RIBBON_LENGTH_TO_KEEP * FULL_HD.height
+        );
+      }
     }
   });
 
   it("vuelve a planear si cambia el tamaño de la pantalla", () => {
-    const first = reconcileWall(null, photos(40), FULL_HD).layout;
-    const next = reconcileWall(first, photos(40), {
-      width: 1280,
-      height: 720,
-    });
+    const first = reconcileWall(null, photos(80), FULL_HD).layout;
+    const next = reconcileWall(first, photos(80), { width: 1280, height: 720 });
     expect(next.replanned).toBe(true);
   });
 });
 
-describe("rowSpeed y rowDirection", () => {
-  it("cada fila va a su velocidad, proporcional al alto de fila", () => {
-    const speeds = [0, 1, 2].map((i) => rowSpeed(i, 300));
-    expect(new Set(speeds).size).toBe(3);
-    expect(rowSpeed(0, 600)).toBeCloseTo(2 * rowSpeed(0, 300));
+describe("columnSpeed y rowDirection", () => {
+  it("cada columna va a su velocidad, proporcional a su ancho", () => {
+    const speeds = [0, 1, 2, 3, 4].map((i) => columnSpeed(i, 300));
+    expect(new Set(speeds).size).toBe(5);
+    expect(columnSpeed(0, 600)).toBeCloseTo(2 * columnSpeed(0, 300));
   });
 
   it("los sentidos se alternan", () => {
-    expect([0, 1, 2].map(rowDirection)).toEqual(["left", "right", "left"]);
+    expect([0, 1, 2, 3].map(rowDirection)).toEqual([
+      "left",
+      "right",
+      "left",
+      "right",
+    ]);
   });
 });
 

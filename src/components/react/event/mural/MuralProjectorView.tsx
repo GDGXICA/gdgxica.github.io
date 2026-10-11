@@ -116,33 +116,15 @@ export function MuralProjectorView({
     idle ? "pointer-events-none opacity-0" : "opacity-100"
   }`;
 
+  const card = "rounded-2xl bg-black/55 backdrop-blur-md";
+
   return (
     <div
-      className={`flex h-dvh flex-col overflow-hidden bg-black text-white ${
+      className={`relative h-dvh overflow-hidden bg-black text-white ${
         idle ? "cursor-none" : ""
       }`}
       data-immersive={immersive || undefined}
     >
-      {!immersive && (
-        <header className="flex items-center gap-5 px-8 pt-6 pb-4">
-          <img src="/gdg-logo.png" alt="GDG ICA" className="h-10 w-auto" />
-          <h1 className="line-clamp-2 flex-1 text-3xl leading-tight font-semibold">
-            {title}
-          </h1>
-          <button
-            type="button"
-            onClick={() => void toggle()}
-            className={`flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm text-white/80 hover:bg-white/10 ${controls}`}
-          >
-            <FullscreenIcon exit={false} />
-            Pantalla completa
-            <kbd className="rounded border border-white/30 px-1.5 text-xs">
-              F
-            </kbd>
-          </button>
-        </header>
-      )}
-
       {empty ? (
         invite === "open" ? (
           <HeroQr
@@ -152,7 +134,7 @@ export function MuralProjectorView({
             alt="QR para subir fotos al mural"
           />
         ) : (
-          <main className="flex flex-1 items-center justify-center p-8 text-center">
+          <main className="flex h-full items-center justify-center p-8 text-center">
             <p className="text-2xl text-white/70">
               {invite === "paused"
                 ? "Las subidas están en pausa un momento."
@@ -161,7 +143,7 @@ export function MuralProjectorView({
           </main>
         )
       ) : (
-        <main className="relative min-h-0 flex-1">
+        <main className="absolute inset-0">
           {waiting ? (
             <p className="flex h-full items-center justify-center text-xl text-white/50">
               Cargando fotos…
@@ -172,6 +154,7 @@ export function MuralProjectorView({
               aspects={aspects}
               reducedMotion={reducedMotion}
               paused={Boolean(spotlight.current)}
+              inset={reducedMotion && !immersive}
               onBroken={markBroken}
             />
           )}
@@ -186,43 +169,38 @@ export function MuralProjectorView({
               leaving={spotlight.leaving}
             />
           )}
-
-          {immersive && invite === "open" && (
-            <aside className="absolute right-6 bottom-6 z-30 flex flex-col items-center gap-2 rounded-2xl bg-black/70 p-3 backdrop-blur">
-              <img
-                src={qrDataUrl}
-                alt="QR para subir fotos al mural"
-                className="h-[15vh] w-[15vh] rounded-lg bg-white p-1.5"
-              />
-              <p className="text-sm font-medium">Sube tu foto</p>
-            </aside>
-          )}
-
-          {immersive && invite === "paused" && (
-            <p className="absolute right-6 bottom-6 z-30 rounded-full bg-black/70 px-4 py-2 text-sm text-white/80">
-              Subidas en pausa
-            </p>
-          )}
-
-          {immersive && (
-            <button
-              type="button"
-              onClick={() => void toggle()}
-              aria-label="Salir de pantalla completa"
-              className={`absolute top-5 right-5 z-30 flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm text-white/80 hover:bg-black/80 ${controls}`}
-            >
-              <FullscreenIcon exit />
-              Salir
-            </button>
-          )}
         </main>
       )}
 
-      {!immersive && !empty && invite === "open" && (
-        <footer className="flex items-center justify-end gap-5 px-8 pt-4 pb-6">
+      {!immersive && (
+        <header className="absolute top-6 right-6 left-6 z-20 flex items-start gap-4">
+          <div className={`flex min-w-0 items-center gap-4 px-5 py-3 ${card}`}>
+            <img src="/gdg-logo.png" alt="GDG ICA" className="h-10 w-auto" />
+            <h1 className="line-clamp-2 text-3xl leading-tight font-semibold">
+              {title}
+            </h1>
+          </div>
+          <button
+            type="button"
+            onClick={() => void toggle()}
+            className={`ml-auto hidden shrink-0 items-center gap-2 rounded-full bg-black/55 px-4 py-2 text-sm text-white/80 backdrop-blur-md hover:bg-black/75 sm:flex ${controls}`}
+          >
+            <FullscreenIcon exit={false} />
+            Pantalla completa
+            <kbd className="rounded border border-white/30 px-1.5 text-xs">
+              F
+            </kbd>
+          </button>
+        </header>
+      )}
+
+      {!empty && !immersive && invite === "open" && (
+        <footer
+          className={`absolute right-6 bottom-6 z-20 flex items-center gap-5 p-3 pl-6 ${card}`}
+        >
           <div className="text-right">
             <p className="text-lg font-medium">Sube tu foto</p>
-            <p className="text-white/60">{displayUrl}</p>
+            <p className="text-white/70">{displayUrl}</p>
           </div>
           <img
             src={qrDataUrl}
@@ -232,12 +210,43 @@ export function MuralProjectorView({
         </footer>
       )}
 
-      {!immersive && !empty && invite === "paused" && (
-        <footer className="flex justify-end px-8 pt-4 pb-6">
-          <p className="rounded-full bg-white/10 px-4 py-2 text-white/80">
+      {!empty && !immersive && invite === "paused" && (
+        <footer className="absolute right-6 bottom-6 z-20">
+          <p className="rounded-full bg-black/55 px-4 py-2 text-white/80 backdrop-blur-md">
             Subidas en pausa
           </p>
         </footer>
+      )}
+
+      {!empty && immersive && invite === "open" && (
+        <aside
+          className={`absolute right-6 bottom-6 z-30 flex flex-col items-center gap-2 p-3 ${card}`}
+        >
+          <img
+            src={qrDataUrl}
+            alt="QR para subir fotos al mural"
+            className="h-[15vh] w-[15vh] rounded-lg bg-white p-1.5"
+          />
+          <p className="text-sm font-medium">Sube tu foto</p>
+        </aside>
+      )}
+
+      {!empty && immersive && invite === "paused" && (
+        <p className="absolute right-6 bottom-6 z-30 rounded-full bg-black/55 px-4 py-2 text-sm text-white/80 backdrop-blur-md">
+          Subidas en pausa
+        </p>
+      )}
+
+      {!empty && immersive && (
+        <button
+          type="button"
+          onClick={() => void toggle()}
+          aria-label="Salir de pantalla completa"
+          className={`absolute top-5 right-5 z-30 flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm text-white/80 hover:bg-black/80 ${controls}`}
+        >
+          <FullscreenIcon exit />
+          Salir
+        </button>
       )}
     </div>
   );

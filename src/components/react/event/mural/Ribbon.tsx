@@ -10,10 +10,10 @@ import type { MuralPhoto } from "@/lib/mural";
 import { MuralTile } from "./MuralTile";
 import {
   applyMembership,
+  columnSpeed,
   offsetToTime,
   rowDirection,
   rowPeriod,
-  rowSpeed,
   timeToOffset,
   type RowGeometry,
 } from "./ribbons";
@@ -21,10 +21,10 @@ import {
 interface Props {
   index: number;
   photos: readonly MuralPhoto[];
-  widths: ReadonlyMap<string, number>;
-  rowHeight: number;
+  heights: ReadonlyMap<string, number>;
+  columnWidth: number;
   gap: number;
-  viewportWidth: number;
+  viewportHeight: number;
   reducedMotion: boolean;
   paused: boolean;
   onBroken: (id: string) => void;
@@ -34,23 +34,23 @@ const SWEEP_MS = 1000;
 
 function keyframesFor(direction: "left" | "right", period: number) {
   const start = { transform: "translate3d(0, 0, 0)" };
-  const end = { transform: `translate3d(${-period}px, 0, 0)` };
+  const end = { transform: `translate3d(0, ${-period}px, 0)` };
   return direction === "left" ? [start, end] : [end, start];
 }
 
 function RibbonImpl({
   index,
   photos,
-  widths,
-  rowHeight,
+  heights,
+  columnWidth,
   gap,
-  viewportWidth,
+  viewportHeight,
   reducedMotion,
   paused,
   onBroken,
 }: Props) {
   const direction = rowDirection(index);
-  const speed = rowSpeed(index, rowHeight);
+  const speed = columnSpeed(index, columnWidth);
 
   const [order, setOrder] = useState<string[]>(() => photos.map((p) => p.id));
   const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
@@ -59,20 +59,20 @@ function RibbonImpl({
   const animation = useRef<Animation | null>(null);
   const pendingOffset = useRef<number | null>(null);
   const known = useRef(new Map<string, MuralPhoto>());
-  const knownWidths = useRef(new Map<string, number>());
+  const knownHeights = useRef(new Map<string, number>());
   const orderRef = useRef(order);
   orderRef.current = order;
 
   for (const photo of photos) known.current.set(photo.id, photo);
-  for (const [id, width] of widths) knownWidths.current.set(id, width);
+  for (const [id, height] of heights) knownHeights.current.set(id, height);
 
   const geometryOf = useCallback(
     (ids: readonly string[]): RowGeometry => ({
       ids: [...ids],
-      widths: ids.map((id) => knownWidths.current.get(id) ?? rowHeight),
+      widths: ids.map((id) => knownHeights.current.get(id) ?? columnWidth),
       gap,
     }),
-    [gap, rowHeight]
+    [gap, columnWidth]
   );
 
   const currentOffset = useCallback(() => {
@@ -86,7 +86,7 @@ function RibbonImpl({
   const sync = useCallback(() => {
     const target = photos.map((p) => ({
       id: p.id,
-      width: knownWidths.current.get(p.id) ?? rowHeight,
+      width: knownHeights.current.get(p.id) ?? columnWidth,
     }));
 
     if (reducedMotion) {
@@ -99,7 +99,7 @@ function RibbonImpl({
       geometryOf(orderRef.current),
       target,
       currentOffset(),
-      viewportWidth,
+      viewportHeight,
       direction
     );
     const nextIds = result.geometry.ids;
@@ -122,8 +122,8 @@ function RibbonImpl({
     geometryOf,
     photos,
     reducedMotion,
-    rowHeight,
-    viewportWidth,
+    columnWidth,
+    viewportHeight,
   ]);
 
   useLayoutEffect(() => {
@@ -193,15 +193,15 @@ function RibbonImpl({
 
   return (
     <div
-      className="relative w-full overflow-hidden"
-      style={{ height: rowHeight }}
+      className="relative h-full shrink-0 overflow-hidden"
+      style={{ width: columnWidth }}
       data-direction={direction}
       data-speed={speed.toFixed(2)}
       data-period={Math.round(period)}
     >
       <div
         ref={trackRef}
-        className="flex w-max will-change-transform"
+        className="flex h-max flex-col will-change-transform"
         style={{ gap }}
       >
         {[false, true].map((copy) =>
@@ -209,8 +209,8 @@ function RibbonImpl({
             <MuralTile
               key={`${photo.id}${copy ? "-copy" : ""}`}
               photo={photo}
-              width={knownWidths.current.get(photo.id) ?? rowHeight}
-              height={rowHeight}
+              width={columnWidth}
+              height={knownHeights.current.get(photo.id) ?? columnWidth}
               hidden={hidden.has(photo.id)}
               copy={copy}
               onBroken={onBroken}

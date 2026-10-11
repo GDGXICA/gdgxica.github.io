@@ -7,9 +7,16 @@ export const RIBBON_LENGTH_TO_KEEP = 1.75;
 export const STATIC_HEIGHT_SHARE = 0.9;
 export const STATIC_WIDTH_SHARE = 0.94;
 export const STILL_MIN_HEIGHT_SHARE = 0.22;
+export const COLUMN_TARGET_WIDTH = 360;
+export const COLUMNS_MIN = 2;
+export const COLUMNS_MAX = 6;
+export const TILE_SCALE_MIN = 0.85;
+export const TILE_SCALE_MAX = 1.15;
 
-const SPEED_PER_ROW_HEIGHT = 0.11;
-const SPEED_FACTORS = [1, 0.8, 1.2];
+const SPEED_PER_COLUMN_WIDTH = 0.11;
+const SPEED_FACTORS = [1, 0.75, 1.2, 0.9, 1.1];
+const COLUMN_WEIGHTS = [1, 1.25, 0.85, 1.15, 0.95, 1.1];
+const REPEAT_MARK = "~";
 
 export type Direction = "left" | "right";
 export type WallMode = "empty" | "static" | "ribbons";
@@ -29,6 +36,8 @@ export interface WallLayout {
   rows: string[][];
   rowHeight: number;
   gap: number;
+  colWidths: number[];
+  repeats: boolean;
 }
 
 export interface RowGeometry {
@@ -69,39 +78,143 @@ export function distribute(
   return rows;
 }
 
-function rowLength(
-  ids: readonly string[],
+function emptyLayout(): WallLayout {
+  return {
+    mode: "empty",
+    rows: [],
+    rowHeight: 0,
+    gap: 0,
+    colWidths: [],
+    repeats: false,
+  };
+}
+
+export function photoIdOf(key: string): string {
+  const at = key.indexOf(REPEAT_MARK);
+  return at === -1 ? key : key.slice(0, at);
+}
+
+function repeatKey(id: string, occurrence: number): string {
+  return occurrence <= 1 ? id : `${id}${REPEAT_MARK}${occurrence}`;
+}
+
+function tileScale(id: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < id.length; i++) {
+    hash ^= id.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  const unit = ((hash >>> 0) % 1000) / 1000;
+  return TILE_SCALE_MIN + unit * (TILE_SCALE_MAX - TILE_SCALE_MIN);
+}
+
+export function columnTileHeight(
+  aspect: number,
+  key: string,
+  columnWidth: number
+): number {
+  return Math.round(columnWidth / (aspect * tileScale(photoIdOf(key))));
+}
+
+export function columnGap(viewportWidth: number): number {
+  return Math.min(10, Math.max(6, Math.round(viewportWidth * 0.005)));
+}
+
+export function columnCount(viewportWidth: number): number {
+  return Math.min(
+    COLUMNS_MAX,
+    Math.max(COLUMNS_MIN, Math.round(viewportWidth / COLUMN_TARGET_WIDTH))
+  );
+}
+
+export function columnWidths(
+  viewportWidth: number,
+  count: number,
+  gap: number
+): number[] {
+  const usable = viewportWidth - (count - 1) * gap;
+  const weights = COLUMN_WEIGHTS.slice(0, count);
+  const total = weights.reduce((sum, w) => sum + w, 0);
+  const widths = weights.map((w) => Math.floor((usable * w) / total));
+  widths[count - 1] += usable - widths.reduce((sum, w) => sum + w, 0);
+  return widths;
+}
+
+function columnLength(
+  keys: readonly string[],
   aspects: ReadonlyMap<string, number>,
-  rowHeight: number,
+  columnWidth: number,
   gap: number
 ): number {
-  return ids.reduce(
-    (sum, id) =>
-      sum + tileWidth(aspects.get(id) ?? DEFAULT_ASPECT, rowHeight) + gap,
+  return keys.reduce(
+    (sum, key) =>
+      sum +
+      columnTileHeight(
+        aspects.get(photoIdOf(key)) ?? DEFAULT_ASPECT,
+        key,
+        columnWidth
+      ) +
+      gap,
     0
   );
 }
 
-function ribbonPlan(
+function planColumns(
   photos: readonly WallPhoto[],
-  viewport: Viewport,
-  rowCount: number,
-  minimumLength: number
-): WallLayout | null {
-  const gap = gapFor(viewport.height / rowCount);
-  const rowHeight = Math.floor(
-    (viewport.height - (rowCount - 1) * gap) / rowCount
-  );
-  if (rowHeight < MIN_ROW_HEIGHT) return null;
+  viewport: Viewport
+): WallLayout {
+  const gap = columnGap(viewport.width);
+  const count = columnCount(viewport.width);
+  const widths = columnWidths(viewport.width, count, gap);
+  const needed = RIBBON_LENGTH * viewport.height;
 
-  const rows = distribute(photos, rowCount, rowHeight, gap);
-  const aspects = new Map(photos.map((p) => [p.id, p.aspect]));
-  const shortest = Math.min(
-    ...rows.map((row) => rowLength(row, aspects, rowHeight, gap))
-  );
-  if (shortest < minimumLength * viewport.width) return null;
+  const columns: string[][] = Array.from({ length: count }, () => []);
+  const lengths = new Array<number>(count).fill(0);
+  for (const photo of photos) {
+    let shortest = 0;
+    for (let i = 1; i < count; i++) {
+      if (lengths[i] < lengths[shortest]) shortest = i;
+    }
+    columns[shortest].push(photo.id);
+    lengths[shortest] +=
+      columnTileHeight(photo.aspect, photo.id, widths[shortest]) + gap;
+  }
 
-  return { mode: "ribbons", rows, rowHeight, gap };
+  if (Math.min(...lengths) >= needed) {
+    return {
+      mode: "ribbons",
+      rows: columns,
+      rowHeight: 0,
+      gap,
+      colWidths: widths,
+      repeats: false,
+    };
+  }
+
+  const stride = Math.max(1, Math.floor(photos.length / count));
+  const cycled = widths.map((width, column) => {
+    const keys: string[] = [];
+    const seen = new Map<string, number>();
+    let length = 0;
+    for (let step = 0; length < needed; step++) {
+      const photo = photos[(column * stride + step) % photos.length];
+      const occurrence = (seen.get(photo.id) ?? 0) + 1;
+      seen.set(photo.id, occurrence);
+      const key = repeatKey(photo.id, occurrence);
+      keys.push(key);
+      length += columnTileHeight(photo.aspect, key, width) + gap;
+    }
+    return keys;
+  });
+
+  return {
+    mode: "ribbons",
+    rows: cycled,
+    rowHeight: 0,
+    gap,
+    colWidths: widths,
+    repeats: true,
+  };
 }
 
 function staticPlan(
@@ -128,11 +241,18 @@ function staticPlan(
     );
     const rowHeight = Math.floor(Math.min(byHeight, byWidth));
     if (!best || rowHeight > best.rowHeight) {
-      best = { mode: "static", rows, rowHeight, gap };
+      best = {
+        mode: "static",
+        rows,
+        rowHeight,
+        gap,
+        colWidths: [],
+        repeats: false,
+      };
     }
   }
 
-  return best ?? { mode: "empty", rows: [], rowHeight: 0, gap: 0 };
+  return best ?? emptyLayout();
 }
 
 function stillPlan(
@@ -153,27 +273,11 @@ function stillPlan(
 export function planWall(
   photos: readonly WallPhoto[],
   viewport: Viewport,
-  previous?: Pick<WallLayout, "mode" | "rows">,
   motion = true
 ): WallLayout {
-  if (photos.length === 0) {
-    return { mode: "empty", rows: [], rowHeight: 0, gap: 0 };
-  }
+  if (photos.length === 0) return emptyLayout();
   if (!motion) return stillPlan(photos, viewport);
-
-  for (const rowCount of [3, 2]) {
-    const keeping =
-      previous?.mode === "ribbons" && previous.rows.length === rowCount;
-    const plan = ribbonPlan(
-      photos,
-      viewport,
-      rowCount,
-      keeping ? RIBBON_LENGTH_TO_KEEP : RIBBON_LENGTH
-    );
-    if (plan) return plan;
-  }
-
-  return staticPlan(photos, viewport);
+  return planColumns(photos, viewport);
 }
 
 function sameShape(a: WallLayout, b: WallLayout): boolean {
@@ -181,7 +285,17 @@ function sameShape(a: WallLayout, b: WallLayout): boolean {
     a.mode === b.mode &&
     a.rows.length === b.rows.length &&
     a.rowHeight === b.rowHeight &&
-    a.gap === b.gap
+    a.gap === b.gap &&
+    a.colWidths.length === b.colWidths.length &&
+    a.colWidths.every((w, i) => w === b.colWidths[i])
+  );
+}
+
+function sameRows(a: WallLayout, b: WallLayout): boolean {
+  return a.rows.every(
+    (row, i) =>
+      row.length === b.rows[i].length &&
+      row.every((key, j) => key === b.rows[i][j])
   );
 }
 
@@ -191,18 +305,23 @@ export function reconcileWall(
   viewport: Viewport,
   motion = true
 ): { layout: WallLayout; replanned: boolean } {
-  const plan = planWall(photos, viewport, previous ?? undefined, motion);
+  const plan = planWall(photos, viewport, motion);
   if (!previous || !sameShape(plan, previous)) {
     return { layout: plan, replanned: true };
   }
   if (plan.mode !== "ribbons") return { layout: plan, replanned: false };
+  if (previous.repeats) {
+    return plan.repeats && sameRows(plan, previous)
+      ? { layout: previous, replanned: false }
+      : { layout: plan, replanned: true };
+  }
 
   const live = new Set(photos.map((p) => p.id));
   const aspects = new Map(photos.map((p) => [p.id, p.aspect]));
   const rows = previous.rows.map((row) => row.filter((id) => live.has(id)));
   const placed = new Set(rows.flat());
-  const lengths = rows.map((row) =>
-    rowLength(row, aspects, previous.rowHeight, previous.gap)
+  const lengths = rows.map((row, i) =>
+    columnLength(row, aspects, previous.colWidths[i], previous.gap)
   );
 
   for (const photo of photos) {
@@ -213,19 +332,20 @@ export function reconcileWall(
     }
     rows[shortest].push(photo.id);
     lengths[shortest] +=
-      tileWidth(photo.aspect, previous.rowHeight) + previous.gap;
+      columnTileHeight(photo.aspect, photo.id, previous.colWidths[shortest]) +
+      previous.gap;
   }
 
-  if (Math.min(...lengths) < RIBBON_LENGTH_TO_KEEP * viewport.width) {
+  if (Math.min(...lengths) < RIBBON_LENGTH_TO_KEEP * viewport.height) {
     return { layout: plan, replanned: true };
   }
   return { layout: { ...previous, rows }, replanned: false };
 }
 
-export function rowSpeed(index: number, rowHeight: number): number {
+export function columnSpeed(index: number, columnWidth: number): number {
   return (
-    rowHeight *
-    SPEED_PER_ROW_HEIGHT *
+    columnWidth *
+    SPEED_PER_COLUMN_WIDTH *
     SPEED_FACTORS[index % SPEED_FACTORS.length]
   );
 }
