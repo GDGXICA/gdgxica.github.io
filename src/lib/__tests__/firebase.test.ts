@@ -6,6 +6,12 @@ const mocks = vi.hoisted(() => ({
   getAuth: vi.fn(),
   signInAnonymously: vi.fn(),
   connectAuthEmulator: vi.fn(),
+  initializeFirestore: vi.fn(() => ({ __db: true })),
+  getFirestore: vi.fn(),
+  persistentLocalCache: vi.fn(() => ({ kind: "persistent" })),
+  persistentMultipleTabManager: vi.fn(() => ({ kind: "multi-tab" })),
+  memoryLocalCache: vi.fn(() => ({ kind: "memory" })),
+  connectFirestoreEmulator: vi.fn(),
 }));
 
 vi.mock("firebase/app", () => ({
@@ -17,6 +23,15 @@ vi.mock("firebase/auth", () => ({
   getAuth: mocks.getAuth,
   signInAnonymously: mocks.signInAnonymously,
   connectAuthEmulator: mocks.connectAuthEmulator,
+}));
+
+vi.mock("firebase/firestore", () => ({
+  initializeFirestore: mocks.initializeFirestore,
+  getFirestore: mocks.getFirestore,
+  persistentLocalCache: mocks.persistentLocalCache,
+  persistentMultipleTabManager: mocks.persistentMultipleTabManager,
+  memoryLocalCache: mocks.memoryLocalCache,
+  connectFirestoreEmulator: mocks.connectFirestoreEmulator,
 }));
 
 function buildAuth(options: {
@@ -82,5 +97,46 @@ describe("firebase.ts auth readiness", () => {
 
     expect(mocks.signInAnonymously).toHaveBeenCalledTimes(1);
     expect(user).toEqual({ uid: "anon-uid" });
+  });
+});
+
+describe("firebase.ts Firestore cache", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    mocks.initializeFirestore.mockClear();
+    mocks.persistentLocalCache.mockClear();
+    mocks.persistentMultipleTabManager.mockClear();
+    mocks.memoryLocalCache.mockClear();
+  });
+
+  afterEach(() => {
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("keeps a public page out of the cache shared between tabs", async () => {
+    window.history.replaceState(null, "", "/events/devfest-2025/mural/");
+
+    const { getFirestore } = await import("../firebase");
+    await getFirestore();
+
+    expect(mocks.persistentLocalCache).not.toHaveBeenCalled();
+    expect(mocks.initializeFirestore).toHaveBeenCalledWith(expect.anything(), {
+      localCache: { kind: "memory" },
+    });
+  });
+
+  it("keeps the persistent multi-tab cache on admin pages", async () => {
+    window.history.replaceState(null, "", "/admin/checkin");
+
+    const { getFirestore } = await import("../firebase");
+    await getFirestore();
+
+    expect(mocks.memoryLocalCache).not.toHaveBeenCalled();
+    expect(mocks.persistentLocalCache).toHaveBeenCalledWith({
+      tabManager: { kind: "multi-tab" },
+    });
+    expect(mocks.initializeFirestore).toHaveBeenCalledWith(expect.anything(), {
+      localCache: { kind: "persistent" },
+    });
   });
 });
