@@ -7,6 +7,7 @@ const updates: { path: string; data: Record<string, unknown> }[] = [];
 const sentInvitations: Record<string, unknown>[] = [];
 const sentDecisions: Record<string, unknown>[] = [];
 let invitationEmailFails = false;
+let invitationQueryFails = false;
 
 function snapFor(path: string) {
   const data = docs.get(path);
@@ -54,11 +55,16 @@ function collectionRef(name: string) {
       chain((d) => filter(d) && d[field] === value),
     orderBy: () => chain(filter),
     limit: () => chain(filter),
-    get: async () => ({
-      docs: docsUnder(name)
-        .filter(([, data]) => filter(data))
-        .map(([path]) => snapFor(path)),
-    }),
+    get: async () => {
+      if (invitationQueryFails && name === "invitations") {
+        throw new Error("firestore unavailable");
+      }
+      return {
+        docs: docsUnder(name)
+          .filter(([, data]) => filter(data))
+          .map(([path]) => snapFor(path)),
+      };
+    },
   });
 
   return {
@@ -244,6 +250,7 @@ beforeEach(() => {
   sentInvitations.length = 0;
   sentDecisions.length = 0;
   invitationEmailFails = false;
+  invitationQueryFails = false;
   securityEvents.length = 0;
 });
 
@@ -677,6 +684,129 @@ describe("createInvitation", () => {
       res
     );
     expect(res.__status).toBe(502);
+  });
+});
+
+describe("createInvitation — reinvitar al mismo correo", () => {
+  const body = { email: "Repetida@Example.com", role: "organizer" };
+
+  function seedOld(id: string, over: Record<string, unknown> = {}) {
+    docs.set(`invitations/${id}`, {
+      emailLower: "repetida@example.com",
+      role: "organizer",
+      tokenHash: hash(id),
+      expiresAt: new Date(Date.now() + 86400_000),
+      usedAt: null,
+      revokedAt: null,
+      ...over,
+    });
+  }
+
+  it("anula la invitación abierta anterior al mismo correo", async () => {
+    seedOld("old-1");
+    const res = buildRes();
+    await handler.createInvitation(
+      buildReq({ role: "admin", uid: "adm", body }),
+      res
+    );
+    expect(res.__status).toBe(201);
+    expect(docs.get("invitations/old-1")?.revokedAt).toBe("__TS__");
+    const newId = (res.__body?.data as { id: string }).id;
+    expect(docs.get(`invitations/${newId}`)?.revokedAt).toBeNull();
+  });
+
+  it("no toca invitaciones de otros correos ni las ya usadas", async () => {
+    seedOld("used", { usedAt: new Date() });
+    seedOld("other", { emailLower: "otra@example.com" });
+    const res = buildRes();
+    await handler.createInvitation(
+      buildReq({ role: "admin", uid: "adm", body }),
+      res
+    );
+    expect(docs.get("invitations/used")?.revokedAt).toBeNull();
+    expect(docs.get("invitations/other")?.revokedAt).toBeNull();
+  });
+
+  it("deja la anterior vigente si el correo nuevo no sale", async () => {
+    seedOld("old-1");
+    invitationEmailFails = true;
+    const res = buildRes();
+    await handler.createInvitation(
+      buildReq({ role: "admin", uid: "adm", body }),
+      res
+    );
+    expect(res.__status).toBe(502);
+    expect(docs.get("invitations/old-1")?.revokedAt).toBeNull();
+  });
+
+  it("responde 201 aunque falle la anulación de las anteriores", async () => {
+    seedOld("old-1");
+    invitationQueryFails = true;
+    const res = buildRes();
+    await handler.createInvitation(
+      buildReq({ role: "admin", uid: "adm", body }),
+      res
+    );
+    expect(res.__status).toBe(201);
+    expect(sentInvitations).toHaveLength(1);
+  });
+
+  it("audita cada invitación anulada", async () => {
+    seedOld("old-1");
+    const res = buildRes();
+    await handler.createInvitation(
+      buildReq({ role: "admin", uid: "adm", body }),
+      res
+    );
+    const newId = (res.__body?.data as { id: string }).id;
+    expect(
+      auditLogEntries().filter((e) => e.action === "access.invitation.revoke")
+    ).toEqual([
+      expect.objectContaining({
+        targetId: "old-1",
+        details: { replacedBy: newId },
+      }),
+    ]);
+  });
+});
+
+describe("revokeInvitation", () => {
+  it("revoca una invitación caducada que nadie usó", async () => {
+    docs.set("invitations/inv-1", {
+      emailLower: "a@example.com",
+      expiresAt: new Date(Date.now() - 86400_000),
+      usedAt: null,
+      revokedAt: null,
+    });
+    const res = buildRes();
+    await handler.revokeInvitation(
+      buildReq({ role: "admin", uid: "adm", params: { id: "inv-1" } }),
+      res
+    );
+    expect(res.__body?.success).toBe(true);
+    expect(docs.get("invitations/inv-1")?.revokedAt).toBe("__TS__");
+  });
+
+  it("rechaza con 409 una invitación ya revocada sin pisar su fecha", async () => {
+    docs.set("invitations/inv-1", { usedAt: null, revokedAt: "ayer" });
+    const res = buildRes();
+    await handler.revokeInvitation(
+      buildReq({ role: "admin", uid: "adm", params: { id: "inv-1" } }),
+      res
+    );
+    expect(res.__status).toBe(409);
+    expect(docs.get("invitations/inv-1")?.revokedAt).toBe("ayer");
+    expect(auditLogEntries()).toHaveLength(0);
+  });
+
+  it("rechaza con 409 una invitación ya usada", async () => {
+    docs.set("invitations/inv-1", { usedAt: new Date(), revokedAt: null });
+    const res = buildRes();
+    await handler.revokeInvitation(
+      buildReq({ role: "admin", uid: "adm", params: { id: "inv-1" } }),
+      res
+    );
+    expect(res.__status).toBe(409);
   });
 });
 

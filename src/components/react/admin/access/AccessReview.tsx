@@ -24,23 +24,24 @@ interface Invitation {
   id: string;
   emailLower: string;
   role: string;
-  expiresAt?: string;
+  expiresAt?: { _seconds: number } | string;
   usedAt?: { _seconds: number } | null;
   revokedAt?: { _seconds: number } | null;
   createdAt?: { _seconds: number };
 }
 
-function formatDate(value: unknown): string {
-  if (!value) return "—";
+function toMillis(value: unknown): number | null {
+  if (!value) return null;
   if (typeof value === "object" && "_seconds" in (value as object)) {
-    return new Date(
-      (value as { _seconds: number })._seconds * 1000
-    ).toLocaleDateString("es-PE");
+    return (value as { _seconds: number })._seconds * 1000;
   }
-  const parsed = new Date(value as string);
-  return Number.isNaN(parsed.getTime())
-    ? "—"
-    : parsed.toLocaleDateString("es-PE");
+  const parsed = new Date(value as string).getTime();
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function formatDate(value: unknown): string {
+  const ms = toMillis(value);
+  return ms === null ? "—" : new Date(ms).toLocaleDateString("es-PE");
 }
 
 /** Estado de una invitación: caducada y usada se ven distinto. */
@@ -60,7 +61,8 @@ function invitationState(inv: Invitation): {
       className:
         "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400",
     };
-  if (inv.expiresAt && new Date(inv.expiresAt).getTime() < Date.now())
+  const expiresAt = toMillis(inv.expiresAt);
+  if (expiresAt !== null && expiresAt < Date.now())
     return {
       label: "Caducada",
       className:

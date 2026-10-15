@@ -433,6 +433,49 @@ export async function listInvitations(_req: Request, res: Response) {
   }
 }
 
+async function revokeSupersededInvitations(
+  emailLower: string,
+  newId: string,
+  performedBy: string,
+  req: Request
+): Promise<void> {
+  try {
+    const open = await admin
+      .firestore()
+      .collection("invitations")
+      .where("emailLower", "==", emailLower)
+      .where("usedAt", "==", null)
+      .where("revokedAt", "==", null)
+      .get();
+
+    const stale = open.docs.filter((d) => d.id !== newId);
+    if (stale.length === 0) return;
+
+    const batch = admin.firestore().batch();
+    for (const d of stale) {
+      batch.update(d.ref, { revokedAt: FieldValue.serverTimestamp() });
+    }
+    await batch.commit();
+
+    await Promise.all(
+      stale.map((d) =>
+        writeAuditLog(
+          {
+            action: "access.invitation.revoke",
+            performedBy,
+            targetId: d.id,
+            targetType: "invitation",
+            details: { replacedBy: newId },
+          },
+          req
+        )
+      )
+    );
+  } catch (err) {
+    logger.error("Superseding previous invitations failed", err);
+  }
+}
+
 export async function createInvitation(req: Request, res: Response) {
   try {
     const performer = (req as AuthenticatedRequest).user;
@@ -537,6 +580,13 @@ export async function createInvitation(req: Request, res: Response) {
       return;
     }
 
+    await revokeSupersededInvitations(
+      email.toLowerCase(),
+      ref.id,
+      performer.uid,
+      req
+    );
+
     res.status(201).json({ success: true, data: { id: ref.id } });
   } catch (err) {
     res.status(500).json({ success: false, error: safeError(err) });
@@ -558,6 +608,12 @@ export async function revokeInvitation(req: Request, res: Response) {
       res
         .status(409)
         .json({ success: false, error: "Invitation was already used" });
+      return;
+    }
+    if (doc.data()?.revokedAt) {
+      res
+        .status(409)
+        .json({ success: false, error: "Invitation was already revoked" });
       return;
     }
 
