@@ -537,6 +537,35 @@ export async function createInvitation(req: Request, res: Response) {
       return;
     }
 
+    const superseded = await admin
+      .firestore()
+      .collection("invitations")
+      .where("emailLower", "==", email.toLowerCase())
+      .where("usedAt", "==", null)
+      .where("revokedAt", "==", null)
+      .get();
+
+    const stale = superseded.docs.filter((d) => d.id !== ref.id);
+    if (stale.length > 0) {
+      const batch = admin.firestore().batch();
+      for (const d of stale) {
+        batch.update(d.ref, { revokedAt: FieldValue.serverTimestamp() });
+      }
+      await batch.commit();
+      for (const d of stale) {
+        await writeAuditLog(
+          {
+            action: "access.invitation.revoke",
+            performedBy: performer.uid,
+            targetId: d.id,
+            targetType: "invitation",
+            details: { replacedBy: ref.id },
+          },
+          req
+        );
+      }
+    }
+
     res.status(201).json({ success: true, data: { id: ref.id } });
   } catch (err) {
     res.status(500).json({ success: false, error: safeError(err) });
