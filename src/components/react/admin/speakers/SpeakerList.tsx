@@ -3,6 +3,17 @@ import { api } from "@/lib/api";
 import { toImagePath } from "@/lib/image";
 import { Toast } from "../ui/Toast";
 import { FormField } from "../ui/FormField";
+import {
+  ArrowIcon,
+  CloseIcon,
+  CornerNodes,
+  ErrorState,
+  HeaderActions,
+  LoadingState,
+  SectionHeading,
+  buttonClass,
+  inputClass,
+} from "../ui/atlas";
 
 interface Speaker {
   id: string;
@@ -30,10 +41,106 @@ const EMPTY_SPEAKER: Speaker = {
 
 const PAGE_SIZE = 10;
 
+const ID_PATTERN = /^[a-zA-Z0-9_-]{1,100}$/;
+
+const SOCIAL_FIELDS = [
+  { key: "linkedin", label: "LinkedIn" },
+  { key: "github", label: "GitHub" },
+  { key: "twitter", label: "X (Twitter)" },
+  { key: "web", label: "Sitio web" },
+];
+
+const deleteClass =
+  "text-atlas-rose hover:bg-atlas-rose/10 rounded-md px-2 py-1.5 text-sm font-semibold transition-colors disabled:opacity-50";
+
+function SpeakerAvatar({
+  speaker,
+}: {
+  speaker: Pick<Speaker, "name" | "photo_url">;
+}) {
+  if (speaker.photo_url) {
+    return (
+      <img
+        src={toImagePath(speaker.photo_url)}
+        alt=""
+        loading="lazy"
+        className="bg-atlas-deep border-atlas-line size-10 rounded-full border object-cover"
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden="true"
+      className="atlas-name bg-atlas-deep border-atlas-line text-atlas-dust grid size-10 place-items-center rounded-full border text-base"
+    >
+      {speaker.name.trim().charAt(0).toUpperCase() || "?"}
+    </span>
+  );
+}
+
+function describeSpeaker(speaker: Pick<Speaker, "role" | "company">) {
+  return [speaker.role, speaker.company].filter(Boolean).join(" · ");
+}
+
+function SpeakerRow({
+  speaker,
+  deleting,
+  onEdit,
+  onDelete,
+}: {
+  speaker: Speaker;
+  deleting: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const detail = describeSpeaker(speaker);
+  const shownTopics = speaker.topics.slice(0, 4);
+  const extraTopics = speaker.topics.length - shownTopics.length;
+
+  return (
+    <li className="border-atlas-line grid grid-cols-[2.5rem_1fr] gap-x-4 gap-y-3 border-b py-4 last:border-b-0 @3xl:grid-cols-[2.5rem_1fr_auto] @3xl:items-center">
+      <div className="row-span-2 self-start pt-0.5 @3xl:row-span-1 @3xl:self-center">
+        <SpeakerAvatar speaker={speaker} />
+      </div>
+      <div className="min-w-0">
+        <p className="atlas-name text-atlas-dust text-xl leading-tight">
+          {speaker.name || speaker.id}
+        </p>
+        <p className="text-atlas-mist mt-1 text-sm">
+          {detail || "Sin cargo ni empresa"}
+        </p>
+        {shownTopics.length > 0 && (
+          <p className="text-atlas-fog mt-0.5 text-xs">
+            {shownTopics.join(" · ")}
+            {extraTopics > 0 && ` · y ${extraTopics} más`}
+          </p>
+        )}
+      </div>
+      <div className="col-start-2 flex flex-wrap items-center gap-2 @3xl:col-start-auto @3xl:justify-end">
+        <button
+          type="button"
+          onClick={onEdit}
+          className={buttonClass.secondary}
+        >
+          Editar
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          className={deleteClass}
+        >
+          {deleting ? "Eliminando…" : "Eliminar"}
+        </button>
+      </div>
+    </li>
+  );
+}
+
 export function SpeakerList() {
   const [speakers, setSpeakers] = useState<Speaker[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(false);
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
@@ -73,13 +180,32 @@ export function SpeakerList() {
 
   async function loadSpeakers() {
     setLoading(true);
+    setError(false);
     const res = await api.listSpeakers();
     if (res.success && res.data) {
       setSpeakers(res.data as Speaker[]);
     } else {
-      setError(res.error || "Error al cargar speakers");
+      setError(true);
     }
     setLoading(false);
+  }
+
+  function openCreate() {
+    setCreating(true);
+    setEditing({ ...EMPTY_SPEAKER });
+    setTopicInput("");
+  }
+
+  function openEdit(speaker: Speaker) {
+    setCreating(false);
+    setEditing(speaker);
+    setTopicInput("");
+  }
+
+  function closeForm() {
+    setEditing(null);
+    setCreating(false);
+    setTopicInput("");
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -93,27 +219,43 @@ export function SpeakerList() {
 
     if (res.success) {
       setToast({
-        message: `Speaker ${isNew ? "agregado" : "actualizado"}`,
+        message: isNew
+          ? `${form.name} ya está entre los speakers`
+          : `Cambios guardados en ${form.name}`,
         type: "success",
       });
-      setEditing(null);
-      setCreating(false);
+      closeForm();
       loadSpeakers();
     } else {
-      setToast({ message: res.error || "Error", type: "error" });
+      setToast({
+        message: `No se pudo guardar a ${form.name || "este speaker"}. Revisa que los enlaces empiecen con https:// e inténtalo de nuevo.`,
+        type: "error",
+      });
     }
     setSaving(false);
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm(`Eliminar speaker "${id}"?`)) return;
-    setDeleting(id);
-    const res = await api.deleteSpeaker(id);
+  async function handleDelete(speaker: Speaker) {
+    const label = speaker.name || speaker.id;
+    if (
+      !confirm(
+        `¿Eliminar a «${label}» de los speakers? Su ficha desaparecerá del sitio público.`
+      )
+    )
+      return;
+    setDeleting(speaker.id);
+    const res = await api.deleteSpeaker(speaker.id);
     if (res.success) {
-      setSpeakers((prev) => prev.filter((s) => s.id !== id));
-      setToast({ message: "Speaker eliminado", type: "success" });
+      setSpeakers((prev) => prev.filter((s) => s.id !== speaker.id));
+      setToast({
+        message: `${label} ya no figura como speaker`,
+        type: "success",
+      });
     } else {
-      setToast({ message: res.error || "Error", type: "error" });
+      setToast({
+        message: `No se pudo eliminar a ${label}. Inténtalo de nuevo.`,
+        type: "error",
+      });
     }
     setDeleting(null);
   }
@@ -122,420 +264,417 @@ export function SpeakerList() {
     if (editing) setEditing({ ...editing, [field]: value });
   }
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-      </div>
-    );
+  function addTopic() {
+    if (!form || !topicInput.trim()) return;
+    updateForm("topics", [...form.topics, topicInput.trim()]);
+    setTopicInput("");
   }
 
-  if (error) {
-    return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-        {error}
-      </div>
-    );
-  }
-
-  const inputClass =
-    "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400";
+  const toastNode = toast && (
+    <Toast
+      message={toast.message}
+      type={toast.type}
+      onClose={() => setToast(null)}
+    />
+  );
 
   if (form) {
+    const idInvalid = creating && form.id !== "" && !ID_PATTERN.test(form.id);
+    const missing = [
+      !form.name.trim() && "nombre",
+      creating && !form.id && "ID",
+    ].filter(Boolean) as string[];
+    const ready = missing.length === 0 && !idInvalid;
+    const detail = describeSpeaker(form);
+    const socialCount = SOCIAL_FIELDS.filter(
+      ({ key }) => form.social_links[key]
+    ).length;
+
     return (
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-6xl">
+        {toastNode}
         <button
-          onClick={() => {
-            setEditing(null);
-            setCreating(false);
-          }}
-          className="mb-4 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+          type="button"
+          onClick={closeForm}
+          className={`${buttonClass.quiet} mb-6 -ml-2`}
         >
-          ← Volver a speakers
+          <ArrowIcon className="size-4 rotate-180" />
+          Volver a speakers
         </button>
-        <h2 className="mb-6 text-xl font-bold text-gray-900 dark:text-white">
-          {creating ? "Agregar speaker" : `Editar: ${form.name}`}
-        </h2>
-        <form onSubmit={handleSave} className="space-y-6">
-          <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="ID (slug)" required>
-                <input
-                  type="text"
-                  value={form.id}
-                  onChange={(e) => updateForm("id", e.target.value)}
-                  placeholder="juan-perez"
-                  className={inputClass}
-                  disabled={!!editing}
-                />
-              </FormField>
-              <FormField label="Nombre" required>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => updateForm("name", e.target.value)}
-                  className={inputClass}
-                />
-              </FormField>
-              <FormField label="Empresa">
-                <input
-                  type="text"
-                  value={form.company}
-                  onChange={(e) => updateForm("company", e.target.value)}
-                  className={inputClass}
-                />
-              </FormField>
-              <FormField label="Rol">
-                <input
-                  type="text"
-                  value={form.role}
-                  onChange={(e) => updateForm("role", e.target.value)}
-                  className={inputClass}
-                />
-              </FormField>
-              <div className="sm:col-span-2">
+
+        <form
+          onSubmit={handleSave}
+          className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_20rem]"
+        >
+          <div className="space-y-10">
+            <section aria-labelledby="speaker-identidad">
+              <SectionHeading>
+                <span id="speaker-identidad">Identidad</span>
+              </SectionHeading>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField label="Nombre" required>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => updateForm("name", e.target.value)}
+                    placeholder="María García"
+                    className={inputClass}
+                  />
+                </FormField>
+                <div>
+                  <FormField
+                    label="ID"
+                    required
+                    error={
+                      idInvalid
+                        ? "Solo letras sin tildes, números, guiones y guion bajo."
+                        : undefined
+                    }
+                  >
+                    <input
+                      type="text"
+                      value={form.id}
+                      onChange={(e) => updateForm("id", e.target.value)}
+                      placeholder="maria-garcia"
+                      className={inputClass}
+                      disabled={!creating}
+                    />
+                  </FormField>
+                  {!idInvalid && (
+                    <p className="text-atlas-fog mt-1 text-xs">
+                      {creating
+                        ? "Con él se enlaza el speaker a sus eventos. No se puede cambiar después."
+                        : "Con él se enlaza el speaker a sus eventos; no se puede cambiar."}
+                    </p>
+                  )}
+                </div>
+                <FormField label="Cargo">
+                  <input
+                    type="text"
+                    value={form.role}
+                    onChange={(e) => updateForm("role", e.target.value)}
+                    placeholder="Staff Engineer"
+                    className={inputClass}
+                  />
+                </FormField>
+                <FormField label="Empresa">
+                  <input
+                    type="text"
+                    value={form.company}
+                    onChange={(e) => updateForm("company", e.target.value)}
+                    className={inputClass}
+                  />
+                </FormField>
+              </div>
+            </section>
+
+            <section aria-labelledby="speaker-presentacion">
+              <SectionHeading>
+                <span id="speaker-presentacion">Presentación</span>
+              </SectionHeading>
+              <div className="space-y-4">
                 <FormField label="Bio">
                   <textarea
                     value={form.bio}
                     onChange={(e) => updateForm("bio", e.target.value)}
-                    rows={3}
+                    rows={4}
                     className={inputClass}
                   />
                 </FormField>
-              </div>
-              <div className="sm:col-span-2">
-                <FormField label="URL foto">
+                <FormField label="URL de la foto">
                   <input
                     type="url"
                     value={form.photo_url}
                     onChange={(e) => updateForm("photo_url", e.target.value)}
+                    placeholder="https://gdgica.com/speakers/foto.webp"
                     className={inputClass}
                   />
                 </FormField>
               </div>
-            </div>
-          </div>
+            </section>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-            <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">
-              Topics
-            </h3>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={topicInput}
-                onChange={(e) => setTopicInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    if (topicInput.trim()) {
-                      updateForm("topics", [...form.topics, topicInput.trim()]);
-                      setTopicInput("");
+            <section aria-labelledby="speaker-temas">
+              <SectionHeading>
+                <span id="speaker-temas">Temas</span>
+              </SectionHeading>
+              <div className="flex gap-2">
+                <label htmlFor="speaker-tema" className="sr-only">
+                  Nuevo tema
+                </label>
+                <input
+                  id="speaker-tema"
+                  type="text"
+                  value={topicInput}
+                  onChange={(e) => setTopicInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addTopic();
                     }
-                  }
-                }}
-                placeholder="Agregar topic"
-                className={inputClass}
-              />
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {form.topics.map((topic, i) => (
-                <span
-                  key={i}
-                  className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                  }}
+                  placeholder="Kubernetes, Angular, IA…"
+                  className={inputClass}
+                />
+                <button
+                  type="button"
+                  onClick={addTopic}
+                  disabled={!topicInput.trim()}
+                  className={`${buttonClass.secondary} shrink-0`}
                 >
-                  {topic}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateForm(
-                        "topics",
-                        form.topics.filter((_, idx) => idx !== i)
-                      )
-                    }
-                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
+                  Agregar
+                </button>
+              </div>
+              {form.topics.length > 0 ? (
+                <ul className="mt-3 flex flex-wrap gap-2">
+                  {form.topics.map((topic, i) => (
+                    <li
+                      key={i}
+                      className="border-atlas-line text-atlas-dust inline-flex items-center gap-1 rounded-xs border py-1 pr-1 pl-2.5 text-sm"
+                    >
+                      {topic}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateForm(
+                            "topics",
+                            form.topics.filter((_, idx) => idx !== i)
+                          )
+                        }
+                        aria-label={`Quitar ${topic}`}
+                        className="text-atlas-fog hover:text-atlas-rose rounded-xs p-0.5 transition-colors"
+                      >
+                        <CloseIcon className="size-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-atlas-fog mt-2 text-sm">
+                  Escribe un tema y pulsa Enter para agregarlo.
+                </p>
+              )}
+            </section>
+
+            <section aria-labelledby="speaker-redes">
+              <SectionHeading>
+                <span id="speaker-redes">Redes</span>
+              </SectionHeading>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {SOCIAL_FIELDS.map(({ key, label }) => (
+                  <FormField key={key} label={label}>
+                    <input
+                      type="url"
+                      value={form.social_links[key] || ""}
+                      onChange={(e) =>
+                        updateForm("social_links", {
+                          ...form.social_links,
+                          [key]: e.target.value,
+                        })
+                      }
+                      placeholder="https://"
+                      className={inputClass}
+                    />
+                  </FormField>
+                ))}
+              </div>
+            </section>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-            <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">
-              Redes sociales
-            </h3>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {["linkedin", "github", "twitter", "web"].map((key) => (
-                <FormField key={key} label={key}>
-                  <input
-                    type="url"
-                    value={form.social_links[key] || ""}
-                    onChange={(e) =>
-                      updateForm("social_links", {
-                        ...form.social_links,
-                        [key]: e.target.value,
-                      })
-                    }
-                    className={inputClass}
-                  />
-                </FormField>
-              ))}
+          <aside
+            aria-label="Resumen del speaker"
+            className="border-atlas-line bg-atlas-deep/40 relative rounded-xs border p-5 lg:sticky lg:top-0"
+          >
+            <CornerNodes />
+            <p className="atlas-label text-atlas-glow">
+              {creating ? "Nuevo speaker" : "Editando"}
+            </p>
+            <div className="mt-4 flex items-center gap-3">
+              <SpeakerAvatar speaker={form} />
+              <div className="min-w-0">
+                <p className="atlas-name text-atlas-dust text-lg leading-snug break-words">
+                  {form.name.trim() || "Sin nombre todavía"}
+                </p>
+                {detail && <p className="text-atlas-mist text-sm">{detail}</p>}
+              </div>
             </div>
-          </div>
+            <dl className="mt-4 space-y-2 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="text-atlas-fog">ID</dt>
+                <dd className="text-atlas-dust min-w-0 truncate text-right">
+                  {form.id || "—"}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-atlas-fog">Temas</dt>
+                <dd className="text-atlas-dust tabular-nums">
+                  {form.topics.length}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-atlas-fog">Redes</dt>
+                <dd className="text-atlas-dust tabular-nums">{socialCount}</dd>
+              </div>
+            </dl>
 
-          <div className="flex justify-end gap-3">
+            {!ready && (
+              <p className="text-atlas-mist mt-4 text-sm">
+                {idInvalid
+                  ? "Corrige el ID: solo letras sin tildes, números, guiones y guion bajo."
+                  : `Falta: ${missing.join(", ")}.`}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={saving || !ready}
+              className={`${buttonClass.primary} mt-5 w-full`}
+            >
+              {saving
+                ? "Guardando…"
+                : creating
+                  ? "Agregar speaker"
+                  : "Guardar cambios"}
+            </button>
             <button
               type="button"
-              onClick={() => {
-                setEditing(null);
-                setCreating(false);
-              }}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              onClick={closeForm}
+              className={`${buttonClass.quiet} mt-2 w-full justify-center`}
             >
               Cancelar
             </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {saving ? "Guardando..." : creating ? "Agregar" : "Actualizar"}
-            </button>
-          </div>
+          </aside>
         </form>
       </div>
     );
   }
 
   return (
-    <div>
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
-
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar speaker..."
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none sm:w-64 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-          />
-          <span className="shrink-0 text-sm text-gray-500 dark:text-gray-400">
-            {filtered.length} speaker{filtered.length !== 1 && "s"}
-          </span>
-        </div>
+    <div className="mx-auto max-w-6xl">
+      <HeaderActions>
         <button
-          onClick={() => {
-            setCreating(true);
-            setEditing({ ...EMPTY_SPEAKER });
-          }}
-          className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          type="button"
+          onClick={openCreate}
+          className={buttonClass.primary}
         >
-          + Agregar speaker
+          Nuevo speaker
         </button>
-      </div>
+      </HeaderActions>
 
-      {/* Desktop table */}
-      <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white md:block dark:border-gray-700 dark:bg-gray-800">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-900">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                Speaker
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                Empresa
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                Topics
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-            {paginated.map((speaker) => (
-              <tr
-                key={speaker.id}
-                className="hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={toImagePath(speaker.photo_url)}
-                      alt=""
-                      loading="lazy"
-                      className="h-8 w-8 rounded-full bg-gray-100 object-cover dark:bg-gray-700"
-                    />
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-white">
-                        {speaker.name}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {speaker.role}
-                      </p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                  {speaker.company}
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex flex-wrap gap-1">
-                    {speaker.topics.slice(0, 3).map((t, i) => (
-                      <span
-                        key={i}
-                        className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-400"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                    {speaker.topics.length > 3 && (
-                      <span className="text-xs text-gray-400 dark:text-gray-500">
-                        +{speaker.topics.length - 3}
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => setEditing(speaker)}
-                      className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(speaker.id)}
-                      disabled={deleting === speaker.id}
-                      className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                    >
-                      {deleting === speaker.id ? "..." : "Eliminar"}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {toastNode}
 
-      {/* Mobile cards */}
-      <div className="space-y-3 md:hidden">
-        {paginated.map((speaker) => (
-          <div
-            key={speaker.id}
-            className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
+      {loading ? (
+        <LoadingState label="Cargando speakers…" />
+      ) : error ? (
+        <ErrorState
+          message="No se pudieron cargar los speakers. Suele ser la conexión con el repositorio de datos."
+          onRetry={loadSpeakers}
+        />
+      ) : speakers.length === 0 ? (
+        <div className="border-atlas-line text-atlas-mist rounded-xs border border-dashed px-5 py-8 text-sm">
+          Todavía no hay speakers.{" "}
+          <button
+            type="button"
+            onClick={openCreate}
+            className="text-atlas-dust font-semibold underline underline-offset-4"
           >
-            <div className="flex items-start gap-3">
-              <img
-                src={toImagePath(speaker.photo_url)}
-                alt=""
-                loading="lazy"
-                className="h-10 w-10 shrink-0 rounded-full bg-gray-100 object-cover dark:bg-gray-700"
-              />
-              <div className="min-w-0 flex-1">
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {speaker.name}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {speaker.role}
-                </p>
-                {speaker.company && (
-                  <p className="text-sm text-gray-400 dark:text-gray-500">
-                    {speaker.company}
-                  </p>
-                )}
-                {speaker.topics.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {speaker.topics.slice(0, 3).map((t, i) => (
-                      <span
-                        key={i}
-                        className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-400"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                    {speaker.topics.length > 3 && (
-                      <span className="text-xs text-gray-400 dark:text-gray-500">
-                        +{speaker.topics.length - 3}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="mt-3 flex justify-end gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
-              <button
-                onClick={() => setEditing(speaker)}
-                className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
-              >
-                Editar
-              </button>
-              <button
-                onClick={() => handleDelete(speaker.id)}
-                disabled={deleting === speaker.id}
-                className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
-              >
-                {deleting === speaker.id ? "..." : "Eliminar"}
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {paginated.length === 0 && (
-        <p className="py-8 text-center text-gray-500 dark:text-gray-400">
-          {search ? "Sin resultados" : "No hay speakers."}
-        </p>
-      )}
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="mt-6 flex items-center justify-between">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Mostrando {(page - 1) * PAGE_SIZE + 1}-
-            {Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length}
-          </p>
-          <div className="flex gap-1">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-40 dark:border-gray-600 dark:text-gray-300"
-            >
-              Anterior
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPage(p)}
-                className={`rounded-lg px-3 py-1.5 text-sm ${
-                  p === page
-                    ? "bg-blue-600 text-white"
-                    : "border border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-                }`}
-              >
-                {p}
-              </button>
-            ))}
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-40 dark:border-gray-600 dark:text-gray-300"
-            >
-              Siguiente
-            </button>
-          </div>
+            Agrega el primero
+          </button>
+          .
         </div>
+      ) : (
+        <section aria-label="Speakers" className="@container">
+          <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <label htmlFor="speaker-buscar" className="sr-only">
+              Buscar speakers
+            </label>
+            <input
+              id="speaker-buscar"
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nombre, empresa o tema"
+              className={`${inputClass} sm:max-w-sm`}
+            />
+            <p className="text-atlas-fog shrink-0 text-sm tabular-nums">
+              {search.trim()
+                ? `${filtered.length} de ${speakers.length} speakers`
+                : `${speakers.length} ${speakers.length === 1 ? "speaker" : "speakers"}`}
+            </p>
+          </div>
+
+          {paginated.length === 0 ? (
+            <div className="border-atlas-line text-atlas-mist mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xs border border-dashed px-5 py-8 text-sm">
+              <span>Ningún speaker coincide con «{search.trim()}».</span>
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className={`${buttonClass.quiet} -my-1.5`}
+              >
+                Limpiar búsqueda
+              </button>
+            </div>
+          ) : (
+            <ul>
+              {paginated.map((speaker) => (
+                <SpeakerRow
+                  key={speaker.id}
+                  speaker={speaker}
+                  deleting={deleting === speaker.id}
+                  onEdit={() => openEdit(speaker)}
+                  onDelete={() => handleDelete(speaker)}
+                />
+              ))}
+            </ul>
+          )}
+
+          {totalPages > 1 && (
+            <nav
+              aria-label="Páginas de speakers"
+              className="border-atlas-line mt-2 flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <p className="text-atlas-fog text-sm tabular-nums">
+                {(page - 1) * PAGE_SIZE + 1}–
+                {Math.min(page * PAGE_SIZE, filtered.length)} de{" "}
+                {filtered.length}
+              </p>
+              <div className="flex flex-wrap gap-1">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className={`${buttonClass.quiet} disabled:opacity-50`}
+                >
+                  Anterior
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPage(p)}
+                      aria-current={p === page ? "page" : undefined}
+                      className={`min-w-9 rounded-md border px-2 py-1.5 text-sm font-semibold tabular-nums transition-colors ${
+                        p === page
+                          ? "border-atlas-mist bg-atlas-deep text-atlas-dust"
+                          : "text-atlas-mist hover:text-atlas-dust border-transparent"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className={`${buttonClass.quiet} disabled:opacity-50`}
+                >
+                  Siguiente
+                </button>
+              </div>
+            </nav>
+          )}
+        </section>
       )}
     </div>
   );

@@ -1,30 +1,111 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { AuthProvider, useAuth } from "../AuthProvider";
 import { LoginScreen } from "../LoginScreen";
+import { FormField } from "../ui/FormField";
+import { ChartRule, LoadingState, buttonClass, inputClass } from "../ui/atlas";
+import { useEventCatalog } from "../useEventCatalog";
 import { api } from "@/lib/api";
 import { ROLE_DESCRIPTIONS, ROLE_LABELS, type Role } from "@/lib/permissions";
+import { accessError, redeemError } from "./copy";
+import { RoleChoice } from "./RoleChoice";
 
 const REQUESTABLE: Role[] = ["contributor", "volunteer", "organizer"];
 
-function Card({ children }: { children: React.ReactNode }) {
+function Screen({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-gray-900">
-      <div className="w-full max-w-lg rounded-xl bg-white p-8 shadow-lg dark:bg-gray-800">
+    <main className="flex min-h-screen justify-center px-4 py-16 sm:items-center">
+      <div className="w-full max-w-md">
+        <img src="/gdg-logo.png" alt="" className="h-8 w-auto" />
+        <h1 className="atlas-name text-atlas-dust mt-6 text-[2.25rem] leading-[1.05]">
+          {title}
+        </h1>
+        <ChartRule className="mt-5" />
         {children}
       </div>
-    </div>
+    </main>
   );
 }
 
-function Spinner() {
+function Waiting({ label }: { label: string }) {
   return (
     <div className="flex min-h-screen items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+      <LoadingState label={label} />
     </div>
   );
 }
 
-/** Formulario público de solicitud de acceso. */
+function Session({ email }: { email: string | null }) {
+  const { signOut } = useAuth();
+  return (
+    <p className="text-atlas-fog mt-3 flex flex-wrap items-center gap-x-2 text-sm">
+      <span>
+        Sesión: <span className="text-atlas-mist">{email}</span>
+      </span>
+      <button
+        type="button"
+        onClick={signOut}
+        className={`${buttonClass.quiet} -ml-2 sm:ml-0`}
+      >
+        Usar otra cuenta
+      </button>
+    </p>
+  );
+}
+
+function FormError({ message }: { message: string }) {
+  return (
+    <p
+      role="alert"
+      className="border-atlas-rose/40 bg-atlas-rose/5 text-atlas-dust rounded-md border px-4 py-3 text-sm"
+    >
+      {message}
+    </p>
+  );
+}
+
+function EventField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (slug: string) => void;
+}) {
+  const { events, failed } = useEventCatalog();
+  const open = (events ?? []).filter((e) => e.status !== "completed");
+
+  if (!failed && open.length > 0) {
+    return (
+      <FormField label="Evento en el que quieres ayudar (opcional)">
+        <select
+          className={inputClass}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          <option value="">Cualquiera, el que haga falta</option>
+          {open.map((event) => (
+            <option key={event.slug} value={event.slug}>
+              {event.name}
+            </option>
+          ))}
+        </select>
+      </FormField>
+    );
+  }
+
+  return (
+    <FormField label="Evento en el que quieres ayudar (opcional)">
+      <input
+        type="text"
+        maxLength={100}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Nombre del evento"
+        className={inputClass}
+      />
+    </FormField>
+  );
+}
+
 function RequestForm() {
   const { user, loading, canAccessPanel, profileError, retryProfile } =
     useAuth();
@@ -52,7 +133,8 @@ function RequestForm() {
     });
   }, [user]);
 
-  if (loading || checking) return <Spinner />;
+  if (loading) return <Waiting label="Comprobando tu sesión…" />;
+  if (checking) return <Waiting label="Buscando tu solicitud…" />;
   if (!user) return <LoginScreen />;
 
   // Sin perfil legible no sabemos si esta persona YA tiene acceso, y
@@ -60,76 +142,63 @@ function RequestForm() {
   // solicitud de organizer firmada por un administrador.
   if (profileError) {
     return (
-      <Card>
-        <p className="text-4xl">📡</p>
-        <h1 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">
-          No pudimos cargar tu perfil
-        </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
-          No se pudo leer tu cuenta, y sin eso no sabemos si ya tienes acceso.
-          Suele ser la conexion: reintenta en un momento.
+      <Screen title="No pudimos cargar tu perfil">
+        <p className="text-atlas-mist mt-5 leading-relaxed">
+          No se pudo leer tu cuenta y, sin eso, no sabemos si ya tienes acceso.
+          Suele ser la conexión: reintenta en un momento.
         </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-3">
+        <Session email={user.email} />
+        <div className="mt-8 flex flex-wrap items-center gap-3">
           <button
+            type="button"
             onClick={async () => {
               setRetrying(true);
               await retryProfile();
               setRetrying(false);
             }}
             disabled={retrying}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+            className={buttonClass.primary}
           >
             {retrying ? "Reintentando…" : "Reintentar"}
           </button>
-          <a
-            href="/"
-            className="inline-block rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-          >
+          <a href="/" className={buttonClass.secondary}>
             Volver al sitio
           </a>
         </div>
-      </Card>
+      </Screen>
     );
   }
 
   if (canAccessPanel) {
     return (
-      <Card>
-        <p className="text-4xl">✅</p>
-        <h1 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">
-          Ya tienes acceso
-        </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
-          Tu cuenta ya puede operar la plataforma.
+      <Screen title="Ya tienes acceso">
+        <p className="text-atlas-mist mt-5 leading-relaxed">
+          Tu cuenta ya puede entrar al panel; no hace falta que lo solicites.
         </p>
-        <a
-          href="/admin"
-          className="mt-6 inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          Ir al panel
-        </a>
-      </Card>
+        <Session email={user.email} />
+        <div className="mt-8">
+          <a href="/admin" className={buttonClass.primary}>
+            Ir al panel
+          </a>
+        </div>
+      </Screen>
     );
   }
 
   if (sent || existing?.status === "pending") {
     return (
-      <Card>
-        <p className="text-4xl">⏳</p>
-        <h1 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">
-          Solicitud enviada
-        </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
-          Un administrador la revisará y te avisaremos por correo a {user.email}
-          .
+      <Screen title="Solicitud enviada">
+        <p className="text-atlas-mist mt-5 leading-relaxed">
+          Una persona del equipo la revisará y te escribiremos a{" "}
+          <span className="text-atlas-dust">{user.email}</span> con la
+          respuesta. No hace falta que la envíes de nuevo.
         </p>
-        <a
-          href="/"
-          className="mt-6 inline-block text-sm text-gray-500 underline dark:text-gray-400"
-        >
-          Volver al sitio
-        </a>
-      </Card>
+        <div className="mt-8">
+          <a href="/" className={buttonClass.secondary}>
+            Volver al sitio
+          </a>
+        </div>
+      </Screen>
     );
   }
 
@@ -144,54 +213,45 @@ function RequestForm() {
       eventSlug: eventSlug.trim() || undefined,
     });
     if (res.success) setSent(true);
-    else setError(res.error || "No se pudo enviar la solicitud");
+    else
+      setError(
+        accessError(
+          res.error,
+          "No se pudo enviar la solicitud. Inténtalo de nuevo en un momento."
+        )
+      );
     setSending(false);
   }
 
-  const inputClass =
-    "mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white";
+  const ready = motivo.trim().length > 0;
 
   return (
-    <Card>
-      <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-        Solicitar acceso
-      </h1>
-      <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-        Cuéntanos cómo quieres colaborar con la comunidad GDG ICA. Entras como{" "}
-        {user.email}.
+    <Screen title="Solicitar acceso">
+      <p className="text-atlas-mist mt-5 leading-relaxed">
+        Cuéntanos cómo quieres colaborar con GDG ICA. Una persona del equipo lee
+        cada solicitud y te responde por correo.
       </p>
+      <Session email={user.email} />
       {existing?.status === "rejected" && (
-        <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-          Tu solicitud anterior no fue aprobada. Puedes volver a enviarla con
-          más detalle.
+        <p className="border-atlas-line text-atlas-mist mt-5 rounded-md border px-4 py-3 text-sm">
+          <span className="atlas-label text-atlas-glow mb-1 block">
+            Solicitud anterior
+          </span>
+          No fue aprobada. Puedes enviarla otra vez contando con más detalle qué
+          quieres aportar.
         </p>
       )}
 
-      <form onSubmit={submit} className="mt-6 space-y-4">
-        <label className="block">
-          <span className="text-sm font-medium text-gray-900 dark:text-white">
-            ¿Cómo quieres participar?
-          </span>
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value as Role)}
-            className={inputClass}
-          >
-            {REQUESTABLE.map((r) => (
-              <option key={r} value={r}>
-                {ROLE_LABELS[r]}
-              </option>
-            ))}
-          </select>
-          <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
-            {ROLE_DESCRIPTIONS[role]}
-          </span>
-        </label>
+      <form onSubmit={submit} className="mt-8 space-y-6">
+        <RoleChoice
+          legend="¿Cómo quieres participar?"
+          name="rol-solicitado"
+          roles={REQUESTABLE}
+          value={role}
+          onChange={setRole}
+        />
 
-        <label className="block">
-          <span className="text-sm font-medium text-gray-900 dark:text-white">
-            Motivo <span className="text-red-500">*</span>
-          </span>
+        <FormField label="Motivo" required>
           <textarea
             required
             rows={4}
@@ -201,57 +261,44 @@ function RequestForm() {
             placeholder="Qué te gustaría aportar y por qué"
             className={inputClass}
           />
-        </label>
+        </FormField>
 
-        <label className="block">
-          <span className="text-sm font-medium text-gray-900 dark:text-white">
-            Enlaces (opcional)
-          </span>
+        <FormField label="Enlaces (opcional)">
           <input
             type="text"
             maxLength={1000}
             value={links}
             onChange={(e) => setLinks(e.target.value)}
-            placeholder="GitHub, LinkedIn, portafolio..."
+            placeholder="GitHub, LinkedIn, portafolio…"
             className={inputClass}
           />
-        </label>
+        </FormField>
 
         {role === "volunteer" && (
-          <label className="block">
-            <span className="text-sm font-medium text-gray-900 dark:text-white">
-              Evento en el que quieres ayudar (opcional)
-            </span>
-            <input
-              type="text"
-              maxLength={100}
-              value={eventSlug}
-              onChange={(e) => setEventSlug(e.target.value)}
-              placeholder="devfest-2026"
-              className={inputClass}
-            />
-          </label>
+          <EventField value={eventSlug} onChange={setEventSlug} />
         )}
 
-        {error && (
-          <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
-            {error}
-          </p>
-        )}
+        {error && <FormError message={error} />}
 
-        <button
-          type="submit"
-          disabled={sending || motivo.trim().length === 0}
-          className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {sending ? "Enviando..." : "Enviar solicitud"}
-        </button>
+        <div>
+          <button
+            type="submit"
+            disabled={sending || !ready}
+            className={`${buttonClass.primary} w-full`}
+          >
+            {sending
+              ? "Enviando…"
+              : `Solicitar acceso como ${ROLE_LABELS[role]}`}
+          </button>
+          {!ready && (
+            <p className="text-atlas-fog mt-2 text-sm">Falta: el motivo.</p>
+          )}
+        </div>
       </form>
-    </Card>
+    </Screen>
   );
 }
 
-/** Canje de una invitación recibida por correo. */
 function RedeemForm() {
   const { user, loading } = useAuth();
   const [token, setToken] = useState("");
@@ -265,27 +312,28 @@ function RedeemForm() {
     if (fromUrl) setToken(fromUrl);
   }, []);
 
-  if (loading) return <Spinner />;
+  if (loading) return <Waiting label="Comprobando tu sesión…" />;
   if (!user) return <LoginScreen />;
 
   if (state === "done") {
+    const label = ROLE_LABELS[grantedRole as Role] ?? grantedRole;
     return (
-      <Card>
-        <p className="text-4xl">🎉</p>
-        <h1 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">
-          Invitación aceptada
-        </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
+      <Screen title="Invitación aceptada">
+        <p className="text-atlas-mist mt-5 leading-relaxed">
           Tu cuenta ahora es{" "}
-          <strong>{ROLE_LABELS[grantedRole as Role] ?? grantedRole}</strong>.
+          <span className="text-atlas-dust font-semibold">{label}</span>.
         </p>
-        <a
-          href="/admin"
-          className="mt-6 inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          Ir al panel
-        </a>
-      </Card>
+        {grantedRole && ROLE_DESCRIPTIONS[grantedRole as Role] && (
+          <p className="text-atlas-fog mt-2 text-sm leading-snug">
+            {ROLE_DESCRIPTIONS[grantedRole as Role]}
+          </p>
+        )}
+        <div className="mt-8">
+          <a href="/admin" className={buttonClass.primary}>
+            Ir al panel
+          </a>
+        </div>
+      </Screen>
     );
   }
 
@@ -298,51 +346,43 @@ function RedeemForm() {
       setGrantedRole((res.data as { role: string })?.role ?? null);
       setState("done");
     } else {
-      setError(res.error || "No se pudo canjear la invitación");
+      setError(redeemError(res.error));
       setState("idle");
     }
   }
 
   return (
-    <Card>
-      <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-        Aceptar invitación
-      </h1>
-      <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-        Has entrado como <strong>{user.email}</strong>. La invitación solo
-        funciona con la dirección a la que se envió; si no es esta, cierra
-        sesión y entra con la correcta.
+    <Screen title="Aceptar invitación">
+      <p className="text-atlas-mist mt-5 leading-relaxed">
+        La invitación solo funciona con la cuenta del correo al que se envió. Si
+        no es la de abajo, cambia de cuenta antes de aceptarla.
       </p>
+      <Session email={user.email} />
 
-      <form onSubmit={redeem} className="mt-6 space-y-4">
-        <label className="block">
-          <span className="text-sm font-medium text-gray-900 dark:text-white">
-            Código de invitación
-          </span>
+      <form onSubmit={redeem} className="mt-8 space-y-6">
+        <FormField label="Código de invitación" required>
           <input
             type="text"
             required
+            spellCheck={false}
+            autoComplete="off"
             value={token}
             onChange={(e) => setToken(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            className={`${inputClass} font-mono`}
           />
-        </label>
+        </FormField>
 
-        {error && (
-          <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
-            {error}
-          </p>
-        )}
+        {error && <FormError message={error} />}
 
         <button
           type="submit"
           disabled={state === "sending" || token.trim().length === 0}
-          className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className={`${buttonClass.primary} w-full`}
         >
-          {state === "sending" ? "Comprobando..." : "Aceptar invitación"}
+          {state === "sending" ? "Comprobando…" : "Aceptar invitación"}
         </button>
       </form>
-    </Card>
+    </Screen>
   );
 }
 

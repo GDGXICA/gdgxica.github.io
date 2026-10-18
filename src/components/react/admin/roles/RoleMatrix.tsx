@@ -8,6 +8,7 @@ import {
   type Permission,
   type Role,
 } from "@/lib/permissions";
+import { GROUP_LABELS, PERMISSION_LABELS } from "./labels";
 
 /** Cómo otorga un rol un permiso concreto. */
 type Level = "global" | "perEvent" | "none";
@@ -24,46 +25,43 @@ function groupOf(permission: Permission): string {
   return permission.split(":")[0];
 }
 
-const GROUP_LABELS: Record<string, string> = {
-  events: "Eventos",
-  speakers: "Speakers",
-  sponsors: "Sponsors",
-  team: "Equipo",
-  stats: "Estadísticas",
-  locations: "Ubicaciones",
-  forms: "Formularios",
-  roster: "Asistentes",
-  checkin: "Check-in",
-  certificates: "Certificados",
-  minigames: "Minijuegos",
-  proposals: "Propuestas",
-  users: "Usuarios",
-  access: "Accesos",
-  audit: "Auditoría",
-  rebuild: "Despliegue",
+const LEVEL_TITLE: Record<Level, string> = {
+  global: "Concedido en toda la plataforma",
+  perEvent:
+    "Solo en los eventos donde la persona esté asignada, y mientras dure la asignación",
+  none: "No concedido",
 };
 
-const CELL: Record<Level, { label: string; className: string; title: string }> =
-  {
-    global: {
-      label: "Sí",
-      className:
-        "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-      title: "Concedido en toda la plataforma",
-    },
-    perEvent: {
-      label: "Por evento",
-      className:
-        "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-      title:
-        "Solo en los eventos donde la persona esté asignada, y mientras dure la asignación",
-    },
-    none: {
-      label: "—",
-      className: "text-gray-300 dark:text-gray-600",
-      title: "No concedido",
-    },
-  };
+function Mark({ level }: { level: Level }) {
+  if (level === "global") {
+    return (
+      <span
+        title={LEVEL_TITLE.global}
+        className="bg-atlas-dust inline-block size-3 rounded-full"
+      >
+        <span className="sr-only">Sí</span>
+      </span>
+    );
+  }
+  if (level === "perEvent") {
+    return (
+      <span
+        title={LEVEL_TITLE.perEvent}
+        className="border-atlas-glow inline-block size-3 rounded-full border-2"
+      >
+        <span className="sr-only">Por evento</span>
+      </span>
+    );
+  }
+  return (
+    <span
+      title={LEVEL_TITLE.none}
+      className="bg-atlas-line inline-block h-px w-3"
+    >
+      <span className="sr-only">No</span>
+    </span>
+  );
+}
 
 export function RoleMatrix() {
   const [query, setQuery] = useState("");
@@ -71,7 +69,10 @@ export function RoleMatrix() {
   const groups = useMemo(() => {
     const needle = query.trim().toLowerCase();
     const filtered = PERMISSIONS.filter(
-      (p) => !needle || p.toLowerCase().includes(needle)
+      (p) =>
+        !needle ||
+        p.toLowerCase().includes(needle) ||
+        PERMISSION_LABELS[p].toLowerCase().includes(needle)
     );
     const byGroup = new Map<string, Permission[]>();
     for (const permission of filtered) {
@@ -83,111 +84,130 @@ export function RoleMatrix() {
     return [...byGroup.entries()];
   }, [query]);
 
+  const counts = useMemo(
+    () =>
+      Object.fromEntries(
+        ROLES.map((role) => [
+          role,
+          new Set([
+            ...ROLE_BUNDLES[role].global,
+            ...ROLE_BUNDLES[role].perEvent,
+          ]).size,
+        ])
+      ) as Record<Role, number>,
+    []
+  );
+
   return (
-    <div>
-      <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
-        <p className="font-medium">Esta matriz es de solo lectura.</p>
-        <p className="mt-1">
-          Los roles y sus permisos viven en el código, no en la base de datos:
-          así nadie puede redefinir qué significa un rol desde el panel. Para
-          dar o quitar permisos a una persona concreta, usa los permisos
-          puntuales en{" "}
-          <a href="/admin/users" className="underline">
-            Usuarios
-          </a>
-          .
+    <div className="mx-auto max-w-6xl">
+      <p className="text-atlas-mist mb-6 max-w-[70ch] text-sm leading-relaxed">
+        <span className="atlas-label text-atlas-glow mr-2">Solo lectura</span>
+        Los roles y sus permisos viven en el código, no en la base de datos: así
+        nadie puede redefinir qué significa un rol desde el panel. Para dar o
+        quitar permisos a una persona concreta, usa los permisos puntuales en{" "}
+        <a
+          href="/admin/users"
+          className="text-atlas-dust font-semibold underline underline-offset-4"
+        >
+          Usuarios
+        </a>
+        .
+      </p>
+
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+        <label className="w-full max-w-sm">
+          <span className="sr-only">Filtrar permisos</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Filtrar permisos (p. ej. asistencia, events:write)"
+            className="border-atlas-line bg-atlas-night text-atlas-dust w-full rounded-md border px-3 py-2 text-sm"
+          />
+        </label>
+        <p className="text-atlas-mist flex items-center gap-4 text-xs">
+          <span className="flex items-center gap-1.5">
+            <Mark level="global" /> En toda la plataforma
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Mark level="perEvent" /> Solo en sus eventos asignados
+          </span>
         </p>
       </div>
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {ROLES.map((role) => (
-          <div
-            key={role}
-            className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
-          >
-            <p className="font-semibold text-gray-900 dark:text-white">
-              {ROLE_LABELS[role]}
-            </p>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              {ROLE_DESCRIPTIONS[role]}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <label className="mb-4 block">
-        <span className="sr-only">Filtrar permisos</span>
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Filtrar permisos (p. ej. roster, events:write)"
-          className="w-full max-w-sm rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-        />
-      </label>
-
-      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-        <table className="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-900">
+      <div className="border-atlas-line relative max-h-[calc(100vh-15rem)] overflow-auto rounded-xs border">
+        <table className="min-w-[48rem] border-collapse text-sm sm:min-w-[56rem]">
+          <thead>
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                Permiso
+              <th className="bg-atlas-night border-atlas-line sticky top-0 left-0 z-20 w-40 border-b px-4 py-3 text-left align-bottom sm:w-72">
+                <span className="atlas-label text-atlas-fog">Permiso</span>
               </th>
               {ROLES.map((role) => (
                 <th
                   key={role}
-                  className="px-4 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                  scope="col"
+                  className="bg-atlas-night border-atlas-line sticky top-0 z-10 w-40 border-b border-l px-3 py-3 text-left align-top font-normal"
                 >
-                  {ROLE_LABELS[role]}
+                  <span className="atlas-name text-atlas-dust block text-base leading-tight">
+                    {ROLE_LABELS[role]}
+                  </span>
+                  <span className="text-atlas-glow mt-1 block text-xs tabular-nums">
+                    {counts[role]} {counts[role] === 1 ? "permiso" : "permisos"}
+                  </span>
+                  <span className="text-atlas-fog mt-1.5 block text-xs leading-snug">
+                    {ROLE_DESCRIPTIONS[role]}
+                  </span>
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody>
             {groups.map(([group, permissions]) => (
               <Fragment key={group}>
-                <tr className="bg-gray-50 dark:bg-gray-900/50">
-                  <td
+                <tr>
+                  <th
                     colSpan={ROLES.length + 1}
-                    className="px-4 py-2 text-xs font-semibold text-gray-600 uppercase dark:text-gray-300"
+                    scope="colgroup"
+                    className="bg-atlas-deep/60 border-atlas-line border-b px-4 py-2 text-left"
                   >
-                    {GROUP_LABELS[group] ?? group}
-                  </td>
+                    <span className="atlas-label text-atlas-glow sticky left-4">
+                      {GROUP_LABELS[group] ?? group}
+                    </span>
+                  </th>
                 </tr>
                 {permissions.map((permission) => (
-                  <tr
-                    key={permission}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                  >
-                    <td className="px-4 py-2 font-mono text-xs text-gray-700 dark:text-gray-300">
-                      {permission}
-                    </td>
-                    {ROLES.map((role) => {
-                      const cell = CELL[levelFor(role, permission)];
-                      return (
-                        <td key={role} className="px-4 py-2 text-center">
-                          <span
-                            title={cell.title}
-                            className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${cell.className}`}
-                          >
-                            {cell.label}
-                          </span>
-                        </td>
-                      );
-                    })}
+                  <tr key={permission} className="group hover:bg-atlas-deep/40">
+                    <th
+                      scope="row"
+                      className="bg-atlas-night group-hover:bg-atlas-deep border-atlas-line sticky left-0 z-10 border-b px-4 py-2.5 text-left font-normal"
+                    >
+                      <span className="text-atlas-dust block">
+                        {PERMISSION_LABELS[permission]}
+                      </span>
+                      <code className="text-atlas-fog text-xs">
+                        {permission}
+                      </code>
+                    </th>
+                    {ROLES.map((role) => (
+                      <td
+                        key={role}
+                        className="border-atlas-line border-b border-l px-3 py-2.5 text-center"
+                      >
+                        <Mark level={levelFor(role, permission)} />
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </Fragment>
             ))}
           </tbody>
         </table>
+        {groups.length === 0 && (
+          <p className="text-atlas-mist px-4 py-6 text-sm">
+            Ningún permiso coincide con «{query}».
+          </p>
+        )}
       </div>
-
-      {groups.length === 0 && (
-        <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-          Ningún permiso coincide con «{query}».
-        </p>
-      )}
     </div>
   );
 }

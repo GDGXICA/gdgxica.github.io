@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "../AuthProvider";
+import { SectionHeading } from "../ui/atlas";
 
 type Transport = "gmail" | "resend";
 
@@ -9,8 +10,8 @@ interface Props {
 }
 
 const LABELS: Record<Transport, { name: string; sender: string }> = {
-  gmail: { name: "Gmail", sender: "sale desde tu cuenta de Gmail" },
-  resend: { name: "Resend", sender: "sale desde el dominio de GDG Ica" },
+  gmail: { name: "Gmail", sender: "Sale desde tu cuenta de Gmail" },
+  resend: { name: "Resend", sender: "Sale desde el dominio de GDG Ica" },
 };
 
 /**
@@ -62,7 +63,10 @@ export function EmailTransportSetting({ onError }: Props) {
     setBusy(false);
 
     if (!res.success || !res.data) {
-      onError(res.error ?? "No se pudo cambiar el proveedor de correo");
+      onError(
+        res.error ??
+          `No se pudo cambiar el envío a ${LABELS[next].name}. Sigue saliendo por ${LABELS[transport].name}.`
+      );
       return;
     }
     setTransport(res.data.transport);
@@ -70,10 +74,19 @@ export function EmailTransportSetting({ onError }: Props) {
   };
 
   return (
-    <div className="border-gray-custom rounded-lg border bg-white p-3">
-      <p className="text-primary text-sm font-semibold">Envío de correos</p>
+    <section
+      aria-labelledby="credenciales-correo"
+      className="min-w-[min(100%,18rem)] flex-1"
+    >
+      <SectionHeading>
+        <span id="credenciales-correo">Envío de correos</span>
+      </SectionHeading>
 
-      <div className="mt-2 flex gap-2">
+      <div
+        role="group"
+        aria-label="Servicio de envío"
+        className="border-atlas-line inline-flex rounded-md border p-1"
+      >
         {(Object.keys(LABELS) as Transport[]).map((option) => (
           <button
             key={option}
@@ -81,10 +94,10 @@ export function EmailTransportSetting({ onError }: Props) {
             disabled={busy}
             onClick={() => change(option)}
             aria-pressed={transport === option}
-            className={`rounded border px-3 py-1.5 text-sm disabled:opacity-50 ${
+            className={`rounded px-4 py-1.5 text-sm font-semibold transition-colors disabled:opacity-50 ${
               transport === option
-                ? "border-google-blue text-google-blue bg-[#EFF6FF] font-semibold"
-                : "border-gray-custom text-secondary"
+                ? "bg-atlas-deep text-atlas-dust"
+                : "text-atlas-mist hover:text-atlas-dust"
             }`}
           >
             {LABELS[option].name}
@@ -92,21 +105,30 @@ export function EmailTransportSetting({ onError }: Props) {
         ))}
       </div>
 
-      <p className="text-tertiary mt-2 text-xs">
+      <p className="text-atlas-dust mt-3 text-sm">
         {LABELS[transport].sender}
-        {dailyCap !== null && ` · hasta ${dailyCap} correos al día`}
+        {dailyCap !== null && (
+          <span className="text-atlas-mist">
+            {" "}
+            · hasta <span className="tabular-nums">{dailyCap}</span> correos al
+            día
+          </span>
+        )}
       </p>
       {!resendReady && (
-        <p className="mt-2 rounded bg-[#FEF3C7] px-2 py-1 text-xs text-[#92400E]">
-          Resend todavía no tiene una clave válida configurada. Si lo eliges,
-          los envíos quedarán en cola reintentando hasta que se configure.
+        <p className="border-atlas-glow/40 text-atlas-mist mt-3 rounded-md border px-3 py-2 text-sm">
+          <span className="text-atlas-glow font-semibold">
+            Resend no tiene clave.
+          </span>{" "}
+          Si lo eliges, los envíos quedan en cola reintentando hasta que se
+          configure una válida.
         </p>
       )}
-      <p className="text-tertiary mt-1 text-xs">
+      <p className="text-atlas-fog mt-3 text-sm">
         Las respuestas llegan a tu correo con cualquiera de los dos. Al pasar el
-        límite diario la cola continúa al día siguiente; nadie se queda sin
+        límite diario la cola sigue al día siguiente; nadie se queda sin
         credencial.
       </p>
-    </div>
+    </section>
   );
 }

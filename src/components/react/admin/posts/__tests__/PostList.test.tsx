@@ -65,31 +65,36 @@ beforeEach(() => {
   for (const mock of Object.values(mocks)) mock.mockReset();
   mocks.can.mockReturnValue(true);
   mocks.listPosts.mockResolvedValue({ success: true, data: SUMMARIES });
+  const slot = document.createElement("div");
+  slot.id = "admin-header-actions";
+  document.body.appendChild(slot);
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  document.getElementById("admin-header-actions")?.remove();
+});
 
-/** La tabla de escritorio; la versión móvil repite los mismos textos. */
-function desktopRows() {
-  return within(screen.getByRole("table")).getAllByRole("row").slice(1);
+function postRows() {
+  return within(screen.getByRole("list")).getAllByRole("listitem");
 }
 
 describe("listado", () => {
   it("ordena por fecha, del más reciente al más viejo", async () => {
     render(<PostList />);
-    await screen.findByRole("table");
+    await screen.findByRole("list");
 
-    const rows = desktopRows();
+    const rows = postRows();
     expect(rows[0]).toHaveTextContent("Un post reciente");
     expect(rows[1]).toHaveTextContent("Un post viejo");
   });
 
   it("distingue borrador de publicado", async () => {
     render(<PostList />);
-    await screen.findByRole("table");
+    await screen.findByRole("list");
 
-    expect(desktopRows()[0]).toHaveTextContent("Borrador");
-    expect(desktopRows()[1]).toHaveTextContent("Publicado");
+    expect(postRows()[0]).toHaveTextContent("Borrador");
+    expect(postRows()[1]).toHaveTextContent("Publicado");
   });
 
   it("enseña el error si la carga falla", async () => {
@@ -116,10 +121,10 @@ describe("permisos", () => {
   it("sin posts:write no ofrece crear ni editar", async () => {
     mocks.can.mockImplementation((perm: string) => perm !== "posts:write");
     render(<PostList />);
-    await screen.findByRole("table");
+    await screen.findByRole("list");
 
     expect(
-      screen.queryByRole("button", { name: "+ Nuevo post" })
+      screen.queryByRole("button", { name: "Nuevo post" })
     ).not.toBeInTheDocument();
     expect(screen.queryAllByRole("button", { name: "Editar" })).toHaveLength(0);
   });
@@ -127,7 +132,7 @@ describe("permisos", () => {
   it("sin posts:delete no ofrece eliminar", async () => {
     mocks.can.mockImplementation((perm: string) => perm !== "posts:delete");
     render(<PostList />);
-    await screen.findByRole("table");
+    await screen.findByRole("list");
 
     expect(screen.queryAllByRole("button", { name: "Eliminar" })).toHaveLength(
       0
@@ -143,7 +148,7 @@ describe("abrir el editor", () => {
       data: { ...SUMMARIES[1], body: "# Hola" },
     });
     render(<PostList />);
-    await screen.findByRole("table");
+    await screen.findByRole("list");
 
     await userEvent.click(screen.getAllByRole("button", { name: "Editar" })[0]);
 
@@ -155,9 +160,9 @@ describe("abrir el editor", () => {
 
   it("crea con el formulario vacío", async () => {
     render(<PostList />);
-    await screen.findByRole("table");
+    await screen.findByRole("list");
 
-    await userEvent.click(screen.getByRole("button", { name: "+ Nuevo post" }));
+    await userEvent.click(screen.getByRole("button", { name: "Nuevo post" }));
 
     expect(await screen.findByText("Nuevo post")).toBeInTheDocument();
     expect(mocks.getPost).not.toHaveBeenCalled();
@@ -169,7 +174,7 @@ describe("eliminar", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     mocks.deletePost.mockResolvedValue({ success: true });
     render(<PostList />);
-    await screen.findByRole("table");
+    await screen.findByRole("list");
 
     await userEvent.click(
       screen.getAllByRole("button", { name: "Eliminar" })[0]
@@ -184,7 +189,7 @@ describe("eliminar", () => {
   it("no borra nada si se cancela la confirmación", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
     render(<PostList />);
-    await screen.findByRole("table");
+    await screen.findByRole("list");
 
     await userEvent.click(
       screen.getAllByRole("button", { name: "Eliminar" })[0]

@@ -1,7 +1,15 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { isDevPreview } from "@/lib/api";
 import { useAuth } from "../AuthProvider";
 import { EventPicker } from "../ui/EventPicker";
+import {
+  CornerNodes,
+  ErrorState,
+  HeaderActions,
+  LoadingState,
+  SectionHeading,
+  buttonClass,
+} from "../ui/atlas";
 import { useCredentials } from "./useCredentials";
 import { BevyQueue } from "./BevyQueue";
 import { PhotoModerationQueue } from "./PhotoModerationQueue";
@@ -25,6 +33,11 @@ function slugFromUrl(): string | null {
 }
 
 type Tab = "bevy" | "photos" | "all";
+
+const EMPTY_MESSAGE: Record<Exclude<Tab, "photos">, string> = {
+  bevy: "No queda nadie por cargar en Bevy. Las inscripciones nuevas aparecen aquí en cuanto llegan.",
+  all: "Todavía no hay inscripciones para este evento. Aparecen aquí en cuanto alguien llena el formulario de credencial.",
+};
 
 export function CredentialsPanel({ initialSlug }: { initialSlug?: string }) {
   const { can } = useAuth();
@@ -84,98 +97,155 @@ export function CredentialsPanel({ initialSlug }: { initialSlug?: string }) {
 
   if (loading) {
     return (
-      <p className="text-secondary py-12 text-center text-sm">
-        Cargando credenciales…
-      </p>
+      <div className="mx-auto max-w-6xl">
+        <LoadingState label="Cargando credenciales…" />
+      </div>
     );
   }
 
   if (loadError) {
     return (
-      <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-800">
-        {loadError}
+      <div className="mx-auto max-w-6xl">
+        <ErrorState
+          message={`${loadError.replace(/\.$/, "")}. Si persiste, revisa que tu rol pueda ver las credenciales de este evento.`}
+          onRetry={() => window.location.reload()}
+        />
       </div>
     );
   }
 
+  const tabs: { id: Tab; label: string; count: number }[] = [
+    { id: "bevy", label: "Por cargar", count: stats.pending },
+    ...(canModerate
+      ? [{ id: "photos" as const, label: "Fotos", count: stats.photos }]
+      : []),
+    { id: "all", label: "Todos", count: stats.total },
+  ];
+
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-primary text-2xl font-bold">
-          Credenciales · {slug}
-        </h1>
-        <div className="flex flex-wrap items-start gap-2">
-          <ReconcileButton slug={slug} onError={setError} />
-          <ReminderButton
+    <div className="mx-auto max-w-6xl space-y-10">
+      <HeaderActions>
+        <button
+          type="button"
+          onClick={downloadCsv}
+          className={buttonClass.primary}
+        >
+          Descargar CSV para Bevy
+        </button>
+      </HeaderActions>
+
+      {isDevPreview && (
+        <p className="border-atlas-line text-atlas-mist rounded-md border px-4 py-3 text-sm leading-relaxed">
+          <span className="text-atlas-glow font-semibold">
+            Esta sección no funciona con datos de ejemplo.
+          </span>{" "}
+          Las credenciales se leen de Firestore en vivo, así que aquí las colas
+          salen vacías. Para probarla, levanta los emuladores y arranca con{" "}
+          <code className="text-atlas-dust break-all">
+            PUBLIC_USE_FIREBASE_EMULATOR=true
+          </code>
+          .
+        </p>
+      )}
+
+      <div className="space-y-4">
+        {/* "Pendientes de cargar" is the headline metric on purpose. If people
+            fill our form and nobody transcribes them into Bevy, GDG ICA ends
+            up with a list of people who BELIEVE they are registered and are
+            not — which is worse than having no form at all. */}
+        <div className="@container relative">
+          <CornerNodes />
+          <dl className="border-atlas-line bg-atlas-line grid grid-cols-2 gap-px overflow-hidden rounded-xs border @2xl:grid-cols-5">
+            <Stat label="Por cargar en Bevy" value={stats.pending} lead />
+            <Stat label="Cargados" value={stats.loaded} />
+            <Stat label="Inscripciones" value={stats.total} />
+            <Stat label="Fotos por revisar" value={stats.photos} />
+            <Stat
+              label="DNI repetidos"
+              value={stats.conflicts}
+              tone="text-atlas-glow"
+            />
+          </dl>
+        </div>
+
+        {stats.emailFailed > 0 && (
+          <p className="border-atlas-rose/40 bg-atlas-rose/5 text-atlas-dust rounded-md border px-4 py-3 text-sm">
+            {stats.emailFailed === 1
+              ? "1 correo de credencial no salió tras agotar los reintentos."
+              : `${stats.emailFailed} correos de credencial no salieron tras agotar los reintentos.`}{" "}
+            <span className="text-atlas-mist">
+              Están en «Todos» con la marca «Correo: falló».
+            </span>
+          </p>
+        )}
+
+        {error && <ErrorState message={error} />}
+      </div>
+
+      <div className="flex flex-wrap gap-10">
+        <section
+          aria-labelledby="credenciales-cruce"
+          className="min-w-[min(100%,28rem)] flex-[1.6]"
+        >
+          <SectionHeading>
+            <span id="credenciales-cruce">Cruce con Bevy</span>
+          </SectionHeading>
+          <div className="divide-atlas-line border-atlas-line divide-y border-b">
+            <ReconcileButton slug={slug} onError={setError} />
+            <ReminderButton
+              slug={slug}
+              credentials={credentials}
+              onError={setError}
+            />
+          </div>
+        </section>
+        <EmailTransportSetting onError={setError} />
+      </div>
+
+      <section aria-labelledby="credenciales-lista" className="@container">
+        <SectionHeading>
+          <span id="credenciales-lista">Inscripciones</span>
+        </SectionHeading>
+
+        <div
+          role="group"
+          aria-label="Qué inscripciones ver"
+          className="border-atlas-line mb-2 inline-flex flex-wrap rounded-md border p-1"
+        >
+          {tabs.map((t) => (
+            <TabButton
+              key={t.id}
+              active={tab === t.id}
+              onClick={() => setTab(t.id)}
+            >
+              {t.label}{" "}
+              <span
+                className={`tabular-nums ${
+                  tab === t.id ? "text-atlas-mist" : "text-atlas-fog"
+                }`}
+              >
+                {t.count}
+              </span>
+            </TabButton>
+          ))}
+        </div>
+
+        {tab === "photos" && canModerate ? (
+          <PhotoModerationQueue
             slug={slug}
             credentials={credentials}
             onError={setError}
           />
-          <button
-            type="button"
-            onClick={downloadCsv}
-            className="bg-google-blue rounded px-3 py-2 text-sm text-white"
-          >
-            Descargar CSV para Bevy
-          </button>
-        </div>
-      </header>
-
-      {/* "Pendientes de cargar" is the headline metric on purpose. If people
-          fill our form and nobody transcribes them into Bevy, GDG ICA ends
-          up with a list of people who BELIEVE they are registered and are
-          not — which is worse than having no form at all. */}
-      <dl className="grid grid-cols-2 gap-3 md:grid-cols-5">
-        <Stat label="Pendientes de cargar" value={stats.pending} highlight />
-        <Stat label="Cargados" value={stats.loaded} />
-        <Stat label="Total" value={stats.total} />
-        <Stat label="Fotos por revisar" value={stats.photos} />
-        <Stat label="DNI duplicados" value={stats.conflicts} />
-      </dl>
-
-      {stats.emailFailed > 0 && (
-        <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {stats.emailFailed} correo(s) marcados como fallidos tras agotar los
-          reintentos.
-        </p>
-      )}
-
-      {error && (
-        <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {error}
-        </p>
-      )}
-
-      <EmailTransportSetting onError={setError} />
-
-      <nav className="border-gray-custom flex gap-1 border-b">
-        <TabButton active={tab === "bevy"} onClick={() => setTab("bevy")}>
-          Cola Bevy ({stats.pending})
-        </TabButton>
-        {canModerate && (
-          <TabButton active={tab === "photos"} onClick={() => setTab("photos")}>
-            Fotos ({stats.photos})
-          </TabButton>
+        ) : (
+          <BevyQueue
+            slug={slug}
+            credentials={visible}
+            conflicts={conflicts}
+            onError={setError}
+            emptyMessage={EMPTY_MESSAGE[tab === "photos" ? "all" : tab]}
+          />
         )}
-        <TabButton active={tab === "all"} onClick={() => setTab("all")}>
-          Todos ({stats.total})
-        </TabButton>
-      </nav>
-
-      {tab === "photos" && canModerate ? (
-        <PhotoModerationQueue
-          slug={slug}
-          credentials={credentials}
-          onError={setError}
-        />
-      ) : (
-        <BevyQueue
-          slug={slug}
-          credentials={visible}
-          conflicts={conflicts}
-          onError={setError}
-        />
-      )}
+      </section>
     </div>
   );
 }
@@ -183,22 +253,30 @@ export function CredentialsPanel({ initialSlug }: { initialSlug?: string }) {
 function Stat({
   label,
   value,
-  highlight,
+  lead,
+  tone = "text-atlas-dust",
 }: {
   label: string;
   value: number;
-  highlight?: boolean;
+  lead?: boolean;
+  tone?: string;
 }) {
+  const color =
+    value === 0 ? "text-atlas-fog" : lead ? "text-atlas-star" : tone;
   return (
     <div
-      className={`rounded-lg border p-3 ${
-        highlight
-          ? "border-google-blue bg-[#EFF6FF]"
-          : "border-gray-custom bg-white"
+      className={`bg-atlas-night flex flex-col-reverse justify-end gap-2 px-5 py-4 ${
+        lead ? "col-span-2 @2xl:col-span-1" : ""
       }`}
     >
-      <dt className="text-tertiary text-xs">{label}</dt>
-      <dd className="text-primary text-2xl font-bold">{value}</dd>
+      <dt className="atlas-label text-atlas-mist">{label}</dt>
+      <dd
+        className={`leading-none font-semibold tabular-nums ${color} ${
+          lead ? "text-[2rem]" : "text-[1.75rem]"
+        }`}
+      >
+        {value}
+      </dd>
     </div>
   );
 }
@@ -210,16 +288,17 @@ function TabButton({
 }: {
   active: boolean;
   onClick: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`px-4 py-2 text-sm font-medium ${
+      aria-pressed={active}
+      className={`rounded px-3 py-1.5 text-sm font-semibold transition-colors ${
         active
-          ? "border-google-blue text-google-blue border-b-2"
-          : "text-secondary"
+          ? "bg-atlas-deep text-atlas-dust"
+          : "text-atlas-mist hover:text-atlas-dust"
       }`}
     >
       {children}

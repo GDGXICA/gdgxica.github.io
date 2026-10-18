@@ -1,7 +1,18 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { toImagePath } from "@/lib/image";
 import { Toast } from "../ui/Toast";
 import { FormField } from "../ui/FormField";
+import {
+  ArrowIcon,
+  CornerNodes,
+  ErrorState,
+  HeaderActions,
+  LoadingState,
+  SectionHeading,
+  buttonClass,
+  inputClass,
+} from "../ui/atlas";
 
 interface Sponsor {
   name: string;
@@ -21,10 +32,121 @@ const EMPTY_SPONSOR: Sponsor = {
   featured: false,
 };
 
+const deleteClass =
+  "text-atlas-rose hover:bg-atlas-rose/10 rounded-md px-2 py-1.5 text-sm font-semibold transition-colors disabled:opacity-50";
+
+function siteHost(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      return null;
+    }
+    return parsed.host.replace(/^www\./, "") || null;
+  } catch {
+    return null;
+  }
+}
+
+function SponsorLogo({
+  sponsor,
+}: {
+  sponsor: Pick<Sponsor, "name" | "logo_url">;
+}) {
+  if (sponsor.logo_url) {
+    return (
+      <img
+        src={toImagePath(sponsor.logo_url)}
+        alt=""
+        loading="lazy"
+        className="bg-atlas-dust border-atlas-line size-10 rounded-xs border object-contain p-1"
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden="true"
+      className="atlas-name bg-atlas-deep border-atlas-line text-atlas-dust grid size-10 place-items-center rounded-xs border text-base"
+    >
+      {sponsor.name.trim().charAt(0).toUpperCase() || "?"}
+    </span>
+  );
+}
+
+function describeSponsor(sponsor: Pick<Sponsor, "sector" | "url">) {
+  return [sponsor.sector, siteHost(sponsor.url)].filter(Boolean).join(" · ");
+}
+
+function SponsorRow({
+  sponsor,
+  deleting,
+  onEdit,
+  onDelete,
+}: {
+  sponsor: Sponsor;
+  deleting: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const detail = describeSponsor(sponsor);
+  const host = siteHost(sponsor.url);
+
+  return (
+    <li className="border-atlas-line grid grid-cols-[2.5rem_1fr] gap-x-4 gap-y-3 border-b py-4 last:border-b-0 @3xl:grid-cols-[2.5rem_1fr_auto] @3xl:items-center">
+      <div className="row-span-2 self-start pt-0.5 @3xl:row-span-1 @3xl:self-center">
+        <SponsorLogo sponsor={sponsor} />
+      </div>
+      <div className="min-w-0">
+        <p className="atlas-name text-atlas-dust text-xl leading-tight">
+          {sponsor.name}
+        </p>
+        <p className="text-atlas-mist mt-1 text-sm">
+          {detail || "Sin sector ni sitio web"}
+        </p>
+        {sponsor.description && (
+          <p className="text-atlas-fog mt-0.5 line-clamp-1 text-xs">
+            {sponsor.description}
+          </p>
+        )}
+      </div>
+      <div className="col-start-2 flex flex-wrap items-center gap-2 @3xl:col-start-auto @3xl:justify-end">
+        <button
+          type="button"
+          onClick={onEdit}
+          className={buttonClass.secondary}
+        >
+          Editar
+        </button>
+        {host && (
+          <a
+            href={sponsor.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonClass.quiet}
+          >
+            Ver sitio
+            <span className="sr-only">
+              {" "}
+              de {sponsor.name} (abre otra pestaña)
+            </span>
+          </a>
+        )}
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          className={deleteClass}
+        >
+          {deleting ? "Eliminando…" : "Eliminar"}
+        </button>
+      </div>
+    </li>
+  );
+}
+
 export function SponsorList() {
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(false);
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
@@ -42,13 +164,29 @@ export function SponsorList() {
 
   async function loadSponsors() {
     setLoading(true);
+    setError(false);
     const res = await api.listSponsors();
     if (res.success && res.data) {
       setSponsors(res.data as Sponsor[]);
     } else {
-      setError(res.error || "Error al cargar sponsors");
+      setError(true);
     }
     setLoading(false);
+  }
+
+  function openCreate() {
+    setCreating(true);
+    setEditing({ ...EMPTY_SPONSOR });
+  }
+
+  function openEdit(sponsor: Sponsor) {
+    setCreating(false);
+    setEditing(sponsor);
+  }
+
+  function closeForm() {
+    setEditing(null);
+    setCreating(false);
   }
 
   function updateForm(field: keyof Sponsor, value: unknown) {
@@ -66,230 +204,311 @@ export function SponsorList() {
 
     if (res.success) {
       setToast({
-        message: `Sponsor ${isNew ? "agregado" : "actualizado"}`,
+        message: isNew
+          ? `${form.name} ya está entre los sponsors`
+          : `Cambios guardados en ${form.name}`,
         type: "success",
       });
-      setEditing(null);
-      setCreating(false);
+      closeForm();
       loadSponsors();
     } else {
-      setToast({ message: res.error || "Error", type: "error" });
+      setToast({
+        message: `No se pudo guardar a ${form.name || "este sponsor"}. Revisa que los enlaces empiecen con https:// e inténtalo de nuevo.`,
+        type: "error",
+      });
     }
     setSaving(false);
   }
 
-  async function handleDelete(name: string) {
-    if (!confirm(`Eliminar sponsor "${name}"?`)) return;
-    setDeleting(name);
-    const res = await api.deleteSponsor(name);
+  async function handleDelete(sponsor: Sponsor) {
+    if (
+      !confirm(
+        `¿Eliminar a «${sponsor.name}» de los sponsors? Su logo desaparecerá del sitio público.`
+      )
+    )
+      return;
+    setDeleting(sponsor.name);
+    const res = await api.deleteSponsor(sponsor.name);
     if (res.success) {
-      setSponsors((prev) => prev.filter((s) => s.name !== name));
-      setToast({ message: "Sponsor eliminado", type: "success" });
+      setSponsors((prev) => prev.filter((s) => s.name !== sponsor.name));
+      setToast({
+        message: `${sponsor.name} ya no figura como sponsor`,
+        type: "success",
+      });
     } else {
-      setToast({ message: res.error || "Error", type: "error" });
+      setToast({
+        message: `No se pudo eliminar a ${sponsor.name}. Inténtalo de nuevo.`,
+        type: "error",
+      });
     }
     setDeleting(null);
   }
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-        {error}
-      </div>
-    );
-  }
-
-  const inputClass =
-    "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400";
+  const toastNode = toast && (
+    <Toast
+      message={toast.message}
+      type={toast.type}
+      onClose={() => setToast(null)}
+    />
+  );
 
   if (form) {
+    const ready = form.name.trim() !== "";
+    const host = siteHost(form.url);
+
     return (
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-6xl">
+        {toastNode}
         <button
-          onClick={() => {
-            setEditing(null);
-            setCreating(false);
-          }}
-          className="mb-4 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+          type="button"
+          onClick={closeForm}
+          className={`${buttonClass.quiet} mb-6 -ml-2`}
         >
-          ← Volver a sponsors
+          <ArrowIcon className="size-4 rotate-180" />
+          Volver a sponsors
         </button>
-        <h2 className="mb-6 text-xl font-bold text-gray-900 dark:text-white">
-          {creating ? "Agregar sponsor" : `Editar: ${form.name}`}
-        </h2>
-        <form onSubmit={handleSave} className="space-y-6">
-          <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="Nombre" required>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => updateForm("name", e.target.value)}
-                  className={inputClass}
-                  disabled={!!editing}
-                />
-              </FormField>
-              <FormField label="Sector">
-                <input
-                  type="text"
-                  value={form.sector}
-                  onChange={(e) => updateForm("sector", e.target.value)}
-                  className={inputClass}
-                />
-              </FormField>
-              <div className="sm:col-span-2">
-                <FormField label="Descripcion">
-                  <textarea
-                    value={form.description}
-                    onChange={(e) => updateForm("description", e.target.value)}
-                    rows={3}
+
+        <form
+          onSubmit={handleSave}
+          className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_20rem]"
+        >
+          <div className="space-y-10">
+            <section aria-labelledby="sponsor-datos">
+              <SectionHeading>
+                <span id="sponsor-datos">Datos</span>
+              </SectionHeading>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <FormField label="Nombre" required>
+                    <input
+                      type="text"
+                      value={form.name}
+                      onChange={(e) => updateForm("name", e.target.value)}
+                      placeholder="Google"
+                      className={inputClass}
+                      disabled={!creating}
+                    />
+                  </FormField>
+                  <p className="text-atlas-fog mt-1 text-xs">
+                    {creating
+                      ? "Identifica al sponsor. No se puede cambiar después."
+                      : "Identifica al sponsor; no se puede cambiar."}
+                  </p>
+                </div>
+                <FormField label="Sector">
+                  <input
+                    type="text"
+                    value={form.sector}
+                    onChange={(e) => updateForm("sector", e.target.value)}
+                    placeholder="Tecnología"
+                    className={inputClass}
+                  />
+                </FormField>
+                <div className="sm:col-span-2">
+                  <FormField label="Descripción">
+                    <textarea
+                      value={form.description}
+                      onChange={(e) =>
+                        updateForm("description", e.target.value)
+                      }
+                      rows={4}
+                      className={inputClass}
+                    />
+                  </FormField>
+                </div>
+              </div>
+            </section>
+
+            <section aria-labelledby="sponsor-enlaces">
+              <SectionHeading>
+                <span id="sponsor-enlaces">Enlaces</span>
+              </SectionHeading>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField label="URL del logo">
+                  <input
+                    type="url"
+                    value={form.logo_url}
+                    onChange={(e) => updateForm("logo_url", e.target.value)}
+                    placeholder="https://gdgica.com/sponsors/logo.svg"
+                    className={inputClass}
+                  />
+                </FormField>
+                <FormField label="Sitio web">
+                  <input
+                    type="url"
+                    value={form.url}
+                    onChange={(e) => updateForm("url", e.target.value)}
+                    placeholder="https://"
                     className={inputClass}
                   />
                 </FormField>
               </div>
-              <FormField label="URL logo">
-                <input
-                  type="url"
-                  value={form.logo_url}
-                  onChange={(e) => updateForm("logo_url", e.target.value)}
-                  className={inputClass}
-                />
-              </FormField>
-              <FormField label="Website">
-                <input
-                  type="url"
-                  value={form.url}
-                  onChange={(e) => updateForm("url", e.target.value)}
-                  className={inputClass}
-                />
-              </FormField>
-              <label className="flex items-center gap-2 text-sm dark:text-gray-300">
+            </section>
+
+            <section aria-labelledby="sponsor-visibilidad">
+              <SectionHeading>
+                <span id="sponsor-visibilidad">Visibilidad</span>
+              </SectionHeading>
+              <label className="flex cursor-pointer items-start gap-3 text-sm">
                 <input
                   type="checkbox"
                   checked={form.featured}
                   onChange={(e) => updateForm("featured", e.target.checked)}
-                  className="rounded"
+                  className="accent-atlas-ember mt-0.5 size-4 shrink-0"
                 />
-                Destacado
+                <span>
+                  <span className="text-atlas-dust block font-semibold">
+                    Destacado
+                  </span>
+                  <span className="text-atlas-mist block">
+                    Aparece arriba, en la sección principal de la página de
+                    sponsors. Los demás se listan debajo.
+                  </span>
+                </span>
               </label>
-            </div>
+            </section>
           </div>
-          <div className="flex justify-end gap-3">
+
+          <aside
+            aria-label="Resumen del sponsor"
+            className="border-atlas-line bg-atlas-deep/40 relative rounded-xs border p-5 lg:sticky lg:top-0"
+          >
+            <CornerNodes />
+            <p className="atlas-label text-atlas-glow">
+              {creating ? "Nuevo sponsor" : "Editando"}
+            </p>
+            <div className="mt-4 flex items-center gap-3">
+              <SponsorLogo sponsor={form} />
+              <p className="atlas-name text-atlas-dust min-w-0 text-lg leading-snug break-words">
+                {form.name.trim() || "Sin nombre todavía"}
+              </p>
+            </div>
+            <dl className="mt-4 space-y-2 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="text-atlas-fog">Sector</dt>
+                <dd className="text-atlas-dust text-right">
+                  {form.sector || "—"}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-atlas-fog">Sitio</dt>
+                <dd className="text-atlas-dust min-w-0 truncate text-right">
+                  {host || "—"}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-atlas-fog">En la página</dt>
+                <dd className="text-atlas-dust text-right">
+                  {form.featured ? "Destacado" : "Lista general"}
+                </dd>
+              </div>
+            </dl>
+
+            {!ready && (
+              <p className="text-atlas-mist mt-4 text-sm">Falta: nombre.</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={saving || !ready}
+              className={`${buttonClass.primary} mt-5 w-full`}
+            >
+              {saving
+                ? "Guardando…"
+                : creating
+                  ? "Agregar sponsor"
+                  : "Guardar cambios"}
+            </button>
             <button
               type="button"
-              onClick={() => {
-                setEditing(null);
-                setCreating(false);
-              }}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              onClick={closeForm}
+              className={`${buttonClass.quiet} mt-2 w-full justify-center`}
             >
               Cancelar
             </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {saving ? "Guardando..." : creating ? "Agregar" : "Actualizar"}
-            </button>
-          </div>
+          </aside>
         </form>
       </div>
     );
   }
 
+  const groups = [
+    {
+      id: "destacados",
+      label: "Destacados",
+      list: sponsors.filter((s) => s.featured),
+    },
+    {
+      id: "otros",
+      label: "Lista general",
+      list: sponsors.filter((s) => !s.featured),
+    },
+  ].filter((group) => group.list.length > 0);
+
   return (
-    <div>
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
-      <div className="mb-6 flex items-center justify-between">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          {sponsors.length} sponsors
-        </p>
+    <div className="mx-auto max-w-6xl space-y-10">
+      <HeaderActions>
         <button
-          onClick={() => {
-            setCreating(true);
-            setEditing({ ...EMPTY_SPONSOR });
-          }}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          type="button"
+          onClick={openCreate}
+          className={buttonClass.primary}
         >
-          + Agregar sponsor
+          Nuevo sponsor
         </button>
-      </div>
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-900">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                Sponsor
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                Sector
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                Estado
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-            {sponsors.map((sponsor) => (
-              <tr
-                key={sponsor.name}
-                className="hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                <td className="px-6 py-4">
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {sponsor.name}
-                  </p>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                  {sponsor.sector}
-                </td>
-                <td className="px-6 py-4">
-                  {sponsor.featured && (
-                    <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
-                      Destacado
-                    </span>
-                  )}
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => setEditing(sponsor)}
-                      className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(sponsor.name)}
-                      disabled={deleting === sponsor.name}
-                      className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                    >
-                      {deleting === sponsor.name ? "..." : "Eliminar"}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      </HeaderActions>
+
+      {toastNode}
+
+      {loading ? (
+        <LoadingState label="Cargando sponsors…" />
+      ) : error ? (
+        <ErrorState
+          message="No se pudieron cargar los sponsors. Suele ser la conexión con el repositorio de datos."
+          onRetry={loadSponsors}
+        />
+      ) : sponsors.length === 0 ? (
+        <div className="border-atlas-line text-atlas-mist rounded-xs border border-dashed px-5 py-8 text-sm">
+          Todavía no hay sponsors.{" "}
+          <button
+            type="button"
+            onClick={openCreate}
+            className="text-atlas-dust font-semibold underline underline-offset-4"
+          >
+            Agrega el primero
+          </button>
+          .
+        </div>
+      ) : (
+        groups.map((group) => (
+          <section
+            key={group.id}
+            aria-labelledby={`sponsors-${group.id}`}
+            className="@container"
+          >
+            <SectionHeading
+              action={
+                <span className="text-atlas-fog text-sm tabular-nums">
+                  {group.list.length}{" "}
+                  {group.list.length === 1 ? "sponsor" : "sponsors"}
+                </span>
+              }
+            >
+              <span id={`sponsors-${group.id}`}>{group.label}</span>
+            </SectionHeading>
+            <ul>
+              {group.list.map((sponsor) => (
+                <SponsorRow
+                  key={sponsor.name}
+                  sponsor={sponsor}
+                  deleting={deleting === sponsor.name}
+                  onEdit={() => openEdit(sponsor)}
+                  onDelete={() => handleDelete(sponsor)}
+                />
+              ))}
+            </ul>
+          </section>
+        ))
+      )}
     </div>
   );
 }
