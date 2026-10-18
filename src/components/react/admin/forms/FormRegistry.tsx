@@ -3,6 +3,17 @@ import { api } from "@/lib/api";
 import { useAuth } from "../AuthProvider";
 import { Toast } from "../ui/Toast";
 import { FormField } from "../ui/FormField";
+import {
+  ArrowIcon,
+  CornerNodes,
+  ErrorState,
+  HeaderActions,
+  LoadingState,
+  SectionHeading,
+  buttonClass,
+  inputClass,
+} from "../ui/atlas";
+import { draftIssues, extractSpreadsheetId } from "./copy";
 
 interface FormEntry {
   id: string;
@@ -22,12 +33,80 @@ const EMPTY_FORM: FormEntry = {
   created_at: "",
 };
 
+const SERVICE_ACCOUNT = "647264238138-compute@developer.gserviceaccount.com";
+
+function formatDate(value: string): string | null {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("es-PE", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function FormRow({
+  form,
+  canManage,
+  deleting,
+  onDelete,
+}: {
+  form: FormEntry;
+  canManage: boolean;
+  deleting: boolean;
+  onDelete: () => void;
+}) {
+  const created = formatDate(form.created_at);
+
+  return (
+    <li className="border-atlas-line grid gap-x-5 gap-y-4 border-b py-5 last:border-b-0 @3xl:grid-cols-[1fr_auto] @3xl:items-center">
+      <div className="min-w-0">
+        <p className="atlas-name text-atlas-dust text-xl leading-tight">
+          {form.name || form.id}
+        </p>
+        <p className="text-atlas-mist mt-1 text-sm">
+          <span className={form.is_public ? "text-atlas-dust" : ""}>
+            {form.is_public ? "Público" : "Privado"}
+          </span>
+          {created && <> · Registrado el {created}</>}
+          {form.sheet_name && <> · Hoja «{form.sheet_name}»</>}
+        </p>
+        <p className="text-atlas-fog mt-0.5 text-xs">{form.id}</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 @3xl:justify-end">
+        {form.is_public ? (
+          <a
+            href={`/admin/forms/viewer?id=${encodeURIComponent(form.id)}`}
+            className={buttonClass.secondary}
+          >
+            Ver respuestas
+          </a>
+        ) : (
+          <span className="text-atlas-fog px-2 py-1.5 text-sm">
+            Respuestas cerradas al panel
+          </span>
+        )}
+        {canManage && (
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={deleting}
+            className="text-atlas-rose hover:bg-atlas-rose/10 rounded-md px-2 py-1.5 text-sm font-semibold transition-colors disabled:opacity-50"
+          >
+            {deleting ? "Eliminando…" : "Eliminar"}
+          </button>
+        )}
+      </div>
+    </li>
+  );
+}
+
 export function FormRegistry() {
   const { can } = useAuth();
   const canManageForms = can("forms:write");
   const [forms, setForms] = useState<FormEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(false);
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
@@ -43,20 +122,33 @@ export function FormRegistry() {
 
   async function loadForms() {
     setLoading(true);
+    setError(false);
     const res = await api.listForms();
     if (res.success && res.data) {
       setForms(res.data as FormEntry[]);
     } else {
-      setError(res.error || "Error al cargar formularios");
+      setError(true);
     }
     setLoading(false);
   }
 
+  const issues = draftIssues(
+    form,
+    forms.map((f) => f.id)
+  );
+  const ready =
+    issues.missing.length === 0 && !issues.idError && !issues.spreadsheetError;
+
+  function closeForm() {
+    setCreating(false);
+    setForm(EMPTY_FORM);
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.id || !form.name || !form.spreadsheet_id) {
+    if (!ready) {
       setToast({
-        message: "ID, nombre y spreadsheet ID son obligatorios",
+        message: "Completa el ID, el nombre y el ID de la hoja de cálculo.",
         type: "error",
       });
       return;
@@ -64,222 +156,327 @@ export function FormRegistry() {
     setSaving(true);
     const res = await api.addForm(form);
     if (res.success) {
-      setToast({ message: "Formulario registrado", type: "success" });
-      setCreating(false);
-      setForm(EMPTY_FORM);
+      setToast({
+        message: `Formulario «${form.name.trim()}» registrado`,
+        type: "success",
+      });
+      closeForm();
       loadForms();
     } else {
-      setToast({ message: res.error || "Error", type: "error" });
+      setToast({
+        message:
+          "No se pudo registrar el formulario. Revisa los datos e inténtalo de nuevo.",
+        type: "error",
+      });
     }
     setSaving(false);
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm(`Eliminar formulario "${id}"?`)) return;
-    setDeleting(id);
-    const res = await api.deleteForm(id);
+  async function handleDelete(entry: FormEntry) {
+    const label = entry.name || entry.id;
+    if (
+      !confirm(
+        `¿Eliminar el formulario «${label}»? Dejará de aparecer en el panel; la hoja de cálculo y sus respuestas no se tocan.`
+      )
+    )
+      return;
+    setDeleting(entry.id);
+    const res = await api.deleteForm(entry.id);
     if (res.success) {
-      setForms((prev) => prev.filter((f) => f.id !== id));
-      setToast({ message: "Formulario eliminado", type: "success" });
+      setForms((prev) => prev.filter((f) => f.id !== entry.id));
+      setToast({ message: `Formulario «${label}» eliminado`, type: "success" });
     } else {
-      setToast({ message: res.error || "Error", type: "error" });
+      setToast({
+        message: "No se pudo eliminar el formulario. Inténtalo de nuevo.",
+        type: "error",
+      });
     }
     setDeleting(null);
   }
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-        {error}
-      </div>
-    );
-  }
-
-  const inputClass =
-    "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400";
+  const toastNode = toast && (
+    <Toast
+      message={toast.message}
+      type={toast.type}
+      onClose={() => setToast(null)}
+    />
+  );
 
   if (creating) {
     return (
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-6xl">
+        {toastNode}
         <button
-          onClick={() => setCreating(false)}
-          className="mb-4 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          type="button"
+          onClick={closeForm}
+          className={`${buttonClass.quiet} mb-6 -ml-2`}
         >
-          ← Volver a formularios
+          <ArrowIcon className="size-4 rotate-180" />
+          Volver a formularios
         </button>
-        <h2 className="mb-6 text-xl font-bold text-gray-900 dark:text-white">
-          Registrar formulario
-        </h2>
-        <form onSubmit={handleSave} className="space-y-6">
-          <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="ID (slug)" required>
-                <input
-                  type="text"
-                  value={form.id}
-                  onChange={(e) => setForm({ ...form, id: e.target.value })}
-                  placeholder="speakers-bwai-2026"
-                  className={inputClass}
-                />
-              </FormField>
-              <FormField label="Nombre" required>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Convocatoria Speakers"
-                  className={inputClass}
-                />
-              </FormField>
-              <FormField label="Spreadsheet ID" required>
-                <input
-                  type="text"
-                  value={form.spreadsheet_id}
-                  onChange={(e) =>
-                    setForm({ ...form, spreadsheet_id: e.target.value })
-                  }
-                  placeholder="1BxiMVs0XRA5nFMd..."
-                  className={inputClass}
-                />
-              </FormField>
-              <FormField label="Nombre de la hoja">
-                <input
-                  type="text"
-                  value={form.sheet_name}
-                  onChange={(e) =>
-                    setForm({ ...form, sheet_name: e.target.value })
-                  }
-                  className={inputClass}
-                />
-              </FormField>
-              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+
+        <form
+          onSubmit={handleSave}
+          noValidate
+          className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_20rem]"
+        >
+          <div className="space-y-10">
+            <section aria-labelledby="form-datos">
+              <SectionHeading>
+                <span id="form-datos">1 · Formulario</span>
+              </SectionHeading>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <FormField label="ID" required error={issues.idError}>
+                    <input
+                      type="text"
+                      value={form.id}
+                      onChange={(e) => setForm({ ...form, id: e.target.value })}
+                      placeholder="speakers-bwai-2026"
+                      autoComplete="off"
+                      spellCheck={false}
+                      className={inputClass}
+                    />
+                  </FormField>
+                  {!issues.idError && (
+                    <p className="text-atlas-fog mt-1.5 text-xs">
+                      Identifica el formulario en el panel. No se puede cambiar
+                      después.
+                    </p>
+                  )}
+                </div>
+                <FormField label="Nombre" required>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    placeholder="Convocatoria de speakers"
+                    className={inputClass}
+                  />
+                </FormField>
+              </div>
+            </section>
+
+            <section aria-labelledby="form-hoja">
+              <SectionHeading>
+                <span id="form-hoja">2 · Hoja de respuestas</span>
+              </SectionHeading>
+              <p className="text-atlas-mist mb-4 max-w-[70ch] text-sm leading-relaxed">
+                El panel lee las respuestas desde la hoja de cálculo vinculada
+                al formulario de Google. Puedes pegar el enlace completo de la
+                hoja: se queda solo con el ID.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  label="ID de la hoja de cálculo"
+                  required
+                  error={issues.spreadsheetError}
+                >
+                  <input
+                    type="text"
+                    value={form.spreadsheet_id}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        spreadsheet_id: extractSpreadsheetId(
+                          e.target.value.trim()
+                        ),
+                      })
+                    }
+                    placeholder="1BxiMVs0XRA5nFMd…"
+                    autoComplete="off"
+                    spellCheck={false}
+                    className={inputClass}
+                  />
+                </FormField>
+                <div>
+                  <FormField label="Nombre de la pestaña">
+                    <input
+                      type="text"
+                      value={form.sheet_name}
+                      onChange={(e) =>
+                        setForm({ ...form, sheet_name: e.target.value })
+                      }
+                      className={inputClass}
+                    />
+                  </FormField>
+                  <p className="text-atlas-fog mt-1.5 text-xs">
+                    Google la llama «Form Responses 1» o «Respuestas de
+                    formulario 1».
+                  </p>
+                </div>
+              </div>
+              <div className="border-atlas-line mt-6 rounded-xs border px-5 py-4 text-sm">
+                <p className="atlas-label text-atlas-glow">
+                  Antes de registrar
+                </p>
+                <p className="text-atlas-mist mt-2 leading-relaxed">
+                  Comparte la hoja como{" "}
+                  <span className="text-atlas-dust">Lector</span> con la cuenta
+                  del panel; si no, las respuestas no cargarán.
+                </p>
+                <code className="text-atlas-dust bg-atlas-deep mt-2 inline-block rounded-xs px-2 py-1 text-xs break-all select-all">
+                  {SERVICE_ACCOUNT}
+                </code>
+              </div>
+            </section>
+
+            <section aria-labelledby="form-visibilidad">
+              <SectionHeading>
+                <span id="form-visibilidad">3 · Visibilidad</span>
+              </SectionHeading>
+              <label className="flex items-start gap-3 text-sm">
                 <input
                   type="checkbox"
                   checked={form.is_public}
                   onChange={(e) =>
                     setForm({ ...form, is_public: e.target.checked })
                   }
-                  className="rounded"
+                  className="accent-atlas-ember mt-0.5 size-4 shrink-0"
                 />
-                Publico (visible para organizers)
+                <span>
+                  <span className="text-atlas-dust font-semibold">Público</span>
+                  <span className="text-atlas-mist mt-1 block leading-relaxed">
+                    Quien tenga acceso a Formularios lo verá en la lista y podrá
+                    abrir sus respuestas. Si lo desmarcas, solo lo verá quien
+                    gestiona formularios y sus respuestas no se podrán abrir
+                    desde el panel.
+                  </span>
+                </span>
               </label>
-            </div>
+            </section>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Recuerda compartir el Google Sheet con{" "}
-            <code className="rounded bg-gray-100 px-1 text-xs dark:bg-gray-700">
-              647264238138-compute@developer.gserviceaccount.com
-            </code>{" "}
-            como Lector.
-          </p>
-          <div className="flex justify-end gap-3">
+
+          <aside
+            aria-label="Resumen del registro"
+            className="border-atlas-line bg-atlas-deep/40 relative rounded-xs border p-5 lg:sticky lg:top-0"
+          >
+            <CornerNodes />
+            <p className="atlas-label text-atlas-glow">Resumen</p>
+            <p className="atlas-name text-atlas-dust mt-3 text-lg leading-snug break-words">
+              {form.name.trim() || "Sin nombre todavía"}
+            </p>
+            <dl className="mt-4 space-y-2 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="text-atlas-fog">ID</dt>
+                <dd className="text-atlas-dust min-w-0 truncate text-right">
+                  {form.id.trim() || "—"}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-atlas-fog">Pestaña</dt>
+                <dd className="text-atlas-dust min-w-0 truncate text-right">
+                  {form.sheet_name.trim() || "—"}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-atlas-fog">Visibilidad</dt>
+                <dd className="text-atlas-dust text-right">
+                  {form.is_public ? "Público" : "Privado"}
+                </dd>
+              </div>
+            </dl>
+
+            {!ready && (
+              <p className="text-atlas-mist mt-4 text-sm">
+                {issues.missing.length > 0
+                  ? `Falta: ${issues.missing.join(", ")}.`
+                  : "Corrige los campos marcados."}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={saving || !ready}
+              className={`${buttonClass.primary} mt-5 w-full`}
+            >
+              {saving ? "Registrando…" : "Registrar formulario"}
+            </button>
             <button
               type="button"
-              onClick={() => setCreating(false)}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              onClick={closeForm}
+              className={`${buttonClass.quiet} mt-2 w-full justify-center`}
             >
               Cancelar
             </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {saving ? "Guardando..." : "Registrar"}
-            </button>
-          </div>
+          </aside>
         </form>
       </div>
     );
   }
 
   return (
-    <div>
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
+    <div className="mx-auto max-w-6xl">
+      {canManageForms && (
+        <HeaderActions>
+          <button
+            type="button"
+            onClick={() => setCreating(true)}
+            className={buttonClass.primary}
+          >
+            Registrar formulario
+          </button>
+        </HeaderActions>
       )}
 
-      <div className="mb-6 flex items-center justify-between">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          {forms.length} formulario{forms.length !== 1 && "s"}
-        </p>
-        {canManageForms && (
-          <button
-            onClick={() => setCreating(true)}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            + Agregar formulario
-          </button>
-        )}
-      </div>
+      {toastNode}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {forms.map((f) => (
-          <div
-            key={f.id}
-            className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800"
-          >
-            <div className="mb-3 flex items-start justify-between">
-              <div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">
-                  {f.name}
-                </h3>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {f.id}
-                </p>
-              </div>
-              <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                  f.is_public
-                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                    : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
-                }`}
+      <p className="text-atlas-mist mb-8 max-w-[70ch] text-sm leading-relaxed">
+        Formularios de Google cuyas respuestas se consultan aquí, leídas
+        directamente de su hoja de cálculo.
+      </p>
+
+      {loading ? (
+        <LoadingState label="Cargando formularios…" />
+      ) : error ? (
+        <ErrorState
+          message="No se pudieron cargar los formularios. Suele ser la conexión con el repositorio de datos."
+          onRetry={loadForms}
+        />
+      ) : forms.length === 0 ? (
+        <div className="border-atlas-line text-atlas-mist rounded-xs border border-dashed px-5 py-8 text-sm">
+          Todavía no hay formularios registrados.
+          {canManageForms && (
+            <>
+              {" "}
+              <button
+                type="button"
+                onClick={() => setCreating(true)}
+                className="text-atlas-dust font-semibold underline underline-offset-4"
               >
-                {f.is_public ? "Publico" : "Privado"}
+                Registra el primero
+              </button>
+              .
+            </>
+          )}
+        </div>
+      ) : (
+        <section
+          aria-labelledby="formularios-registrados"
+          className="@container"
+        >
+          <SectionHeading
+            action={
+              <span className="text-atlas-fog text-sm tabular-nums">
+                {forms.length}{" "}
+                {forms.length === 1 ? "formulario" : "formularios"}
               </span>
-            </div>
-            <p className="mb-4 text-xs text-gray-400 dark:text-gray-500">
-              {new Date(f.created_at).toLocaleDateString("es-PE")}
-            </p>
-            <div className="flex gap-2">
-              {f.is_public && (
-                <a
-                  href={`/admin/forms/viewer?id=${f.id}`}
-                  className="rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
-                >
-                  Ver respuestas
-                </a>
-              )}
-              {canManageForms && (
-                <button
-                  onClick={() => handleDelete(f.id)}
-                  disabled={deleting === f.id}
-                  className="rounded-lg px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                >
-                  {deleting === f.id ? "..." : "Eliminar"}
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {forms.length === 0 && (
-        <p className="py-12 text-center text-gray-500 dark:text-gray-400">
-          No hay formularios registrados.
-        </p>
+            }
+          >
+            <span id="formularios-registrados">Registrados</span>
+          </SectionHeading>
+          <ul>
+            {forms.map((f) => (
+              <FormRow
+                key={f.id}
+                form={f}
+                canManage={canManageForms}
+                deleting={deleting === f.id}
+                onDelete={() => handleDelete(f)}
+              />
+            ))}
+          </ul>
+        </section>
       )}
     </div>
   );

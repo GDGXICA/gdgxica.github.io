@@ -2,6 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { Toast } from "../ui/Toast";
 import { FormField } from "../ui/FormField";
+import {
+  ArrowIcon,
+  CornerNodes,
+  ErrorState,
+  HeaderActions,
+  LoadingState,
+  SectionHeading,
+  buttonClass,
+  inputClass,
+} from "../ui/atlas";
+import { describeLocationError } from "./errors";
 
 interface Location {
   id: string;
@@ -22,10 +33,77 @@ const EMPTY_LOCATION: LocationForm = {
 
 const PAGE_SIZE = 10;
 
+const dangerClass =
+  "text-atlas-rose hover:bg-atlas-rose/10 rounded-md px-2 py-1.5 text-sm font-semibold transition-colors disabled:opacity-50";
+
+function pluralize(count: number) {
+  return count === 1 ? "ubicación" : "ubicaciones";
+}
+
+function LocationRow({
+  location,
+  deleting,
+  onEdit,
+  onDelete,
+}: {
+  location: Location;
+  deleting: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <li className="border-atlas-line grid grid-cols-1 gap-y-4 border-b py-5 last:border-b-0 @3xl:grid-cols-[1fr_auto] @3xl:items-center @3xl:gap-x-6">
+      <div className="min-w-0">
+        <p className="atlas-name text-atlas-dust text-xl leading-tight">
+          {location.name || "Sin nombre"}
+        </p>
+        <p
+          className={`mt-1 text-sm ${location.address ? "text-atlas-mist" : "text-atlas-fog"}`}
+        >
+          {location.address || "Sin dirección"}
+        </p>
+        <p className="text-atlas-fog mt-0.5 text-xs">
+          {location.map_url ? "Con enlace a Maps" : "Sin enlace a Maps"}
+          {" · "}
+          {location.map_embed ? "Con mapa incrustado" : "Sin mapa incrustado"}
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 @3xl:justify-end">
+        <button
+          type="button"
+          onClick={onEdit}
+          className={buttonClass.secondary}
+        >
+          Editar
+        </button>
+        {location.map_url && (
+          <a
+            href={location.map_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonClass.quiet}
+          >
+            Abrir en Maps
+            <span className="sr-only"> (se abre en otra pestaña)</span>
+          </a>
+        )}
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          className={dangerClass}
+        >
+          {deleting ? "Eliminando…" : "Eliminar"}
+        </button>
+      </div>
+    </li>
+  );
+}
+
 export function LocationList() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(false);
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
@@ -36,6 +114,7 @@ export function LocationList() {
     ...EMPTY_LOCATION,
   });
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -64,19 +143,41 @@ export function LocationList() {
 
   async function loadLocations() {
     setLoading(true);
+    setError(false);
     const res = await api.listLocations();
     if (res.success && res.data) {
       setLocations(res.data as Location[]);
     } else {
-      setError(res.error || "Error al cargar ubicaciones");
+      setError(true);
     }
     setLoading(false);
   }
 
+  function openCreate() {
+    setCreatingForm({ ...EMPTY_LOCATION });
+    setCreating(true);
+    setEditing(null);
+    setSaveError(null);
+  }
+
+  function openEdit(location: Location) {
+    setEditing(location);
+    setCreating(false);
+    setSaveError(null);
+  }
+
+  function closeForm() {
+    setEditing(null);
+    setCreating(false);
+    setCreatingForm({ ...EMPTY_LOCATION });
+    setSaveError(null);
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!form) return;
+    if (!form || !form.name.trim()) return;
     setSaving(true);
+    setSaveError(null);
     const isNew = creating;
     const payload = {
       name: form.name,
@@ -90,28 +191,45 @@ export function LocationList() {
 
     if (res.success) {
       setToast({
-        message: `Ubicación ${isNew ? "agregada" : "actualizada"}`,
+        message: `Ubicación «${form.name}» ${isNew ? "agregada" : "actualizada"}`,
         type: "success",
       });
-      setEditing(null);
-      setCreating(false);
-      setCreatingForm({ ...EMPTY_LOCATION });
+      closeForm();
       loadLocations();
     } else {
-      setToast({ message: res.error || "Error", type: "error" });
+      setSaveError(
+        describeLocationError(
+          res.error,
+          "No se pudo guardar la ubicación. Revisa los enlaces e inténtalo de nuevo."
+        )
+      );
     }
     setSaving(false);
   }
 
-  async function handleDelete(id: string, name: string) {
-    if (!confirm(`Eliminar ubicación "${name}"?`)) return;
-    setDeleting(id);
-    const res = await api.deleteLocation(id);
+  async function handleDelete(location: Location) {
+    if (
+      !confirm(
+        `¿Eliminar la ubicación «${location.name || "sin nombre"}»? Los eventos que ya la usan conservan sus datos.`
+      )
+    )
+      return;
+    setDeleting(location.id);
+    const res = await api.deleteLocation(location.id);
     if (res.success) {
-      setLocations((prev) => prev.filter((l) => l.id !== id));
-      setToast({ message: "Ubicación eliminada", type: "success" });
+      setLocations((prev) => prev.filter((l) => l.id !== location.id));
+      setToast({
+        message: `Ubicación «${location.name}» eliminada`,
+        type: "success",
+      });
     } else {
-      setToast({ message: res.error || "Error", type: "error" });
+      setToast({
+        message: describeLocationError(
+          res.error,
+          "No se pudo eliminar la ubicación. Inténtalo de nuevo."
+        ),
+        type: "error",
+      });
     }
     setDeleting(null);
   }
@@ -121,281 +239,307 @@ export function LocationList() {
     else if (creating) setCreatingForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-        {error}
-      </div>
-    );
-  }
-
-  const inputClass =
-    "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400";
+  const toastNode = toast && (
+    <Toast
+      message={toast.message}
+      type={toast.type}
+      onClose={() => setToast(null)}
+    />
+  );
 
   if (form) {
+    const missingName = !form.name.trim();
     return (
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-6xl">
+        {toastNode}
         <button
-          onClick={() => {
-            setEditing(null);
-            setCreating(false);
-            setCreatingForm({ ...EMPTY_LOCATION });
-          }}
-          className="mb-4 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+          type="button"
+          onClick={closeForm}
+          className={`${buttonClass.quiet} mb-6 -ml-2`}
         >
-          ← Volver a ubicaciones
+          <ArrowIcon className="size-4 rotate-180" />
+          Volver a ubicaciones
         </button>
-        <h2 className="mb-6 text-xl font-bold text-gray-900 dark:text-white">
-          {creating
-            ? "Agregar ubicación"
-            : `Editar: ${(form as Location).name}`}
-        </h2>
-        <form onSubmit={handleSave} className="space-y-6">
-          <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <FormField label="Nombre" required>
-                  <input
-                    type="text"
-                    value={form.name}
-                    onChange={(e) => updateForm("name", e.target.value)}
-                    placeholder="Universidad Tecnológica Del Perú (UTP) - Sede Ica"
-                    className={inputClass}
-                  />
-                </FormField>
-              </div>
-              <div className="sm:col-span-2">
-                <FormField label="Dirección">
-                  <input
-                    type="text"
-                    value={form.address}
-                    onChange={(e) => updateForm("address", e.target.value)}
-                    placeholder="Av. Ayabaca S/N, Ica 11001"
-                    className={inputClass}
-                  />
-                </FormField>
-              </div>
-              <div className="sm:col-span-2">
-                <FormField label="Google Maps URL">
+
+        <form
+          onSubmit={handleSave}
+          className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start"
+        >
+          <section aria-labelledby="ubicacion-form">
+            <SectionHeading>
+              <span id="ubicacion-form">
+                {creating ? "Nueva ubicación" : "Editar ubicación"}
+              </span>
+            </SectionHeading>
+            <p className="text-atlas-mist mb-6 text-sm">
+              Una ubicación guardada sirve para rellenar la sede de un evento
+              con un clic.
+            </p>
+            <div className="grid gap-5">
+              <FormField label="Nombre" required>
+                <input
+                  type="text"
+                  required
+                  value={form.name}
+                  onChange={(e) => updateForm("name", e.target.value)}
+                  placeholder="Universidad Tecnológica del Perú (UTP), sede Ica"
+                  className={inputClass}
+                />
+              </FormField>
+              <FormField label="Dirección">
+                <input
+                  type="text"
+                  value={form.address}
+                  onChange={(e) => updateForm("address", e.target.value)}
+                  placeholder="Av. Ayabaca S/N, Ica 11001"
+                  className={inputClass}
+                />
+              </FormField>
+              <div>
+                <FormField label="Enlace de Google Maps">
                   <input
                     type="url"
                     value={form.map_url}
                     onChange={(e) => updateForm("map_url", e.target.value)}
-                    placeholder="https://maps.app.goo.gl/..."
+                    placeholder="https://maps.app.goo.gl/…"
                     className={inputClass}
                   />
                 </FormField>
+                <p className="text-atlas-fog mt-1.5 text-xs">
+                  En Maps: «Compartir», luego «Copiar vínculo». Es el botón «Ver
+                  en Google Maps» de la página del evento.
+                </p>
               </div>
-              <div className="sm:col-span-2">
-                <FormField label="Google Maps Embed URL">
+              <div>
+                <FormField label="Enlace para incrustar el mapa">
                   <input
                     type="url"
                     value={form.map_embed}
                     onChange={(e) => updateForm("map_embed", e.target.value)}
-                    placeholder="https://www.google.com/maps/embed?pb=..."
+                    placeholder="https://www.google.com/maps/embed?pb=…"
                     className={inputClass}
                   />
                 </FormField>
+                <p className="text-atlas-fog mt-1.5 text-xs">
+                  En Maps: «Compartir», pestaña «Insertar un mapa». Pega solo el
+                  valor de src, sin la etiqueta iframe. Sin él, la página del
+                  evento no muestra el mapa.
+                </p>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="flex justify-end gap-3">
+          <aside
+            aria-label="Resumen de la ubicación"
+            className="border-atlas-line bg-atlas-deep/40 relative rounded-xs border p-5 lg:sticky lg:top-0"
+          >
+            <CornerNodes />
+            <p className="atlas-label text-atlas-glow">
+              {creating ? "Resumen" : "Editando"}
+            </p>
+            <p className="atlas-name text-atlas-dust mt-3 text-lg leading-snug">
+              {form.name.trim() || "Sin nombre todavía"}
+            </p>
+            <dl className="mt-4 space-y-2 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="text-atlas-fog">Dirección</dt>
+                <dd className="text-atlas-dust min-w-0 text-right break-words">
+                  {form.address.trim() || "—"}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-atlas-fog">Enlace a Maps</dt>
+                <dd className="text-atlas-dust">
+                  {form.map_url.trim() ? "Sí" : "No"}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-atlas-fog">Mapa incrustado</dt>
+                <dd className="text-atlas-dust">
+                  {form.map_embed.trim() ? "Sí" : "No"}
+                </dd>
+              </div>
+            </dl>
+
+            {missingName && (
+              <p className="text-atlas-mist mt-4 text-sm">Falta: nombre.</p>
+            )}
+
+            {saveError && (
+              <p
+                role="alert"
+                className="border-atlas-rose/40 bg-atlas-rose/5 text-atlas-dust mt-4 rounded-md border px-3 py-2.5 text-sm"
+              >
+                {saveError}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={saving || missingName}
+              className={`${buttonClass.primary} mt-5 w-full`}
+            >
+              {saving
+                ? "Guardando…"
+                : creating
+                  ? "Agregar ubicación"
+                  : "Guardar cambios"}
+            </button>
             <button
               type="button"
-              onClick={() => {
-                setEditing(null);
-                setCreating(false);
-              }}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              onClick={closeForm}
+              className={`${buttonClass.secondary} mt-2 w-full`}
             >
               Cancelar
             </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {saving ? "Guardando..." : creating ? "Agregar" : "Actualizar"}
-            </button>
-          </div>
+            <p className="text-atlas-fog mt-3 text-xs leading-snug">
+              Al elegirla en un evento sus datos se copian. Cambiarla aquí no
+              modifica los eventos que ya la usan.
+            </p>
+          </aside>
         </form>
       </div>
     );
   }
 
   return (
-    <div>
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
-
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar ubicación..."
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none sm:w-64 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-          />
-          <span className="shrink-0 text-sm text-gray-500 dark:text-gray-400">
-            {filtered.length} ubicación{filtered.length !== 1 && "es"}
-          </span>
-        </div>
+    <div className="mx-auto max-w-6xl">
+      <HeaderActions>
         <button
-          onClick={() => {
-            setCreatingForm({ ...EMPTY_LOCATION });
-            setCreating(true);
-            setEditing(null);
-          }}
-          className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          type="button"
+          onClick={openCreate}
+          className={buttonClass.primary}
         >
-          + Agregar ubicación
+          Nueva ubicación
         </button>
-      </div>
+      </HeaderActions>
 
-      {/* Desktop table */}
-      <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white md:block dark:border-gray-700 dark:bg-gray-800">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-900">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                Nombre
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                Dirección
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-            {paginated.map((loc) => (
-              <tr
-                key={loc.id}
-                className="hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                <td className="px-6 py-4">
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {loc.name}
-                  </p>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                  {loc.address || "—"}
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => setEditing(loc)}
-                      className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(loc.id, loc.name)}
-                      disabled={deleting === loc.id}
-                      className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                    >
-                      {deleting === loc.id ? "..." : "Eliminar"}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {toastNode}
 
-      {/* Mobile cards */}
-      <div className="space-y-3 md:hidden">
-        {paginated.map((loc) => (
-          <div
-            key={loc.id}
-            className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
+      {loading ? (
+        <LoadingState label="Cargando ubicaciones…" />
+      ) : error ? (
+        <ErrorState
+          message="No se pudieron cargar las ubicaciones. Revisa tu conexión e inténtalo de nuevo."
+          onRetry={loadLocations}
+        />
+      ) : locations.length === 0 ? (
+        <div className="border-atlas-line text-atlas-mist rounded-xs border border-dashed px-5 py-8 text-sm">
+          Todavía no hay ubicaciones guardadas. Guarda una sede para elegirla
+          con un clic al crear un evento.{" "}
+          <button
+            type="button"
+            onClick={openCreate}
+            className="text-atlas-dust font-semibold underline underline-offset-4"
           >
-            <p className="font-medium text-gray-900 dark:text-white">
-              {loc.name}
-            </p>
-            {loc.address && (
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {loc.address}
-              </p>
-            )}
-            <div className="mt-3 flex justify-end gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
-              <button
-                onClick={() => setEditing(loc)}
-                className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
-              >
-                Editar
-              </button>
-              <button
-                onClick={() => handleDelete(loc.id, loc.name)}
-                disabled={deleting === loc.id}
-                className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
-              >
-                {deleting === loc.id ? "..." : "Eliminar"}
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {paginated.length === 0 && (
-        <p className="py-8 text-center text-gray-500 dark:text-gray-400">
-          {search ? "Sin resultados" : "No hay ubicaciones guardadas."}
-        </p>
-      )}
-
-      {totalPages > 1 && (
-        <div className="mt-6 flex items-center justify-between">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Mostrando {(page - 1) * PAGE_SIZE + 1}-
-            {Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length}
-          </p>
-          <div className="flex gap-1">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-40 dark:border-gray-600 dark:text-gray-300"
-            >
-              Anterior
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPage(p)}
-                className={`rounded-lg px-3 py-1.5 text-sm ${
-                  p === page
-                    ? "bg-blue-600 text-white"
-                    : "border border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-                }`}
-              >
-                {p}
-              </button>
-            ))}
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-40 dark:border-gray-600 dark:text-gray-300"
-            >
-              Siguiente
-            </button>
-          </div>
+            Agrega la primera
+          </button>
+          .
         </div>
+      ) : (
+        <section aria-labelledby="ubicaciones-guardadas" className="@container">
+          <SectionHeading
+            action={
+              <span className="text-atlas-fog text-sm tabular-nums">
+                {filtered.length} {pluralize(filtered.length)}
+              </span>
+            }
+          >
+            <span id="ubicaciones-guardadas">Guardadas</span>
+          </SectionHeading>
+
+          <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <label htmlFor="buscar-ubicacion" className="sr-only">
+              Buscar ubicación
+            </label>
+            <input
+              id="buscar-ubicacion"
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nombre o dirección"
+              className={`${inputClass} sm:max-w-xs`}
+            />
+            <p className="text-atlas-fog text-sm">
+              Se eligen en el formulario del evento, en «Cargar ubicación
+              guardada».
+            </p>
+          </div>
+
+          {paginated.length === 0 ? (
+            <div className="border-atlas-line text-atlas-mist mt-4 rounded-xs border border-dashed px-5 py-8 text-sm">
+              Ninguna ubicación coincide con «{search.trim()}».{" "}
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="text-atlas-dust font-semibold underline underline-offset-4"
+              >
+                Limpiar la búsqueda
+              </button>
+              .
+            </div>
+          ) : (
+            <ul>
+              {paginated.map((loc) => (
+                <LocationRow
+                  key={loc.id}
+                  location={loc}
+                  deleting={deleting === loc.id}
+                  onEdit={() => openEdit(loc)}
+                  onDelete={() => handleDelete(loc)}
+                />
+              ))}
+            </ul>
+          )}
+
+          {totalPages > 1 && (
+            <nav
+              aria-label="Páginas de ubicaciones"
+              className="border-atlas-line mt-2 flex flex-col gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <p className="text-atlas-fog text-sm tabular-nums">
+                {(page - 1) * PAGE_SIZE + 1}–
+                {Math.min(page * PAGE_SIZE, filtered.length)} de{" "}
+                {filtered.length}
+              </p>
+              <div className="flex flex-wrap gap-1">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className={buttonClass.quiet}
+                >
+                  Anterior
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPage(p)}
+                      aria-current={p === page ? "page" : undefined}
+                      className={`min-w-9 rounded-md px-2 py-1.5 text-sm font-semibold tabular-nums transition-colors ${
+                        p === page
+                          ? "bg-atlas-deep text-atlas-dust"
+                          : "text-atlas-mist hover:text-atlas-dust"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className={buttonClass.quiet}
+                >
+                  Siguiente
+                </button>
+              </div>
+            </nav>
+          )}
+        </section>
       )}
     </div>
   );

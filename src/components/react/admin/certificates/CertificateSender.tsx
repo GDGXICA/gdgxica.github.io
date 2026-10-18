@@ -2,6 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { Toast } from "../ui/Toast";
 import { FormField } from "../ui/FormField";
+import {
+  ArrowIcon,
+  CloseIcon,
+  CornerNodes,
+  SectionHeading,
+  buttonClass,
+  inputClass,
+} from "../ui/atlas";
 import { EMAIL_RE, parseCsv, type Recipient } from "./parseCsv";
 
 interface SendResult {
@@ -275,11 +283,27 @@ export function CertificateSender() {
     }
   }
 
-  const inputCls =
-    "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white";
+  const inputCls = inputClass;
+  const missing = [
+    !meta.eventName.trim() && "nombre del evento",
+    !meta.eventDate && "fecha",
+    (!meta.startTime.trim() || !meta.endTime.trim()) && "horario",
+    !(Number(meta.hours) > 0) && "horas",
+    recipients.length === 0 && "destinatarios",
+  ].filter(Boolean) as string[];
+  const ready = missing.length === 0 && invalidCount === 0;
+  const sentOk = results?.filter((r) => r.ok).length ?? 0;
+  const formattedDate = meta.eventDate
+    ? new Date(`${meta.eventDate}T12:00:00`).toLocaleDateString("es-PE", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : null;
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-6xl">
       {toast && (
         <Toast
           message={toast.message}
@@ -288,288 +312,341 @@ export function CertificateSender() {
         />
       )}
 
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Certificados
-        </h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Genera y envía certificados de participación por correo. Los PDF se
-          crean al momento y no se almacenan.
-        </p>
-      </header>
+      <p className="text-atlas-mist mb-8 max-w-[70ch] text-sm leading-relaxed">
+        Genera y envía certificados de participación por correo. Los PDF se
+        crean al momento y no se almacenan.
+      </p>
 
-      <section className="mb-6 rounded-xl bg-white p-5 shadow dark:bg-gray-800">
-        <h2 className="mb-1 text-lg font-semibold text-gray-900 dark:text-white">
-          Evento
-        </h2>
-        <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-          Selecciona un evento para autocompletar los datos. El organizador es
-          siempre GDG ICA.
-        </p>
-
-        <FormField label="Seleccionar evento">
-          <select
-            className={inputCls}
-            value={selectedEventId}
-            disabled={loadingEvent}
-            onChange={(e) => handleSelectEvent(e.target.value)}
-          >
-            <option value="">— Ingresar manualmente —</option>
-            {events.map((ev) => (
-              <option key={ev.id} value={ev.id}>
-                {ev.title}
-              </option>
-            ))}
-          </select>
-        </FormField>
-        {loadingEvent && (
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            Cargando datos del evento…
-          </p>
-        )}
-
-        {selectedEventId && !manualOpen && (
-          <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-700/40">
-            <p className="font-medium text-gray-900 dark:text-white">
-              {meta.eventName || "—"}
+      <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="space-y-10">
+          <section aria-labelledby="cert-evento">
+            <SectionHeading>
+              <span id="cert-evento">1 · Evento</span>
+            </SectionHeading>
+            <p className="text-atlas-mist mb-4 text-sm">
+              Elige un evento para completar los datos solos, o escríbelos a
+              mano. El organizador es siempre GDG ICA.
             </p>
-            <p className="mt-1 text-gray-600 dark:text-gray-300">
-              {[
-                meta.eventDate,
-                meta.startTime && meta.endTime
-                  ? `${meta.startTime} – ${meta.endTime}`
-                  : "",
-                meta.hours ? `${meta.hours} h` : "",
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-            <p className="mt-1 text-gray-500 dark:text-gray-400">
-              Organizador: {meta.organizer}
-            </p>
-          </div>
-        )}
 
-        {selectedEventId && (
-          <button
-            type="button"
-            onClick={() => setManualOpen((o) => !o)}
-            className="mt-4 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
-          >
-            {manualOpen ? "▾" : "▸"} Ajustar datos manualmente
-          </button>
-        )}
+            <FormField label="Evento">
+              <select
+                className={inputCls}
+                value={selectedEventId}
+                disabled={loadingEvent}
+                onChange={(e) => handleSelectEvent(e.target.value)}
+              >
+                <option value="">Ingresar los datos a mano</option>
+                {events.map((ev) => (
+                  <option key={ev.id} value={ev.id}>
+                    {ev.title}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+            {loadingEvent && (
+              <p role="status" className="text-atlas-mist mt-2 text-sm">
+                Cargando datos del evento…
+              </p>
+            )}
 
-        <div className={showManualFields ? "mt-4" : "hidden"}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <FormField label="Nombre del evento" required>
-                <input
-                  className={inputCls}
-                  value={meta.eventName}
-                  onChange={(e) => setMetaField("eventName", e.target.value)}
-                  placeholder="Taller intensivo: prepárate para certificarte en Cloud"
+            {selectedEventId && (
+              <button
+                type="button"
+                onClick={() => setManualOpen((o) => !o)}
+                aria-expanded={manualOpen}
+                className={`${buttonClass.quiet} mt-3 -ml-2`}
+              >
+                <ArrowIcon
+                  className={`size-4 transition-transform ${manualOpen ? "rotate-90" : ""}`}
                 />
-              </FormField>
-            </div>
-            <FormField label="Fecha del evento" required>
-              <input
-                type="date"
-                className={inputCls}
-                value={meta.eventDate}
-                onChange={(e) => setMetaField("eventDate", e.target.value)}
-              />
-            </FormField>
-            <FormField label="Horas" required>
-              <input
-                type="number"
-                min="0"
-                step="0.5"
-                className={inputCls}
-                value={meta.hours}
-                onChange={(e) => setMetaField("hours", e.target.value)}
-                placeholder="4"
-              />
-            </FormField>
-            <FormField label="Hora de inicio" required>
-              <input
-                className={inputCls}
-                value={meta.startTime}
-                onChange={(e) => setMetaField("startTime", e.target.value)}
-                placeholder="9:00 am"
-              />
-            </FormField>
-            <FormField label="Hora de fin" required>
-              <input
-                className={inputCls}
-                value={meta.endTime}
-                onChange={(e) => setMetaField("endTime", e.target.value)}
-                placeholder="1:00 pm"
-              />
-            </FormField>
-            <div className="sm:col-span-2">
-              <FormField label="Organizador">
-                <input
-                  className={inputCls}
-                  value={meta.organizer}
-                  onChange={(e) => setMetaField("organizer", e.target.value)}
-                  placeholder="GDG ICA"
-                />
-              </FormField>
-            </div>
-          </div>
-        </div>
-      </section>
+                Ajustar los datos a mano
+              </button>
+            )}
 
-      <section className="mb-6 rounded-xl bg-white p-5 shadow dark:bg-gray-800">
-        <h2 className="mb-1 text-lg font-semibold text-gray-900 dark:text-white">
-          Destinatarios
-        </h2>
-        <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-          Importa un CSV (columnas nombre y correo) o agrégalos uno por uno.
-        </p>
+            <div className={showManualFields ? "mt-4" : "hidden"}>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <FormField label="Nombre del evento" required>
+                    <input
+                      className={inputCls}
+                      value={meta.eventName}
+                      onChange={(e) =>
+                        setMetaField("eventName", e.target.value)
+                      }
+                      placeholder="Taller intensivo: prepárate para certificarte en Cloud"
+                    />
+                  </FormField>
+                </div>
+                <FormField label="Fecha del evento" required>
+                  <input
+                    type="date"
+                    className={inputCls}
+                    value={meta.eventDate}
+                    onChange={(e) => setMetaField("eventDate", e.target.value)}
+                  />
+                </FormField>
+                <FormField label="Horas" required>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    className={inputCls}
+                    value={meta.hours}
+                    onChange={(e) => setMetaField("hours", e.target.value)}
+                    placeholder="4"
+                  />
+                </FormField>
+                <FormField label="Hora de inicio" required>
+                  <input
+                    className={inputCls}
+                    value={meta.startTime}
+                    onChange={(e) => setMetaField("startTime", e.target.value)}
+                    placeholder="9:00 a.m."
+                  />
+                </FormField>
+                <FormField label="Hora de fin" required>
+                  <input
+                    className={inputCls}
+                    value={meta.endTime}
+                    onChange={(e) => setMetaField("endTime", e.target.value)}
+                    placeholder="1:00 p.m."
+                  />
+                </FormField>
+                <div className="sm:col-span-2">
+                  <FormField label="Organizador">
+                    <input
+                      className={inputCls}
+                      value={meta.organizer}
+                      onChange={(e) =>
+                        setMetaField("organizer", e.target.value)
+                      }
+                      placeholder="GDG ICA"
+                    />
+                  </FormField>
+                </div>
+              </div>
+            </div>
+          </section>
 
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <label className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-            Importar CSV
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".csv,text/csv,text/plain"
-              className="hidden"
-              onChange={handleFile}
-            />
-          </label>
-          {recipients.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setRecipients([])}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+          <section aria-labelledby="cert-destinatarios">
+            <SectionHeading
+              action={
+                <label className={`${buttonClass.secondary} cursor-pointer`}>
+                  Importar CSV
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept=".csv,text/csv,text/plain"
+                    className="sr-only"
+                    onChange={handleFile}
+                  />
+                </label>
+              }
             >
-              Vaciar lista
-            </button>
+              <span id="cert-destinatarios">2 · Destinatarios</span>
+            </SectionHeading>
+            <p className="text-atlas-mist mb-4 text-sm">
+              Importa un CSV con las columnas nombre y correo, o agrégalos uno
+              por uno.
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                addManual();
+              }}
+              className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]"
+            >
+              <label className="sr-only" htmlFor="cert-nombre">
+                Nombre completo
+              </label>
+              <input
+                id="cert-nombre"
+                className={inputCls}
+                value={manual.name}
+                onChange={(e) =>
+                  setManual((m) => ({ ...m, name: e.target.value }))
+                }
+                placeholder="Nombre completo"
+              />
+              <label className="sr-only" htmlFor="cert-correo">
+                Correo
+              </label>
+              <input
+                id="cert-correo"
+                type="email"
+                className={inputCls}
+                value={manual.email}
+                onChange={(e) =>
+                  setManual((m) => ({ ...m, email: e.target.value }))
+                }
+                placeholder="correo@ejemplo.com"
+              />
+              <button type="submit" className={buttonClass.secondary}>
+                Agregar
+              </button>
+            </form>
+
+            {recipients.length > 0 ? (
+              <div className="border-atlas-line rounded-xs border">
+                <div className="border-atlas-line flex items-center justify-between border-b px-4 py-2.5 text-sm">
+                  <span className="text-atlas-mist tabular-nums">
+                    {recipients.length}{" "}
+                    {recipients.length === 1 ? "destinatario" : "destinatarios"}
+                    {invalidCount > 0 && (
+                      <span className="text-atlas-rose ml-2">
+                        · {invalidCount} con correo inválido
+                      </span>
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setRecipients([])}
+                    className="text-atlas-rose hover:bg-atlas-rose/10 rounded-md px-2 py-1 text-sm font-semibold"
+                  >
+                    Vaciar lista
+                  </button>
+                </div>
+                <ul className="max-h-80 overflow-auto">
+                  {recipients.map((r) => {
+                    const bad = !EMAIL_RE.test(r.email);
+                    return (
+                      <li
+                        key={r.email}
+                        className="border-atlas-line flex items-center justify-between gap-3 border-b px-4 py-2.5 text-sm last:border-b-0"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-atlas-dust truncate">{r.name}</p>
+                          <p
+                            className={`truncate ${bad ? "text-atlas-rose" : "text-atlas-fog"}`}
+                          >
+                            {r.email}
+                            {bad && " · correo inválido"}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeRecipient(r.email)}
+                          className="text-atlas-fog hover:text-atlas-rose shrink-0 rounded-md p-1 transition-colors"
+                          aria-label={`Quitar a ${r.name}`}
+                        >
+                          <CloseIcon className="size-4" />
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ) : (
+              <p className="border-atlas-line text-atlas-mist rounded-xs border border-dashed px-4 py-6 text-center text-sm">
+                Sin destinatarios todavía.
+              </p>
+            )}
+          </section>
+
+          {results && (
+            <section aria-labelledby="cert-resultado">
+              <SectionHeading
+                action={
+                  <span className="text-atlas-mist text-sm tabular-nums">
+                    {sentOk} de {results.length} enviados
+                  </span>
+                }
+              >
+                <span id="cert-resultado">Resultado del envío</span>
+              </SectionHeading>
+              <ul className="border-atlas-line rounded-xs border text-sm">
+                {results.map((r) => (
+                  <li
+                    key={r.email}
+                    className="border-atlas-line flex items-center justify-between gap-3 border-b px-4 py-2.5 last:border-b-0"
+                  >
+                    <span className="text-atlas-mist min-w-0 truncate">
+                      <span className="text-atlas-dust">{r.name}</span> ·{" "}
+                      {r.email}
+                    </span>
+                    <span
+                      className={`shrink-0 font-semibold ${r.ok ? "text-atlas-ok" : "text-atlas-rose"}`}
+                    >
+                      {r.ok ? "Enviado" : r.error || "Falló"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
         </div>
 
-        <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
-          <input
-            className={inputCls}
-            value={manual.name}
-            onChange={(e) => setManual((m) => ({ ...m, name: e.target.value }))}
-            placeholder="Nombre completo"
-          />
-          <input
-            className={inputCls}
-            value={manual.email}
-            onChange={(e) =>
-              setManual((m) => ({ ...m, email: e.target.value }))
-            }
-            placeholder="correo@ejemplo.com"
-            onKeyDown={(e) => e.key === "Enter" && addManual()}
-          />
+        <aside
+          aria-label="Resumen del envío"
+          className="border-atlas-line bg-atlas-deep/40 relative rounded-xs border p-5 lg:sticky lg:top-0"
+        >
+          <CornerNodes />
+          <p className="atlas-label text-atlas-glow">Resumen del envío</p>
+          <p className="atlas-name text-atlas-dust mt-3 text-lg leading-snug">
+            {meta.eventName.trim() || "Sin evento todavía"}
+          </p>
+          <dl className="mt-4 space-y-2 text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-atlas-fog">Fecha</dt>
+              <dd className="text-atlas-dust text-right first-letter:uppercase">
+                {formattedDate ?? "—"}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-atlas-fog">Horario</dt>
+              <dd className="text-atlas-dust text-right">
+                {meta.startTime && meta.endTime
+                  ? `${meta.startTime} – ${meta.endTime}`
+                  : "—"}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-atlas-fog">Horas</dt>
+              <dd className="text-atlas-dust tabular-nums">
+                {Number(meta.hours) > 0 ? `${meta.hours} h` : "—"}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-atlas-fog">Organizador</dt>
+              <dd className="text-atlas-dust text-right">
+                {meta.organizer || "—"}
+              </dd>
+            </div>
+            <div className="border-atlas-line flex items-baseline justify-between gap-4 border-t pt-3">
+              <dt className="text-atlas-fog">Destinatarios</dt>
+              <dd className="text-atlas-dust text-2xl font-semibold tabular-nums">
+                {recipients.length}
+              </dd>
+            </div>
+          </dl>
+
+          {!ready && (
+            <p className="text-atlas-mist mt-4 text-sm">
+              {invalidCount > 0
+                ? `Corrige o quita ${invalidCount} ${invalidCount === 1 ? "correo inválido" : "correos inválidos"}.`
+                : `Falta: ${missing.join(", ")}.`}
+            </p>
+          )}
+
           <button
             type="button"
-            onClick={addManual}
-            className="rounded-lg border border-blue-600 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            disabled={sending || !ready}
+            onClick={handleSend}
+            className={`${buttonClass.primary} mt-5 w-full`}
           >
-            Agregar
+            {sending
+              ? "Enviando…"
+              : recipients.length === 1
+                ? "Generar y enviar 1 certificado"
+                : `Generar y enviar ${recipients.length} certificados`}
           </button>
-        </div>
-
-        {recipients.length > 0 ? (
-          <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between bg-gray-50 px-4 py-2 text-xs font-medium text-gray-500 dark:bg-gray-700/50 dark:text-gray-400">
-              <span>
-                {recipients.length} destinatario(s)
-                {invalidCount > 0 && (
-                  <span className="ml-2 text-red-600 dark:text-red-400">
-                    · {invalidCount} con correo inválido
-                  </span>
-                )}
-              </span>
-            </div>
-            <ul className="max-h-72 divide-y divide-gray-100 overflow-auto dark:divide-gray-700">
-              {recipients.map((r) => {
-                const bad = !EMAIL_RE.test(r.email);
-                return (
-                  <li
-                    key={r.email}
-                    className="flex items-center justify-between px-4 py-2 text-sm"
-                  >
-                    <div className="min-w-0">
-                      <span className="text-gray-900 dark:text-white">
-                        {r.name}
-                      </span>
-                      <span
-                        className={`ml-2 ${
-                          bad
-                            ? "text-red-600 dark:text-red-400"
-                            : "text-gray-500 dark:text-gray-400"
-                        }`}
-                      >
-                        {r.email}
-                        {bad && " ⚠"}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeRecipient(r.email)}
-                      className="ml-3 shrink-0 text-gray-400 hover:text-red-600"
-                      aria-label={`Eliminar ${r.email}`}
-                    >
-                      ✕
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ) : (
-          <p className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-400 dark:border-gray-600">
-            Sin destinatarios todavía
+          <p className="text-atlas-fog mt-3 text-xs leading-snug">
+            Cada persona recibe su PDF por correo. El envío no se puede
+            deshacer.
           </p>
-        )}
-      </section>
-
-      <div className="mb-8 flex items-center justify-end gap-3">
-        <button
-          type="button"
-          disabled={sending}
-          onClick={handleSend}
-          className="rounded-lg bg-green-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {sending ? "Enviando…" : `Generar y enviar (${recipients.length})`}
-        </button>
+        </aside>
       </div>
-
-      {results && (
-        <section className="mb-8 rounded-xl bg-white p-5 shadow dark:bg-gray-800">
-          <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">
-            Resultado del envío
-          </h2>
-          <ul className="divide-y divide-gray-100 text-sm dark:divide-gray-700">
-            {results.map((r) => (
-              <li
-                key={r.email}
-                className="flex items-center justify-between py-2"
-              >
-                <span className="text-gray-700 dark:text-gray-300">
-                  {r.name} · {r.email}
-                </span>
-                <span
-                  className={
-                    r.ok
-                      ? "text-green-600 dark:text-green-400"
-                      : "text-red-600 dark:text-red-400"
-                  }
-                >
-                  {r.ok ? "✓ Enviado" : `✕ ${r.error || "Falló"}`}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
     </div>
   );
 }

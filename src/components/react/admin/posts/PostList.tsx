@@ -2,18 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, type Post, type PostSummary } from "@/lib/api";
 import { Toast } from "../ui/Toast";
 import { useAuth } from "../AuthProvider";
+import {
+  ErrorState,
+  HeaderActions,
+  LoadingState,
+  SectionHeading,
+  buttonClass,
+} from "../ui/atlas";
 import { PostEditor } from "./PostEditor";
 
 const STATUS: Record<string, { label: string; className: string }> = {
-  draft: {
-    label: "Borrador",
-    className: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
-  },
-  published: {
-    label: "Publicado",
-    className:
-      "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-  },
+  draft: { label: "Borrador", className: "text-atlas-glow" },
+  published: { label: "Publicado", className: "text-atlas-mist" },
 };
 
 /** Milisegundos de una fecha ISO; 0 si falta o es ilegible. */
@@ -22,15 +22,106 @@ function time(iso: string): number {
   return Number.isNaN(ms) ? 0 : ms;
 }
 
-function formatDate(iso: string): string {
-  if (!iso) return "—";
+function formatDate(iso: string): string | null {
+  if (!iso) return null;
   const ms = Date.parse(iso);
-  if (Number.isNaN(ms)) return "—";
+  if (Number.isNaN(ms)) return null;
   return new Date(ms).toLocaleDateString("es-PE", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
+}
+
+function PostRow({
+  post,
+  canWrite,
+  canDelete,
+  opening,
+  deleting,
+  onEdit,
+  onDelete,
+}: {
+  post: PostSummary;
+  canWrite: boolean;
+  canDelete: boolean;
+  opening: boolean;
+  deleting: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const state = STATUS[post.status] ?? STATUS.draft;
+  const date = formatDate(post.published_at);
+
+  return (
+    <li className="border-atlas-line grid grid-cols-1 gap-x-5 gap-y-3 border-b py-5 last:border-b-0 @3xl:grid-cols-[1fr_auto] @3xl:items-center">
+      <div className="min-w-0">
+        <p className="atlas-name text-atlas-dust text-xl leading-tight">
+          {post.title || post.id}
+        </p>
+        <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-sm">
+          <span className={`atlas-label ${state.className}`}>
+            {state.label}
+          </span>
+          <span className="text-atlas-fog" aria-hidden="true">
+            ·
+          </span>
+          {date ? (
+            <time dateTime={post.published_at} className="text-atlas-mist">
+              {date}
+            </time>
+          ) : (
+            <span className="text-atlas-mist">Sin fecha</span>
+          )}
+          {post.author_name && (
+            <>
+              <span className="text-atlas-fog" aria-hidden="true">
+                ·
+              </span>
+              <span className="text-atlas-mist">{post.author_name}</span>
+            </>
+          )}
+        </p>
+        <p className="text-atlas-fog mt-0.5 truncate text-xs">
+          /foro/{post.id}
+        </p>
+      </div>
+      {(canWrite || canDelete || post.status === "published") && (
+        <div className="flex flex-wrap items-center gap-2 @3xl:justify-end">
+          {canWrite && (
+            <button
+              type="button"
+              onClick={onEdit}
+              disabled={opening}
+              className={buttonClass.secondary}
+            >
+              {opening ? "Abriendo…" : "Editar"}
+            </button>
+          )}
+          {post.status === "published" && (
+            <a
+              href={`/foro/${post.id}`}
+              target="_blank"
+              rel="noreferrer"
+              className={buttonClass.quiet}
+            >
+              Ver en el sitio
+            </a>
+          )}
+          {canDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={deleting}
+              className="text-atlas-rose hover:bg-atlas-rose/10 rounded-md px-2 py-1.5 text-sm font-semibold transition-colors disabled:opacity-50"
+            >
+              {deleting ? "Eliminando…" : "Eliminar"}
+            </button>
+          )}
+        </div>
+      )}
+    </li>
+  );
 }
 
 export function PostList() {
@@ -57,7 +148,10 @@ export function PostList() {
       setPosts(res.data);
       setError(null);
     } else {
-      setError(res.error || "No se pudieron cargar los posts");
+      setError(
+        res.error ||
+          "No se pudieron cargar los posts. Suele ser la conexión con el repositorio de datos."
+      );
     }
     setLoading(false);
   }, []);
@@ -69,7 +163,7 @@ export function PostList() {
   // Más recientes primero, como en el sitio.
   const ordered = useMemo(
     () =>
-      // Con NaN en el comparador —una fecha ausente— el orden de toda la tabla
+      // Con NaN en el comparador —una fecha ausente— el orden de toda la lista
       // queda a merced de la implementación de sort, no solo el de esa fila.
       [...posts].sort((a, b) => time(b.published_at) - time(a.published_at)),
     [posts]
@@ -86,7 +180,9 @@ export function PostList() {
     setOpening(null);
     if (!res.success || !res.data) {
       setToast({
-        message: res.error || "No se pudo abrir el post",
+        message:
+          res.error ||
+          "No se pudo abrir el post. Inténtalo de nuevo en un rato.",
         type: "error",
       });
       return;
@@ -97,7 +193,7 @@ export function PostList() {
   async function handleDelete(post: PostSummary) {
     if (
       !confirm(
-        `Eliminar "${post.title}"? El post desaparece del sitio y del repositorio de datos.`
+        `¿Eliminar «${post.title || post.id}»? El post desaparece del sitio y del repositorio de datos.`
       )
     )
       return;
@@ -109,20 +205,26 @@ export function PostList() {
       setPosts((prev) => prev.filter((p) => p.id !== post.id));
       setToast({ message: "Post eliminado", type: "success" });
     } else {
-      setToast({ message: res.error || "Error", type: "error" });
+      setToast({
+        message:
+          res.error || "No se pudo eliminar el post. Inténtalo de nuevo.",
+        type: "error",
+      });
     }
   }
+
+  const toastNode = toast && (
+    <Toast
+      message={toast.message}
+      type={toast.type}
+      onClose={() => setToast(null)}
+    />
+  );
 
   if (editor) {
     return (
       <>
-        {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onClose={() => setToast(null)}
-          />
-        )}
+        {toastNode}
         <PostEditor
           initial={editor.post}
           onCancel={() => setEditor(null)}
@@ -149,192 +251,77 @@ export function PostList() {
     );
   }
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-        {error}
-      </div>
-    );
-  }
-
   return (
-    <div>
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
+    <div className="mx-auto max-w-6xl">
+      {canWrite && (
+        <HeaderActions>
+          <button
+            type="button"
+            onClick={() => setEditor({ post: null })}
+            className={buttonClass.primary}
+          >
+            Nuevo post
+          </button>
+        </HeaderActions>
       )}
 
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Publicaciones del foro. Se escriben en markdown y salen en{" "}
-          <a
-            href="/foro"
-            className="text-blue-600 hover:underline dark:text-blue-400"
-          >
-            gdgica.com/foro
-          </a>{" "}
-          cuando se publican.
-        </p>
-        {canWrite && (
-          <button
-            onClick={() => setEditor({ post: null })}
-            className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            + Nuevo post
-          </button>
-        )}
-      </div>
+      {toastNode}
 
-      {ordered.length === 0 ? (
-        <p className="py-8 text-center text-gray-500 dark:text-gray-400">
-          Todavía no hay posts.
-        </p>
+      <p className="text-atlas-mist mb-8 max-w-[70ch] text-sm leading-relaxed">
+        Publicaciones del foro. Se escriben en markdown y salen en{" "}
+        <a
+          href="/foro"
+          className="text-atlas-dust font-semibold underline underline-offset-4"
+        >
+          gdgica.com/foro
+        </a>{" "}
+        cuando se publican. Un borrador se guarda en el repositorio de datos,
+        que es público, pero no aparece en el sitio.
+      </p>
+
+      {loading ? (
+        <LoadingState label="Cargando posts…" />
+      ) : error ? (
+        <ErrorState message={error} onRetry={load} />
+      ) : ordered.length === 0 ? (
+        <div className="border-atlas-line text-atlas-mist rounded-xs border border-dashed px-5 py-8 text-sm">
+          <p>Todavía no hay posts.</p>
+          {canWrite && (
+            <button
+              type="button"
+              onClick={() => setEditor({ post: null })}
+              className="text-atlas-dust mt-1 font-semibold underline underline-offset-4"
+            >
+              Escribe el primero
+            </button>
+          )}
+        </div>
       ) : (
-        <>
-          {/* Escritorio */}
-          <div className="hidden overflow-hidden rounded-lg border border-gray-200 bg-white md:block dark:border-gray-700 dark:bg-gray-800">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-900">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                    Post
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                    Estado
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                    Publicado
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {ordered.map((post) => {
-                  const state = STATUS[post.status] ?? STATUS.draft;
-                  return (
-                    <tr
-                      key={post.id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700"
-                    >
-                      <td className="px-6 py-4">
-                        <p className="font-medium text-gray-900 dark:text-white">
-                          {post.title}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {post.author_name || "—"} · /foro/{post.id}
-                        </p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${state.className}`}
-                        >
-                          {state.label}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                        {formatDate(post.published_at)}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          {post.status === "published" && (
-                            <a
-                              href={`/foro/${post.id}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="rounded px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
-                            >
-                              Ver
-                            </a>
-                          )}
-                          {canWrite && (
-                            <button
-                              onClick={() => openEditor(post.id)}
-                              disabled={opening === post.id}
-                              className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 disabled:opacity-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
-                            >
-                              {opening === post.id ? "..." : "Editar"}
-                            </button>
-                          )}
-                          {canDelete && (
-                            <button
-                              onClick={() => handleDelete(post)}
-                              disabled={deleting === post.id}
-                              className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                            >
-                              {deleting === post.id ? "..." : "Eliminar"}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Móvil */}
-          <div className="space-y-3 md:hidden">
-            {ordered.map((post) => {
-              const state = STATUS[post.status] ?? STATUS.draft;
-              return (
-                <div
-                  key={post.id}
-                  className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-medium text-gray-900 dark:text-white">
-                        {post.title}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {formatDate(post.published_at)} · /foro/{post.id}
-                      </p>
-                    </div>
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${state.className}`}
-                    >
-                      {state.label}
-                    </span>
-                  </div>
-                  <div className="mt-3 flex justify-end gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
-                    {canWrite && (
-                      <button
-                        onClick={() => openEditor(post.id)}
-                        disabled={opening === post.id}
-                        className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 disabled:opacity-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
-                      >
-                        {opening === post.id ? "..." : "Editar"}
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button
-                        onClick={() => handleDelete(post)}
-                        disabled={deleting === post.id}
-                        className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                      >
-                        {deleting === post.id ? "..." : "Eliminar"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </>
+        <section aria-labelledby="foro-posts" className="@container">
+          <SectionHeading
+            action={
+              <span className="text-atlas-fog text-sm tabular-nums">
+                {ordered.length} {ordered.length === 1 ? "post" : "posts"}
+              </span>
+            }
+          >
+            <span id="foro-posts">Publicaciones</span>
+          </SectionHeading>
+          <ul>
+            {ordered.map((post) => (
+              <PostRow
+                key={post.id}
+                post={post}
+                canWrite={canWrite}
+                canDelete={canDelete}
+                opening={opening === post.id}
+                deleting={deleting === post.id}
+                onEdit={() => openEditor(post.id)}
+                onDelete={() => handleDelete(post)}
+              />
+            ))}
+          </ul>
+        </section>
       )}
     </div>
   );

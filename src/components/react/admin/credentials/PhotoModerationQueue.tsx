@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { api } from "@/lib/api";
 import { getStorage } from "@/lib/firebase";
+import { buttonClass, inputClass } from "../ui/atlas";
 import type { Credential } from "./types";
 
 interface Props {
@@ -59,6 +60,8 @@ function PhotoCard({
   );
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState("");
+  const reasonId = useId();
+  const name = `${credential.firstName} ${credential.lastName}`.trim();
 
   const moderate = async (action: "approve" | "remove") => {
     setBusy(true);
@@ -67,41 +70,68 @@ function PhotoCard({
       reason: action === "remove" ? reason.trim() : "",
     });
     setBusy(false);
-    if (!res.success) onError(res.error ?? "No se pudo moderar la foto");
+    if (!res.success)
+      onError(
+        res.error ??
+          `No se pudo moderar la foto de ${name || `#${credential.sequenceNumber}`}. Inténtalo de nuevo.`
+      );
   };
 
   return (
-    <li className="border-gray-custom flex flex-col gap-2 rounded-lg border bg-white p-3">
-      <div className="bg-section flex aspect-[4/5] items-center justify-center overflow-hidden rounded">
+    <li className="border-atlas-line flex min-w-0 flex-col gap-3 rounded-xs border p-3">
+      <div className="bg-atlas-deep/40 flex aspect-[4/5] items-center justify-center overflow-hidden rounded-xs">
         {url ? (
           <img
             src={url}
-            alt={`Credencial de ${credential.firstName} ${credential.lastName}`}
+            alt={`Credencial de ${name}`}
             className="h-full w-full object-contain"
           />
         ) : (
-          <span className="text-tertiary text-xs">Sin imagen</span>
+          <span className="atlas-label text-atlas-fog">Sin imagen</span>
         )}
       </div>
 
-      <p className="text-primary truncate text-sm font-semibold">
-        {credential.firstName} {credential.lastName}
-      </p>
+      <div className="min-w-0">
+        <p className="text-atlas-dust truncate text-sm font-semibold">
+          {name || "Sin nombre"}
+        </p>
+        <p className="text-atlas-fog mt-0.5 text-xs tabular-nums">
+          #{credential.sequenceNumber}
+          {credential.photoUploadedAt && (
+            <>
+              {" · "}
+              <time dateTime={credential.photoUploadedAt.toISOString()}>
+                {credential.photoUploadedAt.toLocaleString("es-PE", {
+                  day: "numeric",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </time>
+            </>
+          )}
+        </p>
+      </div>
 
+      <label htmlFor={reasonId} className="sr-only">
+        Motivo para quitar la foto de {name || `#${credential.sequenceNumber}`}{" "}
+        (opcional)
+      </label>
       <input
+        id={reasonId}
         type="text"
         value={reason}
         onChange={(e) => setReason(e.target.value)}
-        placeholder="Motivo (opcional)"
-        className="border-gray-custom rounded border px-2 py-1 text-xs"
+        placeholder="Motivo si la quitas"
+        className={inputClass}
       />
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           type="button"
           disabled={busy}
           onClick={() => moderate("approve")}
-          className="bg-google-green flex-1 rounded px-2 py-1 text-sm text-white disabled:opacity-50"
+          className="border-atlas-line text-atlas-dust hover:border-atlas-mist hover:bg-atlas-deep flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors disabled:opacity-50"
         >
           Aprobar
         </button>
@@ -109,7 +139,7 @@ function PhotoCard({
           type="button"
           disabled={busy}
           onClick={() => moderate("remove")}
-          className="bg-google-red flex-1 rounded px-2 py-1 text-sm text-white disabled:opacity-50"
+          className="border-atlas-rose/40 text-atlas-rose hover:bg-atlas-rose/10 flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors disabled:opacity-50"
         >
           Quitar foto
         </button>
@@ -151,7 +181,10 @@ export function PhotoModerationQueue({ slug, credentials, onError }: Props) {
         reason: "",
       });
       if (!res.success) {
-        onError(res.error ?? "No se pudo aprobar todo el lote");
+        onError(
+          res.error ??
+            "Se cortó la aprobación en lote. Las fotos que siguen en la cola no se aprobaron: vuelve a intentarlo."
+        );
         break;
       }
     }
@@ -160,29 +193,36 @@ export function PhotoModerationQueue({ slug, credentials, onError }: Props) {
 
   if (pending.length === 0) {
     return (
-      <p className="text-secondary py-8 text-center text-sm">
-        No hay fotos por revisar.
+      <p className="border-atlas-line text-atlas-mist mt-4 rounded-xs border border-dashed px-5 py-8 text-sm">
+        No hay fotos por revisar. Las que suban los asistentes aparecen aquí, de
+        la más antigua a la más reciente.
       </p>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <p className="text-secondary text-sm">
-          {pending.length} foto{pending.length === 1 ? "" : "s"} por revisar
+    <div className="mt-4 flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-atlas-mist text-sm">
+          <span className="text-atlas-dust tabular-nums">{pending.length}</span>{" "}
+          {pending.length === 1 ? "foto por revisar" : "fotos por revisar"}, de
+          la más antigua a la más reciente.
         </p>
         <button
           type="button"
           disabled={bulkBusy}
           onClick={approveAll}
-          className="border-gray-custom text-secondary rounded border px-3 py-1 text-sm disabled:opacity-50"
+          className={buttonClass.secondary}
         >
-          {bulkBusy ? "Aprobando…" : "Aprobar todas las visibles"}
+          {bulkBusy
+            ? "Aprobando…"
+            : pending.length === 1
+              ? "Aprobar la foto"
+              : `Aprobar las ${pending.length} fotos`}
         </button>
       </div>
 
-      <ul className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-4 @2xl:grid-cols-3 @4xl:grid-cols-4">
         {pending.map((c) => (
           <PhotoCard key={c.id} slug={slug} credential={c} onError={onError} />
         ))}

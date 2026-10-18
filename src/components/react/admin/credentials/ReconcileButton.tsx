@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { buttonClass } from "../ui/atlas";
 
 interface Props {
   slug: string;
@@ -12,6 +13,9 @@ interface Summary {
   unmatchedRoster: number;
   ambiguous: number;
 }
+
+const count = (n: number, one: string, many: string) =>
+  `${n} ${n === 1 ? one : many}`;
 
 /**
  * Cross-references the credentials with the imported Bevy roster.
@@ -35,38 +39,51 @@ export function ReconcileButton({ slug, onError }: Props) {
     setBusy(false);
 
     if (!res.success || !res.data) {
-      onError(res.error ?? "No se pudo conciliar con el roster");
+      onError(
+        res.error ??
+          "No se pudo cruzar con el roster de Bevy. Revisa que el roster esté importado y vuelve a intentarlo."
+      );
       return;
     }
     setSummary(res.data);
   };
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-x-6 gap-y-3 py-4 sm:grid-cols-[13rem_minmax(0,1fr)] sm:items-start">
       <button
         type="button"
         onClick={run}
         disabled={busy}
-        className="border-gray-custom text-secondary rounded border px-3 py-2 text-sm disabled:opacity-50"
-        title="Cruza las credenciales con el roster importado de Bevy"
+        className={buttonClass.secondary}
       >
         {busy ? "Conciliando…" : "Conciliar con Bevy"}
       </button>
 
-      {summary && (
-        <div className="text-tertiary text-right text-xs">
-          <p>
-            {summary.matched} emparejada(s) · {summary.unmatchedCredentials} sin
-            inscripción · {summary.unmatchedRoster} solo en Bevy
-          </p>
-          {summary.ambiguous > 0 && (
-            <p className="text-[#92400E]">
-              {summary.ambiguous} correo(s) repetidos: revísalos a mano, no se
-              emparejaron
+      <div className="text-sm">
+        <p className="text-atlas-mist">
+          Cruza las credenciales con el roster importado de Bevy. Hazlo después
+          de cada importación; repetirlo no cambia lo ya cruzado.
+        </p>
+        {summary && (
+          <div role="status" className="mt-2">
+            <p className="text-atlas-dust tabular-nums">
+              {count(summary.matched, "emparejada", "emparejadas")} ·{" "}
+              {summary.unmatchedCredentials} sin inscripción en Bevy ·{" "}
+              {summary.unmatchedRoster} solo en Bevy
             </p>
-          )}
-        </div>
-      )}
+            {summary.ambiguous > 0 && (
+              <p className="text-atlas-glow mt-1">
+                {count(
+                  summary.ambiguous,
+                  "correo repetido",
+                  "correos repetidos"
+                )}{" "}
+                en el roster: no se emparejaron, revísalos a mano.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
