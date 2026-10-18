@@ -18,6 +18,20 @@
   --color-gray-custom: #e4e4e7;
   /* surface colors */
   --color-section: #f9fafb;
+  --font-atlas: "Archivo Variable", sans-serif;
+  --color-atlas-night: #0a1021;
+  --color-atlas-deep: #16233d;
+  --color-atlas-chart: #24374f;
+  --color-atlas-line: #2e4262;
+  --color-atlas-fog: #8a93a6;
+  --color-atlas-mist: #b8bfcc;
+  --color-atlas-dust: #f2f2e9;
+  --color-atlas-star: #ff4d2e;
+  --color-atlas-ember: #d1361a;
+  --color-atlas-ember-deep: #b02c14;
+  --color-atlas-glow: #ffb36b;
+  --color-atlas-ok: #6fcf97;
+  --color-atlas-rose: #ff8a9a;
 }
 
 body {

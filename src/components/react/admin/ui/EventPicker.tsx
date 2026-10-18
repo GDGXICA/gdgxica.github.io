@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "../AuthProvider";
+import { useEventCatalog } from "../useEventCatalog";
+import { ArrowIcon, ErrorState, LoadingState, SectionHeading } from "./atlas";
 
 /**
  * Elige el evento cuando la URL no lo trae.
@@ -45,6 +47,7 @@ export function EventPicker({ basePath, title }: Props) {
   const { can } = useAuth();
   const [options, setOptions] = useState<EventOption[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const catalog = useEventCatalog();
 
   // Quien tiene `events:read` ve el catálogo entero; quien no, solo lo suyo.
   // No es una optimización: para un voluntario `/api/events` responde 403, así
@@ -102,26 +105,20 @@ export function EventPicker({ basePath, title }: Props) {
   }, [canListAll]);
 
   if (error) {
-    return (
-      <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
-        {error}
-      </div>
-    );
+    return <ErrorState message={error} />;
   }
 
   if (options === null) {
-    return (
-      <p className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
-        Cargando eventos…
-      </p>
-    );
+    return <LoadingState label="Cargando eventos…" />;
   }
 
   if (options.length === 0) {
     return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-        <p className="font-medium">No tienes eventos asignados.</p>
-        <p className="mt-1 text-sm">
+      <div className="border-atlas-line text-atlas-mist max-w-xl rounded-xs border border-dashed px-5 py-6 text-sm">
+        <p className="text-atlas-dust font-semibold">
+          No tienes eventos asignados.
+        </p>
+        <p className="mt-1">
           {canListAll
             ? "Todavía no hay eventos creados."
             : "Pide a un organizador que te asigne al evento que vas a trabajar."}
@@ -130,31 +127,65 @@ export function EventPicker({ basePath, title }: Props) {
     );
   }
 
+  const named = options.map((option) => {
+    const entry = catalog.events?.find((e) => e.slug === option.slug);
+    return {
+      ...option,
+      name: entry?.name ?? option.title,
+      date: entry?.date ?? null,
+      upcoming: entry ? entry.status !== "completed" : true,
+    };
+  });
+  named.sort(
+    (a, b) =>
+      Number(b.upcoming) - Number(a.upcoming) ||
+      (a.upcoming ? 1 : -1) *
+        ((a.date?.getTime() ?? 0) - (b.date?.getTime() ?? 0))
+  );
+
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-      <h2 className="font-medium text-gray-900 dark:text-white">{title}</h2>
-      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-        Elige el evento.
+    <section aria-labelledby="event-picker-title" className="max-w-3xl">
+      <SectionHeading>
+        <span id="event-picker-title">Elige el evento</span>
+      </SectionHeading>
+      <p className="text-atlas-mist mb-4 text-sm">
+        {title} trabaja sobre un evento a la vez.
       </p>
-      <ul className="mt-4 space-y-2">
-        {options.map((option) => (
-          <li key={option.slug}>
+      <ul className="border-atlas-line rounded-xs border">
+        {named.map((option) => (
+          <li
+            key={option.slug}
+            className="border-atlas-line border-b last:border-b-0"
+          >
             <a
               href={`${basePath}?slug=${encodeURIComponent(option.slug)}`}
-              className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3 text-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700"
+              className="group hover:bg-atlas-deep/60 flex items-center gap-4 px-5 py-4 transition-colors"
             >
-              <span className="font-medium text-gray-900 dark:text-white">
-                {option.title}
-              </span>
-              {option.expiresAt && (
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  hasta el {option.expiresAt}
+              <span className="min-w-0 flex-1">
+                <span className="atlas-name text-atlas-dust block text-lg leading-tight">
+                  {option.name}
                 </span>
-              )}
+                <span className="text-atlas-fog mt-0.5 block text-xs">
+                  {[
+                    option.date?.toLocaleDateString("es-PE", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    }),
+                    option.slug !== option.name ? option.slug : null,
+                    option.expiresAt
+                      ? `asignado hasta el ${option.expiresAt}`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              </span>
+              <ArrowIcon className="text-atlas-fog group-hover:text-atlas-dust size-4 shrink-0 transition-colors" />
             </a>
           </li>
         ))}
       </ul>
-    </div>
+    </section>
   );
 }

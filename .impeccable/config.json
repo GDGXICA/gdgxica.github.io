@@ -1,0 +1,50 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "geist",
+        "files": [".impeccable/mocks/decision/canon.html"],
+        "createdAt": "2026-10-18T12:36:19.898Z",
+        "reason": "agent: canon card is the category-standard sketch by definition, and Geist is the incumbent site font"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [".impeccable/mocks/decision/assigned.html"],
+        "createdAt": "2026-10-18T13:58:21.335Z",
+        "reason": "agent: unchosen decision-round sketch, each draws its own direction's fonts by design"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [".impeccable/mocks/decision/model-pick.html"],
+        "createdAt": "2026-10-18T13:58:21.347Z",
+        "reason": "agent: unchosen decision-round sketch, each draws its own direction's fonts by design"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [".impeccable/mocks/decision/challenger-gate.html"],
+        "createdAt": "2026-10-18T13:58:21.363Z",
+        "reason": "agent: unchosen decision-round sketch, each draws its own direction's fonts by design"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [".impeccable/mocks/decision/canon.html"],
+        "createdAt": "2026-10-18T13:58:21.376Z",
+        "reason": "agent: unchosen decision-round sketch, each draws its own direction's fonts by design"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "geist variable",
+        "files": ["src/styles/global.css"],
+        "createdAt": "2026-10-18T13:58:21.390Z",
+        "reason": "agent: Geist is the public site's font; DESIGN.md is scoped to /admin"
+      }
+    ]
+  }
+}

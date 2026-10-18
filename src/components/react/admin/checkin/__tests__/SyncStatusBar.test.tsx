@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { SyncStatusBar } from "../SyncStatusBar";
 
 afterEach(() => cleanup());
@@ -7,7 +7,12 @@ afterEach(() => cleanup());
 describe("SyncStatusBar", () => {
   it("shows the present/total count", () => {
     render(
-      <SyncStatusBar present={42} total={134} offline={false} pendingCount={0} />
+      <SyncStatusBar
+        present={42}
+        total={134}
+        offline={false}
+        pendingCount={0}
+      />
     );
     expect(screen.getByText("42/134 presentes")).toBeInTheDocument();
   });
@@ -54,5 +59,25 @@ describe("SyncStatusBar", () => {
       <SyncStatusBar present={0} total={5} offline={true} pendingCount={0} />
     );
     expect(screen.queryByText("Sincronizado")).not.toBeInTheDocument();
+  });
+
+  it("moves into the event header band when the shell provides it", () => {
+    const slot = document.createElement("span");
+    slot.id = "admin-header-status";
+    document.body.appendChild(slot);
+
+    render(
+      <SyncStatusBar
+        present={187}
+        total={342}
+        offline={false}
+        pendingCount={0}
+      />
+    );
+
+    const status = within(slot).getByRole("status");
+    expect(status).toHaveTextContent("Sincronizado");
+    expect(status).toHaveTextContent("187/342 presentes");
+    slot.remove();
   });
 });

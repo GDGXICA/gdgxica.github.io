@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+
 interface Props {
   present: number;
   total: number;
@@ -11,7 +14,12 @@ interface Props {
  * here than anywhere else in the admin panel: a volunteer needs to know
  * their taps are safe even when the venue wifi drops.
  */
-export function SyncStatusBar({ present, total, offline, pendingCount }: Props) {
+export function SyncStatusBar({
+  present,
+  total,
+  offline,
+  pendingCount,
+}: Props) {
   let tone: string;
   let label: string;
 
@@ -29,6 +37,28 @@ export function SyncStatusBar({ present, total, offline, pendingCount }: Props) 
     tone =
       "border-green-300 bg-green-50 text-green-800 dark:border-green-700 dark:bg-green-900/20 dark:text-green-300";
     label = "Sincronizado";
+  }
+
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setSlot(document.getElementById("admin-header-status"));
+  }, []);
+
+  if (slot) {
+    return createPortal(
+      <span
+        role="status"
+        className={`font-semibold ${
+          offline ? "text-atlas-glow" : "text-atlas-ok"
+        }`}
+      >
+        · {label} ·{" "}
+        <span className="tabular-nums">
+          {present}/{total} presentes
+        </span>
+      </span>,
+      slot
+    );
   }
 
   return (
