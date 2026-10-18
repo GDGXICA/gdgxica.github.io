@@ -8,11 +8,10 @@ import { FieldValue } from "firebase-admin/firestore";
 // raw responses collection — so this trigger absorbs the fan-out and caps
 // realtime read costs to 1 listener per game per phone.
 //
-// For poll responses we just bump optionCounts + totalResponses with
-// FieldValue.increment (O(1)). For quiz responses we additionally rebuild
-// the top-10 leaderboard by querying participants ordered by quizScore.
-// That extra query is bounded (limit 10) and only fires for quiz games,
-// so the cost stays well within the free tier even at ~200 attendees.
+// Poll responses bump optionCounts + totalResponses with FieldValue.increment
+// (O(1)). Quiz answers now use a private collection and their aggregates are
+// published by finishQuizQuestion after the deadline. The quiz branch below
+// only maintains compatibility with legacy response documents.
 //
 // Rule deletes are blocked, so we ignore the delete edge case (no
 // `before && !after`). For pure update events (also blocked by rules)

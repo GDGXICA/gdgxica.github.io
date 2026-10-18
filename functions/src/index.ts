@@ -24,6 +24,7 @@ import {
   minigameInstanceCreateSchema,
   minigameStateSchema,
   minigameJoinSchema,
+  minigameQuizAnswerSchema,
   minigameWordHiddenSchema,
   certificateSendSchema,
   checkinImportSchema,
@@ -64,6 +65,8 @@ import * as minigameJoin from "./handlers/minigameJoin";
 import * as minigameWords from "./handlers/minigameWords";
 import * as minigameRoulette from "./handlers/minigameRoulette";
 import * as minigameBingo from "./handlers/minigameBingo";
+import * as minigameQuiz from "./handlers/minigameQuiz";
+import * as minigamePoll from "./handlers/minigamePoll";
 import * as certificates from "./handlers/certificates";
 import * as checkin from "./handlers/checkin";
 import * as credentials from "./handlers/credentials";
@@ -131,7 +134,8 @@ let warnedMissingIp = false;
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 300,
+    max: (req) =>
+      /^\/api\/events\/[^/]+\/minigames\//.test(req.path) ? 10000 : 300,
     standardHeaders: true,
     legacyHeaders: false,
     // Skip rather than fall back to a shared key. Keying every caller
@@ -191,7 +195,7 @@ const writeLimiter = rateLimit({
 // bypassable. We pin this limiter to the IP only.
 const joinLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 10,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip ?? "unknown")}`,
@@ -200,6 +204,16 @@ const joinLimiter = rateLimit({
     success: false,
     error: "Demasiados intentos, espera un momento",
   },
+});
+
+const quizAnswerLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 3000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip ?? "unknown")}`,
+  handler: limitExceeded("quiz_answer"),
+  message: { success: false, error: "Demasiadas respuestas desde esta red" },
 });
 
 // Calling bingo balls does not belong on writeLimiter. That limiter caps
@@ -794,6 +808,32 @@ app.post(
   writeLimiter,
   minigameInstances.quizAdvance
 );
+app.post(
+  "/api/events/:slug/minigames/:id/poll/advance",
+  minigamesOfEvent(),
+  slugP,
+  vid,
+  writeLimiter,
+  minigameInstances.pollAdvance
+);
+app.post(
+  "/api/events/:slug/minigames/:id/quiz/answer",
+  requireAuth(),
+  slugP,
+  vid,
+  quizAnswerLimiter,
+  validateBody(minigameQuizAnswerSchema),
+  minigameQuiz.answer
+);
+app.post(
+  "/api/events/:slug/minigames/:id/poll/answer",
+  requireAuth(),
+  slugP,
+  vid,
+  quizAnswerLimiter,
+  validateBody(minigameQuizAnswerSchema),
+  minigamePoll.answer
+);
 app.delete(
   "/api/events/:slug/minigames/:id",
   minigamesOfEvent(),
@@ -1110,6 +1150,7 @@ export const api = onRequest(
 // Firestore trigger: incrementally maintains aggregates/current per
 // minigame instance whenever a participant response is created.
 export { onMinigameResponseWritten } from "./triggers/recomputeAggregates";
+export { finishQuizQuestion } from "./handlers/minigameQuiz";
 // Audita el check-in. Es la única mutación del panel que no pasa por esta API
 // —va directa a Firestore para poder encolarse sin wifi—, así que un trigger es
 // el único sitio desde el que se puede registrar.

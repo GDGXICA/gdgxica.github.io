@@ -86,7 +86,9 @@ describe("MinigameTemplateForm", () => {
     );
     await user.click(screen.getByRole("button", { name: /Crear plantilla/i }));
     expect(onSubmit).not.toHaveBeenCalled();
-    expect(screen.getByText(/opciones deben tener texto/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/opciones de cada pregunta deben tener texto/i)
+    ).toBeInTheDocument();
   });
 
   it("submits a valid poll payload", async () => {
@@ -106,8 +108,10 @@ describe("MinigameTemplateForm", () => {
     expect(submitted.type).toBe("poll");
     expect(submitted.title).toBe("Quiz");
     if (submitted.type === "poll") {
-      expect(submitted.poll.question).toBe("Pick");
-      expect(submitted.poll.options.map((o) => o.label)).toEqual(["Yes", "No"]);
+      expect(submitted.poll.questions?.[0].prompt).toBe("Pick");
+      expect(submitted.poll.questions?.[0].options.map((o) => o.label)).toEqual(
+        ["Yes", "No"]
+      );
     }
   });
 

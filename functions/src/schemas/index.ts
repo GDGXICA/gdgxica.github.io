@@ -388,8 +388,18 @@ export const minigameTemplateSchema = z.discriminatedUnion("type", [
       ...baseTemplate,
       poll: z
         .object({
-          question: shortText(1000).min(1),
-          options: z.array(optionItemSchema).min(2).max(6),
+          questions: z
+            .array(
+              z
+                .object({
+                  id: safeId,
+                  prompt: shortText(1000).min(1),
+                  options: z.array(optionItemSchema).min(2).max(6),
+                })
+                .strict()
+            )
+            .min(1)
+            .max(50),
         })
         .strict(),
     })
@@ -485,6 +495,13 @@ export const minigameStateSchema = z
 export const minigameJoinSchema = z
   .object({
     alias: z.string().trim().min(1).max(24),
+  })
+  .strict();
+
+export const minigameQuizAnswerSchema = z
+  .object({
+    questionId: safeId,
+    optionId: safeId,
   })
   .strict();
 

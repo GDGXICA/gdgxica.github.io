@@ -6,7 +6,14 @@ export interface OptionItem {
 }
 
 export interface PollConfig {
-  question: string;
+  questions?: PollQuestion[];
+  question?: string;
+  options?: OptionItem[];
+}
+
+export interface PollQuestion {
+  id: string;
+  prompt: string;
   options: OptionItem[];
 }
 
@@ -101,10 +108,15 @@ export function emptyForType(type: MinigameType): Template {
         title: "",
         description: "",
         poll: {
-          question: "",
-          options: [
-            { id: makeId(), label: "" },
-            { id: makeId(), label: "" },
+          questions: [
+            {
+              id: makeId(),
+              prompt: "",
+              options: [
+                { id: makeId(), label: "" },
+                { id: makeId(), label: "" },
+              ],
+            },
           ],
         },
       };

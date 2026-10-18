@@ -8,10 +8,15 @@ describe("minigameTemplateSchema", () => {
       title: "Sample",
       description: "",
       poll: {
-        question: "Pick one",
-        options: [
-          { id: "a", label: "A" },
-          { id: "b", label: "B" },
+        questions: [
+          {
+            id: "q1",
+            prompt: "Pick one",
+            options: [
+              { id: "a", label: "A" },
+              { id: "b", label: "B" },
+            ],
+          },
         ],
       },
     });

@@ -120,6 +120,10 @@ export const mockApi = {
     ok({ id, state }),
   advanceQuizQuestion: (_slug: string, id: string) =>
     ok({ id, currentQuestionIndex: 0 }),
+  advancePollQuestion: (_slug: string, id: string) =>
+    ok({ id, currentQuestionIndex: 0 }),
+  answerQuizQuestion: () => ok(null),
+  answerPollQuestion: () => ok(null),
   removeMinigameFromEvent: () => ok(null),
 
   joinEventMinigames: (_slug: string, data: { alias: string }) =>

@@ -429,7 +429,12 @@ const POLL_INSTANCE = {
   mode: "realtime",
   state: "live",
   title: "Sample poll",
-  config: { question: "Q?", options: [] },
+  config: {
+    questions: [
+      { id: "main", prompt: "Q?", options: [{ id: "a", label: "A" }] },
+    ],
+  },
+  currentQuestionIndex: 0,
   order: 2,
   createdBy: "admin-uid",
   createdAt: 0,
@@ -492,7 +497,7 @@ describe("firestore.rules — PR6 response writes", () => {
     await cleanup();
   });
 
-  it("allows a joined participant to vote on a live poll", async () => {
+  it("rejects direct poll writes because the API validates active questions and options", async () => {
     const env = await getTestEnv();
     await seedRealtimeState(env, {
       instanceId: POLL_INSTANCE_ID,
@@ -500,7 +505,7 @@ describe("firestore.rules — PR6 response writes", () => {
       participantUid: "user-1",
     });
     const auth = env.authenticatedContext("user-1").firestore();
-    await assertSucceeds(
+    await assertFails(
       setDoc(
         doc(
           auth,
@@ -511,7 +516,7 @@ describe("firestore.rules — PR6 response writes", () => {
     );
   });
 
-  it("allows a joined participant to vote on a live quiz question", async () => {
+  it("rejects direct quiz answers because the API validates and scores them", async () => {
     const env = await getTestEnv();
     await seedRealtimeState(env, {
       instanceId: QUIZ_INSTANCE_ID,
@@ -519,7 +524,7 @@ describe("firestore.rules — PR6 response writes", () => {
       participantUid: "user-1",
     });
     const auth = env.authenticatedContext("user-1").firestore();
-    await assertSucceeds(
+    await assertFails(
       setDoc(
         doc(
           auth,
@@ -532,6 +537,39 @@ describe("firestore.rules — PR6 response writes", () => {
           isCorrect: true,
           pointsEarned: 100,
         }
+      )
+    );
+  });
+
+  it("lets a player read only their own quiz receipt, never the answer key", async () => {
+    const env = await getTestEnv();
+    await seedRealtimeState(env, {
+      instanceId: QUIZ_INSTANCE_ID,
+      instance: QUIZ_INSTANCE,
+      participantUid: "user-1",
+    });
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(
+        doc(
+          db,
+          `events/${SLUG}/minigames/${QUIZ_INSTANCE_ID}/quiz_receipts/user-1_q1`
+        ),
+        { uid: "user-1", questionId: "q1", optionId: "a" }
+      );
+      await setDoc(
+        doc(db, `events/${SLUG}/minigames/${QUIZ_INSTANCE_ID}/secret/quiz`),
+        { answers: { q1: "a" } }
+      );
+    });
+    const owner = env.authenticatedContext("user-1").firestore();
+    const stranger = env.authenticatedContext("user-2").firestore();
+    const receipt = `events/${SLUG}/minigames/${QUIZ_INSTANCE_ID}/quiz_receipts/user-1_q1`;
+    await assertSucceeds(getDoc(doc(owner, receipt)));
+    await assertFails(getDoc(doc(stranger, receipt)));
+    await assertFails(
+      getDoc(
+        doc(owner, `events/${SLUG}/minigames/${QUIZ_INSTANCE_ID}/secret/quiz`)
       )
     );
   });
@@ -692,11 +730,11 @@ describe("firestore.rules — PR6 quiz score self-update", () => {
     });
   }
 
-  it("allows the owner to merge quizScore + quizAnsweredQuestions", async () => {
+  it("rejects client-written quiz scores", async () => {
     const env = await getTestEnv();
     await seedParticipant(env);
     const auth = env.authenticatedContext("user-1").firestore();
-    await assertSucceeds(
+    await assertFails(
       setDoc(
         doc(
           auth,

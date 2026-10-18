@@ -2,8 +2,9 @@ import { FormField } from "../../ui/FormField";
 import {
   inputClass,
   newOptionId,
-  type OptionItem,
+  newQuestionId,
   type PollConfig,
+  type PollQuestion,
 } from "../types";
 
 interface Props {
@@ -12,84 +13,122 @@ interface Props {
 }
 
 export function PollFields({ value, onChange }: Props) {
-  function setQuestion(question: string) {
-    onChange({ ...value, question });
-  }
+  const questions = value.questions ?? [
+    { id: "main", prompt: value.question ?? "", options: value.options ?? [] },
+  ];
 
-  function setOption(index: number, label: string) {
-    const next = value.options.map((o, i) =>
-      i === index ? { ...o, label } : o
-    );
-    onChange({ ...value, options: next });
-  }
-
-  function addOption() {
-    if (value.options.length >= 6) return;
-    const next: OptionItem[] = [
-      ...value.options,
-      { id: newOptionId(), label: "" },
-    ];
-    onChange({ ...value, options: next });
-  }
-
-  function removeOption(index: number) {
-    if (value.options.length <= 2) return;
+  function changeQuestion(index: number, question: PollQuestion) {
     onChange({
-      ...value,
-      options: value.options.filter((_, i) => i !== index),
+      questions: questions.map((q, i) => (i === index ? question : q)),
     });
   }
 
   return (
-    <div className="space-y-4">
-      <FormField label="Pregunta" required>
-        <input
-          type="text"
-          value={value.question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder="¿Cuál es tu opción favorita?"
-          className={inputClass}
-        />
-      </FormField>
-
-      <div>
-        <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-          Opciones <span className="text-red-500">*</span>
-        </p>
-        <div className="space-y-2">
-          {value.options.map((opt, i) => (
-            <div key={opt.id} className="flex gap-2">
-              <input
-                type="text"
-                value={opt.label}
-                onChange={(e) => setOption(i, e.target.value)}
-                placeholder={`Opción ${i + 1}`}
-                className={inputClass}
-              />
-              <button
-                type="button"
-                onClick={() => removeOption(i)}
-                disabled={value.options.length <= 2}
-                className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-                aria-label={`Eliminar opción ${i + 1}`}
-              >
-                ✕
-              </button>
-            </div>
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={addOption}
-          disabled={value.options.length >= 6}
-          className="mt-2 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+    <div className="space-y-5">
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        El organizador mostrará una pregunta a la vez. Mínimo 1, máximo 50.
+      </p>
+      {questions.map((q, qi) => (
+        <div
+          key={q.id}
+          className="rounded-xl border border-gray-200 p-4 dark:border-gray-700"
         >
-          + Agregar opción
-        </button>
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          Mínimo 2, máximo 6 opciones.
-        </p>
-      </div>
+          <div className="mb-3 flex items-center justify-between">
+            <h4 className="font-semibold">Pregunta {qi + 1}</h4>
+            <button
+              type="button"
+              disabled={questions.length <= 1}
+              onClick={() =>
+                onChange({ questions: questions.filter((_, i) => i !== qi) })
+              }
+              className="text-sm text-red-600 disabled:opacity-40"
+            >
+              Eliminar
+            </button>
+          </div>
+          <FormField label="Enunciado" required>
+            <input
+              type="text"
+              value={q.prompt}
+              onChange={(e) =>
+                changeQuestion(qi, { ...q, prompt: e.target.value })
+              }
+              placeholder="¿Cuál es tu opción favorita?"
+              className={inputClass}
+            />
+          </FormField>
+          <div className="mt-4 space-y-2">
+            {q.options.map((opt, oi) => (
+              <div key={opt.id} className="flex gap-2">
+                <input
+                  type="text"
+                  value={opt.label}
+                  aria-label={`Opción ${oi + 1} de la pregunta ${qi + 1}`}
+                  placeholder={`Opción ${oi + 1}`}
+                  onChange={(e) =>
+                    changeQuestion(qi, {
+                      ...q,
+                      options: q.options.map((o, i) =>
+                        i === oi ? { ...o, label: e.target.value } : o
+                      ),
+                    })
+                  }
+                  className={inputClass}
+                />
+                <button
+                  type="button"
+                  aria-label={`Eliminar opción ${oi + 1}`}
+                  disabled={q.options.length <= 2}
+                  onClick={() =>
+                    changeQuestion(qi, {
+                      ...q,
+                      options: q.options.filter((_, i) => i !== oi),
+                    })
+                  }
+                  className="rounded-lg border px-3 disabled:opacity-40"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              disabled={q.options.length >= 6}
+              onClick={() =>
+                changeQuestion(qi, {
+                  ...q,
+                  options: [...q.options, { id: newOptionId(), label: "" }],
+                })
+              }
+              className="rounded-lg border border-dashed px-3 py-2 text-sm disabled:opacity-40"
+            >
+              + Agregar opción
+            </button>
+          </div>
+        </div>
+      ))}
+      <button
+        type="button"
+        disabled={questions.length >= 50}
+        onClick={() =>
+          onChange({
+            questions: [
+              ...questions,
+              {
+                id: newQuestionId(),
+                prompt: "",
+                options: [
+                  { id: newOptionId(), label: "" },
+                  { id: newOptionId(), label: "" },
+                ],
+              },
+            ],
+          })
+        }
+        className="rounded-lg border border-dashed px-4 py-2 text-sm disabled:opacity-40"
+      >
+        + Agregar pregunta
+      </button>
     </div>
   );
 }

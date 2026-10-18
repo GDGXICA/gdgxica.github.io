@@ -309,6 +309,33 @@ const realApi = {
       "POST",
       `/events/${encodeURIComponent(slug)}/minigames/${id}/quiz/advance`
     ),
+  advancePollQuestion: (slug: string, id: string) =>
+    request(
+      "POST",
+      `/events/${encodeURIComponent(slug)}/minigames/${id}/poll/advance`
+    ),
+  answerQuizQuestion: (
+    slug: string,
+    id: string,
+    questionId: string,
+    optionId: string
+  ) =>
+    request(
+      "POST",
+      `/events/${encodeURIComponent(slug)}/minigames/${id}/quiz/answer`,
+      { questionId, optionId }
+    ),
+  answerPollQuestion: (
+    slug: string,
+    id: string,
+    questionId: string,
+    optionId: string
+  ) =>
+    request(
+      "POST",
+      `/events/${encodeURIComponent(slug)}/minigames/${id}/poll/answer`,
+      { questionId, optionId }
+    ),
   removeMinigameFromEvent: (slug: string, id: string) =>
     request("DELETE", `/events/${encodeURIComponent(slug)}/minigames/${id}`),
 
