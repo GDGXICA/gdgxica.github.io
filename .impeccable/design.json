@@ -1,0 +1,394 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-18T00:00:00Z",
+  "title": "Design System: Panel GDG ICA",
+  "extensions": {
+    "scope": "Solo el panel admin (/admin/*), bajo body.admin-atlas en src/layouts/AdminLayout.astro. El sitio público queda fuera.",
+    "colorMeta": {
+      "atlas-night": {
+        "role": "neutral",
+        "displayName": "Noche",
+        "canonical": "#0a1021",
+        "tonalRamp": [
+          "#070b17",
+          "#0a1021",
+          "#16233d",
+          "#24374f",
+          "#3b5072",
+          "#8a93a6",
+          "#c9ced8",
+          "#f2f2e9"
+        ]
+      },
+      "atlas-deep": {
+        "role": "neutral",
+        "displayName": "Índigo",
+        "canonical": "#16233d",
+        "tonalRamp": [
+          "#070b17",
+          "#0a1021",
+          "#16233d",
+          "#24374f",
+          "#3b5072",
+          "#8a93a6",
+          "#c9ced8",
+          "#f2f2e9"
+        ]
+      },
+      "atlas-chart": {
+        "role": "neutral",
+        "displayName": "Azul carta",
+        "canonical": "#24374f",
+        "tonalRamp": [
+          "#070b17",
+          "#0a1021",
+          "#16233d",
+          "#24374f",
+          "#3b5072",
+          "#8a93a6",
+          "#c9ced8",
+          "#f2f2e9"
+        ]
+      },
+      "atlas-line": {
+        "role": "neutral",
+        "displayName": "Filete",
+        "canonical": "#2e4262",
+        "tonalRamp": [
+          "#0a1021",
+          "#16233d",
+          "#24374f",
+          "#2e4262",
+          "#3b5072",
+          "#8a93a6",
+          "#c9ced8",
+          "#f2f2e9"
+        ]
+      },
+      "atlas-fog": {
+        "role": "neutral",
+        "displayName": "Velo",
+        "canonical": "#8a93a6",
+        "tonalRamp": [
+          "#16233d",
+          "#24374f",
+          "#3b5072",
+          "#8a93a6",
+          "#a7afbf",
+          "#c9ced8",
+          "#dee1e7",
+          "#f2f2e9"
+        ]
+      },
+      "atlas-mist": {
+        "role": "neutral",
+        "displayName": "Bruma",
+        "canonical": "#b8bfcc",
+        "tonalRamp": [
+          "#16233d",
+          "#24374f",
+          "#3b5072",
+          "#8a93a6",
+          "#b8bfcc",
+          "#c9ced8",
+          "#dee1e7",
+          "#f2f2e9"
+        ]
+      },
+      "atlas-dust": {
+        "role": "neutral",
+        "displayName": "Polvo de estrellas",
+        "canonical": "#f2f2e9",
+        "tonalRamp": [
+          "#24374f",
+          "#3b5072",
+          "#8a93a6",
+          "#a7afbf",
+          "#c9ced8",
+          "#dee1e7",
+          "#ecede8",
+          "#f2f2e9"
+        ]
+      },
+      "atlas-star": {
+        "role": "primary",
+        "displayName": "Ámbar estelar",
+        "canonical": "#ff4d2e",
+        "tonalRamp": [
+          "#2a0b05",
+          "#4a140a",
+          "#7e1f0e",
+          "#b02c14",
+          "#d1361a",
+          "#ff4d2e",
+          "#ffb9a6",
+          "#fff0eb"
+        ]
+      },
+      "atlas-ember": {
+        "role": "primary",
+        "displayName": "Ascua",
+        "canonical": "#d1361a",
+        "tonalRamp": [
+          "#2a0b05",
+          "#4a140a",
+          "#7e1f0e",
+          "#b02c14",
+          "#d1361a",
+          "#ff4d2e",
+          "#ffdcd1",
+          "#fff0eb"
+        ]
+      },
+      "atlas-ember-deep": {
+        "role": "primary",
+        "displayName": "Ascua profunda",
+        "canonical": "#b02c14",
+        "tonalRamp": [
+          "#2a0b05",
+          "#4a140a",
+          "#7e1f0e",
+          "#b02c14",
+          "#d1361a",
+          "#ff4d2e",
+          "#ffdcd1",
+          "#fff0eb"
+        ]
+      },
+      "atlas-glow": {
+        "role": "secondary",
+        "displayName": "Ámbar claro",
+        "canonical": "#ffb36b",
+        "tonalRamp": [
+          "#46290c",
+          "#6e4013",
+          "#a15e1e",
+          "#c97a2c",
+          "#f29b45",
+          "#ffb36b",
+          "#ffd4a8",
+          "#fff5ea"
+        ]
+      },
+      "atlas-ok": {
+        "role": "tertiary",
+        "displayName": "Verde sincronía",
+        "canonical": "#6fcf97",
+        "tonalRamp": [
+          "#103524",
+          "#1b573a",
+          "#23704a",
+          "#2c8c5a",
+          "#3faf73",
+          "#6fcf97",
+          "#bfeacf",
+          "#eefaf2"
+        ]
+      },
+      "atlas-rose": {
+        "role": "tertiary",
+        "displayName": "Rosa error",
+        "canonical": "#ff8a9a",
+        "tonalRamp": [
+          "#2a0a12",
+          "#44101d",
+          "#6e1a2e",
+          "#9e2540",
+          "#c2334f",
+          "#ff8a9a",
+          "#ffb8c2",
+          "#fff0f2"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Título de página, saludo del dashboard, nombre del evento en modo vivo, con .atlas-name (Archivo 640, ancho 118%). 28px en celular, 36px desde sm; 44px en login."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Encabezado de sección (.atlas-name, 22px) seguido de un filete con nodo."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Nombre de evento en filas (.atlas-name, 20px) y en la efeméride (17px); «GDG ICA» en el riel (22px)."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Navegación del riel, filas de «Te esperan», texto introductorio."
+      },
+      "body-sm": {
+        "displayName": "Body small",
+        "purpose": "Línea de coordenadas, metadatos, botones."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Versalitas espaciadas: grupos del riel, leyendas, meses, «Hoy»."
+      },
+      "numeral": {
+        "displayName": "Numeral",
+        "purpose": "Día de fecha (32px) y conteo pendiente (28px), cifras tabulares."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "atlas-reticle-in",
+        "value": "420ms cubic-bezier(0.16, 1, 0.3, 1) both; from scale(1.6) rotate(-45deg) opacity 0",
+        "purpose": "Entrada de la retícula en el elemento activo o tuyo. Desactivada con prefers-reduced-motion."
+      },
+      {
+        "name": "reticle-spin",
+        "value": "spin 2.4s linear infinite",
+        "purpose": "Retícula girando como indicador de carga."
+      },
+      {
+        "name": "live-ping",
+        "value": "animate-ping, opacity 0.6, motion-reduce:none",
+        "purpose": "Punto «En vivo» de la cabecera en modo evento."
+      },
+      {
+        "name": "color-transition",
+        "value": "transition-colors 150ms",
+        "purpose": "Hover de botones, ítems del riel y filas."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px",
+        "purpose": "Pestañas de evento en cabecera; acciones de cabecera a la derecha."
+      },
+      {
+        "name": "lg",
+        "value": "1024px",
+        "purpose": "Riel fijo de 248px; por debajo, cajón modal."
+      }
+    ],
+    "transitional": {
+      "name": "Puente de colores",
+      "file": "src/styles/admin.css",
+      "description": "Dentro de .admin-atlas se reasignan las escalas gray, blue, red, green, amber y yellow de Tailwind a valores del mundo para que las secciones no migradas rendericen en la noche. Transitorio: el código nuevo usa tokens atlas-*, y el puente se retira cuando todas las secciones migren. No forma parte de la paleta."
+    }
+  },
+  "components": [
+    {
+      "name": "Botón primario",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "La acción principal de una zona; uno por zona.",
+      "html": "<button class=\"ds-btn-primary\">Nuevo evento</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--color-atlas-ember, #d1361a); color: #fff; padding: 10px 16px; border: none; border-radius: 6px; font-family: 'Archivo Variable', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color 150ms; } .ds-btn-primary:hover { background: #b02c14; } .ds-btn-primary:focus-visible { outline: 2px solid var(--color-atlas-star, #ff4d2e); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.5; }"
+    },
+    {
+      "name": "Botón secundario",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Acciones de apoyo junto a la primaria y en filas.",
+      "html": "<button class=\"ds-btn-secondary\">Escribir post</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: transparent; color: var(--color-atlas-dust, #f2f2e9); padding: 10px 16px; border: 1px solid var(--color-atlas-line, #2e4262); border-radius: 6px; font-family: 'Archivo Variable', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color 150ms, border-color 150ms; } .ds-btn-secondary:hover { border-color: var(--color-atlas-mist, #b8bfcc); background: var(--color-atlas-deep, #16233d); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--color-atlas-star, #ff4d2e); outline-offset: 2px; }"
+    },
+    {
+      "name": "Botón discreto",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Salidas y acciones terciarias sin borde.",
+      "html": "<a class=\"ds-btn-quiet\" href=\"#\">Ver el sitio público</a>",
+      "css": ".ds-btn-quiet { display: inline-flex; align-items: center; gap: 8px; color: var(--color-atlas-mist, #b8bfcc); padding: 6px 8px; border-radius: 6px; font-family: 'Archivo Variable', sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; transition: color 150ms; } .ds-btn-quiet:hover { color: var(--color-atlas-dust, #f2f2e9); } .ds-btn-quiet:focus-visible { outline: 2px solid var(--color-atlas-star, #ff4d2e); outline-offset: 2px; }"
+    },
+    {
+      "name": "Riel de navegación",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Grupo del riel con etiqueta en versalitas, ítem activo con retícula y conteo pendiente.",
+      "html": "<nav class=\"ds-rail\"><h3 class=\"ds-rail-group\">Contenido<span></span></h3><ul><li><a class=\"ds-rail-item is-active\" href=\"#\" aria-current=\"page\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"><circle cx=\"12\" cy=\"12\" r=\"6.5\"/><circle cx=\"12\" cy=\"12\" r=\"1.25\" fill=\"currentColor\" stroke=\"none\"/><path d=\"M12 2v4M12 18v4M2 12h4M18 12h4\"/></svg><span>Eventos</span></a></li><li><a class=\"ds-rail-item\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"><circle cx=\"12\" cy=\"12\" r=\"6.5\"/><path d=\"M12 2v4M12 18v4M2 12h4M18 12h4\"/></svg><span>Foro</span><b class=\"ds-rail-count\">1</b></a></li></ul></nav>",
+      "css": ".ds-rail { width: 248px; background: var(--color-atlas-night, #0a1021); padding: 12px; font-family: 'Archivo Variable', sans-serif; } .ds-rail ul { list-style: none; margin: 0; padding: 0; } .ds-rail-group { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; padding: 0 8px; color: var(--color-atlas-glow, #ffb36b); font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; font-stretch: 112%; } .ds-rail-group span { flex: 1; height: 1px; background: var(--color-atlas-line, #2e4262); } .ds-rail-item { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 6px; color: var(--color-atlas-mist, #b8bfcc); font-size: 15px; text-decoration: none; transition: background-color 150ms, color 150ms; } .ds-rail-item svg { flex-shrink: 0; color: transparent; } .ds-rail-item span { flex: 1; } .ds-rail-item:hover { background: rgb(22 35 61 / 0.6); color: var(--color-atlas-dust, #f2f2e9); } .ds-rail-item:hover svg { color: var(--color-atlas-line, #2e4262); } .ds-rail-item.is-active { background: var(--color-atlas-deep, #16233d); color: var(--color-atlas-dust, #f2f2e9); font-weight: 600; } .ds-rail-item.is-active svg { color: var(--color-atlas-star, #ff4d2e); } .ds-rail-item:focus-visible { outline: 2px solid var(--color-atlas-star, #ff4d2e); outline-offset: 2px; } .ds-rail-count { color: var(--color-atlas-star, #ff4d2e); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Panel de carta con nodos",
+      "kind": "card",
+      "refersTo": "chart-panel",
+      "description": "Contenedor de la efeméride y de «Te esperan»: borde de 1px, esquina de 2px y rombos en las esquinas.",
+      "html": "<ul class=\"ds-chart-panel\"><i class=\"ds-node tl\"></i><i class=\"ds-node tr\"></i><i class=\"ds-node bl\"></i><i class=\"ds-node br\"></i><li><a href=\"#\"><b>2</b><span>Solicitudes de acceso</span><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14M13 6l6 6-6 6\"/></svg></a></li><li><a href=\"#\"><b>1</b><span>Posts en borrador</span><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14M13 6l6 6-6 6\"/></svg></a></li></ul>",
+      "css": ".ds-chart-panel { position: relative; list-style: none; margin: 0; padding: 0; width: 360px; border: 1px solid var(--color-atlas-line, #2e4262); border-radius: 2px; background: var(--color-atlas-night, #0a1021); font-family: 'Archivo Variable', sans-serif; } .ds-node { position: absolute; width: 6px; height: 6px; transform: rotate(45deg); border: 1px solid rgb(255 77 46 / 0.7); background: var(--color-atlas-night, #0a1021); pointer-events: none; } .ds-node.tl { top: -3.5px; left: -3.5px; } .ds-node.tr { top: -3.5px; right: -3.5px; } .ds-node.bl { bottom: -3.5px; left: -3.5px; } .ds-node.br { bottom: -3.5px; right: -3.5px; } .ds-chart-panel li + li { border-top: 1px solid var(--color-atlas-line, #2e4262); } .ds-chart-panel a { display: flex; align-items: center; gap: 16px; padding: 16px 20px; color: var(--color-atlas-dust, #f2f2e9); text-decoration: none; font-size: 15px; transition: background-color 150ms; } .ds-chart-panel a:hover { background: rgb(22 35 61 / 0.6); } .ds-chart-panel a:focus-visible { outline: 2px solid var(--color-atlas-star, #ff4d2e); outline-offset: 2px; } .ds-chart-panel b { width: 40px; font-size: 28px; line-height: 1; font-weight: 600; color: var(--color-atlas-star, #ff4d2e); font-variant-numeric: tabular-nums; } .ds-chart-panel span { flex: 1; } .ds-chart-panel svg { color: var(--color-atlas-fog, #8a93a6); transition: color 150ms; } .ds-chart-panel a:hover svg { color: var(--color-atlas-dust, #f2f2e9); }"
+    },
+    {
+      "name": "Encabezado de sección",
+      "kind": "custom",
+      "description": "Nombre en Archivo ancho seminegrita (.atlas-name) 22px seguido de un filete con nodo en rombo.",
+      "html": "<div class=\"ds-section-heading\"><h2>Te esperan</h2><div class=\"ds-rule\"><i></i><span></span></div></div>",
+      "css": ".ds-section-heading { display: flex; align-items: flex-end; gap: 16px; width: 480px; } .ds-section-heading h2 { margin: 0; font-family: 'Archivo Variable', sans-serif; font-weight: 640; font-stretch: 118%; font-size: 22px; line-height: 1; letter-spacing: -0.015em; color: var(--color-atlas-dust, #f2f2e9); } .ds-rule { flex: 1; display: flex; align-items: center; margin-bottom: 4px; } .ds-rule i { width: 6px; height: 6px; transform: rotate(45deg); border: 1px solid rgb(255 77 46 / 0.7); } .ds-rule span { flex: 1; height: 1px; background: var(--color-atlas-line, #2e4262); }"
+    },
+    {
+      "name": "Retícula de localización",
+      "kind": "custom",
+      "description": "Marca firma del elemento activo, tuyo o en carga; entra rotando y escalando.",
+      "html": "<span class=\"ds-reticle-demo\"><svg class=\"ds-reticle\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"><circle cx=\"12\" cy=\"12\" r=\"6.5\"/><circle cx=\"12\" cy=\"12\" r=\"1.25\" fill=\"currentColor\" stroke=\"none\"/><path d=\"M12 2v4M12 18v4M2 12h4M18 12h4\"/></svg><i class=\"ds-magnitude\"></i></span>",
+      "css": ".ds-reticle-demo { position: relative; display: inline-grid; place-items: center; width: 32px; height: 32px; } .ds-reticle { position: absolute; color: var(--color-atlas-star, #ff4d2e); animation: ds-reticle-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both; } .ds-magnitude { width: 13px; height: 13px; border-radius: 9999px; background: var(--color-atlas-dust, #f2f2e9); } @keyframes ds-reticle-in { from { transform: scale(1.6) rotate(-45deg); opacity: 0; } to { transform: scale(1) rotate(0deg); opacity: 1; } } @media (prefers-reduced-motion: reduce) { .ds-reticle { animation: none; } }"
+    },
+    {
+      "name": "Estado de error",
+      "kind": "custom",
+      "refersTo": "error-state",
+      "description": "Caja rosa con reintento secundario; role=alert.",
+      "html": "<div class=\"ds-error\" role=\"alert\"><span>No se pudo cargar el calendario de eventos del sitio.</span><button>Reintentar</button></div>",
+      "css": ".ds-error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 12px 16px; border: 1px solid rgb(255 138 154 / 0.4); background: rgb(255 138 154 / 0.05); border-radius: 6px; color: var(--color-atlas-dust, #f2f2e9); font-family: 'Archivo Variable', sans-serif; font-size: 14px; } .ds-error span { flex: 1; } .ds-error button { background: transparent; border: 1px solid var(--color-atlas-line, #2e4262); color: var(--color-atlas-dust, #f2f2e9); padding: 6px 12px; border-radius: 6px; font: inherit; font-weight: 600; cursor: pointer; transition: border-color 150ms; } .ds-error button:hover { border-color: var(--color-atlas-mist, #b8bfcc); } .ds-error button:focus-visible { outline: 2px solid var(--color-atlas-star, #ff4d2e); outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "La carta celeste de la comunidad",
+    "overview": "El panel es un atlas estelar nocturno. Cada cosa tiene coordenadas (fecha, alcance, rol, estado) y su importancia se lee como magnitud: el tamaño del punto, el brillo del número, el ámbar que solo aparece donde algo te necesita. Rechaza el admin gris de tarjetas blancas con un acento azul. La superficie es noche plana en capas de índigo, trazada con filetes de un píxel que terminan en nodos rotados, como las líneas de una carta impresa.\n\nLa densidad es de herramienta de trabajo, no de tablero: una sola columna de contenido bajo una cabecera que dice dónde estás y qué alcance tienes, con un riel de navegación agrupado a la izquierda. Los nombres propios (eventos, la comunidad, títulos de página) se escriben en el corte ancho seminegrita de Archivo (.atlas-name); lo operativo, en la misma grotesca a ancho normal; las etiquetas, en versalitas espaciadas; las cifras, tabulares. Existe un segundo modo, evento en vivo, que cambia la cabecera a índigo, muestra el estado de sincronización en la línea de coordenadas y, en el celular, añade una barra de pestañas inferior.\n\nSolo noche: no hay variante clara (color-scheme: dark). Sin brillos ni degradados decorativos.",
+    "keyCharacteristics": [
+      "Noche plana en tres capas (noche, índigo, azul carta) separadas por filetes de 1px, no por sombras.",
+      "Un único acento cálido, ámbar estelar, reservado para la acción principal, el foco y lo pendiente.",
+      "Retícula de localización (anillo con cruz) como marca del elemento activo, seleccionado o tuyo.",
+      "Magnitud: rampa fija de tamaños de punto para la importancia de un evento.",
+      "Una sola familia, Archivo Variable: corte ancho seminegrita para nombres, ancho normal para todo lo demás, versalitas para etiquetas."
+    ],
+    "rules": [
+      {
+        "name": "The Una Sola Estrella Rule",
+        "body": "El ámbar estelar y su ascua marcan una sola cosa por zona: la acción principal de la cabecera, el elemento activo, lo pendiente. Si dos botones primarios compiten en la misma fila, uno de los dos es secundario. En «Tus eventos», «Abrir check-in» solo es primario el día del evento.",
+        "section": "colors"
+      },
+      {
+        "name": "The Puente Transitorio Rule",
+        "body": "Dentro de .admin-atlas, src/styles/admin.css reasigna las escalas gray, blue, red, green, amber y yellow de Tailwind a valores del mundo (blue-* pasa a la rampa ascua, gray-* a la tinta nocturna) para que las secciones aún no migradas no rompan la noche. Es un mecanismo de transición, no la paleta: el código nuevo usa solo tokens atlas-*, y el puente se retira cuando la última sección migre. No se citan sus valores como colores del sistema.",
+        "section": "colors"
+      },
+      {
+        "name": "The Nombre Propio Rule",
+        "body": "El corte ancho seminegrita (.atlas-name: 640, ancho 118%) está reservado para nombres y títulos: de página, de sección, de evento, de la comunidad, la inicial del avatar, los títulos de login y avisos. Nunca para botones, etiquetas, cifras o texto corrido.",
+        "section": "typography"
+      },
+      {
+        "name": "The Cifra Tabular Rule",
+        "body": "Tablas, <time> y todo número que se compara usan cifras tabulares (.tabular, ya aplicado por defecto a table y time).",
+        "section": "typography"
+      },
+      {
+        "name": "The Tinta Plana Rule",
+        "body": "Nada flota. Si una superficie necesita separarse, sube una capa tonal o gana un filete; nunca una sombra ni un brillo.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do usar solo tokens atlas-* en código nuevo del panel; el puente de admin.css es para lo no migrado.",
+      "Do reservar el ámbar estelar y la ascua para la acción principal, el foco, lo activo y lo pendiente.",
+      "Do escribir los nombres propios (página, sección, evento) con .atlas-name y todo lo demás en Archivo a ancho normal; una sola familia.",
+      "Do separar superficies con capas tonales y filetes de 1px, y cerrar encabezados y paneles de carta con nodos en rombo.",
+      "Do marcar lo activo, lo tuyo y lo que carga con la retícula de localización, y dar importancia con la rampa fija de magnitud (6 / 9 / 13 / 18px).",
+      "Do usar cifras tabulares en tablas, fechas y conteos.",
+      "Do dibujar los iconos como trazo de 1.5 en una caja de 24, heredando currentColor."
+    ],
+    "donts": [
+      "Don't usar box-shadow, brillos ni degradados decorativos; la máscara de desplazamiento del riel es la única transición tonal.",
+      "Don't añadir una variante clara: el panel es solo noche.",
+      "Don't reintroducir el admin gris de tarjetas blancas con acento azul, ni los colores Google del sitio público dentro del panel (salvo el logotipo de Google en su botón).",
+      "Don't usar .atlas-name en botones, etiquetas o cifras, ni reintroducir una segunda familia o itálicas.",
+      "Don't usar emoji ni caracteres como iconos; los iconos son SVG de trazo.",
+      "Don't mostrar slugs, uids o claves de permiso donde puede ir el nombre del evento o de la persona."
+    ]
+  }
+}

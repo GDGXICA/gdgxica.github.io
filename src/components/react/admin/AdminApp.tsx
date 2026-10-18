@@ -3,6 +3,7 @@ import { AuthProvider, DevAuthProvider, useAuth } from "./AuthProvider";
 import { LoginScreen } from "./LoginScreen";
 import { isDevPreview } from "@/lib/api";
 import { AdminShell } from "./AdminShell";
+import { ChartRule, LoadingState, buttonClass } from "./ui/atlas";
 import { Dashboard } from "./Dashboard";
 import { EventList } from "./events/EventList";
 import { EventForm } from "./events/EventForm";
@@ -28,8 +29,10 @@ import { EventStaffPanel } from "./event-staff/EventStaffPanel";
 import { ProposalsPanel } from "./proposals/ProposalsPanel";
 import {
   canReachByAssignment,
+  ROLE_LABELS,
   type Permission,
   type PermissionSubject,
+  type Role,
 } from "@/lib/permissions";
 
 interface Props {
@@ -138,11 +141,7 @@ function pageContent(page: string) {
     case "credentials":
       return <CredentialsPanel />;
     default:
-      return (
-        <p className="text-gray-500 dark:text-gray-400">
-          Pagina en construccion
-        </p>
-      );
+      return <p className="text-atlas-mist">Página en construcción</p>;
   }
 }
 
@@ -166,7 +165,7 @@ function renderPage(page: string, guards: Guards | null) {
     !guards.can(required) &&
     !(guards.profile && canReachByAssignment(guards.profile, required))
   ) {
-    return <AccessDenied role={guards.role} signOut={guards.signOut} />;
+    return <AccessDenied role={guards.role} />;
   }
   return content;
 }
@@ -187,7 +186,7 @@ function AdminContent({ page, currentPath }: Props) {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+        <LoadingState label="Abriendo el panel…" />
       </div>
     );
   }
@@ -213,42 +212,24 @@ function AdminContent({ page, currentPath }: Props) {
 
   if (!canAccessPanel) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-md rounded-xl bg-white p-8 text-center shadow-lg dark:bg-gray-800">
-          <p className="text-4xl">🔒</p>
-          <h1 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">
-            Acceso restringido
-          </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Tu cuenta no tiene permisos para operar la plataforma. Si formas
-            parte del GDG o quieres colaborar, solicita acceso y un
-            administrador lo revisara.
-          </p>
-          <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">
-            Sesion: {user.email} (rol: {role})
-          </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <button
-              onClick={signOut}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-            >
-              Cerrar sesion
-            </button>
-            <a
-              href="/admin/solicitar"
-              className="inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
+      <Notice
+        title="Todavía no tienes acceso al panel"
+        body="Tu cuenta no tiene permisos para operar la plataforma. Si formas parte del GDG o quieres colaborar, solicita acceso y un administrador lo revisará."
+        session={`${user.email}`}
+        actions={
+          <>
+            <a href="/admin/solicitar" className={buttonClass.primary}>
               Solicitar acceso
             </a>
-            <a
-              href="/"
-              className="inline-block rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-            >
+            <button onClick={signOut} className={buttonClass.secondary}>
+              Cerrar sesión
+            </button>
+            <a href="/" className={buttonClass.quiet}>
               Volver al sitio
             </a>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
     );
   }
 
@@ -262,9 +243,9 @@ function AdminContent({ page, currentPath }: Props) {
 function DevContent({ page, currentPath }: Props) {
   return (
     <AdminShell currentPage={currentPath}>
-      <div className="mb-4 rounded-lg border border-yellow-300 bg-yellow-50 px-4 py-2 text-sm text-yellow-800 dark:border-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400">
-        PREVIEW MODE — datos de ejemplo, sin auth
-      </div>
+      <p className="border-atlas-glow/40 text-atlas-glow mb-6 rounded-md border px-4 py-2 text-sm">
+        Vista previa local: datos de ejemplo, sin iniciar sesión.
+      </p>
       {renderPage(page, null)}
     </AdminShell>
   );
@@ -293,75 +274,82 @@ function ProfileUnavailable({
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-md rounded-xl bg-white p-8 text-center shadow-lg dark:bg-gray-800">
-        <p className="text-4xl">📡</p>
-        <h1 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">
-          No pudimos cargar tu perfil
-        </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
-          Tu sesion sigue abierta, pero no se pudo leer tu cuenta. Suele ser la
-          conexion. Reintenta en un momento; tus permisos no han cambiado.
-        </p>
-        <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">
-          Sesion: {email}
-        </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-3">
+    <Notice
+      title="No pudimos cargar tu perfil"
+      body="Tu sesión sigue abierta, pero no se pudo leer tu cuenta. Suele ser la conexión. Reintenta en un momento; tus permisos no han cambiado."
+      session={email}
+      actions={
+        <>
           <button
             onClick={handleRetry}
             disabled={retrying}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+            className={buttonClass.primary}
           >
             {retrying ? "Reintentando…" : "Reintentar"}
           </button>
-          <button
-            onClick={signOut}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-          >
-            Cerrar sesion
+          <button onClick={signOut} className={buttonClass.secondary}>
+            Cerrar sesión
           </button>
+        </>
+      }
+    />
+  );
+}
+
+function AccessDenied({ role }: { role: string | null }) {
+  return (
+    <div className="flex min-h-[60vh] items-center">
+      <div className="max-w-lg">
+        <h2 className="atlas-name text-atlas-dust text-3xl">
+          Esta sección no está en tu alcance
+        </h2>
+        <ChartRule className="mt-4" />
+        <p className="text-atlas-mist mt-4">
+          Tu cuenta no tiene el permiso que pide esta página. Si lo necesitas,
+          pídeselo a un organizador; si trabajas en un evento, entra desde tus
+          eventos en el inicio.
+        </p>
+        {role && (
+          <p className="text-atlas-fog mt-2 text-sm">
+            Rol actual: {ROLE_LABELS[role as Role] ?? role}
+          </p>
+        )}
+        <div className="mt-6 flex flex-wrap gap-3">
+          <a href="/admin" className={buttonClass.primary}>
+            Ir al inicio
+          </a>
         </div>
       </div>
     </div>
   );
 }
 
-function AccessDenied({
-  role,
-  signOut,
+function Notice({
+  title,
+  body,
+  session,
+  actions,
 }: {
-  role: string | null;
-  signOut: () => void;
+  title: string;
+  body: string;
+  session: string | null;
+  actions: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-[60vh] items-center justify-center">
-      <div className="max-w-md rounded-xl bg-white p-8 text-center shadow-lg dark:bg-gray-800">
-        <p className="text-4xl">🔒</p>
-        <h2 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">
-          Acceso restringido
-        </h2>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
-          Esta seccion requiere permisos de administrador.
-        </p>
-        <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
-          Rol actual: {role}
-        </p>
-        <div className="mt-6 flex justify-center gap-3">
-          <button
-            onClick={signOut}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-          >
-            Cerrar sesion
-          </button>
-          <a
-            href="/admin"
-            className="inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            Ir al dashboard
-          </a>
-        </div>
+    <main className="flex min-h-screen items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        <img src="/gdg-logo.png" alt="" className="h-8 w-auto" />
+        <h1 className="atlas-name text-atlas-dust mt-6 text-[2.25rem] leading-[1.05]">
+          {title}
+        </h1>
+        <ChartRule className="mt-5" />
+        <p className="text-atlas-mist mt-5 leading-relaxed">{body}</p>
+        {session && (
+          <p className="text-atlas-fog mt-3 text-sm">Sesión: {session}</p>
+        )}
+        <div className="mt-8 flex flex-wrap items-center gap-3">{actions}</div>
       </div>
-    </div>
+    </main>
   );
 }
 

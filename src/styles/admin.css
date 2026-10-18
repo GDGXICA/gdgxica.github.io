@@ -1,0 +1,137 @@
+@import "@fontsource-variable/archivo/wdth.css";
+
+.admin-atlas {
+  --color-gray-950: #070b17;
+  --color-gray-900: #0a1021;
+  --color-gray-800: #16233d;
+  --color-gray-700: #24374f;
+  --color-gray-600: #3b5072;
+  --color-gray-500: #8a93a6;
+  --color-gray-400: #a7afbf;
+  --color-gray-300: #c9ced8;
+  --color-gray-200: #dee1e7;
+  --color-gray-100: #ecede8;
+  --color-gray-50: #f2f2e9;
+
+  --color-blue-950: #2a0b05;
+  --color-blue-900: #4a140a;
+  --color-blue-800: #7e1f0e;
+  --color-blue-700: #b02c14;
+  --color-blue-600: #d1361a;
+  --color-blue-500: #ff4d2e;
+  --color-blue-400: #dce1ea;
+  --color-blue-300: #c9ced8;
+  --color-blue-200: #ffb9a6;
+  --color-blue-100: #ffdcd1;
+  --color-blue-50: #fff0eb;
+
+  --color-red-950: #2a0a12;
+  --color-red-900: #44101d;
+  --color-red-800: #6e1a2e;
+  --color-red-700: #9e2540;
+  --color-red-600: #c2334f;
+  --color-red-500: #f25c74;
+  --color-red-400: #ff8a9a;
+  --color-red-300: #ff94a3;
+  --color-red-200: #ffb8c2;
+  --color-red-100: #ffdde2;
+  --color-red-50: #fff0f2;
+
+  --color-green-900: #103524;
+  --color-green-800: #1b573a;
+  --color-green-700: #23704a;
+  --color-green-600: #2c8c5a;
+  --color-green-500: #3faf73;
+  --color-green-400: #6fcf97;
+  --color-green-300: #9bddb5;
+  --color-green-200: #bfeacf;
+  --color-green-100: #ddf4e6;
+  --color-green-50: #eefaf2;
+
+  --color-amber-900: #46290c;
+  --color-amber-800: #6e4013;
+  --color-amber-700: #a15e1e;
+  --color-amber-600: #c97a2c;
+  --color-amber-500: #f29b45;
+  --color-amber-400: #ffb36b;
+  --color-amber-300: #ffc994;
+  --color-amber-200: #ffd4a8;
+  --color-amber-100: #ffe8cf;
+  --color-amber-50: #fff5ea;
+
+  --color-yellow-900: #46290c;
+  --color-yellow-800: #6e4013;
+  --color-yellow-700: #a15e1e;
+  --color-yellow-600: #c97a2c;
+  --color-yellow-500: #f29b45;
+  --color-yellow-400: #ffb36b;
+  --color-yellow-300: #ffc994;
+  --color-yellow-200: #ffd4a8;
+  --color-yellow-100: #ffe8cf;
+  --color-yellow-50: #fff5ea;
+
+  font-family: var(--font-atlas);
+  font-stretch: 102%;
+  background: var(--color-atlas-night);
+  color: var(--color-atlas-dust);
+  color-scheme: dark;
+  caret-color: var(--color-atlas-star);
+  scrollbar-color: var(--color-atlas-line) transparent;
+  -webkit-font-smoothing: antialiased;
+}
+
+.admin-atlas ::selection {
+  background: rgb(255 77 46 / 0.35);
+  color: #fff;
+}
+
+.admin-atlas :focus-visible:not([tabindex="-1"]) {
+  outline: 2px solid var(--color-atlas-star);
+  outline-offset: 2px;
+}
+
+.admin-atlas ::placeholder {
+  color: var(--color-atlas-fog);
+  opacity: 1;
+}
+
+.admin-atlas table,
+.admin-atlas time,
+.admin-atlas .tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.atlas-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-stretch: 112%;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.atlas-name {
+  font-weight: 640;
+  font-stretch: 118%;
+  letter-spacing: -0.015em;
+}
+
+@keyframes atlas-reticle-in {
+  from {
+    transform: scale(1.6) rotate(-45deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.atlas-reticle-in {
+  animation: atlas-reticle-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atlas-reticle-in {
+    animation: none;
+  }
+}

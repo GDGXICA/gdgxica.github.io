@@ -1,3 +1,5 @@
+import { cloneElement, isValidElement, useId, type ReactElement } from "react";
+
 interface Props {
   label: string;
   error?: string;
@@ -5,16 +7,49 @@ interface Props {
   children: React.ReactNode;
 }
 
+const CONTROLS = new Set(["input", "select", "textarea"]);
+
+type ControlProps = {
+  id?: string;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
+};
+
 export function FormField({ label, error, required, children }: Props) {
+  const generated = useId();
+  let controlId: string | undefined;
+  let content = children;
+
+  if (
+    isValidElement<ControlProps>(children) &&
+    typeof children.type === "string" &&
+    CONTROLS.has(children.type)
+  ) {
+    controlId = children.props.id ?? generated;
+    content = cloneElement(children as ReactElement<ControlProps>, {
+      id: controlId,
+      "aria-invalid": error ? true : undefined,
+      "aria-describedby": error ? `${controlId}-error` : undefined,
+    });
+  }
+
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label
+        htmlFor={controlId}
+        className="text-atlas-mist mb-1.5 block text-sm font-semibold"
+      >
         {label}
-        {required && <span className="text-red-500"> *</span>}
+        {required && <span className="text-atlas-star"> *</span>}
       </label>
-      {children}
+      {content}
       {error && (
-        <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p
+          id={controlId ? `${controlId}-error` : undefined}
+          className="text-atlas-rose mt-1 text-sm"
+        >
+          {error}
+        </p>
       )}
     </div>
   );
