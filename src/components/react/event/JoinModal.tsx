@@ -12,8 +12,6 @@ interface Props {
 const ALIAS_MAX = 24;
 
 function isLocallyClean(alias: string): boolean {
-  // Mirror the server's denylist with a small client check so we surface
-  // the error before round-tripping. Server is still source of truth.
   const normalized = alias
     .toLowerCase()
     .normalize("NFD")
@@ -55,7 +53,6 @@ export function JoinModal({
       setError(res.error || "No pudimos conectarte. Intenta de nuevo.");
       setSubmitting(false);
     }
-    // On success the parent unmounts the modal, so no need to clear state.
   }
 
   return (
@@ -71,25 +68,28 @@ export function JoinModal({
         className="fixed inset-0 cursor-default bg-black/60"
         onClick={onDismiss}
       />
-      <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-800">
-        <div className="bg-gradient-to-br from-blue-500 to-purple-600 px-6 py-5 text-white">
-          <p className="text-sm font-medium tracking-wider uppercase opacity-80">
-            ¡Hay un juego en vivo!
-          </p>
+      <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_-20px_rgba(0,0,0,.5)] dark:bg-gray-900">
+        <div className="flex h-1.5" aria-hidden="true">
+          <span className="bg-google-blue flex-1" />
+          <span className="bg-google-red flex-1" />
+          <span className="bg-google-yellow flex-1" />
+          <span className="bg-google-green flex-1" />
+        </div>
+        <div className="px-6 pt-6">
           <h2
             id="join-modal-title"
-            className="mt-1 text-2xl leading-tight font-bold"
+            className="text-2xl leading-tight font-bold text-gray-900 dark:text-white"
           >
             Únete con un alias
           </h2>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+            Así te verán en la clasificación y en la pantalla del evento.
+          </p>
         </div>
 
         <div className="space-y-5 px-6 py-5">
           {liveInstances.length > 0 && (
             <div>
-              <p className="mb-2 text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                Activos ahora
-              </p>
               <ul className="flex flex-wrap gap-2">
                 {liveInstances.map((inst) => (
                   <li
@@ -118,7 +118,7 @@ export function JoinModal({
                 }}
                 placeholder="ej. Ana"
                 autoFocus
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-base focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                className="focus-visible:outline-google-blue min-h-12 w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
               />
               <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
                 {trimmed.length}/{ALIAS_MAX} caracteres. No se puede cambiar
@@ -140,14 +140,14 @@ export function JoinModal({
                 type="button"
                 onClick={onDismiss}
                 disabled={submitting}
-                className="rounded-lg px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-50 dark:text-gray-400 dark:hover:bg-gray-700"
+                className="focus-visible:outline-google-blue min-h-11 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-200 dark:hover:bg-gray-800"
               >
                 Cerrar
               </button>
               <button
                 type="submit"
                 disabled={submitting || !aliasOk}
-                className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                className="bg-google-blue focus-visible:outline-google-blue min-h-11 rounded-lg px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
               >
                 {submitting ? "Conectando..." : "Conectarme"}
               </button>

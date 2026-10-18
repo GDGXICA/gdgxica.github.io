@@ -10,7 +10,6 @@ import { WordModerationPanel } from "./WordModerationPanel";
 import type { InstanceState, MinigameInstance } from "./types";
 
 interface Props {
-  // Optional injection point so unit tests can avoid touching window.location.
   initialSlug?: string;
 }
 
@@ -35,15 +34,6 @@ export function EventMinigameManager({ initialSlug }: Props) {
     null
   );
 
-  // Memoizado a proposito: AttachTemplateModal lleva `onError` en las
-  // dependencias de su efecto de carga. Con una flecha nueva en cada render,
-  // un fallo de la peticion entraba en bucle — onError -> setToast -> render
-  // del padre -> nueva identidad de onError -> el efecto vuelve a pedir ->
-  // vuelve a fallar — hasta que alguien cerraba el modal. En produccion
-  // salieron 20 GET /api/minigame-templates en dos rafagas de ~2.5 req/s.
-  //
-  // Lo dispara cualquier fallo, no solo el 403 que lo destapo: un timeout de
-  // red deja el mismo bucle abierto contra la API.
   const showError = useCallback((message: string) => {
     setToast({ message, type: "error" });
   }, []);
@@ -71,7 +61,7 @@ export function EventMinigameManager({ initialSlug }: Props) {
 
   function buildJoinUrl(): string | null {
     if (!slug) return null;
-    return `https://gdgica.com/events/${encodeURIComponent(slug)}?play=1`;
+    return `https://gdgica.com/events/${encodeURIComponent(slug)}/jugar`;
   }
 
   function openProjector() {
@@ -119,6 +109,21 @@ export function EventMinigameManager({ initialSlug }: Props) {
         type: "error",
       });
     }
+    setBusyId(null);
+  }
+
+  async function handleAdvancePoll(id: string) {
+    if (!slug) return;
+    setBusyId(id);
+    const res = await api.advancePollQuestion(slug, id);
+    if (res.success) {
+      setToast({ message: "Pregunta avanzada", type: "success" });
+      await reload();
+    } else
+      setToast({
+        message: res.error || "Error al avanzar pregunta",
+        type: "error",
+      });
     setBusyId(null);
   }
 
@@ -253,6 +258,7 @@ export function EventMinigameManager({ initialSlug }: Props) {
               busy={busyId === inst.id}
               onSetState={(state) => handleSetState(inst.id, state)}
               onAdvanceQuiz={() => handleAdvanceQuiz(inst.id)}
+              onAdvancePoll={() => handleAdvancePoll(inst.id)}
               onDelete={() => handleDelete(inst.id)}
               onOpenModeration={
                 inst.type === "wordcloud" ||

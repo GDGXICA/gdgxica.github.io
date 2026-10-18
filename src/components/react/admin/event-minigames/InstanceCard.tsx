@@ -12,14 +12,11 @@ interface Props {
   instance: MinigameInstance;
   onSetState: (state: InstanceState) => Promise<void> | void;
   onAdvanceQuiz: () => Promise<void> | void;
+  onAdvancePoll?: () => Promise<void> | void;
   onDelete: () => Promise<void> | void;
   busy: boolean;
-  // Opens the moderation/winners side panel for global games.
-  // Optional so admin tests of the card itself don't need to wire it.
   onOpenModeration?: () => void;
-  // Roulette-specific: spin the wheel.
   onSpin?: () => Promise<void> | void;
-  // Classic-bingo-specific: call the next ball.
   onDrawBall?: () => Promise<void> | void;
 }
 
@@ -41,6 +38,7 @@ export function InstanceCard({
   instance,
   onSetState,
   onAdvanceQuiz,
+  onAdvancePoll,
   onDelete,
   busy,
   onOpenModeration,
@@ -60,16 +58,23 @@ export function InstanceCard({
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const isQuiz = instance.type === "quiz";
+  const isPoll = instance.type === "poll";
   const classic = isClassicBingo(instance);
   const totalBalls = bankSize(instance);
   const calledBalls = instance.drawCount ?? 0;
   const allBallsCalled = totalBalls > 0 && calledBalls >= totalBalls;
   const totalQuestions = questionCount(instance);
+  const pollQuestions = isPoll
+    ? ((instance.config?.questions as unknown[] | undefined)?.length ??
+      (instance.config?.question ? 1 : 0))
+    : 0;
   const currentQ =
     instance.currentQuestionIndex !== undefined &&
     instance.currentQuestionIndex >= 0
       ? instance.currentQuestionIndex + 1
-      : 0;
+      : isPoll && instance.config?.question
+        ? 1
+        : 0;
   const isOnLastQuestion = isQuiz && currentQ >= totalQuestions;
 
   return (
@@ -100,6 +105,11 @@ export function InstanceCard({
               Pregunta {currentQ} de {totalQuestions}
             </p>
           )}
+          {isPoll && (
+            <p className="mt-1 text-sm text-gray-500">
+              Pregunta {currentQ} de {pollQuestions}
+            </p>
+          )}
           {classic && (
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               Bola {calledBalls} de {totalBalls}
@@ -117,6 +127,33 @@ export function InstanceCard({
       </div>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-4 dark:border-gray-700">
+        <a
+          href={`/events/${encodeURIComponent(instance.eventSlug)}/jugar?game=${encodeURIComponent(instance.id)}`}
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-lg border border-blue-300 px-3 py-1.5 text-sm text-blue-700"
+        >
+          Abrir juego
+        </a>
+        <a
+          href={`/events/${encodeURIComponent(instance.eventSlug)}/projector?game=${encodeURIComponent(instance.id)}`}
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-lg border border-purple-300 px-3 py-1.5 text-sm text-purple-700"
+        >
+          Abrir proyector
+        </a>
+        <button
+          type="button"
+          onClick={() =>
+            navigator.clipboard.writeText(
+              `${window.location.origin}/events/${encodeURIComponent(instance.eventSlug)}/jugar?game=${encodeURIComponent(instance.id)}`
+            )
+          }
+          className="rounded-lg border px-3 py-1.5 text-sm"
+        >
+          Copiar URL
+        </button>
         {instance.state === "scheduled" && (
           <>
             <button
@@ -178,6 +215,16 @@ export function InstanceCard({
                 onClick={() => onAdvanceQuiz()}
                 disabled={busy || isOnLastQuestion}
                 className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                ⏭ Avanzar pregunta
+              </button>
+            )}
+            {isPoll && onAdvancePoll && (
+              <button
+                type="button"
+                onClick={() => onAdvancePoll()}
+                disabled={busy || currentQ >= pollQuestions}
+                className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
                 ⏭ Avanzar pregunta
               </button>
