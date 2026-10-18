@@ -25,75 +25,85 @@ export function RouletteView({
   const prize = instance.config?.prize as string | undefined;
 
   return (
-    <div>
-      <div className="mb-3 flex items-center gap-2">
-        <span className="inline-block rounded-full bg-rose-500/20 px-3 py-1 text-xs font-semibold tracking-widest text-rose-700 uppercase dark:text-rose-300">
-          Ruleta
-        </span>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          {title}
-        </h3>
-      </div>
+    <div className="mx-auto max-w-3xl">
+      <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+        {title}
+      </h2>
 
       {prize && (
-        <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-          Premio: <span className="font-medium">{prize}</span>
+        <p className="mt-2 text-base text-gray-700 dark:text-gray-300">
+          Premio: <span className="font-semibold">{prize}</span>
         </p>
       )}
 
       {myWin ? (
-        <div className="rounded-xl border border-green-300 bg-green-50 p-6 text-center dark:border-green-700 dark:bg-green-900/20">
-          <p className="text-4xl" aria-hidden>
-            🎉
-          </p>
-          <p className="mt-2 text-xl font-bold text-green-800 dark:text-green-300">
+        <div
+          className="mt-8 rounded-xl bg-green-50 p-8 text-center dark:bg-green-950/50"
+          role="status"
+        >
+          <span
+            className="bg-google-green mx-auto flex h-14 w-14 items-center justify-center rounded-full text-3xl font-bold text-white"
+            aria-hidden="true"
+          >
+            ✓
+          </span>
+          <p className="mt-4 text-3xl font-bold text-green-900 dark:text-green-200">
             ¡Ganaste!
           </p>
-          <p className="mt-1 text-sm text-green-700 dark:text-green-400">
+          <p className="mt-2 text-base text-green-800 dark:text-green-200">
             Preséntate con el organizador para reclamar tu premio.
           </p>
         </div>
       ) : (
-        <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 text-center dark:border-gray-700 dark:bg-gray-800/50">
-          <p className="text-3xl" aria-hidden>
-            🎯
-          </p>
-          <p className="mt-2 font-semibold text-gray-800 dark:text-gray-200">
+        <div
+          className="mt-8 rounded-xl bg-gray-100 p-8 text-center dark:bg-gray-800"
+          role="status"
+        >
+          <div className="mx-auto flex w-fit gap-2" aria-hidden="true">
+            <span className="bg-google-blue h-3 w-3 rounded-full" />
+            <span className="bg-google-red h-3 w-3 rounded-full" />
+            <span className="bg-google-yellow h-3 w-3 rounded-full" />
+            <span className="bg-google-green h-3 w-3 rounded-full" />
+          </div>
+          <p className="mt-5 text-2xl font-bold text-gray-900 dark:text-white">
             Estás en la ruleta
           </p>
           {loading ? (
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Cargando participantes...
+            <p className="mt-2 text-base text-gray-700 dark:text-gray-300">
+              Cargando participantes…
             </p>
           ) : (
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-2 text-base text-gray-700 tabular-nums dark:text-gray-300">
               {eligible.length} participante{eligible.length !== 1 && "s"}{" "}
               elegibles · {winners.length} ganador{winners.length !== 1 && "es"}
             </p>
           )}
-          <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
-            Espera a que el organizador gire la ruleta
+          <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">
+            Mira la pantalla del evento para seguir el giro.
           </p>
         </div>
       )}
 
       {winners.length > 0 && (
-        <div className="mt-4">
-          <p className="mb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400">
+        <div className="mt-8 border-t border-gray-200 pt-5 dark:border-gray-700">
+          <h3 className="mb-3 font-bold text-gray-900 dark:text-white">
             Ganadores anteriores
-          </p>
-          <ol className="space-y-1">
+          </h3>
+          <ol className="space-y-2">
             {winners.map((w, i) => (
               <li
                 key={w.uid}
-                className={`flex items-center gap-2 text-sm ${
+                className={`flex items-center gap-3 rounded-lg bg-gray-50 px-4 py-3 text-base dark:bg-gray-800 ${
                   w.uid === uid
                     ? "font-bold text-green-700 dark:text-green-400"
                     : "text-gray-700 dark:text-gray-300"
                 }`}
               >
-                <span aria-hidden>
-                  {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🎉"}
+                <span
+                  className="text-sm font-bold tabular-nums"
+                  aria-hidden="true"
+                >
+                  {i + 1}.
                 </span>
                 {w.alias}
                 {w.uid === uid && " (tú)"}

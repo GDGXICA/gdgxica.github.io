@@ -1,0 +1,19 @@
+---
+import { getCollection } from "astro:content";
+import GameLayout from "@/layouts/GameLayout.astro";
+import { GameParticipantRoot } from "@/components/react/event/GameParticipantRoot";
+
+export async function getStaticPaths() {
+  const events = await getCollection("events");
+  return events.map((event) => ({
+    params: { slug: event.id },
+    props: { event },
+  }));
+}
+const { slug } = Astro.params;
+const { event } = Astro.props;
+---
+
+<GameLayout title={`Juegos · ${event.data.name}`}>
+  <GameParticipantRoot client:load slug={slug!} eventName={event.data.name} />
+</GameLayout>

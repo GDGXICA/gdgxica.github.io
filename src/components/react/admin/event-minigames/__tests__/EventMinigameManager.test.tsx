@@ -27,7 +27,6 @@ vi.mock("@/lib/api", () => ({
   },
 }));
 
-// Lo usa el selector de evento que se pinta cuando no hay slug.
 vi.mock("../../AuthProvider", () => ({
   useAuth: mocks.useAuth,
 }));
@@ -134,11 +133,6 @@ describe("EventMinigameManager", () => {
   });
 
   it("no reintenta en bucle cuando falla la carga de plantillas", async () => {
-    // AttachTemplateModal lleva `onError` en las dependencias de su efecto de
-    // carga. Cuando el padre lo pasaba como flecha en linea, un fallo se
-    // realimentaba: onError -> setToast -> render del padre -> nueva identidad
-    // de onError -> el efecto vuelve a pedir -> vuelve a fallar. En produccion
-    // salieron 20 GET /api/minigame-templates en dos rafagas de ~2.5 req/s.
     mocks.listMinigameTemplates.mockResolvedValue({
       success: false,
       error: "Insufficient permissions",
@@ -150,23 +144,15 @@ describe("EventMinigameManager", () => {
       screen.getByRole("button", { name: /Adjuntar plantilla/i })
     );
 
-    // El error llego al padre y lo re-renderizo, que es justo la condicion que
-    // realimentaba el bucle. Sale dos veces: en el toast y en el modal.
     expect(
       (await screen.findAllByText("Insufficient permissions")).length
     ).toBeGreaterThan(0);
 
-    // Margen para que varias vueltas del bucle se hubieran manifestado.
     await new Promise((resolve) => setTimeout(resolve, 150));
     expect(mocks.listMinigameTemplates).toHaveBeenCalledTimes(1);
   });
 
   it("muestra el error de carga en vez del estado vacio", async () => {
-    // Al quitar el bucle dejo de repetirse el toast, y el toast se desvanece
-    // a los 5s. Sin un estado de error propio, lo unico que quedaba en
-    // pantalla era «No hay plantillas disponibles, crea una en
-    // /admin/minigame-templates»: le dice a quien acaba de recibir un 403 que
-    // no existen plantillas, y lo manda a una pagina que tampoco puede abrir.
     mocks.listMinigameTemplates.mockResolvedValue({
       success: false,
       error: "Insufficient permissions",
@@ -221,14 +207,14 @@ describe("EventMinigameManager", () => {
   });
 
   it("copies the join URL to the clipboard", async () => {
-    // userEvent.setup() installs an in-memory Clipboard, so we can read
-    // back what the handler wrote without touching the real navigator.
     const user = userEvent.setup();
     render(<EventMinigameManager initialSlug="devfest-2025" />);
     await screen.findByText("First poll");
-    await user.click(screen.getByRole("button", { name: /Copiar URL/i }));
+    await user.click(
+      screen.getByRole("button", { name: /Copiar URL de unión/i })
+    );
     expect(await screen.findByText(/URL copiada/i)).toBeInTheDocument();
     const written = await navigator.clipboard.readText();
-    expect(written).toBe("https://gdgica.com/events/devfest-2025?play=1");
+    expect(written).toBe("https://gdgica.com/events/devfest-2025/jugar");
   });
 });

@@ -27,7 +27,6 @@ import {
   Store,
 } from "@lucide/astro";
 import SharedButton from "@/components/react/SharedButton";
-import { MiniGamesRoot } from "@/components/react/event/MiniGamesRoot";
 import { getEventDates, googleCalendarUrl } from "@/utils/eventDates";
 
 export async function getStaticPaths() {
@@ -579,27 +578,23 @@ const whatsappQrDataUrl = whatsappGroupLink
     </div>
   </section>
 
-  {
-    /*
-     * Deliberately NOT gated on event.data.status. The only switch that
-     * decides whether anything renders is `state == "live"` on the Firestore
-     * instance, which the organizer flips from the admin panel and which
-     * takes effect instantly.
-     *
-     * Gating on the event status added a second, invisible condition that
-     * lives in the gdg-ica-data repo and needs a full site rebuild to
-     * change. Two consequences, both bad: a game could not be run on a
-     * `completed` event at all (so nothing could be rehearsed or replayed),
-     * and an event flipped to completed mid-session would rip the game off
-     * every attendee's phone with no way to put it back quickly.
-     *
-     * MiniGamesRoot renders null while no instance is live, so mounting it
-     * unconditionally is inert on events that have no games.
-     */
-  }
-  <MiniGamesRoot
-    client:idle
-    slug={event.id}
-    eventStatus={event.data.status?.type}
-  />
+  <section
+    class="container my-12 rounded-2xl border border-blue-200 bg-blue-50 p-8 text-center"
+  >
+    <h2 class="text-2xl font-bold text-gray-900">Dinámicas en vivo</h2>
+    <p class="mt-2 text-gray-700">
+      Participa en los juegos de este evento desde una pantalla dedicada.
+    </p>
+    <a
+      class="bg-google-blue mt-5 inline-block rounded-lg px-6 py-3 font-semibold text-white"
+      href={`/events/${event.id}/jugar`}>Entrar a los juegos</a
+    >
+  </section>
+  <script>
+    if (new URLSearchParams(window.location.search).get("play") === "1") {
+      window.location.replace(
+        `${window.location.pathname.replace(/\/$/, "")}/jugar`
+      );
+    }
+  </script>
 </Layout>

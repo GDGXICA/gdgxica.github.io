@@ -25,10 +25,11 @@ import { ProjectorView } from "../ProjectorView";
 
 const QR_DATA_URL =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==";
-const JOIN_URL = "https://gdgica.com/events/x?play=1";
+const JOIN_URL = "https://gdgica.com/events/x/jugar";
 const NOW_MS = 1_700_000_000_000;
 
 beforeEach(() => {
+  window.history.replaceState({}, "", "/events/x/projector");
   for (const m of Object.values(mocks)) m.mockReset();
   mocks.useLiveMinigames.mockReturnValue({
     loading: false,
@@ -55,6 +56,9 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 function renderProjector() {
+  const gameId = mocks.useLiveMinigames().liveInstances[0]?.id;
+  if (gameId)
+    window.history.replaceState({}, "", `/events/x/projector?game=${gameId}`);
   return render(
     <ProjectorView
       slug="x"
@@ -66,20 +70,21 @@ function renderProjector() {
 }
 
 describe("ProjectorView", () => {
-  it("renders the hero QR + URL when no game is live", () => {
+  it("renders the game selector when no game is selected", () => {
     renderProjector();
     expect(screen.getByText("DevFest ICA 2026")).toBeInTheDocument();
-    expect(screen.getByText(/Escanea para participar/i)).toBeInTheDocument();
-    // getByAltText, no getByLabelText: el QR es un <img> y su nombre
-    // accesible viene del alt, no de un aria-label.
-    expect(screen.getByAltText("QR de unión")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Elige una dinámica para proyectar/i)
+    ).toBeInTheDocument();
     expect(screen.getAllByText(JOIN_URL)).not.toHaveLength(0);
   });
 
-  it("renders an event header with the join URL on the right", () => {
+  it("renders an event header with live status", () => {
     renderProjector();
     expect(screen.getByText(/GDG ICA · En vivo/)).toBeInTheDocument();
-    expect(screen.getByText(/Únete escaneando el QR/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Elige una dinámica para proyectar/)
+    ).toBeInTheDocument();
   });
 
   it("renders a poll instance with options and counts", () => {
@@ -111,7 +116,7 @@ describe("ProjectorView", () => {
     });
     renderProjector();
     expect(screen.getByText("Mi poll")).toBeInTheDocument();
-    expect(screen.getByText("¿Cuál prefieres?")).toBeInTheDocument();
+    expect(screen.getByText(/¿Cuál prefieres\?/)).toBeInTheDocument();
     expect(screen.getByText(/6 · 75%/)).toBeInTheDocument();
     expect(screen.getByText(/2 · 25%/)).toBeInTheDocument();
   });
@@ -153,6 +158,7 @@ describe("ProjectorView", () => {
       });
       mocks.useAggregates.mockReturnValue({
         aggregates: {
+          revealedAnswers: { q1: "a" },
           leaderboard: [
             { uid: "u1", alias: "Ana", score: 200 },
             { uid: "u2", alias: "Bea", score: 100 },
@@ -163,9 +169,8 @@ describe("ProjectorView", () => {
       });
       renderProjector();
       expect(screen.getByText("¿Cuál es multimodal?")).toBeInTheDocument();
-      // 30s limit - 10s elapsed = 20s remaining.
       expect(screen.getByLabelText(/Tiempo restante/)).toHaveTextContent("20s");
-      expect(screen.getByText("Top 10")).toBeInTheDocument();
+      expect(screen.getByText("Clasificación")).toBeInTheDocument();
       expect(screen.getByText(/1\. Ana/)).toBeInTheDocument();
       expect(screen.getByText(/2\. Bea/)).toBeInTheDocument();
     } finally {
@@ -235,7 +240,6 @@ describe("ProjectorView", () => {
     expect(screen.getByText("Bingo!")).toBeInTheDocument();
     expect(screen.getByText("Ana")).toBeInTheDocument();
     expect(screen.getByText("Bea")).toBeInTheDocument();
-    // Conference mode has no ball count, so no prize/mention split.
     expect(screen.queryByText(/Premio/i)).not.toBeInTheDocument();
   });
 
@@ -270,7 +274,6 @@ describe("ProjectorView", () => {
       liveClassic();
       renderProjector();
       expect(screen.getByText("Bingo de tecnologías")).toBeInTheDocument();
-      // The badge names the mode, separately from the instance title.
       expect(screen.getByText("Bingo clásico")).toBeInTheDocument();
       expect(
         screen.getByText(/Esperando la primera bola/i)
@@ -317,7 +320,6 @@ describe("ProjectorView", () => {
         ],
       });
       renderProjector();
-      // prizes: 2 → first two are prizes, the third a mention.
       expect(screen.getAllByText("Premio")).toHaveLength(2);
       expect(screen.getAllByText("Mención")).toHaveLength(1);
     });
@@ -352,7 +354,9 @@ describe("ProjectorView", () => {
     });
     renderProjector();
     expect(screen.getByLabelText("Agrandar QR")).toBeInTheDocument();
-    expect(screen.getByText(/Recién llegando/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/¿Quieres participar\? Escanea el QR/i)
+    ).toBeInTheDocument();
   });
 
   it("renders no interactive buttons in game content (read-only view)", () => {
@@ -372,8 +376,6 @@ describe("ProjectorView", () => {
       error: null,
     });
     renderProjector();
-    // The only button allowed in the projector is the QR toggle (presenter
-    // control). Game content itself must not render interactive elements.
     const buttons = screen.queryAllByRole("button");
     expect(buttons).toHaveLength(1);
     expect(buttons[0]).toHaveAttribute("aria-label", "Agrandar QR");
