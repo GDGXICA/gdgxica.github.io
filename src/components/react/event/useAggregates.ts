@@ -11,6 +11,7 @@ export interface AggregatesDoc {
   optionCounts?: Record<string, number>;
   totalResponses?: number;
   leaderboard?: LeaderboardEntry[];
+  revealedAnswers?: Record<string, string>;
   updatedAt?: { seconds: number } | null;
 }
 

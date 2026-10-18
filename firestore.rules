@@ -189,15 +189,11 @@ service cloud.firestore {
     }
 
     match /minigame_templates/{templateId} {
-      allow read: if request.auth != null;
+      allow read: if false;
       allow write: if false;
     }
 
     // Per-event mini-game instances and their subcollections.
-    // Reads are public so participants can subscribe in PR4-PR6 without
-    // authenticating. All writes are denied here in PR3 — Cloud Functions
-    // do every mutation via the Admin SDK. PR4 (participants), PR5 (words),
-    // PR6 (responses) will progressively open specific writes.
     match /events/{eventSlug} {
       allow read: if true;
       allow write: if false;
@@ -209,15 +205,10 @@ service cloud.firestore {
         match /participants/{participantUid} {
           allow read: if true;
           allow create: if false;
-          // Self-update limited to gameplay state. We use
-          // diff().affectedKeys().hasOnly so the client cannot rewrite
-          // alias/joinedAt/bingoCard. Bingo marking, bingo wins and
-          // quiz answer/score state share this rule.
           allow update: if request.auth != null
                         && request.auth.uid == participantUid
                         && request.resource.data.diff(resource.data).affectedKeys()
-                           .hasOnly(['bingoMarked', 'bingoWonAt',
-                                     'quizScore', 'quizAnsweredQuestions'])
+                           .hasOnly(['bingoMarked', 'bingoWonAt'])
                         && (!('bingoMarked' in request.resource.data)
                             || (request.resource.data.bingoMarked is list
                                 && request.resource.data.bingoMarked.size() == 16))
@@ -258,25 +249,22 @@ service cloud.firestore {
         match /secret/{docId} {
           allow read, write: if false;
         }
+        match /quiz_answers/{answerId} {
+          allow read, write: if false;
+        }
+        match /quiz_receipts/{answerId} {
+          allow get: if request.auth != null && resource.data.uid == request.auth.uid;
+          allow list, write: if false;
+        }
+        match /quiz_rounds/{roundId} {
+          allow read, write: if false;
+        }
         match /slots/{participantUid} {
           allow read, write: if false;
         }
         match /responses/{responseId} {
           allow read: if true;
-          // Realtime games (poll + quiz). Doc id is deterministic
-          // `${uid}_${questionId}` so 1 response per (user, question) is
-          // enforced at the rule level. Parent must be live + type
-          // poll|quiz, and the participant must already exist.
-          allow create: if request.auth != null
-                        && request.auth.uid == request.resource.data.uid
-                        && responseId == request.auth.uid + '_' + request.resource.data.questionId
-                        && get(/databases/$(database)/documents/events/$(eventSlug)/minigames/$(instanceId)).data.state == 'live'
-                        && (
-                             get(/databases/$(database)/documents/events/$(eventSlug)/minigames/$(instanceId)).data.type == 'poll'
-                             || get(/databases/$(database)/documents/events/$(eventSlug)/minigames/$(instanceId)).data.type == 'quiz'
-                           )
-                        && exists(/databases/$(database)/documents/events/$(eventSlug)/minigames/$(instanceId)/participants/$(request.auth.uid));
-          allow update, delete: if false;
+          allow write: if false;
         }
         match /words/{wordId} {
           allow read: if true;

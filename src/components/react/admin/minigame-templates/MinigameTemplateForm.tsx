@@ -33,10 +33,32 @@ function validate(template: Template): FormErrors {
   }
   switch (template.type) {
     case "poll":
-      if (!template.poll.question.trim()) {
-        errors.config = "Falta la pregunta";
-      } else if (template.poll.options.some((o) => !o.label.trim())) {
-        errors.config = "Todas las opciones deben tener texto";
+      if (
+        (
+          template.poll.questions ?? [
+            {
+              id: "main",
+              prompt: template.poll.question ?? "",
+              options: template.poll.options ?? [],
+            },
+          ]
+        ).some((q) => !q.prompt.trim())
+      ) {
+        errors.config = "Cada pregunta necesita un enunciado";
+      } else if (
+        (
+          template.poll.questions ?? [
+            {
+              id: "main",
+              prompt: template.poll.question ?? "",
+              options: template.poll.options ?? [],
+            },
+          ]
+        ).some(
+          (q) => q.options.length < 2 || q.options.some((o) => !o.label.trim())
+        )
+      ) {
+        errors.config = "Todas las opciones de cada pregunta deben tener texto";
       }
       break;
     case "quiz":
@@ -103,7 +125,22 @@ export function MinigameTemplateForm({
     e.preventDefault();
     setSubmitted(true);
     if (hasErrors) return;
-    onSubmit(template);
+    if (template.type === "poll") {
+      onSubmit({
+        ...template,
+        poll: {
+          questions: template.poll.questions ?? [
+            {
+              id: "main",
+              prompt: template.poll.question ?? "",
+              options: template.poll.options ?? [],
+            },
+          ],
+        },
+      });
+    } else {
+      onSubmit(template);
+    }
   }
 
   return (

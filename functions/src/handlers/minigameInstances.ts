@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
-import { FieldValue } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { getFunctions } from "firebase-admin/functions";
 import { auditEntryFor, writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
@@ -88,6 +89,14 @@ export async function attach(req: Request, res: Response) {
 
     const now = FieldValue.serverTimestamp();
     const config = pickConfig(tpl);
+    const publicConfig =
+      tpl.type === "quiz"
+        ? {
+            questions: tpl.quiz.questions.map(
+              ({ correctOptionId: _answer, ...question }) => question
+            ),
+          }
+        : config;
     const baseInstance: Record<string, unknown> = {
       eventSlug: slug,
       templateId,
@@ -96,7 +105,7 @@ export async function attach(req: Request, res: Response) {
       mode: modeForType(tpl.type),
       state: "scheduled",
       title: tpl.title,
-      config,
+      config: publicConfig,
       order,
       createdAt: now,
       createdBy: user.uid,
@@ -104,6 +113,10 @@ export async function attach(req: Request, res: Response) {
     if (tpl.type === "quiz") {
       baseInstance.currentQuestionIndex = -1;
       baseInstance.currentQuestionStartedAt = null;
+      baseInstance.revealedQuestionId = null;
+    }
+    if (tpl.type === "poll") {
+      baseInstance.currentQuestionIndex = -1;
     }
     if (tpl.type === "roulette") {
       baseInstance.spinCount = 0;
@@ -126,6 +139,17 @@ export async function attach(req: Request, res: Response) {
 
     const ref = await instancesCol(slug).add(baseInstance);
 
+    if (tpl.type === "quiz") {
+      await ref
+        .collection("secret")
+        .doc("quiz")
+        .set({
+          answers: Object.fromEntries(
+            tpl.quiz.questions.map((q) => [q.id, q.correctOptionId])
+          ),
+        });
+    }
+
     if (classicTerms) {
       // Seal it now, before anyone can join: cards are scored against
       // this sequence so that no two of them win on the same ball, and
@@ -146,6 +170,48 @@ export async function attach(req: Request, res: Response) {
     res
       .status(201)
       .json({ success: true, data: { id: ref.id, type: tpl.type } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: safeError(err) });
+  }
+}
+
+// POST /api/events/:slug/minigames/:id/poll/advance
+export async function pollAdvance(req: Request, res: Response) {
+  try {
+    const { slug, id } = req.params as { slug: string; id: string };
+    const ref = instancesCol(slug).doc(id);
+    const result = await admin.firestore().runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const data = snap.data();
+      if (data?.type !== "poll" || data.state !== "live") return null;
+      const questions =
+        data.config?.questions ??
+        (data.config?.question ? [{ id: "main" }] : []);
+      const current =
+        data.currentQuestionIndex ?? (data.config?.question ? 0 : -1);
+      const next = current + 1;
+      if (next >= questions.length) return null;
+      tx.update(ref, { currentQuestionIndex: next });
+      return next;
+    });
+    if (result === null) {
+      res.status(400).json({
+        success: false,
+        error: "Encuesta inactiva o sin más preguntas",
+      });
+      return;
+    }
+    await writeAuditLog(
+      {
+        action: "minigame_instance.poll.advance",
+        performedBy: (req as AuthenticatedRequest).user.uid,
+        targetId: id,
+        targetType: "minigame_instance",
+        details: { slug, currentQuestionIndex: result },
+      },
+      req
+    );
+    res.json({ success: true, data: { id, currentQuestionIndex: result } });
   } catch (err) {
     res.status(500).json({ success: false, error: safeError(err) });
   }
@@ -213,7 +279,8 @@ export async function quizAdvance(req: Request, res: Response) {
           type?: string;
           state?: string;
           currentQuestionIndex?: number;
-          config?: { questions?: unknown[] };
+          currentQuestionStartedAt?: Timestamp | null;
+          config?: { questions?: { id: string; timeLimitSec: number }[] };
         }
       | undefined;
     if (!data || data.type !== "quiz") {
@@ -228,6 +295,30 @@ export async function quizAdvance(req: Request, res: Response) {
     }
     const questions = data.config?.questions ?? [];
     const fromIndex = data.currentQuestionIndex ?? -1;
+    if (fromIndex >= 0 && data.currentQuestionStartedAt) {
+      const previous = questions[fromIndex];
+      const endsAt =
+        data.currentQuestionStartedAt.toMillis() +
+        (previous?.timeLimitSec ?? 30) * 1000;
+      if (Date.now() < endsAt) {
+        res.status(409).json({
+          success: false,
+          error: "Espera a que termine la pregunta actual",
+        });
+        return;
+      }
+      const previousRound = await ref
+        .collection("quiz_rounds")
+        .doc(previous.id)
+        .get();
+      if (!previousRound.data()?.finishedAt) {
+        res.status(409).json({
+          success: false,
+          error: "Esperando los resultados de la pregunta actual",
+        });
+        return;
+      }
+    }
     const toIndex = fromIndex + 1;
     if (toIndex >= questions.length) {
       res
@@ -236,10 +327,39 @@ export async function quizAdvance(req: Request, res: Response) {
       return;
     }
 
-    await ref.update({
+    const startedAt = Timestamp.now();
+    const question = questions[toIndex] as {
+      timeLimitSec?: number;
+      id?: string;
+    };
+    if (!question?.id) {
+      res.status(400).json({ success: false, error: "Pregunta inválida" });
+      return;
+    }
+    await getFunctions()
+      .taskQueue("finishQuizQuestion")
+      .enqueue(
+        {
+          slug,
+          id,
+          questionId: question.id,
+          startedAtMillis: startedAt.toMillis(),
+        },
+        {
+          scheduleTime: new Date(
+            startedAt.toMillis() + (question.timeLimitSec ?? 30) * 1000 + 2000
+          ),
+        }
+      );
+    const batch = admin.firestore().batch();
+    batch.update(ref, {
       currentQuestionIndex: toIndex,
-      currentQuestionStartedAt: FieldValue.serverTimestamp(),
+      currentQuestionStartedAt: startedAt,
     });
+    batch.set(ref.collection("quiz_rounds").doc(question.id), {
+      startedAtMillis: startedAt.toMillis(),
+    });
+    await batch.commit();
 
     await writeAuditLog(
       auditEntry("minigame_instance.quiz.advance", user.uid, id, {
@@ -301,7 +421,18 @@ export async function remove(req: Request, res: Response) {
 function pickConfig(tpl: MinigameTemplate): Record<string, unknown> {
   switch (tpl.type) {
     case "poll":
-      return { ...tpl.poll };
+      return "questions" in tpl.poll
+        ? { ...tpl.poll }
+        : {
+            questions: [
+              {
+                id: "main",
+                prompt: (tpl.poll as unknown as { question: string }).question,
+                options: (tpl.poll as unknown as { options: unknown[] })
+                  .options,
+              },
+            ],
+          };
     case "quiz":
       return { ...tpl.quiz };
     case "wordcloud":

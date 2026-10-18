@@ -5,20 +5,42 @@ const fieldValueServerTimestamp = "__SERVER_TS__";
 
 const mocks = vi.hoisted(() => ({
   collectionMock: vi.fn(),
+  batchUpdate: vi.fn(),
+  batchSet: vi.fn(),
+  batchCommit: vi.fn(async () => undefined),
+  enqueue: vi.fn(async () => undefined),
+  secretSet: vi.fn(async () => undefined),
+  runTransaction: vi.fn(),
 }));
 
 vi.mock("firebase-admin", () => ({
-  firestore: Object.assign(() => ({ collection: mocks.collectionMock }), {
-    FieldValue: {
-      serverTimestamp: () => "__SERVER_TS__",
-    },
-  }),
+  firestore: Object.assign(
+    () => ({
+      collection: mocks.collectionMock,
+      runTransaction: mocks.runTransaction,
+      batch: () => ({
+        update: mocks.batchUpdate,
+        set: mocks.batchSet,
+        commit: mocks.batchCommit,
+      }),
+    }),
+    {
+      FieldValue: {
+        serverTimestamp: () => "__SERVER_TS__",
+      },
+    }
+  ),
 }));
 
 vi.mock("firebase-admin/firestore", () => ({
   FieldValue: {
     serverTimestamp: () => "__SERVER_TS__",
   },
+  Timestamp: { now: () => ({ toMillis: () => 1700000000000 }) },
+}));
+
+vi.mock("firebase-admin/functions", () => ({
+  getFunctions: () => ({ taskQueue: () => ({ enqueue: mocks.enqueue }) }),
 }));
 
 import * as handler from "./minigameInstances";
@@ -116,6 +138,7 @@ interface InstanceRefStub {
   get: ReturnType<typeof vi.fn>;
   update: ReturnType<typeof vi.fn>;
   delete: ReturnType<typeof vi.fn>;
+  collection: ReturnType<typeof vi.fn>;
 }
 
 interface CollectionWiring {
@@ -136,7 +159,7 @@ function wireCollections(
   listDocs: Array<{ id: string; data: () => unknown }> = []
 ): CollectionWiring {
   const eventSet = vi.fn(async () => undefined);
-  const instanceAdd = vi.fn(async () => ({ id: "new-instance-id" }));
+  const instanceAdd = vi.fn(async () => instanceRef);
   const auditAdd = vi.fn(async () => undefined);
   const instanceListGet = vi.fn(async () => ({ docs: listDocs }));
   const orderByInner = vi.fn(() => ({ get: instanceListGet }));
@@ -146,7 +169,9 @@ function wireCollections(
     get: vi.fn(async () => instanceData),
     update: vi.fn(async () => undefined),
     delete: vi.fn(async () => undefined),
+    collection: vi.fn(() => ({ doc: vi.fn(() => ({ set: mocks.secretSet })) })),
   };
+  (instanceRef as InstanceRefStub & { id: string }).id = "new-instance-id";
 
   const eventDoc = vi.fn(() => ({
     set: eventSet,
@@ -181,6 +206,12 @@ function wireCollections(
 describe("minigameInstances handler", () => {
   beforeEach(() => {
     collectionMock.mockReset();
+    mocks.batchUpdate.mockClear();
+    mocks.batchSet.mockClear();
+    mocks.batchCommit.mockClear();
+    mocks.enqueue.mockClear();
+    mocks.secretSet.mockClear();
+    mocks.runTransaction.mockReset();
   });
 
   afterEach(() => {
@@ -217,13 +248,20 @@ describe("minigameInstances handler", () => {
         mode: "realtime",
         state: "scheduled",
         title: "Pick one",
-        config: SAMPLE_POLL_TEMPLATE.poll,
+        config: {
+          questions: [
+            {
+              id: "main",
+              prompt: "Q?",
+              options: SAMPLE_POLL_TEMPLATE.poll.options,
+            },
+          ],
+        },
         order: 0,
         createdBy: "admin-uid",
       });
       expect(stored.createdAt).toBe(fieldValueServerTimestamp);
-      // Poll has no quiz fields.
-      expect(stored.currentQuestionIndex).toBeUndefined();
+      expect(stored.currentQuestionIndex).toBe(-1);
 
       expect(res.__status).toBe(201);
       expect(res.__body).toEqual({
@@ -262,7 +300,14 @@ describe("minigameInstances handler", () => {
         currentQuestionIndex: -1,
         currentQuestionStartedAt: null,
       });
-      expect(stored.config).toEqual(SAMPLE_QUIZ_TEMPLATE.quiz);
+      expect(stored.config).toEqual({
+        questions: SAMPLE_QUIZ_TEMPLATE.quiz.questions.map(
+          ({ correctOptionId: _answer, ...question }) => question
+        ),
+      });
+      expect(mocks.secretSet).toHaveBeenCalledWith({
+        answers: { q1: "a", q2: "b" },
+      });
     });
 
     it("derives mode='global' for bingo", async () => {
@@ -360,6 +405,44 @@ describe("minigameInstances handler", () => {
     });
   });
 
+  describe("pollAdvance", () => {
+    it("opens the next question and stops after the last one", async () => {
+      const wiring = wireCollections({ exists: false }, { exists: true });
+      const update = vi.fn();
+      let current = 0;
+      mocks.runTransaction.mockImplementation(async (callback) =>
+        callback({
+          get: async () => ({
+            data: () => ({
+              type: "poll",
+              state: "live",
+              currentQuestionIndex: current,
+              config: { questions: [{ id: "a" }, { id: "b" }] },
+            }),
+          }),
+          update,
+        })
+      );
+      const res = buildRes();
+      await handler.pollAdvance(buildReq({}, { slug: "x", id: "i1" }), res);
+      expect(update).toHaveBeenCalledWith(wiring.instanceRef, {
+        currentQuestionIndex: 1,
+      });
+      expect(res.__body).toEqual({
+        success: true,
+        data: { id: "i1", currentQuestionIndex: 1 },
+      });
+      current = 1;
+      const finished = buildRes();
+      await handler.pollAdvance(
+        buildReq({}, { slug: "x", id: "i1" }),
+        finished
+      );
+      expect(finished.__status).toBe(400);
+      expect(update).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("quizAdvance", () => {
     it("increments currentQuestionIndex and stamps startedAt", async () => {
       const wiring = wireCollections(
@@ -376,10 +459,13 @@ describe("minigameInstances handler", () => {
       );
       const res = buildRes();
       await handler.quizAdvance(buildReq({}, { slug: "x", id: "i1" }), res);
-      expect(wiring.instanceRef.update).toHaveBeenCalledWith({
+      expect(mocks.batchUpdate).toHaveBeenCalledWith(wiring.instanceRef, {
         currentQuestionIndex: 1,
-        currentQuestionStartedAt: fieldValueServerTimestamp,
+        currentQuestionStartedAt: expect.objectContaining({
+          toMillis: expect.any(Function),
+        }),
       });
+      expect(mocks.batchSet).toHaveBeenCalled();
       expect(res.__body).toEqual({
         success: true,
         data: { id: "i1", currentQuestionIndex: 1 },

@@ -12,6 +12,8 @@ export interface ParticipantDoc {
   bingoRank?: number;
   bingoWinDraw?: number;
   quizScore?: number;
+  lastQuizPoints?: number;
+  lastQuizQuestionId?: string;
   quizAnsweredQuestions?: string[];
 }
 

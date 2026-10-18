@@ -4,184 +4,115 @@ import userEvent from "@testing-library/user-event";
 
 const mocks = vi.hoisted(() => ({
   getFirestore: vi.fn(),
-  doc: vi.fn(() => ({ __ref: true })),
-  setDoc: vi.fn(),
   getDoc: vi.fn(),
-  serverTimestamp: vi.fn(() => "__TS__"),
+  doc: vi.fn(),
+  answerPollQuestion: vi.fn(),
   useAggregates: vi.fn(),
 }));
-
-vi.mock("@/lib/firebase", () => ({
-  getFirestore: mocks.getFirestore,
+vi.mock("@/lib/firebase", () => ({ getFirestore: mocks.getFirestore }));
+vi.mock("firebase/firestore", () => ({ getDoc: mocks.getDoc, doc: mocks.doc }));
+vi.mock("@/lib/api", () => ({
+  api: { answerPollQuestion: mocks.answerPollQuestion },
 }));
-
-vi.mock("firebase/firestore", () => ({
-  doc: mocks.doc,
-  setDoc: mocks.setDoc,
-  getDoc: mocks.getDoc,
-  serverTimestamp: mocks.serverTimestamp,
-}));
-
-vi.mock("../useAggregates", () => ({
-  useAggregates: mocks.useAggregates,
-}));
+vi.mock("../useAggregates", () => ({ useAggregates: mocks.useAggregates }));
 
 import { PollOverlay } from "../PollOverlay";
 
-const CONFIG = {
-  question: "¿Cuál prefieres?",
-  options: [
-    { id: "a", label: "Opción A" },
-    { id: "b", label: "Opción B" },
+const config = {
+  questions: [
+    {
+      id: "q1",
+      prompt: "Primera",
+      options: [
+        { id: "a", label: "Sí" },
+        { id: "b", label: "No" },
+      ],
+    },
+    {
+      id: "q2",
+      prompt: "Segunda",
+      options: [
+        { id: "a", label: "Rojo" },
+        { id: "b", label: "Azul" },
+      ],
+    },
   ],
 };
 
 beforeEach(() => {
-  for (const m of Object.values(mocks)) {
-    if (
-      typeof (m as unknown as { mockReset?: () => void }).mockReset ===
-      "function"
-    ) {
-      (m as unknown as { mockReset: () => void }).mockReset();
-    }
-  }
+  vi.clearAllMocks();
   mocks.getFirestore.mockResolvedValue({});
-  mocks.doc.mockImplementation(() => ({ __ref: true }));
-  mocks.setDoc.mockResolvedValue(undefined);
   mocks.getDoc.mockResolvedValue({ exists: () => false });
-  mocks.serverTimestamp.mockReturnValue("__TS__");
-  mocks.useAggregates.mockReturnValue({
-    aggregates: null,
-    loading: false,
-    error: null,
-  });
+  mocks.answerPollQuestion.mockResolvedValue({ success: true });
+  mocks.useAggregates.mockReturnValue({ aggregates: null });
 });
-
 afterEach(() => cleanup());
 
+function renderPoll(index = 0) {
+  return render(
+    <PollOverlay
+      slug="evt"
+      instanceId="poll"
+      uid="u1"
+      alias="Ana"
+      title="Varias"
+      config={config}
+      currentQuestionIndex={index}
+    />
+  );
+}
+
 describe("PollOverlay", () => {
-  it("renders the question and clickable options", () => {
-    render(
-      <PollOverlay
-        slug="x"
-        instanceId="i"
-        uid="u"
-        alias="Ana"
-        title="Mi encuesta"
-        config={CONFIG}
-      />
-    );
-    expect(screen.getByText("Mi encuesta")).toBeInTheDocument();
-    expect(screen.getByText("¿Cuál prefieres?")).toBeInTheDocument();
+  it("waits for the organizer before showing a question", () => {
+    renderPoll(-1);
     expect(
-      screen.getByRole("button", { name: /Opción A/ })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Opción B/ })
+      screen.getByText(/Esperando la primera pregunta/)
     ).toBeInTheDocument();
   });
 
-  it("submits a vote via setDoc with the deterministic doc id", async () => {
-    const user = userEvent.setup();
-    render(
-      <PollOverlay
-        slug="evt"
-        instanceId="inst"
-        uid="user-1"
-        alias="Ana"
-        title="t"
-        config={CONFIG}
-      />
-    );
-    await user.click(screen.getByRole("button", { name: /Opción A/ }));
-    await waitFor(() => expect(mocks.setDoc).toHaveBeenCalledTimes(1));
-    const payload = mocks.setDoc.mock.calls[0][1] as Record<string, unknown>;
-    expect(payload).toMatchObject({
-      uid: "user-1",
-      questionId: "main",
-      optionId: "a",
-      answeredAt: "__TS__",
-    });
-  });
-
-  it("does not submit twice when the user double-taps", async () => {
-    mocks.setDoc.mockImplementation(
-      () => new Promise((r) => setTimeout(() => r(undefined), 50))
-    );
-    const user = userEvent.setup();
-    render(
-      <PollOverlay
-        slug="x"
-        instanceId="i"
-        uid="u"
-        alias="Ana"
-        title="t"
-        config={CONFIG}
-      />
-    );
-    const btn = screen.getByRole("button", { name: /Opción A/ });
-    await user.click(btn);
-    await user.click(btn);
-    await waitFor(() => expect(mocks.setDoc).toHaveBeenCalledTimes(1));
-  });
-
-  it("locks the UI to results once a vote is recorded", async () => {
-    mocks.useAggregates.mockReturnValue({
-      aggregates: {
-        optionCounts: { "main:a": 3, "main:b": 1 },
-        totalResponses: 4,
-      },
-      loading: false,
-      error: null,
-    });
-    const user = userEvent.setup();
-    render(
-      <PollOverlay
-        slug="x"
-        instanceId="i"
-        uid="u"
-        alias="Ana"
-        title="t"
-        config={CONFIG}
-      />
-    );
-    await user.click(screen.getByRole("button", { name: /Opción A/ }));
+  it("shows only the active question and submits its option to the API", async () => {
+    renderPoll(1);
+    expect(screen.getByText("Segunda")).toBeInTheDocument();
+    expect(screen.queryByText("Primera")).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Rojo" }));
     await waitFor(() =>
-      expect(
-        screen.queryByRole("button", { name: /Opción B/ })
-      ).not.toBeInTheDocument()
+      expect(mocks.answerPollQuestion).toHaveBeenCalledWith(
+        "evt",
+        "poll",
+        "q2",
+        "a"
+      )
     );
     expect(screen.getByText("Tu voto")).toBeInTheDocument();
-    // Result rows show counts + percentages.
-    expect(screen.getByText(/3 · 75%/)).toBeInTheDocument();
-    expect(screen.getByText(/1 · 25%/)).toBeInTheDocument();
   });
 
-  it("shows results immediately if the user already voted before mount", async () => {
+  it("restores an earlier vote after reload", async () => {
     mocks.getDoc.mockResolvedValue({
       exists: () => true,
       data: () => ({ optionId: "b" }),
     });
     mocks.useAggregates.mockReturnValue({
-      aggregates: { optionCounts: { "main:b": 2 }, totalResponses: 2 },
-      loading: false,
-      error: null,
+      aggregates: { optionCounts: { "q1:a": 3, "q1:b": 1 } },
     });
-    render(
-      <PollOverlay
-        slug="x"
-        instanceId="i"
-        uid="u"
-        alias="Ana"
-        title="t"
-        config={CONFIG}
-      />
-    );
+    renderPoll();
     await waitFor(() =>
-      expect(
-        screen.queryByRole("button", { name: /Opción A/ })
-      ).not.toBeInTheDocument()
+      expect(screen.getByText("Tu voto")).toBeInTheDocument()
     );
-    expect(screen.getByText("Tu voto")).toBeInTheDocument();
+    expect(screen.getByText(/3 · 75%/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Sí" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("reports server validation errors", async () => {
+    mocks.answerPollQuestion.mockResolvedValue({
+      success: false,
+      error: "Pregunta cerrada",
+    });
+    renderPoll();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Sí" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Pregunta cerrada"
+    );
   });
 });

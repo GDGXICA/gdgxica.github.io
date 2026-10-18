@@ -19,6 +19,7 @@ export interface LiveInstance {
   // into the relevant subtree; PR4 only needs `type` for badges.
   config?: Record<string, unknown>;
   currentQuestionIndex?: number;
+  currentQuestionStartedAt?: { seconds: number; nanoseconds?: number } | null;
   // Roulette-specific runtime fields (written by Cloud Function on spin)
   spinCount?: number;
   lastSpinWinnerId?: string | null;

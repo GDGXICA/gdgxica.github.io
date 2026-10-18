@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, it } from "vitest";
-import { assertFails, assertSucceeds } from "@firebase/rules-unit-testing";
+import { assertFails } from "@firebase/rules-unit-testing";
 import {
   collection,
   deleteDoc,
@@ -40,7 +40,7 @@ describe("firestore.rules — minigame_templates", () => {
     await cleanup();
   });
 
-  it("allows authenticated users to read templates", async () => {
+  it("denies direct template reads even to authenticated users", async () => {
     const env = await getTestEnv();
     await env.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(
@@ -49,8 +49,8 @@ describe("firestore.rules — minigame_templates", () => {
       );
     });
     const auth = env.authenticatedContext("user-1").firestore();
-    await assertSucceeds(getDoc(doc(auth, "minigame_templates/template-1")));
-    await assertSucceeds(getDocs(collection(auth, "minigame_templates")));
+    await assertFails(getDoc(doc(auth, "minigame_templates/template-1")));
+    await assertFails(getDocs(collection(auth, "minigame_templates")));
   });
 
   it("denies unauthenticated reads", async () => {
