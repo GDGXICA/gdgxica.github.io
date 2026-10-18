@@ -689,11 +689,23 @@ export async function redeemInvitation(req: Request, res: Response) {
         }
       }
 
+      const requestRef = db.collection("access_requests").doc(user.uid);
+      const requestSnap = await tx.get(requestRef);
+
       tx.update(match.ref, {
         usedAt: FieldValue.serverTimestamp(),
         usedBy: user.uid,
       });
       tx.update(userRef, { role: data.role });
+      if (requestSnap.data()?.status === "pending") {
+        tx.update(requestRef, {
+          status: "approved",
+          reviewedBy: user.uid,
+          reviewedAt: FieldValue.serverTimestamp(),
+          reviewNote: "Resuelta al canjear una invitación",
+          grantedRole: data.role,
+        });
+      }
 
       return stageAuditLog(
         tx,

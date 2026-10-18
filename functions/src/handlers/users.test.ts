@@ -244,6 +244,54 @@ describe("updateRole — validación", () => {
   });
 });
 
+describe("updateRole — solicitud de acceso pendiente", () => {
+  function seedRequest(uid: string, status: string) {
+    docs.set(`access_requests/${uid}`, {
+      uid,
+      status,
+      requestedRole: "organizer",
+    });
+  }
+
+  it("cierra como aprobada la solicitud pendiente de quien recibe el rol", async () => {
+    seed("t1", { role: "member" });
+    seedRequest("t1", "pending");
+    const res = buildRes();
+    await handler.updateRole(
+      buildReq("admin", "t1", { role: "organizer", reason: "Se suma" }),
+      res
+    );
+    expect(res.__body?.success).toBe(true);
+    expect(docs.get("access_requests/t1")).toMatchObject({
+      status: "approved",
+      grantedRole: "organizer",
+      reviewedBy: "actor-1",
+    });
+  });
+
+  it("no toca una solicitud que ya estaba resuelta", async () => {
+    seed("t1", { role: "member" });
+    seedRequest("t1", "rejected");
+    const res = buildRes();
+    await handler.updateRole(
+      buildReq("admin", "t1", { role: "organizer", reason: "Se suma" }),
+      res
+    );
+    expect(docs.get("access_requests/t1")?.status).toBe("rejected");
+  });
+
+  it("deja pendiente la solicitud si el rol nuevo es member", async () => {
+    seed("t1", { role: "volunteer" });
+    seedRequest("t1", "pending");
+    const res = buildRes();
+    await handler.updateRole(
+      buildReq("admin", "t1", { role: "member", reason: "Baja" }),
+      res
+    );
+    expect(docs.get("access_requests/t1")?.status).toBe("pending");
+  });
+});
+
 describe("updateRole — no escalada", () => {
   it("un organizador con users:role:write no puede nombrar admin", async () => {
     seed("t1", { role: "member" });

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { commitWithAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
@@ -118,6 +119,23 @@ export async function updateRole(req: Request, res: Response) {
     // dijera.
     const batch = admin.firestore().batch();
     batch.update(userRef, { role });
+
+    if (role !== "member") {
+      const requestRef = admin
+        .firestore()
+        .collection("access_requests")
+        .doc(uid);
+      if ((await requestRef.get()).data()?.status === "pending") {
+        batch.update(requestRef, {
+          status: "approved",
+          reviewedBy: performer.uid,
+          reviewedAt: FieldValue.serverTimestamp(),
+          reviewNote: reason,
+          grantedRole: role,
+        });
+      }
+    }
+
     await commitWithAuditLog(
       batch,
       {

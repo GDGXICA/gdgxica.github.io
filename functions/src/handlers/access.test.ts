@@ -696,6 +696,46 @@ describe("redeemInvitation", () => {
     docs.set("users/u1", { uid: "u1", role: "member" });
   }
 
+  it("cierra como aprobada la solicitud pendiente de quien canjea", async () => {
+    seedInvitation();
+    docs.set("access_requests/u1", {
+      uid: "u1",
+      status: "pending",
+      requestedRole: "organizer",
+    });
+    const res = buildRes();
+    await handler.redeemInvitation(
+      buildReq({
+        uid: "u1",
+        email: "invitada@example.com",
+        body: { token: TOKEN },
+      }),
+      res
+    );
+    expect(res.__body?.success).toBe(true);
+    expect(docs.get("access_requests/u1")).toMatchObject({
+      status: "approved",
+      grantedRole: "contributor",
+      reviewedBy: "u1",
+    });
+  });
+
+  it("no reabre ni pisa una solicitud ya resuelta al canjear", async () => {
+    seedInvitation();
+    docs.set("access_requests/u1", { uid: "u1", status: "rejected" });
+    const res = buildRes();
+    await handler.redeemInvitation(
+      buildReq({
+        uid: "u1",
+        email: "invitada@example.com",
+        body: { token: TOKEN },
+      }),
+      res
+    );
+    expect(res.__body?.success).toBe(true);
+    expect(docs.get("access_requests/u1")?.status).toBe("rejected");
+  });
+
   it("canjea y aplica el rol", async () => {
     seedInvitation();
     const res = buildRes();
