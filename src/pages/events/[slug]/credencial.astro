@@ -54,7 +54,7 @@ const metadata = {
 ---
 
 <Layout {...metadata}>
-  <main class="min-h-screen bg-slate-50 py-8 md:py-12">
+  <div class="min-h-screen bg-slate-50 py-8 md:py-12">
     <div class="container">
       <nav class="mx-auto mb-6 max-w-[1180px]">
         <a
@@ -70,5 +70,5 @@ const metadata = {
          SharedButton.jsx uses for its hashtags array. -->
       <CredentialPage client:load event={JSON.stringify(eventInfo)} />
     </div>
-  </main>
+  </div>
 </Layout>

@@ -2,8 +2,6 @@
 const { className } = Astro.props;
 ---
 
-<article
-  class={`border-gray-custom bg-white rounded-lg border p-6 shadow-sm ${className}`}
->
+<article class:list={["plate bg-sign-white p-6", className]}>
   <slot />
 </article>

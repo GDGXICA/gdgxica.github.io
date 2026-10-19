@@ -1,0 +1,62 @@
+---
+import Geoglyph from "@/components/illustrations/Geoglyph.astro";
+import type { GeoglyphName } from "@/components/illustrations/geoglyphs";
+
+interface Props {
+  id: string;
+  title: string;
+  glyph: GeoglyphName;
+  tone: "green" | "yellow" | "red" | "blue";
+  reverse?: boolean;
+}
+
+const { id, title, glyph, tone, reverse = false } = Astro.props;
+
+const tones = {
+  green: "bg-sign-green text-white on-sign",
+  yellow: "bg-sign-yellow text-ink",
+  red: "bg-sign-red text-white on-sign",
+  blue: "bg-sign-blue text-white on-sign",
+} as const;
+---
+
+<section
+  class="max-w-site mx-auto px-4 py-14 md:px-8 md:py-20"
+  aria-labelledby={id}
+>
+  <div
+    class:list={[
+      "grid items-center gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16",
+      reverse && "lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]",
+    ]}
+  >
+    <div class:list={["relative", reverse && "lg:order-2"]}>
+      <div
+        class="pointer-events-none absolute inset-x-0 top-full hidden h-14 justify-around px-[22%] lg:flex"
+        aria-hidden="true"
+      >
+        <span class="bg-post block h-full w-3"></span>
+        <span class="bg-post block h-full w-3"></span>
+      </div>
+      <div class:list={["sign-panel relative", tones[tone]]}>
+        <div class="sign-face flex items-center gap-5 p-5 sm:gap-7 sm:p-8">
+          <Geoglyph
+            name={glyph}
+            draw="view"
+            class="h-24 w-24 flex-none sm:h-32 sm:w-32"
+            strokeWidth={6}
+          />
+          <h2
+            id={id}
+            class="text-[clamp(1.75rem,1.1rem+1.9vw,2.75rem)] leading-[1.02] font-black tracking-[-0.02em]"
+          >
+            {title}
+          </h2>
+        </div>
+      </div>
+    </div>
+    <div class="text-lede text-ink flex flex-col gap-6">
+      <slot />
+    </div>
+  </div>
+</section>

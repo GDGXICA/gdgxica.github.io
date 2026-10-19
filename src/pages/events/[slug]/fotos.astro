@@ -18,7 +18,7 @@ const { event } = Astro.props;
   description={`Las fotos que compartió la comunidad en ${event.data.name}.`}
   url={`https://gdgica.com/events/${event.id}/fotos`}
 >
-  <main class="container mx-auto px-4 py-10">
+  <div class="container mx-auto px-4 py-10">
     <a
       href={`/events/${event.id}`}
       class="text-sm text-blue-600 hover:underline">← {event.data.name}</a
@@ -30,5 +30,5 @@ const { event } = Astro.props;
     </p>
 
     <MuralGallery client:visible slug={event.id} eventName={event.data.name} />
-  </main>
+  </div>
 </Layout>

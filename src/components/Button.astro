@@ -1,20 +1,78 @@
 ---
-const { href, target, variant, ...props } = Astro.props;
-const variantValues = {
-  solid: "bg-google-blue text-white border-google-blue",
-  outline: "bg-white text-primary border-gray-custom",
-  white: "bg-white text-primary border-white",
+const faces = {
+  solid: {
+    outer: "bg-sign-blue text-white hover:bg-sign-blue-deep",
+    inner: "border-white",
+  },
+  green: {
+    outer: "bg-sign-green text-white hover:bg-sign-green-deep",
+    inner: "border-white",
+  },
+  red: {
+    outer: "bg-sign-red text-white hover:bg-sign-red-deep",
+    inner: "border-white",
+  },
+  yellow: {
+    outer: "bg-sign-yellow text-ink hover:bg-sign-yellow-deep",
+    inner: "border-ink",
+  },
+  outline: {
+    outer: "bg-ink text-ink",
+    inner: "border-transparent bg-sign-white hover:bg-sand-pale",
+  },
+  white: {
+    outer: "bg-sign-white text-ink hover:bg-sand-pale",
+    inner: "border-ink",
+  },
 } as const;
 
-type Variant = keyof typeof variantValues;
+type Variant = keyof typeof faces;
+
+interface Props {
+  href?: string;
+  target?: string;
+  variant?: Variant;
+  class?: string;
+  [key: string]: unknown;
+}
+
+const {
+  href,
+  target,
+  variant = "solid",
+  class: className,
+  ...props
+} = Astro.props;
+const face = faces[variant] ?? faces.solid;
+const outer = [
+  "inline-flex rounded-plate p-[3px] font-extrabold transition-colors",
+  face.outer,
+  className,
+];
+const inner = [
+  "flex w-full items-center justify-center gap-2.5 whitespace-nowrap rounded-[7px] border-2 px-6 pt-2.5 pb-2 transition-colors",
+  face.inner,
+];
 ---
 
-<a
-  target={target}
-  href={href}
-  rel={target === "_blank" ? "noopener noreferrer" : ""}
-  class=`inline-flex gap-[10px] items-center font-medium justify-center whitespace-nowrap px-8 py-[10px] border rounded-md ${variantValues[variant as Variant]}`
-  {...props}
->
-  <slot />
-</a>
+{
+  href ? (
+    <a
+      href={href}
+      target={target}
+      rel={target === "_blank" ? "noopener noreferrer" : undefined}
+      class:list={outer}
+      {...props}
+    >
+      <span class:list={inner}>
+        <slot />
+      </span>
+    </a>
+  ) : (
+    <button type="button" class:list={outer} {...props}>
+      <span class:list={inner}>
+        <slot />
+      </span>
+    </button>
+  )
+}

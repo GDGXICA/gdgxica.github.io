@@ -2,7 +2,7 @@
 interface StatItem {
   value: string;
   label: string;
-  color: "blue" | "red" | "yellow" | "green";
+  color?: string;
 }
 
 interface Props {
@@ -10,26 +10,19 @@ interface Props {
 }
 
 const { stats } = Astro.props;
-
-const colorMap: Record<string, string> = {
-  blue: "text-google-blue",
-  red: "text-google-red",
-  yellow: "text-google-yellow",
-  green: "text-google-green",
-};
 ---
 
-<div
-  class="grid grid-cols-2 place-items-center gap-10 md:flex md:justify-between"
+<dl
+  class="plate bg-sign-white divide-ink grid grid-cols-2 md:flex md:divide-x-[3px]"
 >
   {
     stats.map((stat) => (
-      <div>
-        <p class={`${colorMap[stat.color]} text-[2rem] font-bold`}>
+      <div class="flex flex-col-reverse gap-1 px-6 py-4 md:flex-1">
+        <dt class="text-ink-muted text-sm font-bold">{stat.label}</dt>
+        <dd class="text-ink text-[2rem] leading-none font-black tabular-nums">
           {stat.value}
-        </p>
-        <p class="text-secondary">{stat.label}</p>
+        </dd>
       </div>
     ))
   }
-</div>
+</dl>

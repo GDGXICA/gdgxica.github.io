@@ -1,0 +1,38 @@
+---
+import type { CollectionEntry } from "astro:content";
+
+interface Props {
+  sponsors: CollectionEntry<"sponsors">[];
+  limit?: number;
+}
+
+const { sponsors, limit = 8 } = Astro.props;
+const ordered = [...sponsors]
+  .sort((a, b) => Number(b.data.featured) - Number(a.data.featured))
+  .slice(0, limit);
+---
+
+<ul class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+  {
+    ordered.map((sponsor) => (
+      <li>
+        <a
+          href={sponsor.data.website || "/sponsors"}
+          target={sponsor.data.website ? "_blank" : undefined}
+          rel={sponsor.data.website ? "noopener noreferrer" : undefined}
+          class="plate bg-sign-white hover:bg-sand-pale grid h-24 place-items-center p-4 transition-colors"
+        >
+          <img
+            src={sponsor.data.logo}
+            alt={sponsor.data.name}
+            width={160}
+            height={64}
+            class="max-h-14 w-auto max-w-full object-contain"
+            loading="lazy"
+            decoding="async"
+          />
+        </a>
+      </li>
+    ))
+  }
+</ul>

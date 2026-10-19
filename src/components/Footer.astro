@@ -1,151 +1,120 @@
 ---
 import { fetchLinks } from "@/loaders/transform-site-config";
+import Geoglyph from "@/components/illustrations/Geoglyph.astro";
 
 const siteLinks = await fetchLinks();
 const year = new Date().getFullYear();
-const data = {
-  logo: "/logo.png",
-  description:
-    "Construir una comunidad de desarrolladores más fuerte a través de la colaboración y el aprendizaje.",
-  items: [
-    {
-      id: 1,
-      title: "Comunidad",
-      links: [
-        {
-          id: 1,
-          text: "Nosotros",
-          url: "/about",
-          target: "_self",
-        },
-        {
-          id: 2,
-          text: "Voluntariado",
-          url: "/volunteers",
-          target: "_self",
-        },
-      ],
-    },
-    {
-      id: 2,
-      title: "Eventos",
-      links: [
-        {
-          id: 1,
-          text: "Todos los eventos",
-          url: "/events",
-          target: "_self",
-        },
-        {
-          id: 2,
-          text: "Patrocinadores",
-          url: "/sponsors",
-          target: "_self",
-        },
-      ],
-    },
-    {
-      id: 3,
-      title: "Conectar",
-      links: [
-        {
-          id: 1,
-          text: "Linkedin",
-          url: siteLinks.social.linkedin,
-          target: "_blank",
-        },
-        {
-          id: 2,
-          text: "Facebook",
-          url: siteLinks.social.facebook,
-          target: "_blank",
-        },
-        {
-          id: 3,
-          text: "Instagram",
-          url: siteLinks.social.instagram,
-          target: "_blank",
-        },
-      ],
-    },
-  ],
-  copyright: `©${year} Google Developer Groups ICA. All rights reserved.`,
-};
+
+const columns = [
+  {
+    title: "Comunidad",
+    links: [
+      { text: "Nosotros", url: "/about" },
+      { text: "Voluntariado", url: "/volunteers" },
+      { text: "Foro", url: "/foro" },
+      { text: "Únete en community.dev", url: siteLinks.community },
+    ],
+  },
+  {
+    title: "Eventos",
+    links: [
+      { text: "Todos los eventos", url: "/events" },
+      { text: "Patrocinadores", url: "/sponsors" },
+      { text: "Propón un evento", url: siteLinks.forms.proposeEvent },
+    ],
+  },
+  {
+    title: "Síguenos",
+    links: [
+      { text: "LinkedIn", url: siteLinks.social.linkedin },
+      { text: "Instagram", url: siteLinks.social.instagram },
+      { text: "Facebook", url: siteLinks.social.facebook },
+    ],
+  },
+];
+
+const isExternal = (url: string) => url.startsWith("http");
 ---
 
-<footer class="bg-primary py-12">
-  <div class="mx-auto max-w-[1400px] px-4">
-    <div class="flex flex-col gap-8 md:flex-row">
-      <div class="basis-1/4">
-        <div class="mb-4 flex items-center gap-3">
-          <img
-            src="/gdg-logo.png"
-            alt="Logo del GDG ICA"
-            height={32}
-            width={32}
-            class="rounded-sm"
-          />
-          <p class="text-lg font-bold text-white">GDG ICA</p>
+<footer class="theme-night">
+  <div class="bg-sand h-3" aria-hidden="true"></div>
+  <div class="bg-sign-white h-1.5" aria-hidden="true"></div>
+  <div class="max-w-site mx-auto px-4 pt-14 pb-10 md:px-8">
+    <div class="grid gap-12 lg:grid-cols-[1.3fr_2fr]">
+      <div class="flex items-start gap-5">
+        <Geoglyph
+          name="colibri"
+          class="text-sign-yellow h-24 w-24 flex-none"
+          strokeWidth={6}
+        />
+        <div>
+          <p class="text-2xl font-black tracking-tight">GDG ICA</p>
+          <p class="text-asphalt-muted mt-2 max-w-sm">
+            La comunidad de Google Developer Group en Ica, Perú. Aprendemos,
+            compartimos y construimos juntos desde 2015.
+          </p>
         </div>
-        <p class="text-[#9CA3AF]">{data.description}</p>
       </div>
-      {
-        data.items.map((item) => (
-          <div class="grow">
-            <p class="mb-4 text-base font-bold text-white">{item.title}</p>
-            <ul class="flex flex-col gap-2">
-              {item.links.map((link) => (
-                <li>
-                  <a
-                    class="text-[#9CA3AF]"
-                    href={link.url}
-                    aria-label={`Enlace a ${link.text}`}
-                    target={link.target}
-                    rel={link.target === "_blank" ? "noopener noreferrer" : ""}
-                  >
-                    {link.text}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))
-      }
+      <div class="grid gap-10 sm:grid-cols-3">
+        {
+          columns.map((column) => (
+            <div>
+              <p class="text-sign-yellow text-sm font-extrabold tracking-[0.12em] uppercase">
+                {column.title}
+              </p>
+              <ul class="mt-4 flex flex-col gap-3">
+                {column.links.map((link) => (
+                  <li>
+                    <a
+                      href={link.url}
+                      target={isExternal(link.url) ? "_blank" : undefined}
+                      rel={
+                        isExternal(link.url) ? "noopener noreferrer" : undefined
+                      }
+                      class="font-semibold text-white decoration-2 hover:underline"
+                    >
+                      {link.text}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </div>
     </div>
-    <hr class="my-6 text-[#1F2937]" />
-    <div class="flex flex-col items-center justify-between gap-4 md:flex-row">
-      <p class="text-center text-[#9CA3AF]">{data.copyright}</p>
-      <div
-        class="flex flex-wrap items-center justify-center gap-4 text-[#9CA3AF]"
-      >
+  </div>
+  <div class="road-lane h-2" aria-hidden="true"></div>
+  <div
+    class="max-w-site text-asphalt-muted mx-auto flex flex-col gap-4 px-4 py-8 text-sm md:flex-row md:items-center md:justify-between md:px-8"
+  >
+    <p>© {year} GDG ICA. Todos los derechos reservados.</p>
+    <ul class="flex flex-wrap gap-x-6 gap-y-2">
+      <li>
         <a
           href="https://github.com/GDGXICA/gdgxica.github.io"
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Contribuye en GitHub"
-          class="inline-flex items-center gap-2 text-sm hover:text-white"
+          class="underline hover:text-white"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            aria-hidden="true"
-            class="h-4 w-4"
-          >
-            <path
-              d="M12 .5C5.73.5.5 5.73.5 12a11.5 11.5 0 0 0 7.86 10.92c.58.11.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.21-1.49 3.18-1.18 3.18-1.18.62 1.59.23 2.76.11 3.05.73.81 1.18 1.84 1.18 3.1 0 4.43-2.7 5.41-5.27 5.69.41.36.77 1.06.77 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5Z"
-            ></path>
-          </svg>
           Contribuye en GitHub
         </a>
-        <a href="/terms-and-conditions" class="text-sm underline"
-          >Términos y Condiciones</a
-        >
-        <a href="/privacy-policy" class="text-sm underline"
-          >Política de Privacidad</a
-        >
-        <a href="/creditos" class="text-sm underline">Créditos y licencias</a>
-      </div>
-    </div>
+      </li>
+      <li>
+        <a href="/terms-and-conditions" class="underline hover:text-white">
+          Términos y condiciones
+        </a>
+      </li>
+      <li>
+        <a href="/privacy-policy" class="underline hover:text-white">
+          Política de privacidad
+        </a>
+      </li>
+      <li>
+        <a href="/creditos" class="underline hover:text-white">
+          Créditos y licencias
+        </a>
+      </li>
+    </ul>
   </div>
 </footer>

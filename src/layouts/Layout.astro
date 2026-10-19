@@ -3,6 +3,7 @@ import "@/styles/global.css";
 import Header from "@/components/Header.astro";
 import Footer from "@/components/Footer.astro";
 import { ClientRouter } from "astro:transitions";
+import { Font } from "astro:assets";
 import { serializeJsonLd } from "@/utils/schema";
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
 }
 
 const { title, description, image, url, schema, noindex } = Astro.props;
+const ogImage = new URL(image || "/og/gdg-ica.png", Astro.site).href;
 ---
 
 <!doctype html>
@@ -27,6 +29,8 @@ const { title, description, image, url, schema, noindex } = Astro.props;
     <link rel="preconnect" href="https://www.google.com" crossorigin />
     <link rel="dns-prefetch" href="https://www.google.com" />
     <meta name="generator" content={Astro.generator} />
+    <meta name="theme-color" content="#ead6ae" />
+    <Font cssVariable="--font-overpass" preload />
 
     <title>{title}</title>
     <meta name="description" content={description} />
@@ -39,9 +43,11 @@ const { title, description, image, url, schema, noindex } = Astro.props;
     />
 
     <!-- Open Graph -->
+    <meta property="og:site_name" content="GDG ICA" />
+    <meta property="og:locale" content="es_PE" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    {image && <meta property="og:image" content={image} />}
+    <meta property="og:image" content={ogImage} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={url} />
 
@@ -49,7 +55,7 @@ const { title, description, image, url, schema, noindex } = Astro.props;
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
-    {image && <meta name="twitter:image" content={image} />}
+    <meta name="twitter:image" content={ogImage} />
     <link rel="canonical" href={url} />
     {
       schema && (
@@ -58,9 +64,17 @@ const { title, description, image, url, schema, noindex } = Astro.props;
     }
     <ClientRouter />
   </head>
-  <body>
+  <body class="site">
+    <a
+      href="#contenido"
+      class="plate bg-sign-white text-ink fixed top-3 left-3 z-50 -translate-y-24 px-4 py-2 font-bold focus:translate-y-0"
+    >
+      Saltar al contenido
+    </a>
     <Header />
-    <slot />
+    <main id="contenido" tabindex="-1" class="outline-none">
+      <slot />
+    </main>
     <Footer />
   </body>
 </html>

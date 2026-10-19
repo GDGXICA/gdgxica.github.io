@@ -1,0 +1,95 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { eventDate, isoDate } from "@/utils/events";
+
+interface Props {
+  events: CollectionEntry<"events">[];
+}
+
+const { events } = Astro.props;
+
+const categoryCaps: Record<string, string> = {
+  devfest: "bg-sign-blue",
+  io: "bg-sign-blue",
+  studyjam: "bg-sign-green",
+  wtm: "bg-sign-green",
+  meetup: "bg-sign-yellow",
+  hackaton: "bg-ink",
+};
+
+const capOf = (event: CollectionEntry<"events">) =>
+  event.data.status.type === "completed"
+    ? (categoryCaps[event.data.category.type] ?? "bg-sign-green")
+    : "bg-sign-red";
+
+const statusText = {
+  upcoming: "Próximo",
+  "in-progress": "En curso",
+  completed: "Realizado",
+} as const;
+
+const monthOf = (date: Date) =>
+  date
+    .toLocaleDateString("es-PE", { month: "short" })
+    .replace(".", "")
+    .toUpperCase();
+---
+
+<section class="theme-night" aria-labelledby="ruta">
+  <div
+    class="max-w-site mx-auto flex flex-wrap items-end justify-between gap-4 px-4 pt-14 pb-8 md:px-8"
+  >
+    <h2 id="ruta" class="text-title">La ruta de la comunidad</h2>
+    <a
+      href="/events"
+      class="text-lg font-bold underline decoration-2 hover:decoration-4"
+    >
+      Ver todos los eventos
+    </a>
+  </div>
+  <div class="max-w-site mx-auto md:px-8">
+    <div class="overflow-x-auto overscroll-x-contain px-4 md:px-0">
+      <ol class="flex w-max gap-4">
+        {
+          events.map((event) => {
+            const date = eventDate(event);
+            const status = event.data.status.type;
+            return (
+              <li class="w-52 flex-none">
+                <a
+                  href={`/events/${event.id}`}
+                  class="bg-sign-white text-ink group flex h-full flex-col overflow-hidden rounded-t-[6.5rem] border-[3px] border-white"
+                >
+                  <span class:list={["block h-6", capOf(event)]} />
+                  <span class="flex flex-1 flex-col items-center px-4 pt-4 pb-5 text-center">
+                    <time
+                      datetime={isoDate(date)}
+                      class="flex flex-col items-center leading-none"
+                    >
+                      <span class="text-[2.75rem] font-black tabular-nums">
+                        {date.getDate()}
+                      </span>
+                      <span class="mt-1 text-lg font-extrabold tracking-[0.08em]">
+                        {monthOf(date)} {date.getFullYear()}
+                      </span>
+                    </time>
+                    <span class="mt-4 line-clamp-3 font-bold group-hover:underline">
+                      {event.data.name}
+                    </span>
+                    <span class="text-ink-muted mt-auto pt-3 text-sm font-extrabold tracking-[0.08em] uppercase">
+                      {statusText[status]}
+                    </span>
+                  </span>
+                </a>
+              </li>
+            );
+          })
+        }
+      </ol>
+    </div>
+  </div>
+  <div class="bg-post/60 mt-0 h-1" aria-hidden="true"></div>
+  <div class="py-10" aria-hidden="true">
+    <div class="road-lane h-2"></div>
+  </div>
+</section>
