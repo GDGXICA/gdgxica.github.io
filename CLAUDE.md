@@ -41,13 +41,16 @@ All content is sourced from the external repo [`GDGXICA/gdg-ica-data`](https://g
 ### Component Pattern
 
 - **`.astro` components** — Used for all static/SSR content (no JS sent to browser). Located in `src/components/`.
-- **`.jsx/.tsx` React components** — Only for client-side interactivity (`src/components/react/`). Public: `Gallery.jsx`, `SharedButton.jsx`. Admin panel: `src/components/react/admin/`.
+- **`.jsx/.tsx` React components** — Only for client-side interactivity (`src/components/react/`). Public: `EventFilters.tsx`, `SharedButton.jsx`, plus the event-day islands (credential, games, mural). Admin panel: `src/components/react/admin/`.
 - **Path alias:** `@/` maps to `src/`
 
 ### Key Design Details
 
-- Google brand colors defined as CSS variables in `src/styles/global.css`: blue `#2463eb`, red `#ef4444`, yellow `#ebb308`, green `#16a34a`
-- `container` utility class provides the standard max-width wrapper
+- **Public visual system** ("Señales de la Panamericana", road signage on the Ica desert) lives in `src/styles/site.css`, imported by `global.css`: sand ground, Google colors used as signage (`sign-green` destination, `sign-blue` the register action, `sign-yellow` warnings/countdown, `sign-red` mandatory), asphalt ink, and utilities `sign-panel`, `plate`, `road-lane`, `theme-night`. Design record in `DESIGN.md` (public site and admin panel have separate sections) and the direction contract in `.impeccable/surfaces/src-pages.md`.
+- `Layout.astro` puts `class="site"` on `<body>`: base styles and a **temporary bridge** that remaps the legacy tokens (`text-primary`, `bg-section`, `google-*`…) are scoped to `.site`, so the admin never sees them. New public code uses the `sand`/`ink`/`sign-*` tokens; the bridge goes away once every page is migrated.
+- Font: Overpass Variable, self-hosted through Astro's Fonts API with the `local` provider (`astro.config.mjs`), so builds never fetch fonts from a CDN. Geist stays imported in `global.css` because the credential canvas draws with it.
+- Nazca geoglyphs and the Huacachina palm are authored single-stroke SVG paths in `src/components/illustrations/geoglyphs.ts`, rendered by `Geoglyph.astro` (`draw="load"` / `draw="view"` animate the stroke only when motion is allowed).
+- `max-w-site` is the standard content width; the older `container` class remains for pages not yet migrated
 - Event slugs are derived from JSON filenames (e.g., `devfest-2025.json` → `/events/devfest-2025`)
 - Images stored in `public/` subdirectories (`events/`, `speakers/`, `sponsors/`, `team/`, `gallery/`) — referenced as absolute paths
 

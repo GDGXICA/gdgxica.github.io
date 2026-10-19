@@ -1,11 +1,16 @@
 ---
+import Geoglyph from "@/components/illustrations/Geoglyph.astro";
+
 const { wide = false } = Astro.props;
 ---
 
-<section
-  class="bg-gradient-to-br from-[#EFF6FF] via-[#FFFFFF] to-[#F0FDF4] py-10 md:py-20"
->
-  <div class="container">
+<section class="relative overflow-hidden py-12 md:py-20">
+  <Geoglyph
+    name="colibri"
+    class="text-sand-deep pointer-events-none absolute top-1/2 -right-16 hidden h-[34rem] w-[34rem] -translate-y-1/2 lg:block"
+    strokeWidth={3}
+  />
+  <div class="max-w-site relative mx-auto px-4 md:px-8">
     <div class={wide ? "w-full" : "mx-auto max-w-[768px] text-center"}>
       <slot />
     </div>

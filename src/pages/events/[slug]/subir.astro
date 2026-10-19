@@ -20,7 +20,7 @@ const mural = event.data.mural!;
   url={`https://gdgica.com/events/${event.id}/subir`}
   noindex
 >
-  <main class="container mx-auto px-4 py-10">
+  <div class="container mx-auto px-4 py-10">
     <MuralUploadRoot client:load slug={event.id} headline={mural.headline} />
-  </main>
+  </div>
 </Layout>

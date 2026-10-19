@@ -29,7 +29,7 @@ const registrationPercent =
 
 {
   isHorizontal ? (
-    <article class="border-gray-custom relative overflow-hidden rounded-2xl border bg-white text-left shadow-[0_20px_60px_rgba(15,23,42,0.10)] lg:grid lg:grid-cols-[minmax(0,1.08fr)_minmax(380px,0.92fr)]">
+    <article class="plate bg-sign-white relative overflow-hidden text-left lg:grid lg:grid-cols-[minmax(0,1.08fr)_minmax(380px,0.92fr)]">
       <div class="relative min-h-[340px] overflow-hidden bg-slate-950 lg:min-h-[500px]">
         <img
           src={image || "/placeholder.svg"}
@@ -75,51 +75,26 @@ const registrationPercent =
 
         <ul class="text-secondary mt-7 grid gap-4 text-sm sm:text-base">
           <li class="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
-            <Calendar
-              class="mt-0.5"
-              stroke-width={1.8}
-              size={19}
-              color="#2463EB"
-            />
+            <Calendar stroke-width={1.8} size={19} class="text-ink mt-0.5" />
             <span class="leading-6">{date}</span>
           </li>
           <li class="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
-            <Clock
-              class="mt-0.5"
-              stroke-width={1.8}
-              size={19}
-              color="#EF4444"
-            />
+            <Clock stroke-width={1.8} size={19} class="text-ink mt-0.5" />
             <span class="leading-6">{time}</span>
           </li>
           {isVirtual ? (
             <li class="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
-              <Globe
-                class="mt-0.5"
-                stroke-width={1.8}
-                size={19}
-                color="#16A34A"
-              />
+              <Globe stroke-width={1.8} size={19} class="text-ink mt-0.5" />
               <span class="leading-6">Evento virtual</span>
             </li>
           ) : (
             <li class="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
-              <MapPin
-                class="mt-0.5"
-                stroke-width={1.8}
-                size={19}
-                color="#16A34A"
-              />
+              <MapPin stroke-width={1.8} size={19} class="text-ink mt-0.5" />
               <span class="leading-6">{location.name}</span>
             </li>
           )}
           <li class="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
-            <Users
-              class="mt-0.5"
-              stroke-width={1.8}
-              size={19}
-              color="#EBB308"
-            />
+            <Users stroke-width={1.8} size={19} class="text-ink mt-0.5" />
             <div>
               <div class="flex items-center justify-between gap-4 leading-6">
                 <span>{participants} personas registradas</span>
@@ -150,7 +125,7 @@ const registrationPercent =
         <div class="mt-8 lg:mt-auto lg:pt-8">
           <a
             href={`/events/${slug}`}
-            class="bg-google-blue inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold text-white shadow-[0_10px_24px_rgba(36,99,235,0.2)] transition hover:-translate-y-0.5 hover:bg-blue-700"
+            class="bg-sign-blue hover:bg-sign-blue-deep rounded-plate inline-flex min-h-12 w-full items-center justify-center gap-2 px-6 py-3 font-extrabold text-white transition-colors"
           >
             <Ticket stroke-width={1.8} size={20} />
             Ver detalles del evento
@@ -159,53 +134,57 @@ const registrationPercent =
       </div>
     </article>
   ) : (
-    <article class="border-gray-custom relative flex h-full flex-col rounded-lg border bg-white">
-      <img
-        src={image ? image : "/placeholder.svg"}
-        class="aspect-video h-[192px] w-full rounded-t-lg object-cover"
-        width={385}
-        height={192}
-        alt={`Imagen del evento ${name}`}
-        loading="lazy"
-        decoding="async"
-      />
-      <div class="absolute top-4 left-6 flex gap-2">
-        {category && <Tag label={category.label} type={category.type} />}
-        {status && <Tag label={status.label} type={status.type} />}
+    <article class="plate bg-sign-white relative flex h-full flex-col overflow-hidden">
+      <div class="border-ink relative border-b-[3px]">
+        <img
+          src={image ? image : "/placeholder.svg"}
+          class="aspect-video w-full object-cover"
+          width={640}
+          height={360}
+          alt=""
+          loading="lazy"
+          decoding="async"
+        />
+        <div class="absolute top-3 left-3 flex flex-wrap gap-2">
+          {category && <Tag label={category.label} type={category.type} />}
+          {status && <Tag label={status.label} type={status.type} />}
+          {isHighlight && <Tag label="Destacado" isHighLight={true} />}
+        </div>
       </div>
-      <div class="absolute top-4 right-6">
-        {isHighlight && <Tag label="Destacado" isHighLight={true} />}
-      </div>
-      <div class="flex flex-1 flex-col p-6">
-        <p class="text-primary mb-1 text-2xl font-bold">{name}</p>
-        <p class="text-secondary mb-6 line-clamp-2">{shortDescription}</p>
-        <ul class="text-secondary mb-4 flex flex-col gap-3">
+      <div class="flex flex-1 flex-col p-5">
+        <h3 class="text-ink text-2xl leading-tight font-black tracking-tight">
+          <a href={`/events/${slug}`} class="hover:underline">
+            {name}
+          </a>
+        </h3>
+        <p class="text-ink-muted mt-2 line-clamp-2">{shortDescription}</p>
+        <ul class="text-ink mt-5 flex flex-col gap-2.5 font-semibold">
           <li class="flex items-center gap-3">
-            <Calendar stroke-width={1.5} size={16} color="#2463EB" />
+            <Calendar stroke-width={2} size={18} aria-hidden="true" />
             {date}
           </li>
           <li class="flex items-center gap-3">
-            <Clock stroke-width={1.5} size={16} color="#EF4444" />
+            <Clock stroke-width={2} size={18} aria-hidden="true" />
             {time}
           </li>
           {isVirtual ? (
             <li class="flex items-center gap-3">
-              <Globe stroke-width={1.5} size={16} color="#16A34A" />
-              Evento Virtual
+              <Globe stroke-width={2} size={18} aria-hidden="true" />
+              Evento virtual
             </li>
           ) : (
             <li class="flex items-center gap-3">
-              <MapPin stroke-width={1.5} size={16} color="#16A34A" />
+              <MapPin stroke-width={2} size={18} aria-hidden="true" />
               {location.name}
             </li>
           )}
           <li class="flex items-center gap-3">
-            <Users stroke-width={1.5} size={16} color="#EBB308" />
-            {participants}/{maxParticipants} registrados
+            <Users stroke-width={2} size={18} aria-hidden="true" />
+            {participants} de {maxParticipants} inscritos
           </li>
         </ul>
         {tags.length > 0 && (
-          <ul class="mb-4 flex min-h-[32px] flex-wrap gap-1">
+          <ul class="mt-4 flex flex-wrap gap-1.5">
             {tags.map((tag: string) => (
               <li>
                 <Tag label={tag} />
@@ -213,11 +192,10 @@ const registrationPercent =
             ))}
           </ul>
         )}
-
-        <p class="mt-auto grid">
+        <p class="mt-auto grid pt-6">
           <Button variant="solid" href={`/events/${slug}`}>
-            <Ticket stroke-width={1.5} />
-            Ver Detalles
+            <Ticket stroke-width={2} size={18} aria-hidden="true" />
+            Ver detalles
           </Button>
         </p>
       </div>

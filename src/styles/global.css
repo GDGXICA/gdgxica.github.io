@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 @import "@fontsource-variable/geist";
+@import "./site.css";
 @plugin "@tailwindcss/typography";
 
 @theme {

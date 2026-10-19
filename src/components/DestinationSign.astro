@@ -1,0 +1,232 @@
+---
+import type { CollectionEntry } from "astro:content";
+import Geoglyph from "@/components/illustrations/Geoglyph.astro";
+import Button from "@/components/Button.astro";
+import {
+  eventDate,
+  formatLongDate,
+  formatStartTime,
+  isoDate,
+} from "@/utils/events";
+
+interface Props {
+  event?: CollectionEntry<"events">;
+  communityUrl: string;
+  sinceYear: number;
+  members: number;
+}
+
+const { event, communityUrl, sinceYear, members } = Astro.props;
+
+const date = event ? eventDate(event) : undefined;
+const action = event?.data.registerFormLink
+  ? { text: "Inscríbete gratis", href: event.data.registerFormLink }
+  : event
+    ? { text: "Ver el evento", href: `/events/${event.id}` }
+    : { text: "Únete a la comunidad", href: communityUrl };
+const isExternal = action.href.startsWith("http");
+const venueParts = event?.data.isVirtual
+  ? ["Evento virtual"]
+  : (event?.data.location.name.split(/\s+-\s+/) ?? []);
+---
+
+<section class="relative lg:pb-16" aria-labelledby="destino">
+  <div class="max-w-site mx-auto px-4 pt-2 md:px-8 lg:pt-4">
+    <div
+      class="grid items-start gap-6 lg:grid-cols-[minmax(0,2.15fr)_minmax(0,1fr)] lg:gap-8"
+    >
+      <div class="relative lg:pb-12">
+        <div
+          class="pointer-events-none absolute inset-x-0 top-[calc(100%-3rem)] hidden h-28 justify-around px-[18%] lg:flex"
+          aria-hidden="true"
+        >
+          <span class="bg-post block h-full w-4"></span>
+          <span class="bg-post block h-full w-4"></span>
+        </div>
+        <div class="sign-panel bg-sign-green on-sign relative text-white">
+          <div
+            class="sign-face grid gap-5 p-5 sm:grid-cols-[minmax(0,0.42fr)_minmax(0,1fr)] sm:gap-8 sm:p-8 lg:p-10"
+          >
+            <div
+              class="grid aspect-square w-28 place-items-center rounded-[0.875rem] border-4 border-current p-3 sm:w-auto sm:p-5"
+            >
+              <Geoglyph
+                name="colibri"
+                title="Colibrí de Nazca"
+                draw="load"
+                class="h-full w-full"
+                strokeWidth={4.5}
+              />
+            </div>
+            <div class="flex flex-col justify-between gap-5 sm:gap-8">
+              {
+                event ? (
+                  <>
+                    <h2 id="destino" class="text-display">
+                      {event.data.name}
+                    </h2>
+                    <div class="flex flex-col gap-4">
+                      <p class="text-xl leading-snug font-bold text-balance sm:text-[1.625rem]">
+                        <time datetime={date && isoDate(date)}>
+                          {date && formatLongDate(date)}
+                        </time>
+                        <span aria-hidden="true" class="mx-2">
+                          ∙
+                        </span>
+                        <span class="sr-only">, </span>
+                        {formatStartTime(event.data.time)}
+                        <br />
+                        {venueParts.map((part, index) =>
+                          index === 0 ? (
+                            <span>{part}</span>
+                          ) : (
+                            <span class="whitespace-nowrap">
+                              <span aria-hidden="true" class="mx-2">
+                                ∙
+                              </span>
+                              <span class="sr-only">, </span>
+                              {part}
+                            </span>
+                          )
+                        )}
+                      </p>
+                      <a
+                        href={`/events/${event.id}`}
+                        class="self-start text-lg font-bold underline decoration-2 hover:decoration-4"
+                      >
+                        Agenda, speakers y ubicación
+                      </a>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h2 id="destino" class="text-display">
+                      GDG ICA
+                    </h2>
+                    <p class="text-xl leading-snug font-bold sm:text-[1.625rem]">
+                      La comunidad de devs de Ica. Nuevos eventos muy pronto.
+                    </p>
+                  </>
+                )
+              }
+            </div>
+          </div>
+        </div>
+
+        <a
+          href={action.href}
+          target={isExternal ? "_blank" : undefined}
+          rel={isExternal ? "noopener noreferrer" : undefined}
+          class="group relative mt-4 flex h-20 items-center sm:h-24 lg:absolute lg:right-12 lg:bottom-0 lg:mt-0 lg:w-[26rem]"
+        >
+          <span
+            class="bg-sign-white absolute inset-0 rounded-l-[0.875rem] [clip-path:polygon(0_0,calc(100%-3.25rem)_0,100%_50%,calc(100%-3.25rem)_100%,0_100%)]"
+            aria-hidden="true"></span>
+          <span
+            class="bg-sign-blue group-hover:bg-sign-blue-deep absolute inset-[5px] rounded-l-[0.625rem] transition-colors [clip-path:polygon(0_0,calc(100%-3rem)_0,100%_50%,calc(100%-3rem)_100%,0_100%)]"
+            aria-hidden="true"></span>
+          <span
+            class="relative pr-20 pl-7 text-2xl font-black text-white sm:text-[1.875rem]"
+          >
+            {action.text}
+          </span>
+        </a>
+      </div>
+
+      <aside aria-label="Datos del evento" class="flex flex-col gap-3 lg:gap-4">
+        <dl class="flex gap-2 lg:flex-col lg:gap-3">
+          {
+            event && (
+              <div
+                hidden
+                class="plate bg-sign-yellow flex min-w-0 flex-1 flex-col justify-between gap-1 px-3 pt-3 pb-2 lg:flex-row lg:items-baseline lg:justify-between lg:px-5 lg:pt-4 lg:pb-3"
+                data-countdown={isoDate(date!)}
+              >
+                <dt class="text-sm font-bold lg:text-base">Faltan</dt>
+                <dd
+                  class="text-xl leading-none font-black tabular-nums lg:text-[1.75rem]"
+                  data-countdown-value
+                />
+              </div>
+            )
+          }
+          {
+            event && event.data.maxParticipants > 0 && (
+              <div class="plate bg-sign-white flex min-w-0 flex-1 flex-col justify-between gap-1 px-3 pt-3 pb-2 lg:flex-row lg:items-baseline lg:justify-between lg:px-5 lg:pt-4 lg:pb-3">
+                <dt class="text-ink-muted text-sm font-bold lg:text-base">
+                  Inscritos
+                </dt>
+                <dd class="text-xl leading-none font-black whitespace-nowrap tabular-nums lg:text-[1.75rem]">
+                  {event.data.participants}
+                  <span class="text-ink-muted text-sm font-bold lg:hidden">
+                    /{event.data.maxParticipants}
+                  </span>
+                  <span class="text-ink-muted ml-1.5 hidden text-lg font-bold lg:inline">
+                    de {event.data.maxParticipants}
+                  </span>
+                </dd>
+              </div>
+            )
+          }
+          <div
+            class="plate bg-sign-white flex min-w-0 flex-1 flex-col justify-between gap-1 px-3 pt-3 pb-2 lg:flex-row lg:items-baseline lg:justify-between lg:px-5 lg:pt-4 lg:pb-3"
+          >
+            <dt
+              class="text-ink-muted text-sm leading-tight font-bold lg:text-base"
+            >
+              Comunidad desde
+            </dt>
+            <dd
+              class="text-xl leading-none font-black tabular-nums lg:text-[1.75rem]"
+            >
+              {sinceYear}
+            </dd>
+          </div>
+          {
+            !event && (
+              <div class="plate bg-sign-white flex min-w-0 flex-1 flex-col justify-between gap-1 px-3 pt-3 pb-2 lg:flex-row lg:items-baseline lg:justify-between lg:px-5 lg:pt-4 lg:pb-3">
+                <dt class="text-ink-muted text-sm font-bold lg:text-base">
+                  Miembros
+                </dt>
+                <dd class="text-xl leading-none font-black tabular-nums lg:text-[1.75rem]">
+                  {members}+
+                </dd>
+              </div>
+            )
+          }
+        </dl>
+        {
+          event && (
+            <Button
+              variant="outline"
+              href={communityUrl}
+              target="_blank"
+              class="w-full"
+            >
+              Únete a la comunidad GDG Ica
+            </Button>
+          )
+        }
+      </aside>
+    </div>
+  </div>
+</section>
+
+<script>
+  function initCountdown() {
+    document
+      .querySelectorAll<HTMLElement>("[data-countdown]")
+      .forEach((row) => {
+        const target = new Date(`${row.dataset.countdown}T00:00:00`);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const days = Math.round((target.getTime() - today.getTime()) / 864e5);
+        const output = row.querySelector("[data-countdown-value]");
+        if (!output || days < 1) return;
+        output.textContent = days === 1 ? "1 día" : `${days} días`;
+        row.hidden = false;
+      });
+  }
+
+  document.addEventListener("astro:page-load", initCountdown);
+</script>

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { defineConfig } from "astro/config";
+import { defineConfig, fontProviders } from "astro/config";
 
 import tailwindcss from "@tailwindcss/vite";
 
@@ -24,8 +24,38 @@ const useFirebaseEmulator = process.env.PUBLIC_USE_FIREBASE_EMULATOR === "true";
 // call 404 with nothing explaining why.
 const emulatorProject = process.env.FIREBASE_EMULATOR_PROJECT ?? "appgdgica";
 
+const sitemapExcluded = [
+  "/admin",
+  "/team/",
+  "/jugar/",
+  "/projector/",
+  "/mural/",
+  "/subir/",
+  "/404",
+];
+
 export default defineConfig({
   site: "https://gdgica.com",
+
+  fonts: [
+    {
+      provider: fontProviders.local(),
+      name: "Overpass",
+      cssVariable: "--font-overpass",
+      fallbacks: ["sans-serif"],
+      options: {
+        variants: [
+          {
+            src: [
+              "@fontsource-variable/overpass/files/overpass-latin-wght-normal.woff2",
+            ],
+            weight: "100 900",
+            style: "normal",
+          },
+        ],
+      },
+    },
+  ],
 
   vite: {
     plugins: [tailwindcss()],
@@ -43,7 +73,8 @@ export default defineConfig({
 
   integrations: [
     sitemap({
-      filter: (page) => !page.includes("/admin"),
+      filter: (page) =>
+        !sitemapExcluded.some((segment) => page.includes(segment)),
     }),
     react({
       include: ["**/react/**"],

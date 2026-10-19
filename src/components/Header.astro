@@ -1,133 +1,180 @@
 ---
-import { Menu } from "@lucide/astro";
+import { Menu, X } from "@lucide/astro";
+import { getCollection } from "astro:content";
+import { fetchLinks } from "@/loaders/transform-site-config";
+import { getNextEvent } from "@/utils/events";
 
-const data = {
-  logo: {
-    image: "/gdg-logo.png",
-    imageAlt: "Logo del GDG ICA",
-    name: "GDG ICA",
-    description: "Google Developer Group Ica",
-  },
-  links: [
-    {
-      id: 1,
-      text: "Nosotros",
-      url: "/about",
-      target: "_self",
-    },
-    {
-      id: 2,
-      text: "Eventos",
-      url: "/events",
-      target: "_self",
-    },
-    {
-      id: 3,
-      text: "Voluntariado",
-      url: "/volunteers",
-      target: "_self",
-    },
-    {
-      id: 4,
-      text: "Foro",
-      url: "/foro",
-      target: "_self",
-    },
-    {
-      id: 5,
-      text: "Patrocinadores",
-      url: "/sponsors",
-      target: "_self",
-    },
-  ],
-};
+const links = [
+  { text: "Eventos", url: "/events" },
+  { text: "Nosotros", url: "/about" },
+  { text: "Voluntariado", url: "/volunteers" },
+  { text: "Foro", url: "/foro" },
+  { text: "Patrocinadores", url: "/sponsors" },
+];
+
+const siteLinks = await fetchLinks();
+const nextEvent = getNextEvent(await getCollection("events"));
+const pathname = Astro.url.pathname;
+const isHome = pathname === "/";
+const isCurrent = (url: string) =>
+  pathname === url || pathname.startsWith(`${url}/`);
+
+const cta = nextEvent?.data.registerFormLink
+  ? {
+      text: "Inscríbete",
+      href: nextEvent.data.registerFormLink,
+      tone: "bg-sign-blue hover:bg-sign-blue-deep",
+    }
+  : {
+      text: "Únete",
+      href: siteLinks.community,
+      tone: "bg-sign-green hover:bg-sign-green-deep",
+    };
 ---
 
-<header class="border-gray-custom border-b bg-white py-4">
-  <div class="mx-auto max-w-[1400px] px-4">
-    <div class="flex items-center justify-between">
-      <a href="/" class="flex items-center gap-3 min-[1360px]:basis-1/3">
-        <img
-          src={data.logo.image}
-          class="h-[40px] w-[40px] min-[1360px]:h-[64px] min-[1360px]:w-[64px]"
-          width={64}
-          height={64}
-          alt={data.logo.imageAlt}
-        />
-        <div>
-          <p class="text-primary text-lg font-bold">{data.logo.name}</p>
-          <p class="text-secondary text-xs">{data.logo.description}</p>
-        </div>
-      </a>
-      <nav
-        id="navigation"
-        aria-label="Navegación principal"
-        class="fixed inset-0 top-[77px] z-10 flex grow translate-x-full flex-col justify-start gap-6 bg-white px-4 py-10 min-[1360px]:static min-[1360px]:translate-0 min-[1360px]:flex-row min-[1360px]:items-center min-[1360px]:justify-end min-[1360px]:py-0 md:gap-0"
-      >
-        <ul class="flex flex-col gap-6 min-[1360px]:flex-row">
-          {
-            data.links.map((link) => (
-              <li>
-                <a
-                  href={link.url}
-                  target={link.target}
-                  class="text-secondary text-base font-medium"
-                  aria-label={`Enlace a ${link.text}`}
-                >
+<header class="relative z-30" data-site-header>
+  <div
+    class="max-w-site mx-auto flex items-center gap-4 px-4 py-4 md:px-8 lg:py-6"
+  >
+    <a
+      href="/"
+      class="plate bg-sign-white mr-auto flex items-center gap-3 py-1.5 pr-4 pl-2"
+    >
+      <img src="/gdg-logo.png" width={36} height={36} alt="" class="h-9 w-9" />
+      <span class="flex flex-col leading-none">
+        <span class="text-ink text-xl font-black tracking-tight">GDG ICA</span>
+        <span class="text-ink-muted mt-1 text-[0.6875rem] font-bold">
+          Google Developer Group
+        </span>
+      </span>
+    </a>
+
+    <nav aria-label="Navegación principal" class="hidden lg:block">
+      <ul class="flex items-center gap-2">
+        {
+          links.map((link) => (
+            <li>
+              <a
+                href={link.url}
+                aria-current={isCurrent(link.url) ? "page" : undefined}
+                class="group bg-ink hover:bg-sign-green aria-[current=page]:bg-sign-green rounded-plate block p-[3px] text-white transition-colors"
+              >
+                <span class="block rounded-[7px] border-2 border-white px-3 pt-1.5 pb-1 text-[0.9375rem] font-extrabold">
                   {link.text}
-                </a>
-              </li>
-            ))
-          }
-        </ul>
-      </nav>
-      <button
-        id="hamburgerButton"
-        class="min-[1360px]:hidden"
-        aria-label="Abrir menú"
-      >
-        <Menu stroke-width={1.5} />
-      </button>
-    </div>
-  </div>
-</header>
-<script is:inline>
-  function initMenu() {
-    const menuButton = document.querySelector("#hamburgerButton");
-    const menuNavigation = document.querySelector("#navigation");
-
-    if (!menuButton || !menuNavigation) return;
-
-    const animateMenuChange = () => {
-      menuNavigation.classList.add("transition-transform");
-      menuNavigation.addEventListener(
-        "transitionend",
-        () => menuNavigation.classList.remove("transition-transform"),
-        { once: true }
-      );
-    };
-
-    // Toggle menú
-    menuButton.onclick = () => {
-      if (window.matchMedia("(min-width: 1360px)").matches) return;
-      animateMenuChange();
-      menuNavigation.classList.toggle("translate-x-full");
-    };
-
-    // Cerrar menú al hacer click en un link
-    menuNavigation.querySelectorAll("a").forEach((link) => {
-      link.onclick = () => {
-        if (!window.matchMedia("(min-width: 1360px)").matches) {
-          animateMenuChange();
+                </span>
+              </a>
+            </li>
+          ))
         }
-        menuNavigation.classList.add("translate-x-full");
-      };
+      </ul>
+    </nav>
+
+    {
+      !isHome && (
+        <a
+          href={cta.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          class={`${cta.tone} rounded-plate hidden p-[3px] text-white transition-colors sm:block`}
+        >
+          <span class="block rounded-[7px] border-2 border-white px-4 pt-1.5 pb-1 text-[0.9375rem] font-black">
+            {cta.text}
+          </span>
+        </a>
+      )
+    }
+
+    <button
+      type="button"
+      class="bg-ink rounded-plate inline-flex items-center gap-2 p-[3px] text-white lg:hidden"
+      aria-expanded="false"
+      aria-controls="menu-movil"
+      data-menu-button
+    >
+      <span
+        class="flex items-center gap-2 rounded-[7px] border-2 border-white px-3 py-1.5 text-[0.9375rem] font-extrabold"
+      >
+        <Menu size={18} stroke-width={2.25} data-menu-open />
+        <X size={18} stroke-width={2.25} class="hidden" data-menu-close />
+        Menú
+      </span>
+    </button>
+  </div>
+
+  <nav
+    id="menu-movil"
+    aria-label="Navegación principal"
+    class="border-ink bg-sand hidden border-y-[3px] lg:hidden"
+    data-menu-panel
+  >
+    <ul class="max-w-site mx-auto flex flex-col gap-2 px-4 py-4 md:px-8">
+      {
+        links.map((link) => (
+          <li>
+            <a
+              href={link.url}
+              aria-current={isCurrent(link.url) ? "page" : undefined}
+              class="bg-ink aria-[current=page]:bg-sign-green rounded-plate block p-[3px] text-white"
+            >
+              <span class="block rounded-[7px] border-2 border-white px-4 pt-3 pb-2.5 text-lg font-extrabold">
+                {link.text}
+              </span>
+            </a>
+          </li>
+        ))
+      }
+      <li>
+        <a
+          href={cta.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          class={`${cta.tone} block rounded-plate p-[3px] text-white`}
+        >
+          <span
+            class="block rounded-[7px] border-2 border-white px-4 pt-3 pb-2.5 text-lg font-black"
+          >
+            {cta.text}
+          </span>
+        </a>
+      </li>
+    </ul>
+  </nav>
+</header>
+
+<script>
+  function initMenu() {
+    const header = document.querySelector<HTMLElement>("[data-site-header]");
+    const button =
+      header?.querySelector<HTMLButtonElement>("[data-menu-button]");
+    const panel = header?.querySelector<HTMLElement>("[data-menu-panel]");
+    if (!header || !button || !panel) return;
+
+    const setOpen = (open: boolean) => {
+      button.setAttribute("aria-expanded", String(open));
+      panel.classList.toggle("hidden", !open);
+      button
+        .querySelector("[data-menu-open]")
+        ?.classList.toggle("hidden", open);
+      button
+        .querySelector("[data-menu-close]")
+        ?.classList.toggle("hidden", !open);
+    };
+
+    button.addEventListener("click", () =>
+      setOpen(button.getAttribute("aria-expanded") !== "true")
+    );
+
+    header.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      if (button.getAttribute("aria-expanded") !== "true") return;
+      setOpen(false);
+      button.focus();
     });
+
+    panel
+      .querySelectorAll("a")
+      .forEach((link) => link.addEventListener("click", () => setOpen(false)));
   }
 
-  // Ejecutar al cargar
-  initMenu();
-
-  // Ejecutar después de cada transición de página
-  document.addEventListener("astro:after-swap", initMenu);
+  document.addEventListener("astro:page-load", initMenu);
 </script>

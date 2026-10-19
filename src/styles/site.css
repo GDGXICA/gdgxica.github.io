@@ -1,0 +1,170 @@
+@theme static {
+  --color-sand: #ead6ae;
+  --color-sand-deep: #dcc08a;
+  --color-sand-pale: #f5ead3;
+  --color-ink: #202124;
+  --color-ink-muted: #4d4436;
+  --color-ink-subtle: #5c5040;
+  --color-line: #c4ab7c;
+  --color-asphalt: #202124;
+  --color-asphalt-soft: #2d2e31;
+  --color-asphalt-muted: #bdc1c6;
+  --color-post: #9aa0a6;
+  --color-sign-white: #ffffff;
+  --color-sign-green: #188038;
+  --color-sign-green-deep: #137333;
+  --color-sign-blue: #1a73e8;
+  --color-sign-blue-deep: #1967d2;
+  --color-sign-yellow: #fbbc04;
+  --color-sign-yellow-deep: #f9ab00;
+  --color-sign-red: #d93025;
+  --color-sign-red-deep: #c5221f;
+
+  --font-sign: var(--font-overpass), "Overpass", sans-serif;
+
+  --text-display: clamp(2.75rem, 1.4rem + 4.6vw, 5.5rem);
+  --text-display--line-height: 0.92;
+  --text-display--letter-spacing: -0.025em;
+  --text-display--font-weight: 900;
+  --text-title: clamp(2rem, 1.3rem + 2.4vw, 3.25rem);
+  --text-title--line-height: 1;
+  --text-title--letter-spacing: -0.02em;
+  --text-title--font-weight: 900;
+  --text-heading: clamp(1.5rem, 1.2rem + 1vw, 2rem);
+  --text-heading--line-height: 1.1;
+  --text-heading--letter-spacing: -0.01em;
+  --text-heading--font-weight: 800;
+  --text-lede: clamp(1.125rem, 1rem + 0.45vw, 1.375rem);
+  --text-lede--line-height: 1.45;
+
+  --radius-sign: 1.75rem;
+  --radius-sign-inner: 1.125rem;
+  --radius-plate: 0.625rem;
+
+  --container-site: 82rem;
+
+  --ease-draw: cubic-bezier(0.65, 0, 0.35, 1);
+  --animate-glyph-draw: glyph-draw 2.6s var(--ease-draw) 0.2s both;
+
+  @keyframes glyph-draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+}
+
+@utility sign-panel {
+  border-radius: var(--radius-sign);
+  padding: 0.625rem;
+
+  & > .sign-face {
+    border: 0.3125rem solid currentColor;
+    border-radius: var(--radius-sign-inner);
+  }
+}
+
+@utility plate {
+  border: 0.1875rem solid var(--color-ink);
+  border-radius: var(--radius-plate);
+}
+
+@utility road-lane {
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--color-sign-yellow) 0 4.5rem,
+    transparent 4.5rem 7.5rem
+  );
+}
+
+.site {
+  font-family: var(--font-sign);
+  --color-primary: var(--color-ink);
+  --color-secondary: var(--color-ink-muted);
+  --color-tertiary: var(--color-ink-subtle);
+  --color-gray-custom: var(--color-line);
+  --color-section: var(--color-sand-pale);
+  --color-google-blue: var(--color-sign-blue);
+  --color-google-red: var(--color-sign-red);
+  --color-google-yellow: #b06000;
+  --color-google-green: var(--color-sign-green);
+}
+
+.site :focus-visible {
+  outline: 3px solid var(--color-ink);
+  outline-offset: 3px;
+}
+
+.site .theme-night :focus-visible,
+.site .on-sign :focus-visible {
+  outline-color: var(--color-sign-white);
+}
+
+@layer base {
+  html:has(> body.site) {
+    scrollbar-color: var(--color-ink-subtle) var(--color-sand);
+  }
+
+  .site {
+    background-color: var(--color-sand);
+    color: var(--color-ink);
+    caret-color: var(--color-sign-blue);
+    accent-color: var(--color-sign-blue);
+  }
+
+  .site ::selection {
+    background-color: var(--color-sign-yellow);
+    color: var(--color-ink);
+  }
+
+  .site :is(h1, h2, h3) {
+    text-wrap: balance;
+  }
+
+  .site [id] {
+    scroll-margin-top: 6rem;
+  }
+
+  .site a {
+    text-underline-offset: 0.2em;
+  }
+
+  .site :is(time, table, .tabular) {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .theme-night {
+    background-color: var(--color-asphalt);
+    color: var(--color-sign-white);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html:has(> body.site) {
+      scroll-behavior: smooth;
+    }
+  }
+}
+
+.glyph-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .glyph-draw .glyph-line {
+    stroke-dasharray: 1;
+    animation: var(--animate-glyph-draw);
+  }
+
+  @supports (animation-timeline: view()) {
+    .glyph-draw-on-view .glyph-line {
+      stroke-dasharray: 1;
+      animation: glyph-draw linear both;
+      animation-timeline: view();
+      animation-range: entry 10% cover 45%;
+    }
+  }
+}

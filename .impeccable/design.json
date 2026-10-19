@@ -1,10 +1,333 @@
 {
   "schemaVersion": 2,
   "generatedAt": "2026-10-18T00:00:00Z",
-  "title": "Design System: Panel GDG ICA",
+  "title": "Design System: GDG ICA",
   "extensions": {
-    "scope": "Solo el panel admin (/admin/*), bajo body.admin-atlas en src/layouts/AdminLayout.astro. El sitio público queda fuera.",
+    "scope": {
+      "site": "Sitio público (todo menos /admin/*), bajo body.site en src/layouts/Layout.astro; sistema en src/styles/site.css. Mundo: «La carretera a Ica».",
+      "admin": "Solo el panel admin (/admin/*), bajo body.admin-atlas en src/layouts/AdminLayout.astro. El sitio público queda fuera."
+    },
     "colorMeta": {
+      "sand": {
+        "role": "neutral",
+        "displayName": "Arena",
+        "canonical": "#ead6ae",
+        "tonalRamp": [
+          "#110a00",
+          "#2d1f00",
+          "#4e3d19",
+          "#705e3a",
+          "#93815b",
+          "#b9a57f",
+          "#dfcba4",
+          "#ffecc8"
+        ],
+        "scope": "site"
+      },
+      "sand-deep": {
+        "role": "neutral",
+        "displayName": "Arena honda",
+        "canonical": "#dcc08a",
+        "tonalRamp": [
+          "#110a00",
+          "#2d1f00",
+          "#523c04",
+          "#755c28",
+          "#9a7f4b",
+          "#bfa46f",
+          "#e6ca94",
+          "#feecca"
+        ],
+        "scope": "site"
+      },
+      "sand-pale": {
+        "role": "neutral",
+        "displayName": "Arena clara",
+        "canonical": "#f5ead3",
+        "tonalRamp": [
+          "#110a00",
+          "#29200e",
+          "#483f2c",
+          "#695f4b",
+          "#8c826d",
+          "#b1a791",
+          "#d7cdb6",
+          "#f8edd6"
+        ],
+        "scope": "site"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Tinta",
+        "canonical": "#202124",
+        "tonalRamp": [
+          "#0a0b0e",
+          "#202124",
+          "#3e4043",
+          "#5f6064",
+          "#828387",
+          "#a6a7ab",
+          "#ccced2",
+          "#edeef2"
+        ],
+        "scope": "site"
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Tinta tenue",
+        "canonical": "#4d4436",
+        "tonalRamp": [
+          "#110a01",
+          "#282013",
+          "#473e30",
+          "#685f50",
+          "#8c8272",
+          "#b1a696",
+          "#d7ccbb",
+          "#f8eddc"
+        ],
+        "scope": "site"
+      },
+      "ink-subtle": {
+        "role": "neutral",
+        "displayName": "Tinta sutil",
+        "canonical": "#5c5040",
+        "tonalRamp": [
+          "#120900",
+          "#2a2011",
+          "#493e2e",
+          "#6b5e4e",
+          "#8e8170",
+          "#b3a594",
+          "#dacbb9",
+          "#fbecd9"
+        ],
+        "scope": "site"
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Filete arena",
+        "canonical": "#c4ab7c",
+        "tonalRamp": [
+          "#120a00",
+          "#2d1f00",
+          "#513c0b",
+          "#745d30",
+          "#988052",
+          "#bda475",
+          "#e4ca9a",
+          "#ffeccb"
+        ],
+        "scope": "site"
+      },
+      "asphalt": {
+        "role": "neutral",
+        "displayName": "Asfalto",
+        "canonical": "#202124",
+        "tonalRamp": [
+          "#0a0b0e",
+          "#202124",
+          "#3e4043",
+          "#5f6064",
+          "#828387",
+          "#a6a7ab",
+          "#ccced2",
+          "#edeef2"
+        ],
+        "scope": "site"
+      },
+      "asphalt-soft": {
+        "role": "neutral",
+        "displayName": "Asfalto suave",
+        "canonical": "#2d2e31",
+        "tonalRamp": [
+          "#0a0b0e",
+          "#212124",
+          "#3f4043",
+          "#5f6064",
+          "#828387",
+          "#a6a7ab",
+          "#ccced1",
+          "#edeef2"
+        ],
+        "scope": "site"
+      },
+      "asphalt-muted": {
+        "role": "neutral",
+        "displayName": "Gris berma",
+        "canonical": "#bdc1c6",
+        "tonalRamp": [
+          "#090b0f",
+          "#1f2226",
+          "#3d4044",
+          "#5d6165",
+          "#808388",
+          "#a4a8ad",
+          "#caced3",
+          "#ebeff4"
+        ],
+        "scope": "site"
+      },
+      "post": {
+        "role": "neutral",
+        "displayName": "Poste",
+        "canonical": "#9aa0a6",
+        "tonalRamp": [
+          "#080c10",
+          "#1e2227",
+          "#3b4045",
+          "#5c6167",
+          "#7e848a",
+          "#a2a8ae",
+          "#c8cfd5",
+          "#e9eff6"
+        ],
+        "scope": "site"
+      },
+      "sign-white": {
+        "role": "neutral",
+        "displayName": "Blanco de señal",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#222222",
+          "#404040",
+          "#606060",
+          "#838383",
+          "#a8a8a8",
+          "#cecece",
+          "#eeeeee"
+        ],
+        "scope": "site"
+      },
+      "sign-green": {
+        "role": "primary",
+        "displayName": "Verde destino",
+        "canonical": "#188038",
+        "tonalRamp": [
+          "#001002",
+          "#022a0d",
+          "#044e1d",
+          "#107431",
+          "#399a50",
+          "#62c074",
+          "#89e799",
+          "#c8ffcf"
+        ],
+        "scope": "site"
+      },
+      "sign-green-deep": {
+        "role": "primary",
+        "displayName": "Verde profundo",
+        "canonical": "#137333",
+        "tonalRamp": [
+          "#001003",
+          "#002a0d",
+          "#064d1f",
+          "#147434",
+          "#419856",
+          "#68be7a",
+          "#8fe59f",
+          "#c9ffd1"
+        ],
+        "scope": "site"
+      },
+      "sign-blue": {
+        "role": "secondary",
+        "displayName": "Azul flecha",
+        "canonical": "#1a73e8",
+        "tonalRamp": [
+          "#000a22",
+          "#011f4c",
+          "#003b85",
+          "#075bc1",
+          "#297ff5",
+          "#70a9fc",
+          "#b0d0fe",
+          "#e5efff"
+        ],
+        "scope": "site"
+      },
+      "sign-blue-deep": {
+        "role": "secondary",
+        "displayName": "Azul profundo",
+        "canonical": "#1967d2",
+        "tonalRamp": [
+          "#000923",
+          "#001f4d",
+          "#053c84",
+          "#045ac4",
+          "#3580ed",
+          "#6fa8fe",
+          "#b1d0fd",
+          "#e5efff"
+        ],
+        "scope": "site"
+      },
+      "sign-yellow": {
+        "role": "tertiary",
+        "displayName": "Amarillo aviso",
+        "canonical": "#fbbc04",
+        "tonalRamp": [
+          "#110a00",
+          "#2d1f01",
+          "#523c02",
+          "#7a5b0b",
+          "#a67b01",
+          "#d39e15",
+          "#fdc442",
+          "#feecc9"
+        ],
+        "scope": "site"
+      },
+      "sign-yellow-deep": {
+        "role": "tertiary",
+        "displayName": "Amarillo profundo",
+        "canonical": "#f9ab00",
+        "tonalRamp": [
+          "#130900",
+          "#2f1e01",
+          "#573900",
+          "#805707",
+          "#ad7713",
+          "#dd980d",
+          "#fec265",
+          "#feecd2"
+        ],
+        "scope": "site"
+      },
+      "sign-red": {
+        "role": "tertiary",
+        "displayName": "Rojo obligatorio",
+        "canonical": "#d93025",
+        "tonalRamp": [
+          "#1f0000",
+          "#460101",
+          "#7d0001",
+          "#b50b08",
+          "#e43d30",
+          "#fc7c6b",
+          "#ffbaaf",
+          "#fee9e5"
+        ],
+        "scope": "site"
+      },
+      "sign-red-deep": {
+        "role": "tertiary",
+        "displayName": "Rojo profundo",
+        "canonical": "#c5221f",
+        "tonalRamp": [
+          "#1f0000",
+          "#470002",
+          "#7b0809",
+          "#b6060e",
+          "#e14238",
+          "#fd7b6d",
+          "#fdbbb1",
+          "#fee9e6"
+        ],
+        "scope": "site"
+      },
       "atlas-night": {
         "role": "neutral",
         "displayName": "Noche",
@@ -18,7 +341,8 @@
           "#8a93a6",
           "#c9ced8",
           "#f2f2e9"
-        ]
+        ],
+        "scope": "admin"
       },
       "atlas-deep": {
         "role": "neutral",
@@ -33,7 +357,8 @@
           "#8a93a6",
           "#c9ced8",
           "#f2f2e9"
-        ]
+        ],
+        "scope": "admin"
       },
       "atlas-chart": {
         "role": "neutral",
@@ -48,7 +373,8 @@
           "#8a93a6",
           "#c9ced8",
           "#f2f2e9"
-        ]
+        ],
+        "scope": "admin"
       },
       "atlas-line": {
         "role": "neutral",
@@ -63,7 +389,8 @@
           "#8a93a6",
           "#c9ced8",
           "#f2f2e9"
-        ]
+        ],
+        "scope": "admin"
       },
       "atlas-fog": {
         "role": "neutral",
@@ -78,7 +405,8 @@
           "#c9ced8",
           "#dee1e7",
           "#f2f2e9"
-        ]
+        ],
+        "scope": "admin"
       },
       "atlas-mist": {
         "role": "neutral",
@@ -93,7 +421,8 @@
           "#c9ced8",
           "#dee1e7",
           "#f2f2e9"
-        ]
+        ],
+        "scope": "admin"
       },
       "atlas-dust": {
         "role": "neutral",
@@ -108,7 +437,8 @@
           "#dee1e7",
           "#ecede8",
           "#f2f2e9"
-        ]
+        ],
+        "scope": "admin"
       },
       "atlas-star": {
         "role": "primary",
@@ -123,7 +453,8 @@
           "#ff4d2e",
           "#ffb9a6",
           "#fff0eb"
-        ]
+        ],
+        "scope": "admin"
       },
       "atlas-ember": {
         "role": "primary",
@@ -138,7 +469,8 @@
           "#ff4d2e",
           "#ffdcd1",
           "#fff0eb"
-        ]
+        ],
+        "scope": "admin"
       },
       "atlas-ember-deep": {
         "role": "primary",
@@ -153,7 +485,8 @@
           "#ff4d2e",
           "#ffdcd1",
           "#fff0eb"
-        ]
+        ],
+        "scope": "admin"
       },
       "atlas-glow": {
         "role": "secondary",
@@ -168,7 +501,8 @@
           "#ffb36b",
           "#ffd4a8",
           "#fff5ea"
-        ]
+        ],
+        "scope": "admin"
       },
       "atlas-ok": {
         "role": "tertiary",
@@ -183,7 +517,8 @@
           "#6fcf97",
           "#bfeacf",
           "#eefaf2"
-        ]
+        ],
+        "scope": "admin"
       },
       "atlas-rose": {
         "role": "tertiary",
@@ -198,88 +533,421 @@
           "#ff8a9a",
           "#ffb8c2",
           "#fff0f2"
-        ]
+        ],
+        "scope": "admin"
       }
     },
     "typographyMeta": {
+      "sign-display": {
+        "displayName": "Display de señal",
+        "purpose": "Nombre del destino en el panel verde.",
+        "scope": "site"
+      },
+      "sign-title": {
+        "displayName": "Title de señal",
+        "purpose": "Títulos de sección sobre asfalto («La ruta de la comunidad»).",
+        "scope": "site"
+      },
+      "sign-station": {
+        "displayName": "Station",
+        "purpose": "Nombre de cada estación dentro de su panel.",
+        "scope": "site"
+      },
+      "sign-heading": {
+        "displayName": "Heading de señal",
+        "purpose": "Token definido para subtítulos; aún sin uso en el marcado.",
+        "scope": "site"
+      },
+      "sign-lede": {
+        "displayName": "Lede",
+        "purpose": "Texto que acompaña a cada estación.",
+        "scope": "site"
+      },
+      "sign-body": {
+        "displayName": "Body de señal",
+        "purpose": "Texto de tablas y descripciones.",
+        "scope": "site"
+      },
+      "sign-action": {
+        "displayName": "Action",
+        "purpose": "Botones (16px) y navegación (15px), 800.",
+        "scope": "site"
+      },
+      "sign-label": {
+        "displayName": "Label de señal",
+        "purpose": "Títulos de columna del pie en amarillo; meses y estado de hitos a tracking 0.08em.",
+        "scope": "site"
+      },
+      "plate-label": {
+        "displayName": "Etiqueta de placa",
+        "purpose": "Etiqueta en tinta tenue; 14px en celular, 16px desde lg.",
+        "scope": "site"
+      },
+      "plate-figure": {
+        "displayName": "Cifra de placa",
+        "purpose": "Cifras del panel de destino desde lg (28px).",
+        "scope": "site"
+      },
+      "plate-figure-sm": {
+        "displayName": "Cifra de placa (celular)",
+        "purpose": "Cifras del panel de destino en celular (20px).",
+        "scope": "site"
+      },
+      "plate-figure-stat": {
+        "displayName": "Cifra de estación",
+        "purpose": "Cifras de la estación «Únete» (24px, 32px desde sm).",
+        "scope": "site"
+      },
+      "milestone-figure": {
+        "displayName": "Día del hito",
+        "purpose": "Día del evento en el hito (44px).",
+        "scope": "site"
+      },
       "display": {
         "displayName": "Display",
-        "purpose": "Título de página, saludo del dashboard, nombre del evento en modo vivo, con .atlas-name (Archivo 640, ancho 118%). 28px en celular, 36px desde sm; 44px en login."
+        "purpose": "Título de página, saludo del dashboard, nombre del evento en modo vivo, con .atlas-name (Archivo 640, ancho 118%). 28px en celular, 36px desde sm; 44px en login.",
+        "scope": "admin"
       },
       "headline": {
         "displayName": "Headline",
-        "purpose": "Encabezado de sección (.atlas-name, 22px) seguido de un filete con nodo."
+        "purpose": "Encabezado de sección (.atlas-name, 22px) seguido de un filete con nodo.",
+        "scope": "admin"
       },
       "title": {
         "displayName": "Title",
-        "purpose": "Nombre de evento en filas (.atlas-name, 20px) y en la efeméride (17px); «GDG ICA» en el riel (22px)."
+        "purpose": "Nombre de evento en filas (.atlas-name, 20px) y en la efeméride (17px); «GDG ICA» en el riel (22px).",
+        "scope": "admin"
       },
       "body": {
         "displayName": "Body",
-        "purpose": "Navegación del riel, filas de «Te esperan», texto introductorio."
+        "purpose": "Navegación del riel, filas de «Te esperan», texto introductorio.",
+        "scope": "admin"
       },
       "body-sm": {
         "displayName": "Body small",
-        "purpose": "Línea de coordenadas, metadatos, botones."
+        "purpose": "Línea de coordenadas, metadatos, botones.",
+        "scope": "admin"
       },
       "label": {
         "displayName": "Label",
-        "purpose": "Versalitas espaciadas: grupos del riel, leyendas, meses, «Hoy»."
+        "purpose": "Versalitas espaciadas: grupos del riel, leyendas, meses, «Hoy».",
+        "scope": "admin"
       },
       "numeral": {
         "displayName": "Numeral",
-        "purpose": "Día de fecha (32px) y conteo pendiente (28px), cifras tabulares."
+        "purpose": "Día de fecha (32px) y conteo pendiente (28px), cifras tabulares.",
+        "scope": "admin"
       }
     },
     "shadows": [],
     "motion": [
       {
+        "name": "glyph-draw",
+        "scope": "site",
+        "value": "2.6s cubic-bezier(0.65, 0, 0.35, 1) 0.2s both; stroke-dashoffset 1 → 0 sobre pathLength 1",
+        "purpose": "Trazo del geoglifo del panel de destino al cargar. Solo con prefers-reduced-motion: no-preference."
+      },
+      {
+        "name": "glyph-draw-on-view",
+        "scope": "site",
+        "value": "glyph-draw linear both; animation-timeline: view(); animation-range: entry 10% cover 45%",
+        "purpose": "Trazo de los geoglifos de las estaciones al entrar en pantalla. Solo con movimiento permitido y soporte de animation-timeline."
+      },
+      {
+        "name": "sign-color-transition",
+        "scope": "site",
+        "value": "transition-colors 150ms",
+        "purpose": "Hover de botones, placas, navegación y flecha."
+      },
+      {
         "name": "atlas-reticle-in",
         "value": "420ms cubic-bezier(0.16, 1, 0.3, 1) both; from scale(1.6) rotate(-45deg) opacity 0",
-        "purpose": "Entrada de la retícula en el elemento activo o tuyo. Desactivada con prefers-reduced-motion."
+        "purpose": "Entrada de la retícula en el elemento activo o tuyo. Desactivada con prefers-reduced-motion.",
+        "scope": "admin"
       },
       {
         "name": "reticle-spin",
         "value": "spin 2.4s linear infinite",
-        "purpose": "Retícula girando como indicador de carga."
+        "purpose": "Retícula girando como indicador de carga.",
+        "scope": "admin"
       },
       {
         "name": "live-ping",
         "value": "animate-ping, opacity 0.6, motion-reduce:none",
-        "purpose": "Punto «En vivo» de la cabecera en modo evento."
+        "purpose": "Punto «En vivo» de la cabecera en modo evento.",
+        "scope": "admin"
       },
       {
         "name": "color-transition",
         "value": "transition-colors 150ms",
-        "purpose": "Hover de botones, ítems del riel y filas."
+        "purpose": "Hover de botones, ítems del riel y filas.",
+        "scope": "admin"
       }
     ],
     "breakpoints": [
       {
         "name": "sm",
         "value": "640px",
-        "purpose": "Pestañas de evento en cabecera; acciones de cabecera a la derecha."
+        "scope": "site",
+        "purpose": "Flecha a 96px; panel de destino a dos columnas; geoglifos de estación a 128px."
+      },
+      {
+        "name": "md",
+        "value": "768px",
+        "scope": "site",
+        "purpose": "Márgenes de 32px; aire de estación a 80px; tira de fotos a 4 columnas."
       },
       {
         "name": "lg",
         "value": "1024px",
-        "purpose": "Riel fijo de 248px; por debajo, cajón modal."
+        "scope": "site",
+        "purpose": "Navegación de placas visible; rejilla 2.15 : 1 del destino con flecha apoyada; postes; estaciones 5 : 7."
+      },
+      {
+        "name": "sm",
+        "value": "640px",
+        "purpose": "Pestañas de evento en cabecera; acciones de cabecera a la derecha.",
+        "scope": "admin"
+      },
+      {
+        "name": "lg",
+        "value": "1024px",
+        "purpose": "Riel fijo de 248px; por debajo, cajón modal.",
+        "scope": "admin"
       }
     ],
     "transitional": {
       "name": "Puente de colores",
       "file": "src/styles/admin.css",
       "description": "Dentro de .admin-atlas se reasignan las escalas gray, blue, red, green, amber y yellow de Tailwind a valores del mundo para que las secciones no migradas rendericen en la noche. Transitorio: el código nuevo usa tokens atlas-*, y el puente se retira cuando todas las secciones migren. No forma parte de la paleta."
+    },
+    "transitionalSite": {
+      "name": "Puente del sitio",
+      "file": "src/styles/site.css",
+      "description": "Dentro de .site se reasignan los tokens heredados (primary, secondary, tertiary, gray-custom, section y google-*) a valores del mundo para que las páginas no migradas rendericen sobre la arena. Transitorio: el código nuevo usa los tokens del mundo, y el puente se retira cuando todas las páginas migren. No forma parte de la paleta."
+    },
+    "narrativeByScope": {
+      "site": {
+        "northStar": "La carretera a Ica",
+        "overview": "El sitio es la Panamericana Sur llegando a Ica. Cada evento es un destino señalizado en un panel de carretera, y la inscripción es la flecha que hay que tomar. Rechaza la landing blanca de comunidad tech con titular, foto al lado y fila de tarjetas iguales. El suelo es arena de la pampa; sobre ella se plantan paneles de esquinas redondeadas con filete blanco interior, en los colores de Google usados como señalética, y los atraviesa una franja de asfalto con línea de carril amarilla discontinua.\n\nLa lectura es de conductor: un panel de destino grande arriba (qué viene, cuándo, dónde), placas blancas con cifras a su lado, y bajando por la ruta, estaciones que alternan lado (cómo unirse, cómo apoyar, cómo dar una charla o ser voluntario). Los pictogramas son geoglifos de Nazca de un solo trazo; el del panel de destino se traza como una línea continua al cargar, y los de las estaciones al entrar en pantalla.\n\nUna sola familia de letra de señal, Overpass, pesada en títulos, sin itálicas, con cifras tabulares. Sin degradados de color ni sombras: la profundidad la dan los bordes y los postes.",
+        "keyCharacteristics": [
+          "Arena de la pampa como suelo; asfalto tinta como franja de ruta y pie de página.",
+          "Paneles de señal: banda de color de 10px, filete interior de 5px en blanco (o tinta sobre amarillo), esquinas de 28px / 18px.",
+          "Colores de Google como señalética: verde destino, azul flecha e información, amarillo aviso, rojo obligatorio.",
+          "Placas blancas con borde tinta de 3px para cifras y datos.",
+          "Geoglifos de Nazca de un solo trazo como pictogramas, trazados con movimiento solo si está permitido.",
+          "Overpass, pesada (800 a 900) en títulos y acciones, cifras tabulares."
+        ],
+        "rules": [
+          {
+            "name": "The Señalética Rule",
+            "body": "Cada color de Google significa una cosa, como en la carretera: verde es destino y evento, azul es la flecha de inscripción e información, amarillo es aviso y cuenta regresiva (con texto tinta), rojo es lo obligatorio y la tapa del hito del próximo evento. La estación de speakers y voluntarios es azul de información, no roja. Un color no se elige por variedad.",
+            "section": "colors",
+            "scope": "site"
+          },
+          {
+            "name": "The Puente del Sitio Rule",
+            "body": "Dentro de .site, src/styles/site.css reasigna los tokens heredados (primary, secondary, tertiary, gray-custom, section y los google-*) a valores del mundo para que las páginas aún no migradas no rompan la arena. Es un mecanismo de transición, no la paleta: el código nuevo usa solo los tokens de este mundo, y el puente se retira cuando la última página migre. No se citan sus valores como colores del sistema.",
+            "section": "colors",
+            "scope": "site"
+          },
+          {
+            "name": "The Letra de Señal Rule",
+            "body": "Una sola familia, Overpass, sin itálicas. La jerarquía sale del peso (900 destino, 800 acción, 400 texto) y del tamaño, nunca de una segunda familia.",
+            "section": "typography",
+            "scope": "site"
+          },
+          {
+            "name": "The Separador de Ruta Rule",
+            "body": "El punto medio U+00B7 de Overpass queda descentrado; los separadores de fecha, hora y lugar usan U+2219 («∙») dentro de un span con aria-hidden, seguido de una coma solo para lectores de pantalla.",
+            "section": "typography",
+            "scope": "site"
+          },
+          {
+            "name": "The Cifra Tabular Rule",
+            "body": "time, table, .tabular y toda cifra de placa o hito usan cifras tabulares.",
+            "section": "typography",
+            "scope": "site"
+          },
+          {
+            "name": "The Poste y Borde Rule",
+            "body": "Nada flota. Un panel se sostiene en postes; una placa se recorta con borde tinta; nunca una sombra difusa ni un degradado de color.",
+            "section": "elevation",
+            "scope": "site"
+          }
+        ],
+        "dos": [
+          "Do usar solo los tokens de este mundo en código nuevo del sitio; el puente de .site es para lo no migrado.",
+          "Do dar a cada color de Google su papel de señal: verde destino, azul flecha e información, amarillo aviso con texto tinta, rojo obligatorio y tapa del próximo hito.",
+          "Do usar la forma de flecha una sola vez por pantalla, y siempre para la acción principal.",
+          "Do levantar los paneles sobre postes y recortar las cifras en placas blancas con borde tinta de 3px.",
+          "Do dibujar los pictogramas como geoglifos de un solo trazo en currentColor, y animar su trazo solo con movimiento permitido.",
+          "Do separar fecha, hora y lugar con U+2219 en un span con aria-hidden, más una coma para lectores de pantalla.",
+          "Do usar cifras tabulares en placas, hitos, fechas y tablas.",
+          "Do emparejar cada acción de color con un botón de contorno para la alternativa."
+        ],
+        "donts": [
+          "Don't usar box-shadow, sombras duras ni degradados de color; la línea de carril de cortes duros es la única excepción técnica.",
+          "Don't volver a la landing blanca de comunidad tech con titular, foto al lado y fila de tarjetas iguales.",
+          "Don't usar el rojo para una estación, una categoría o un adorno: es lo obligatorio y la tapa del próximo hito.",
+          "Don't poner texto blanco sobre amarillo.",
+          "Don't usar una segunda familia, itálicas, ni el punto medio U+00B7 como separador.",
+          "Don't usar los tokens atlas-* ni Archivo en el sitio público.",
+          "Don't usar emoji ni caracteres como iconos; los iconos son SVG de trazo."
+        ]
+      },
+      "admin": {
+        "northStar": "La carta celeste de la comunidad",
+        "overview": "El panel es un atlas estelar nocturno. Cada cosa tiene coordenadas (fecha, alcance, rol, estado) y su importancia se lee como magnitud: el tamaño del punto, el brillo del número, el ámbar que solo aparece donde algo te necesita. Rechaza el admin gris de tarjetas blancas con un acento azul. La superficie es noche plana en capas de índigo, trazada con filetes de un píxel que terminan en nodos rotados, como las líneas de una carta impresa.\n\nLa densidad es de herramienta de trabajo, no de tablero: una sola columna de contenido bajo una cabecera que dice dónde estás y qué alcance tienes, con un riel de navegación agrupado a la izquierda. Los nombres propios (eventos, la comunidad, títulos de página) se escriben en el corte ancho seminegrita de Archivo (.atlas-name); lo operativo, en la misma grotesca a ancho normal; las etiquetas, en versalitas espaciadas; las cifras, tabulares. Existe un segundo modo, evento en vivo, que cambia la cabecera a índigo, muestra el estado de sincronización en la línea de coordenadas y, en el celular, añade una barra de pestañas inferior.\n\nSolo noche: no hay variante clara (color-scheme: dark). Sin brillos ni degradados decorativos.",
+        "keyCharacteristics": [
+          "Noche plana en tres capas (noche, índigo, azul carta) separadas por filetes de 1px, no por sombras.",
+          "Un único acento cálido, ámbar estelar, reservado para la acción principal, el foco y lo pendiente.",
+          "Retícula de localización (anillo con cruz) como marca del elemento activo, seleccionado o tuyo.",
+          "Magnitud: rampa fija de tamaños de punto para la importancia de un evento.",
+          "Una sola familia, Archivo Variable: corte ancho seminegrita para nombres, ancho normal para todo lo demás, versalitas para etiquetas."
+        ],
+        "rules": [
+          {
+            "name": "The Una Sola Estrella Rule",
+            "body": "El ámbar estelar y su ascua marcan una sola cosa por zona: la acción principal de la cabecera, el elemento activo, lo pendiente. Si dos botones primarios compiten en la misma fila, uno de los dos es secundario. En «Tus eventos», «Abrir check-in» solo es primario el día del evento.",
+            "section": "colors",
+            "scope": "admin"
+          },
+          {
+            "name": "The Puente Transitorio Rule",
+            "body": "Dentro de .admin-atlas, src/styles/admin.css reasigna las escalas gray, blue, red, green, amber y yellow de Tailwind a valores del mundo (blue-* pasa a la rampa ascua, gray-* a la tinta nocturna) para que las secciones aún no migradas no rompan la noche. Es un mecanismo de transición, no la paleta: el código nuevo usa solo tokens atlas-*, y el puente se retira cuando la última sección migre. No se citan sus valores como colores del sistema.",
+            "section": "colors",
+            "scope": "admin"
+          },
+          {
+            "name": "The Nombre Propio Rule",
+            "body": "El corte ancho seminegrita (.atlas-name: 640, ancho 118%) está reservado para nombres y títulos: de página, de sección, de evento, de la comunidad, la inicial del avatar, los títulos de login y avisos. Nunca para botones, etiquetas, cifras o texto corrido.",
+            "section": "typography",
+            "scope": "admin"
+          },
+          {
+            "name": "The Cifra Tabular Rule",
+            "body": "Tablas, <time> y todo número que se compara usan cifras tabulares (.tabular, ya aplicado por defecto a table y time).",
+            "section": "typography",
+            "scope": "admin"
+          },
+          {
+            "name": "The Tinta Plana Rule",
+            "body": "Nada flota. Si una superficie necesita separarse, sube una capa tonal o gana un filete; nunca una sombra ni un brillo.",
+            "section": "elevation",
+            "scope": "admin"
+          }
+        ],
+        "dos": [
+          "Do usar solo tokens atlas-* en código nuevo del panel; el puente de admin.css es para lo no migrado.",
+          "Do reservar el ámbar estelar y la ascua para la acción principal, el foco, lo activo y lo pendiente.",
+          "Do escribir los nombres propios (página, sección, evento) con .atlas-name y todo lo demás en Archivo a ancho normal; una sola familia.",
+          "Do separar superficies con capas tonales y filetes de 1px, y cerrar encabezados y paneles de carta con nodos en rombo.",
+          "Do marcar lo activo, lo tuyo y lo que carga con la retícula de localización, y dar importancia con la rampa fija de magnitud (6 / 9 / 13 / 18px).",
+          "Do usar cifras tabulares en tablas, fechas y conteos.",
+          "Do dibujar los iconos como trazo de 1.5 en una caja de 24, heredando currentColor."
+        ],
+        "donts": [
+          "Don't usar box-shadow, brillos ni degradados decorativos; la máscara de desplazamiento del riel es la única transición tonal.",
+          "Don't añadir una variante clara: el panel es solo noche.",
+          "Don't reintroducir el admin gris de tarjetas blancas con acento azul, ni los colores Google del sitio público dentro del panel (salvo el logotipo de Google en su botón).",
+          "Don't usar .atlas-name en botones, etiquetas o cifras, ni reintroducir una segunda familia o itálicas.",
+          "Don't usar emoji ni caracteres como iconos; los iconos son SVG de trazo.",
+          "Don't mostrar slugs, uids o claves de permiso donde puede ir el nombre del evento o de la persona."
+        ]
+      }
     }
   },
   "components": [
+    {
+      "name": "Flecha de inscripción",
+      "kind": "button",
+      "refersTo": "sign-arrow",
+      "scope": "site",
+      "description": "La acción principal con forma de flecha de carretera; una por pantalla.",
+      "html": "<a class=\"ds-arrow\" href=\"#\"><span class=\"ds-arrow-edge\" aria-hidden=\"true\"></span><span class=\"ds-arrow-face\" aria-hidden=\"true\"></span><span class=\"ds-arrow-text\">Inscríbete gratis</span></a>",
+      "css": ".ds-arrow { position: relative; display: flex; align-items: center; width: 26rem; height: 96px; text-decoration: none; font-family: Overpass, 'Overpass Variable', sans-serif; } .ds-arrow-edge { position: absolute; inset: 0; background: var(--color-sign-white, #fff); border-radius: 0.875rem 0 0 0.875rem; clip-path: polygon(0 0, calc(100% - 3.25rem) 0, 100% 50%, calc(100% - 3.25rem) 100%, 0 100%); } .ds-arrow-face { position: absolute; inset: 5px; background: var(--color-sign-blue, #1a73e8); border-radius: 0.625rem 0 0 0.625rem; clip-path: polygon(0 0, calc(100% - 3rem) 0, 100% 50%, calc(100% - 3rem) 100%, 0 100%); transition: background-color 150ms; } .ds-arrow:hover .ds-arrow-face { background: var(--color-sign-blue-deep, #1967d2); } .ds-arrow-text { position: relative; padding: 0 80px 0 28px; color: #fff; font-size: 30px; font-weight: 900; } .ds-arrow:focus-visible { outline: 3px solid var(--color-ink, #202124); outline-offset: 3px; }"
+    },
+    {
+      "name": "Botón sólido (azul)",
+      "kind": "button",
+      "refersTo": "sign-button-solid",
+      "scope": "site",
+      "description": "Acción de información o inscripción fuera de la flecha.",
+      "html": "<a class=\"ds-sign-btn-solid\" href=\"#\"><span>Postula como voluntario</span></a>",
+      "css": ".ds-sign-btn-solid { display: inline-flex; padding: 3px; border-radius: 0.625rem; background: var(--color-sign-blue, #1a73e8); color: #fff; font-family: Overpass, 'Overpass Variable', sans-serif; font-weight: 800; font-size: 16px; text-decoration: none; transition: background-color 150ms; } .ds-sign-btn-solid span { display: flex; align-items: center; justify-content: center; gap: 10px; white-space: nowrap; padding: 10px 24px 8px; border: 2px solid #fff; border-radius: 7px; transition: background-color 150ms; } .ds-sign-btn-solid:hover { background: var(--color-sign-blue-deep, #1967d2); } .ds-sign-btn-solid:focus-visible { outline: 3px solid var(--color-ink, #202124); outline-offset: 3px; }"
+    },
+    {
+      "name": "Botón amarillo",
+      "kind": "button",
+      "refersTo": "sign-button-yellow",
+      "scope": "site",
+      "description": "Aviso; siempre texto y filete tinta.",
+      "html": "<a class=\"ds-sign-btn-yellow\" href=\"#\"><span>Quiero ser sponsor</span></a>",
+      "css": ".ds-sign-btn-yellow { display: inline-flex; padding: 3px; border-radius: 0.625rem; background: var(--color-sign-yellow, #fbbc04); color: var(--color-ink, #202124); font-family: Overpass, 'Overpass Variable', sans-serif; font-weight: 800; font-size: 16px; text-decoration: none; transition: background-color 150ms; } .ds-sign-btn-yellow span { display: flex; align-items: center; justify-content: center; gap: 10px; white-space: nowrap; padding: 10px 24px 8px; border: 2px solid var(--color-ink, #202124); border-radius: 7px; transition: background-color 150ms; } .ds-sign-btn-yellow:hover { background: var(--color-sign-yellow-deep, #f9ab00); } .ds-sign-btn-yellow:focus-visible { outline: 3px solid var(--color-ink, #202124); outline-offset: 3px; }"
+    },
+    {
+      "name": "Botón de contorno",
+      "kind": "button",
+      "refersTo": "sign-button-outline",
+      "scope": "site",
+      "description": "La alternativa junto a cada acción de color.",
+      "html": "<a class=\"ds-sign-btn-outline\" href=\"#\"><span>Conoce al equipo</span></a>",
+      "css": ".ds-sign-btn-outline { display: inline-flex; padding: 3px; border-radius: 0.625rem; background: var(--color-ink, #202124); color: var(--color-ink, #202124); font-family: Overpass, 'Overpass Variable', sans-serif; font-weight: 800; font-size: 16px; text-decoration: none; transition: background-color 150ms; } .ds-sign-btn-outline span { display: flex; align-items: center; justify-content: center; gap: 10px; white-space: nowrap; padding: 10px 24px 8px; border: 2px solid transparent; border-radius: 7px; transition: background-color 150ms; } .ds-sign-btn-outline span { background: var(--color-sign-white, #fff); } .ds-sign-btn-outline:hover span { background: var(--color-sand-pale, #f5ead3); } .ds-sign-btn-outline:focus-visible { outline: 3px solid var(--color-ink, #202124); outline-offset: 3px; }"
+    },
+    {
+      "name": "Navegación de placas",
+      "kind": "nav",
+      "refersTo": "sign-nav-item",
+      "scope": "site",
+      "description": "Ítems de la cabecera como placas tinta con filete blanco; el actual en verde destino.",
+      "html": "<nav class=\"ds-sign-nav\"><a href=\"#\" aria-current=\"page\"><span>Eventos</span></a><a href=\"#\"><span>Nosotros</span></a><a href=\"#\"><span>Foro</span></a></nav>",
+      "css": ".ds-sign-nav { display: flex; gap: 8px; padding: 16px; background: var(--color-sand, #ead6ae); font-family: Overpass, 'Overpass Variable', sans-serif; } .ds-sign-nav a { display: block; padding: 3px; border-radius: 0.625rem; background: var(--color-ink, #202124); color: #fff; text-decoration: none; transition: background-color 150ms; } .ds-sign-nav span { display: block; padding: 6px 12px 4px; border: 2px solid #fff; border-radius: 7px; font-size: 15px; font-weight: 800; } .ds-sign-nav a:hover, .ds-sign-nav a[aria-current=page] { background: var(--color-sign-green, #188038); } .ds-sign-nav a:focus-visible { outline: 3px solid var(--color-ink, #202124); outline-offset: 3px; }"
+    },
+    {
+      "name": "Estación de la ruta",
+      "kind": "card",
+      "refersTo": "route-station",
+      "scope": "site",
+      "description": "Panel de señal (banda de 10px, filete interior de 5px) con geoglifo de un trazo y nombre, sobre dos postes.",
+      "html": "<div class=\"ds-station\"><div class=\"ds-sign\"><div class=\"ds-sign-face\"><svg viewBox=\"0 0 200 200\" width=\"96\" height=\"96\" aria-hidden=\"true\"><path class=\"ds-glyph\" pathLength=\"1\" d=\"M100 30 L100 170 M60 70 Q100 40 140 70 M70 120 Q100 150 130 120\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg><h2>Únete a la comunidad</h2></div></div><div class=\"ds-posts\" aria-hidden=\"true\"><i></i><i></i></div></div>",
+      "css": ".ds-station { width: 420px; padding: 16px; background: var(--color-sand, #ead6ae); font-family: Overpass, 'Overpass Variable', sans-serif; } .ds-sign { padding: 0.625rem; border-radius: 1.75rem; background: var(--color-sign-green, #188038); color: #fff; } .ds-sign-face { display: flex; align-items: center; gap: 28px; padding: 32px; border: 5px solid currentColor; border-radius: 1.125rem; } .ds-sign-face svg { flex: none; } .ds-sign-face h2 { margin: 0; font-size: 36px; line-height: 1.02; font-weight: 900; letter-spacing: -0.02em; } .ds-posts { display: flex; justify-content: space-around; padding: 0 22%; height: 56px; } .ds-posts i { width: 12px; background: var(--color-post, #9aa0a6); } @media (prefers-reduced-motion: no-preference) { .ds-glyph { stroke-dasharray: 1; animation: ds-glyph-draw 2.6s cubic-bezier(0.65, 0, 0.35, 1) 0.2s both; } } @keyframes ds-glyph-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }"
+    },
+    {
+      "name": "Placas de cifras",
+      "kind": "card",
+      "refersTo": "plate",
+      "scope": "site",
+      "description": "Placas blancas (amarilla para la cuenta regresiva) con borde tinta de 3px y cifra 900 tabular.",
+      "html": "<dl class=\"ds-plates\"><div class=\"ds-plate is-yellow\"><dt>Faltan</dt><dd>41 días</dd></div><div class=\"ds-plate\"><dt>Inscritos</dt><dd>326 <small>de 350</small></dd></div><div class=\"ds-plate\"><dt>Comunidad desde</dt><dd>2015</dd></div></dl>",
+      "css": ".ds-plates { display: flex; flex-direction: column; gap: 12px; width: 360px; margin: 0; padding: 16px; background: var(--color-sand, #ead6ae); font-family: Overpass, 'Overpass Variable', sans-serif; } .ds-plate { display: flex; align-items: baseline; justify-content: space-between; padding: 16px 20px 12px; background: var(--color-sign-white, #fff); border: 3px solid var(--color-ink, #202124); border-radius: 0.625rem; color: var(--color-ink, #202124); } .ds-plate.is-yellow { background: var(--color-sign-yellow, #fbbc04); } .ds-plate dt { font-size: 16px; font-weight: 700; color: var(--color-ink-muted, #4d4436); } .ds-plate.is-yellow dt { color: var(--color-ink, #202124); } .ds-plate dd { margin: 0; font-size: 28px; line-height: 1; font-weight: 900; font-variant-numeric: tabular-nums; } .ds-plate small { font-size: 18px; font-weight: 700; color: var(--color-ink-muted, #4d4436); }"
+    },
+    {
+      "name": "Hitos de la ruta",
+      "kind": "custom",
+      "refersTo": "milestone",
+      "scope": "site",
+      "description": "Hitos kilométricos sobre asfalto: tapa roja para el próximo, color de categoría para los pasados; berma y línea de carril debajo.",
+      "html": "<div class=\"ds-road\"><ol><li><a href=\"#\"><i class=\"cap-red\"></i><time><b>28</b><span>NOV 2026</span></time><strong>DevFest ICA 2026</strong><em>Próximo</em></a></li><li><a href=\"#\"><i class=\"cap-blue\"></i><time><b>29</b><span>NOV 2025</span></time><strong>DevFest 2025</strong><em>Realizado</em></a></li></ol><div class=\"ds-berm\"></div><div class=\"ds-lane\"></div></div>",
+      "css": ".ds-road { background: var(--color-asphalt, #202124); padding: 32px 0 40px; font-family: Overpass, 'Overpass Variable', sans-serif; } .ds-road ol { display: flex; gap: 16px; margin: 0; padding: 0 16px; list-style: none; } .ds-road a { display: flex; flex-direction: column; width: 208px; height: 100%; overflow: hidden; border: 3px solid #fff; border-radius: 6.5rem 6.5rem 0 0; background: var(--color-sign-white, #fff); color: var(--color-ink, #202124); text-decoration: none; text-align: center; } .ds-road i { display: block; height: 24px; } .cap-red { background: var(--color-sign-red, #d93025); } .cap-blue { background: var(--color-sign-blue, #1a73e8); } .ds-road time { display: flex; flex-direction: column; padding-top: 16px; line-height: 1; } .ds-road b { font-size: 44px; font-weight: 900; font-variant-numeric: tabular-nums; } .ds-road time span { margin-top: 4px; font-size: 18px; font-weight: 800; letter-spacing: 0.08em; } .ds-road strong { margin-top: 16px; padding: 0 16px; font-weight: 700; } .ds-road em { padding: 12px 0 20px; font-style: normal; font-size: 14px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-ink-muted, #4d4436); } .ds-road a:hover strong { text-decoration: underline; } .ds-road a:focus-visible { outline: 3px solid #fff; outline-offset: 3px; } .ds-berm { height: 4px; background: rgb(154 160 166 / 0.6); } .ds-lane { height: 8px; margin-top: 40px; background-image: repeating-linear-gradient(90deg, var(--color-sign-yellow, #fbbc04) 0 4.5rem, transparent 4.5rem 7.5rem); }"
+    },
+    {
+      "name": "Etiqueta",
+      "kind": "chip",
+      "refersTo": "sign-tag",
+      "scope": "site",
+      "description": "Categoría o estado en mayúsculas con borde tinta; etiquetas libres en blanco con filete arena.",
+      "html": "<span class=\"ds-sign-tags\"><span class=\"ds-sign-tag is-green\">Study Jam</span><span class=\"ds-sign-tag is-yellow\">Meetup</span><span class=\"ds-sign-tag is-free\">Flutter</span></span>",
+      "css": ".ds-sign-tags { display: inline-flex; gap: 8px; padding: 12px; background: var(--color-sand, #ead6ae); font-family: Overpass, 'Overpass Variable', sans-serif; } .ds-sign-tag { display: inline-flex; align-items: center; padding: 3px 8px 1px; border: 2px solid var(--color-ink, #202124); border-radius: 6px; font-size: 12px; font-weight: 800; letter-spacing: 0.025em; text-transform: uppercase; } .ds-sign-tag.is-green { background: var(--color-sign-green, #188038); color: #fff; } .ds-sign-tag.is-yellow { background: var(--color-sign-yellow, #fbbc04); color: var(--color-ink, #202124); } .ds-sign-tag.is-free { background: #fff; color: var(--color-ink, #202124); border-color: var(--color-line, #c4ab7c); text-transform: none; letter-spacing: 0; }"
+    },
     {
       "name": "Botón primario",
       "kind": "button",
       "refersTo": "button-primary",
       "description": "La acción principal de una zona; uno por zona.",
       "html": "<button class=\"ds-btn-primary\">Nuevo evento</button>",
-      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--color-atlas-ember, #d1361a); color: #fff; padding: 10px 16px; border: none; border-radius: 6px; font-family: 'Archivo Variable', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color 150ms; } .ds-btn-primary:hover { background: #b02c14; } .ds-btn-primary:focus-visible { outline: 2px solid var(--color-atlas-star, #ff4d2e); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.5; }"
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--color-atlas-ember, #d1361a); color: #fff; padding: 10px 16px; border: none; border-radius: 6px; font-family: 'Archivo Variable', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color 150ms; } .ds-btn-primary:hover { background: #b02c14; } .ds-btn-primary:focus-visible { outline: 2px solid var(--color-atlas-star, #ff4d2e); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.5; }",
+      "scope": "admin"
     },
     {
       "name": "Botón secundario",
@@ -287,7 +955,8 @@
       "refersTo": "button-secondary",
       "description": "Acciones de apoyo junto a la primaria y en filas.",
       "html": "<button class=\"ds-btn-secondary\">Escribir post</button>",
-      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: transparent; color: var(--color-atlas-dust, #f2f2e9); padding: 10px 16px; border: 1px solid var(--color-atlas-line, #2e4262); border-radius: 6px; font-family: 'Archivo Variable', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color 150ms, border-color 150ms; } .ds-btn-secondary:hover { border-color: var(--color-atlas-mist, #b8bfcc); background: var(--color-atlas-deep, #16233d); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--color-atlas-star, #ff4d2e); outline-offset: 2px; }"
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: transparent; color: var(--color-atlas-dust, #f2f2e9); padding: 10px 16px; border: 1px solid var(--color-atlas-line, #2e4262); border-radius: 6px; font-family: 'Archivo Variable', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color 150ms, border-color 150ms; } .ds-btn-secondary:hover { border-color: var(--color-atlas-mist, #b8bfcc); background: var(--color-atlas-deep, #16233d); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--color-atlas-star, #ff4d2e); outline-offset: 2px; }",
+      "scope": "admin"
     },
     {
       "name": "Botón discreto",
@@ -295,7 +964,8 @@
       "refersTo": "button-quiet",
       "description": "Salidas y acciones terciarias sin borde.",
       "html": "<a class=\"ds-btn-quiet\" href=\"#\">Ver el sitio público</a>",
-      "css": ".ds-btn-quiet { display: inline-flex; align-items: center; gap: 8px; color: var(--color-atlas-mist, #b8bfcc); padding: 6px 8px; border-radius: 6px; font-family: 'Archivo Variable', sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; transition: color 150ms; } .ds-btn-quiet:hover { color: var(--color-atlas-dust, #f2f2e9); } .ds-btn-quiet:focus-visible { outline: 2px solid var(--color-atlas-star, #ff4d2e); outline-offset: 2px; }"
+      "css": ".ds-btn-quiet { display: inline-flex; align-items: center; gap: 8px; color: var(--color-atlas-mist, #b8bfcc); padding: 6px 8px; border-radius: 6px; font-family: 'Archivo Variable', sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; transition: color 150ms; } .ds-btn-quiet:hover { color: var(--color-atlas-dust, #f2f2e9); } .ds-btn-quiet:focus-visible { outline: 2px solid var(--color-atlas-star, #ff4d2e); outline-offset: 2px; }",
+      "scope": "admin"
     },
     {
       "name": "Riel de navegación",
@@ -303,7 +973,8 @@
       "refersTo": "nav-item",
       "description": "Grupo del riel con etiqueta en versalitas, ítem activo con retícula y conteo pendiente.",
       "html": "<nav class=\"ds-rail\"><h3 class=\"ds-rail-group\">Contenido<span></span></h3><ul><li><a class=\"ds-rail-item is-active\" href=\"#\" aria-current=\"page\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"><circle cx=\"12\" cy=\"12\" r=\"6.5\"/><circle cx=\"12\" cy=\"12\" r=\"1.25\" fill=\"currentColor\" stroke=\"none\"/><path d=\"M12 2v4M12 18v4M2 12h4M18 12h4\"/></svg><span>Eventos</span></a></li><li><a class=\"ds-rail-item\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"><circle cx=\"12\" cy=\"12\" r=\"6.5\"/><path d=\"M12 2v4M12 18v4M2 12h4M18 12h4\"/></svg><span>Foro</span><b class=\"ds-rail-count\">1</b></a></li></ul></nav>",
-      "css": ".ds-rail { width: 248px; background: var(--color-atlas-night, #0a1021); padding: 12px; font-family: 'Archivo Variable', sans-serif; } .ds-rail ul { list-style: none; margin: 0; padding: 0; } .ds-rail-group { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; padding: 0 8px; color: var(--color-atlas-glow, #ffb36b); font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; font-stretch: 112%; } .ds-rail-group span { flex: 1; height: 1px; background: var(--color-atlas-line, #2e4262); } .ds-rail-item { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 6px; color: var(--color-atlas-mist, #b8bfcc); font-size: 15px; text-decoration: none; transition: background-color 150ms, color 150ms; } .ds-rail-item svg { flex-shrink: 0; color: transparent; } .ds-rail-item span { flex: 1; } .ds-rail-item:hover { background: rgb(22 35 61 / 0.6); color: var(--color-atlas-dust, #f2f2e9); } .ds-rail-item:hover svg { color: var(--color-atlas-line, #2e4262); } .ds-rail-item.is-active { background: var(--color-atlas-deep, #16233d); color: var(--color-atlas-dust, #f2f2e9); font-weight: 600; } .ds-rail-item.is-active svg { color: var(--color-atlas-star, #ff4d2e); } .ds-rail-item:focus-visible { outline: 2px solid var(--color-atlas-star, #ff4d2e); outline-offset: 2px; } .ds-rail-count { color: var(--color-atlas-star, #ff4d2e); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }"
+      "css": ".ds-rail { width: 248px; background: var(--color-atlas-night, #0a1021); padding: 12px; font-family: 'Archivo Variable', sans-serif; } .ds-rail ul { list-style: none; margin: 0; padding: 0; } .ds-rail-group { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; padding: 0 8px; color: var(--color-atlas-glow, #ffb36b); font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; font-stretch: 112%; } .ds-rail-group span { flex: 1; height: 1px; background: var(--color-atlas-line, #2e4262); } .ds-rail-item { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 6px; color: var(--color-atlas-mist, #b8bfcc); font-size: 15px; text-decoration: none; transition: background-color 150ms, color 150ms; } .ds-rail-item svg { flex-shrink: 0; color: transparent; } .ds-rail-item span { flex: 1; } .ds-rail-item:hover { background: rgb(22 35 61 / 0.6); color: var(--color-atlas-dust, #f2f2e9); } .ds-rail-item:hover svg { color: var(--color-atlas-line, #2e4262); } .ds-rail-item.is-active { background: var(--color-atlas-deep, #16233d); color: var(--color-atlas-dust, #f2f2e9); font-weight: 600; } .ds-rail-item.is-active svg { color: var(--color-atlas-star, #ff4d2e); } .ds-rail-item:focus-visible { outline: 2px solid var(--color-atlas-star, #ff4d2e); outline-offset: 2px; } .ds-rail-count { color: var(--color-atlas-star, #ff4d2e); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }",
+      "scope": "admin"
     },
     {
       "name": "Panel de carta con nodos",
@@ -311,21 +982,24 @@
       "refersTo": "chart-panel",
       "description": "Contenedor de la efeméride y de «Te esperan»: borde de 1px, esquina de 2px y rombos en las esquinas.",
       "html": "<ul class=\"ds-chart-panel\"><i class=\"ds-node tl\"></i><i class=\"ds-node tr\"></i><i class=\"ds-node bl\"></i><i class=\"ds-node br\"></i><li><a href=\"#\"><b>2</b><span>Solicitudes de acceso</span><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14M13 6l6 6-6 6\"/></svg></a></li><li><a href=\"#\"><b>1</b><span>Posts en borrador</span><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14M13 6l6 6-6 6\"/></svg></a></li></ul>",
-      "css": ".ds-chart-panel { position: relative; list-style: none; margin: 0; padding: 0; width: 360px; border: 1px solid var(--color-atlas-line, #2e4262); border-radius: 2px; background: var(--color-atlas-night, #0a1021); font-family: 'Archivo Variable', sans-serif; } .ds-node { position: absolute; width: 6px; height: 6px; transform: rotate(45deg); border: 1px solid rgb(255 77 46 / 0.7); background: var(--color-atlas-night, #0a1021); pointer-events: none; } .ds-node.tl { top: -3.5px; left: -3.5px; } .ds-node.tr { top: -3.5px; right: -3.5px; } .ds-node.bl { bottom: -3.5px; left: -3.5px; } .ds-node.br { bottom: -3.5px; right: -3.5px; } .ds-chart-panel li + li { border-top: 1px solid var(--color-atlas-line, #2e4262); } .ds-chart-panel a { display: flex; align-items: center; gap: 16px; padding: 16px 20px; color: var(--color-atlas-dust, #f2f2e9); text-decoration: none; font-size: 15px; transition: background-color 150ms; } .ds-chart-panel a:hover { background: rgb(22 35 61 / 0.6); } .ds-chart-panel a:focus-visible { outline: 2px solid var(--color-atlas-star, #ff4d2e); outline-offset: 2px; } .ds-chart-panel b { width: 40px; font-size: 28px; line-height: 1; font-weight: 600; color: var(--color-atlas-star, #ff4d2e); font-variant-numeric: tabular-nums; } .ds-chart-panel span { flex: 1; } .ds-chart-panel svg { color: var(--color-atlas-fog, #8a93a6); transition: color 150ms; } .ds-chart-panel a:hover svg { color: var(--color-atlas-dust, #f2f2e9); }"
+      "css": ".ds-chart-panel { position: relative; list-style: none; margin: 0; padding: 0; width: 360px; border: 1px solid var(--color-atlas-line, #2e4262); border-radius: 2px; background: var(--color-atlas-night, #0a1021); font-family: 'Archivo Variable', sans-serif; } .ds-node { position: absolute; width: 6px; height: 6px; transform: rotate(45deg); border: 1px solid rgb(255 77 46 / 0.7); background: var(--color-atlas-night, #0a1021); pointer-events: none; } .ds-node.tl { top: -3.5px; left: -3.5px; } .ds-node.tr { top: -3.5px; right: -3.5px; } .ds-node.bl { bottom: -3.5px; left: -3.5px; } .ds-node.br { bottom: -3.5px; right: -3.5px; } .ds-chart-panel li + li { border-top: 1px solid var(--color-atlas-line, #2e4262); } .ds-chart-panel a { display: flex; align-items: center; gap: 16px; padding: 16px 20px; color: var(--color-atlas-dust, #f2f2e9); text-decoration: none; font-size: 15px; transition: background-color 150ms; } .ds-chart-panel a:hover { background: rgb(22 35 61 / 0.6); } .ds-chart-panel a:focus-visible { outline: 2px solid var(--color-atlas-star, #ff4d2e); outline-offset: 2px; } .ds-chart-panel b { width: 40px; font-size: 28px; line-height: 1; font-weight: 600; color: var(--color-atlas-star, #ff4d2e); font-variant-numeric: tabular-nums; } .ds-chart-panel span { flex: 1; } .ds-chart-panel svg { color: var(--color-atlas-fog, #8a93a6); transition: color 150ms; } .ds-chart-panel a:hover svg { color: var(--color-atlas-dust, #f2f2e9); }",
+      "scope": "admin"
     },
     {
       "name": "Encabezado de sección",
       "kind": "custom",
       "description": "Nombre en Archivo ancho seminegrita (.atlas-name) 22px seguido de un filete con nodo en rombo.",
       "html": "<div class=\"ds-section-heading\"><h2>Te esperan</h2><div class=\"ds-rule\"><i></i><span></span></div></div>",
-      "css": ".ds-section-heading { display: flex; align-items: flex-end; gap: 16px; width: 480px; } .ds-section-heading h2 { margin: 0; font-family: 'Archivo Variable', sans-serif; font-weight: 640; font-stretch: 118%; font-size: 22px; line-height: 1; letter-spacing: -0.015em; color: var(--color-atlas-dust, #f2f2e9); } .ds-rule { flex: 1; display: flex; align-items: center; margin-bottom: 4px; } .ds-rule i { width: 6px; height: 6px; transform: rotate(45deg); border: 1px solid rgb(255 77 46 / 0.7); } .ds-rule span { flex: 1; height: 1px; background: var(--color-atlas-line, #2e4262); }"
+      "css": ".ds-section-heading { display: flex; align-items: flex-end; gap: 16px; width: 480px; } .ds-section-heading h2 { margin: 0; font-family: 'Archivo Variable', sans-serif; font-weight: 640; font-stretch: 118%; font-size: 22px; line-height: 1; letter-spacing: -0.015em; color: var(--color-atlas-dust, #f2f2e9); } .ds-rule { flex: 1; display: flex; align-items: center; margin-bottom: 4px; } .ds-rule i { width: 6px; height: 6px; transform: rotate(45deg); border: 1px solid rgb(255 77 46 / 0.7); } .ds-rule span { flex: 1; height: 1px; background: var(--color-atlas-line, #2e4262); }",
+      "scope": "admin"
     },
     {
       "name": "Retícula de localización",
       "kind": "custom",
       "description": "Marca firma del elemento activo, tuyo o en carga; entra rotando y escalando.",
       "html": "<span class=\"ds-reticle-demo\"><svg class=\"ds-reticle\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"><circle cx=\"12\" cy=\"12\" r=\"6.5\"/><circle cx=\"12\" cy=\"12\" r=\"1.25\" fill=\"currentColor\" stroke=\"none\"/><path d=\"M12 2v4M12 18v4M2 12h4M18 12h4\"/></svg><i class=\"ds-magnitude\"></i></span>",
-      "css": ".ds-reticle-demo { position: relative; display: inline-grid; place-items: center; width: 32px; height: 32px; } .ds-reticle { position: absolute; color: var(--color-atlas-star, #ff4d2e); animation: ds-reticle-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both; } .ds-magnitude { width: 13px; height: 13px; border-radius: 9999px; background: var(--color-atlas-dust, #f2f2e9); } @keyframes ds-reticle-in { from { transform: scale(1.6) rotate(-45deg); opacity: 0; } to { transform: scale(1) rotate(0deg); opacity: 1; } } @media (prefers-reduced-motion: reduce) { .ds-reticle { animation: none; } }"
+      "css": ".ds-reticle-demo { position: relative; display: inline-grid; place-items: center; width: 32px; height: 32px; } .ds-reticle { position: absolute; color: var(--color-atlas-star, #ff4d2e); animation: ds-reticle-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both; } .ds-magnitude { width: 13px; height: 13px; border-radius: 9999px; background: var(--color-atlas-dust, #f2f2e9); } @keyframes ds-reticle-in { from { transform: scale(1.6) rotate(-45deg); opacity: 0; } to { transform: scale(1) rotate(0deg); opacity: 1; } } @media (prefers-reduced-motion: reduce) { .ds-reticle { animation: none; } }",
+      "scope": "admin"
     },
     {
       "name": "Estado de error",
@@ -333,13 +1007,20 @@
       "refersTo": "error-state",
       "description": "Caja rosa con reintento secundario; role=alert.",
       "html": "<div class=\"ds-error\" role=\"alert\"><span>No se pudo cargar el calendario de eventos del sitio.</span><button>Reintentar</button></div>",
-      "css": ".ds-error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 12px 16px; border: 1px solid rgb(255 138 154 / 0.4); background: rgb(255 138 154 / 0.05); border-radius: 6px; color: var(--color-atlas-dust, #f2f2e9); font-family: 'Archivo Variable', sans-serif; font-size: 14px; } .ds-error span { flex: 1; } .ds-error button { background: transparent; border: 1px solid var(--color-atlas-line, #2e4262); color: var(--color-atlas-dust, #f2f2e9); padding: 6px 12px; border-radius: 6px; font: inherit; font-weight: 600; cursor: pointer; transition: border-color 150ms; } .ds-error button:hover { border-color: var(--color-atlas-mist, #b8bfcc); } .ds-error button:focus-visible { outline: 2px solid var(--color-atlas-star, #ff4d2e); outline-offset: 2px; }"
+      "css": ".ds-error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 12px 16px; border: 1px solid rgb(255 138 154 / 0.4); background: rgb(255 138 154 / 0.05); border-radius: 6px; color: var(--color-atlas-dust, #f2f2e9); font-family: 'Archivo Variable', sans-serif; font-size: 14px; } .ds-error span { flex: 1; } .ds-error button { background: transparent; border: 1px solid var(--color-atlas-line, #2e4262); color: var(--color-atlas-dust, #f2f2e9); padding: 6px 12px; border-radius: 6px; font: inherit; font-weight: 600; cursor: pointer; transition: border-color 150ms; } .ds-error button:hover { border-color: var(--color-atlas-mist, #b8bfcc); } .ds-error button:focus-visible { outline: 2px solid var(--color-atlas-star, #ff4d2e); outline-offset: 2px; }",
+      "scope": "admin"
     }
   ],
   "narrative": {
-    "northStar": "La carta celeste de la comunidad",
-    "overview": "El panel es un atlas estelar nocturno. Cada cosa tiene coordenadas (fecha, alcance, rol, estado) y su importancia se lee como magnitud: el tamaño del punto, el brillo del número, el ámbar que solo aparece donde algo te necesita. Rechaza el admin gris de tarjetas blancas con un acento azul. La superficie es noche plana en capas de índigo, trazada con filetes de un píxel que terminan en nodos rotados, como las líneas de una carta impresa.\n\nLa densidad es de herramienta de trabajo, no de tablero: una sola columna de contenido bajo una cabecera que dice dónde estás y qué alcance tienes, con un riel de navegación agrupado a la izquierda. Los nombres propios (eventos, la comunidad, títulos de página) se escriben en el corte ancho seminegrita de Archivo (.atlas-name); lo operativo, en la misma grotesca a ancho normal; las etiquetas, en versalitas espaciadas; las cifras, tabulares. Existe un segundo modo, evento en vivo, que cambia la cabecera a índigo, muestra el estado de sincronización en la línea de coordenadas y, en el celular, añade una barra de pestañas inferior.\n\nSolo noche: no hay variante clara (color-scheme: dark). Sin brillos ni degradados decorativos.",
+    "northStar": "La carretera a Ica (sitio público) · La carta celeste de la comunidad (panel admin)",
+    "overview": "Sitio público\n\nEl sitio es la Panamericana Sur llegando a Ica. Cada evento es un destino señalizado en un panel de carretera, y la inscripción es la flecha que hay que tomar. Rechaza la landing blanca de comunidad tech con titular, foto al lado y fila de tarjetas iguales. El suelo es arena de la pampa; sobre ella se plantan paneles de esquinas redondeadas con filete blanco interior, en los colores de Google usados como señalética, y los atraviesa una franja de asfalto con línea de carril amarilla discontinua.\n\nLa lectura es de conductor: un panel de destino grande arriba (qué viene, cuándo, dónde), placas blancas con cifras a su lado, y bajando por la ruta, estaciones que alternan lado (cómo unirse, cómo apoyar, cómo dar una charla o ser voluntario). Los pictogramas son geoglifos de Nazca de un solo trazo; el del panel de destino se traza como una línea continua al cargar, y los de las estaciones al entrar en pantalla.\n\nUna sola familia de letra de señal, Overpass, pesada en títulos, sin itálicas, con cifras tabulares. Sin degradados de color ni sombras: la profundidad la dan los bordes y los postes.\n\nPanel admin\n\nEl panel es un atlas estelar nocturno. Cada cosa tiene coordenadas (fecha, alcance, rol, estado) y su importancia se lee como magnitud: el tamaño del punto, el brillo del número, el ámbar que solo aparece donde algo te necesita. Rechaza el admin gris de tarjetas blancas con un acento azul. La superficie es noche plana en capas de índigo, trazada con filetes de un píxel que terminan en nodos rotados, como las líneas de una carta impresa.\n\nLa densidad es de herramienta de trabajo, no de tablero: una sola columna de contenido bajo una cabecera que dice dónde estás y qué alcance tienes, con un riel de navegación agrupado a la izquierda. Los nombres propios (eventos, la comunidad, títulos de página) se escriben en el corte ancho seminegrita de Archivo (.atlas-name); lo operativo, en la misma grotesca a ancho normal; las etiquetas, en versalitas espaciadas; las cifras, tabulares. Existe un segundo modo, evento en vivo, que cambia la cabecera a índigo, muestra el estado de sincronización en la línea de coordenadas y, en el celular, añade una barra de pestañas inferior.\n\nSolo noche: no hay variante clara (color-scheme: dark). Sin brillos ni degradados decorativos.",
     "keyCharacteristics": [
+      "Arena de la pampa como suelo; asfalto tinta como franja de ruta y pie de página.",
+      "Paneles de señal: banda de color de 10px, filete interior de 5px en blanco (o tinta sobre amarillo), esquinas de 28px / 18px.",
+      "Colores de Google como señalética: verde destino, azul flecha e información, amarillo aviso, rojo obligatorio.",
+      "Placas blancas con borde tinta de 3px para cifras y datos.",
+      "Geoglifos de Nazca de un solo trazo como pictogramas, trazados con movimiento solo si está permitido.",
+      "Overpass, pesada (800 a 900) en títulos y acciones, cifras tabulares.",
       "Noche plana en tres capas (noche, índigo, azul carta) separadas por filetes de 1px, no por sombras.",
       "Un único acento cálido, ámbar estelar, reservado para la acción principal, el foco y lo pendiente.",
       "Retícula de localización (anillo con cruz) como marca del elemento activo, seleccionado o tuyo.",
@@ -348,32 +1029,81 @@
     ],
     "rules": [
       {
+        "name": "The Señalética Rule",
+        "body": "Cada color de Google significa una cosa, como en la carretera: verde es destino y evento, azul es la flecha de inscripción e información, amarillo es aviso y cuenta regresiva (con texto tinta), rojo es lo obligatorio y la tapa del hito del próximo evento. La estación de speakers y voluntarios es azul de información, no roja. Un color no se elige por variedad.",
+        "section": "colors",
+        "scope": "site"
+      },
+      {
+        "name": "The Puente del Sitio Rule",
+        "body": "Dentro de .site, src/styles/site.css reasigna los tokens heredados (primary, secondary, tertiary, gray-custom, section y los google-*) a valores del mundo para que las páginas aún no migradas no rompan la arena. Es un mecanismo de transición, no la paleta: el código nuevo usa solo los tokens de este mundo, y el puente se retira cuando la última página migre. No se citan sus valores como colores del sistema.",
+        "section": "colors",
+        "scope": "site"
+      },
+      {
+        "name": "The Letra de Señal Rule",
+        "body": "Una sola familia, Overpass, sin itálicas. La jerarquía sale del peso (900 destino, 800 acción, 400 texto) y del tamaño, nunca de una segunda familia.",
+        "section": "typography",
+        "scope": "site"
+      },
+      {
+        "name": "The Separador de Ruta Rule",
+        "body": "El punto medio U+00B7 de Overpass queda descentrado; los separadores de fecha, hora y lugar usan U+2219 («∙») dentro de un span con aria-hidden, seguido de una coma solo para lectores de pantalla.",
+        "section": "typography",
+        "scope": "site"
+      },
+      {
+        "name": "The Cifra Tabular Rule",
+        "body": "time, table, .tabular y toda cifra de placa o hito usan cifras tabulares.",
+        "section": "typography",
+        "scope": "site"
+      },
+      {
+        "name": "The Poste y Borde Rule",
+        "body": "Nada flota. Un panel se sostiene en postes; una placa se recorta con borde tinta; nunca una sombra difusa ni un degradado de color.",
+        "section": "elevation",
+        "scope": "site"
+      },
+      {
         "name": "The Una Sola Estrella Rule",
         "body": "El ámbar estelar y su ascua marcan una sola cosa por zona: la acción principal de la cabecera, el elemento activo, lo pendiente. Si dos botones primarios compiten en la misma fila, uno de los dos es secundario. En «Tus eventos», «Abrir check-in» solo es primario el día del evento.",
-        "section": "colors"
+        "section": "colors",
+        "scope": "admin"
       },
       {
         "name": "The Puente Transitorio Rule",
         "body": "Dentro de .admin-atlas, src/styles/admin.css reasigna las escalas gray, blue, red, green, amber y yellow de Tailwind a valores del mundo (blue-* pasa a la rampa ascua, gray-* a la tinta nocturna) para que las secciones aún no migradas no rompan la noche. Es un mecanismo de transición, no la paleta: el código nuevo usa solo tokens atlas-*, y el puente se retira cuando la última sección migre. No se citan sus valores como colores del sistema.",
-        "section": "colors"
+        "section": "colors",
+        "scope": "admin"
       },
       {
         "name": "The Nombre Propio Rule",
         "body": "El corte ancho seminegrita (.atlas-name: 640, ancho 118%) está reservado para nombres y títulos: de página, de sección, de evento, de la comunidad, la inicial del avatar, los títulos de login y avisos. Nunca para botones, etiquetas, cifras o texto corrido.",
-        "section": "typography"
+        "section": "typography",
+        "scope": "admin"
       },
       {
         "name": "The Cifra Tabular Rule",
         "body": "Tablas, <time> y todo número que se compara usan cifras tabulares (.tabular, ya aplicado por defecto a table y time).",
-        "section": "typography"
+        "section": "typography",
+        "scope": "admin"
       },
       {
         "name": "The Tinta Plana Rule",
         "body": "Nada flota. Si una superficie necesita separarse, sube una capa tonal o gana un filete; nunca una sombra ni un brillo.",
-        "section": "elevation"
+        "section": "elevation",
+        "scope": "admin"
       }
     ],
     "dos": [
+      "Do usar solo los tokens de este mundo en código nuevo del sitio; el puente de .site es para lo no migrado.",
+      "Do dar a cada color de Google su papel de señal: verde destino, azul flecha e información, amarillo aviso con texto tinta, rojo obligatorio y tapa del próximo hito.",
+      "Do usar la forma de flecha una sola vez por pantalla, y siempre para la acción principal.",
+      "Do levantar los paneles sobre postes y recortar las cifras en placas blancas con borde tinta de 3px.",
+      "Do dibujar los pictogramas como geoglifos de un solo trazo en currentColor, y animar su trazo solo con movimiento permitido.",
+      "Do separar fecha, hora y lugar con U+2219 en un span con aria-hidden, más una coma para lectores de pantalla.",
+      "Do usar cifras tabulares en placas, hitos, fechas y tablas.",
+      "Do emparejar cada acción de color con un botón de contorno para la alternativa.",
       "Do usar solo tokens atlas-* en código nuevo del panel; el puente de admin.css es para lo no migrado.",
       "Do reservar el ámbar estelar y la ascua para la acción principal, el foco, lo activo y lo pendiente.",
       "Do escribir los nombres propios (página, sección, evento) con .atlas-name y todo lo demás en Archivo a ancho normal; una sola familia.",
@@ -383,6 +1113,13 @@
       "Do dibujar los iconos como trazo de 1.5 en una caja de 24, heredando currentColor."
     ],
     "donts": [
+      "Don't usar box-shadow, sombras duras ni degradados de color; la línea de carril de cortes duros es la única excepción técnica.",
+      "Don't volver a la landing blanca de comunidad tech con titular, foto al lado y fila de tarjetas iguales.",
+      "Don't usar el rojo para una estación, una categoría o un adorno: es lo obligatorio y la tapa del próximo hito.",
+      "Don't poner texto blanco sobre amarillo.",
+      "Don't usar una segunda familia, itálicas, ni el punto medio U+00B7 como separador.",
+      "Don't usar los tokens atlas-* ni Archivo en el sitio público.",
+      "Don't usar emoji ni caracteres como iconos; los iconos son SVG de trazo.",
       "Don't usar box-shadow, brillos ni degradados decorativos; la máscara de desplazamiento del riel es la única transición tonal.",
       "Don't añadir una variante clara: el panel es solo noche.",
       "Don't reintroducir el admin gris de tarjetas blancas con acento azul, ni los colores Google del sitio público dentro del panel (salvo el logotipo de Google en su botón).",

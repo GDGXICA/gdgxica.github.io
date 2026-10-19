@@ -1,0 +1,35 @@
+---
+interface Props {
+  photos: string[];
+  label: string;
+}
+
+const { photos, label } = Astro.props;
+---
+
+<section aria-label={label} class="overflow-hidden py-4">
+  <ul
+    class="max-w-site mx-auto grid auto-rows-[9rem] grid-cols-2 gap-3 px-4 sm:auto-rows-[11rem] md:grid-cols-4 md:px-8 lg:auto-rows-[13rem]"
+  >
+    {
+      photos.map((src, index) => (
+        <li
+          class:list={[
+            "border-ink rounded-plate overflow-hidden border-[3px]",
+            index === 0 && "col-span-2 row-span-2",
+          ]}
+        >
+          <img
+            src={src}
+            alt=""
+            width={640}
+            height={480}
+            class="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
+          />
+        </li>
+      ))
+    }
+  </ul>
+</section>
