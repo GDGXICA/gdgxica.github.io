@@ -11,7 +11,6 @@ import TrackTabSchedule from "@/components/TrackTabSchedule.astro";
 import SpeakerCard from "@/components/SpeakerCard.astro";
 import {
   Ticket,
-  Share2,
   Calendar,
   CalendarPlus,
   Download,
@@ -125,6 +124,17 @@ const hasSchedule = isArraySchedule
         (schedule as { trackSessions: Record<string, unknown[]> }).trackSessions
       ).length > 0
     : false;
+
+// Never negative: a data entry with more registrations than seats (or a stale
+// `maxParticipants`) must read as "sold out", not as "-12 lugares disponibles".
+const spotsLeft = Math.max(
+  0,
+  event.data.maxParticipants - event.data.participants
+);
+const spotsLabel =
+  spotsLeft === 0
+    ? "Cupos agotados"
+    : `${spotsLeft} ${spotsLeft === 1 ? "lugar disponible" : "lugares disponibles"}`;
 
 const whatsappGroupLink = event.data.whatsappGroupLink;
 // Data URL rather than an SVG string so it goes into an <img src>, without
@@ -409,14 +419,11 @@ const whatsappQrDataUrl = whatsappGroupLink
               Gratuito
             </p>
             <p class="text-secondary mb-4 text-center">
-              {event.data.maxParticipants - event.data.participants} lugares disponibles
+              {spotsLabel}
             </p>
             <div class="flex flex-col gap-4">
               <Button variant="solid" href={event.data.registerFormLink}>
                 <Ticket size={16} /> Registrarse Gratis
-              </Button>
-              <Button variant="outline" href="/"
-                ><Share2 size={16} /> Compartir Evento
               </Button>
             </div>
           </div>
