@@ -73,14 +73,10 @@ const metadata = {
           </div>
         ) : (
           <>
-            <h2 class="text-primary mb-6 text-center text-4xl font-bold">
+            <h2 class="text-primary text-center text-4xl font-bold">
               Publicaciones
             </h2>
-            <p class="text-secondary text-center text-xl">
-              {posts.length} publicación{posts.length !== 1 && "es"} de la
-              comunidad
-            </p>
-            <div class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="mt-12 grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),24rem))] justify-center gap-8">
               {posts.map((post) => (
                 <PostCard slug={post.id} {...post.data} />
               ))}
