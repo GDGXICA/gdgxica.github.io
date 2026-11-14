@@ -553,8 +553,8 @@ const path = colibriPath();
     gap: 0.6rem;
   }
 
-  /* Which site the survey shows. The scene picks one at random on each
-     visit; this lets the visitor see the other. */
+  /* Which site the survey shows. The scene opens on Huacachina and the two
+     take turns every 30 s; this lets the visitor jump to the other. */
   .hero__switch {
     display: inline-flex;
     padding: 3px;
@@ -754,6 +754,14 @@ const path = colibriPath();
   import type { SceneVariant, SceneController } from "@/scripts/desert-scene";
 
   let scene: SceneController | null = null;
+  let cycleTimer: number | null = null;
+
+  /** How long each site stays on screen before the hero switches. */
+  const CYCLE_MS = 30_000;
+  const OTHER: Record<SceneVariant, SceneVariant> = {
+    huacachina: "colibri",
+    colibri: "huacachina",
+  };
 
   const CAPTIONS: Record<SceneVariant, string> = {
     colibri: "Colibrí, líneas de Nazca · 14°41′ S 75°08′ O",
@@ -781,8 +789,8 @@ const path = colibriPath();
     const caption = hero.querySelector<HTMLElement>("[data-scene-caption]");
     if (!holder || !canvas || !canUseWebGL()) return;
 
-    // Each visit lands on one of the two sites at random.
-    let variant: SceneVariant = Math.random() < 0.5 ? "colibri" : "huacachina";
+    // Every visit opens on Huacachina, then the two sites take turns.
+    let variant: SceneVariant = "huacachina";
     const buttons = [
       ...(toggle?.querySelectorAll<HTMLButtonElement>("[data-variant]") ?? []),
     ];
@@ -809,6 +817,7 @@ const path = colibriPath();
               holder.classList.add("is-live");
               reflect();
               toggle?.removeAttribute("hidden");
+              schedule();
             },
           });
         })
@@ -816,21 +825,35 @@ const path = colibriPath();
           // The drawn plateau stays: the page is complete without WebGL.
         });
 
+    const show = (next: SceneVariant) => {
+      if (!scene || next === variant) return;
+      variant = next;
+      reflect();
+      // A short fade hides the swap of one landscape for the other.
+      holder.classList.add("is-swapping");
+      window.setTimeout(
+        () => {
+          scene?.setVariant(next);
+          holder.classList.remove("is-swapping");
+        },
+        still ? 0 : 320
+      );
+    };
+
+    // Switch to the other site every 30 s, in a loop. A switch by hand
+    // restarts the count, and a hidden tab waits rather than switching.
+    const schedule = () => {
+      if (cycleTimer !== null) window.clearTimeout(cycleTimer);
+      cycleTimer = window.setTimeout(() => {
+        if (!document.hidden) show(OTHER[variant]);
+        schedule();
+      }, CYCLE_MS);
+    };
+
     buttons.forEach((button) => {
       button.onclick = () => {
-        const next = button.dataset.variant as SceneVariant;
-        if (!scene || next === variant) return;
-        variant = next;
-        reflect();
-        // A short fade hides the swap of one landscape for the other.
-        holder.classList.add("is-swapping");
-        window.setTimeout(
-          () => {
-            scene?.setVariant(next);
-            holder.classList.remove("is-swapping");
-          },
-          still ? 0 : 320
-        );
+        show(button.dataset.variant as SceneVariant);
+        schedule();
       };
     });
 
@@ -885,6 +908,8 @@ const path = colibriPath();
   });
 
   document.addEventListener("astro:before-swap", () => {
+    if (cycleTimer !== null) window.clearTimeout(cycleTimer);
+    cycleTimer = null;
     scene?.dispose();
     scene = null;
   });

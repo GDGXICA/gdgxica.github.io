@@ -6,7 +6,8 @@
 // - "huacachina": the oasis, its dunes drawn as topographic contour lines
 //   round the lagoon, whose shore glows the same way.
 //
-// The hero picks one at random per visit and lets the visitor switch. Both
+// The hero opens on Huacachina, alternates with the hummingbird every 30 s
+// and lets the visitor switch. Both
 // are only fully legible from the air, so as the hero scrolls away the
 // camera lifts from the grazing view towards the zenith.
 //
