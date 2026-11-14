@@ -1,0 +1,296 @@
+---
+export interface EventRow {
+  slug: string;
+  name: string;
+  image: string;
+  categoryType: string;
+  categoryLabel: string;
+  date: string;
+  venue: string;
+  upcoming: boolean;
+}
+
+interface Props {
+  rows: EventRow[];
+}
+
+const { rows } = Astro.props;
+const first = rows[0];
+---
+
+<section class="log" aria-labelledby="log-title">
+  <div class="n-container">
+    <div class="n-section-head" data-reveal>
+      <h2 id="log-title" class="n-head">Eventos de la comunidad</h2>
+      <a class="n-link" href="/events">Ver el calendario completo</a>
+    </div>
+
+    <div class="log__body" data-log>
+      <ol class="log__list">
+        {
+          rows.map((row) => (
+            <li>
+              <a
+                class="log__row"
+                href={`/events/${row.slug}`}
+                data-preview={row.image}
+                data-venue={row.venue}
+                data-status={row.upcoming ? "Próximo" : "Realizado"}
+                data-name={row.name}
+              >
+                <span class="log__date n-mono">{row.date}</span>
+                <span class="log__name">{row.name}</span>
+                <span class="log__cat n-mono">
+                  <span
+                    class={`log__dot log__dot--${row.categoryType}`}
+                    aria-hidden="true"
+                  />
+                  {row.categoryLabel}
+                </span>
+                {row.upcoming && <span class="log__next n-mono">Próximo</span>}
+              </a>
+            </li>
+          ))
+        }
+      </ol>
+
+      {
+        first && (
+          <figure class="log__preview n-panel n-marks" aria-hidden="true">
+            <div class="log__plate">
+              <img
+                src={first.image}
+                alt=""
+                width={640}
+                height={480}
+                loading="lazy"
+                decoding="async"
+                data-preview-img
+              />
+            </div>
+            <figcaption>
+              <span class="log__plate-name" data-preview-name>
+                {first.name}
+              </span>
+              <span class="n-mono n-muted" data-preview-meta>
+                {first.venue} · {first.upcoming ? "Próximo" : "Realizado"}
+              </span>
+            </figcaption>
+          </figure>
+        )
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .log {
+    padding-block: var(--section-gap);
+  }
+
+  .log__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr);
+    gap: clamp(2rem, 4vw, 4rem);
+    align-items: start;
+  }
+
+  .log__list {
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+    list-style: none;
+  }
+
+  .log__list li {
+    border-bottom: 1px solid var(--line);
+  }
+
+  /* Fixed columns, so the date and the category never move with the
+     length of the title. */
+  .log__row {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr) 10.5rem;
+    align-items: baseline;
+    gap: 0.25rem 1.5rem;
+    padding: 1.05rem 0.75rem;
+    border-radius: var(--radius-sm);
+    color: var(--ink);
+    text-decoration: none;
+    transition: background-color 160ms ease;
+  }
+
+  .log__row:hover,
+  .log__row:focus-visible {
+    background: var(--surface-1);
+  }
+
+  .log__date {
+    color: var(--muted);
+  }
+
+  .log__name {
+    font-size: var(--step-lead);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.3;
+  }
+
+  .log__cat {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: var(--muted);
+  }
+
+  .log__dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    flex: none;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+
+  .log__dot--devfest {
+    background: var(--g-blue);
+  }
+  .log__dot--io {
+    background: var(--g-green);
+  }
+  .log__dot--studyjam {
+    background: var(--g-green);
+  }
+  .log__dot--wtm {
+    background: var(--g-red);
+  }
+  .log__dot--meetup {
+    background: var(--g-yellow);
+  }
+
+  .log__next {
+    grid-column: 2;
+    color: var(--ochre);
+  }
+
+  /* The preview: the whole poster on a plate, never cropped to fit. */
+  .log__preview {
+    position: sticky;
+    top: 6rem;
+    margin: 0;
+    padding: 0.75rem;
+  }
+
+  .log__plate {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+  }
+
+  .log__plate img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: opacity 200ms ease;
+  }
+
+  .log__plate img.is-swapping {
+    opacity: 0;
+  }
+
+  .log__preview figcaption {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.85rem 0.25rem 0.15rem;
+  }
+
+  .log__plate-name {
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  @media (max-width: 1099px) {
+    .log__body {
+      grid-template-columns: 1fr;
+    }
+
+    .log__preview {
+      display: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .log__row {
+      grid-template-columns: 1fr auto;
+      padding-inline: 0.25rem;
+    }
+
+    .log__name {
+      grid-column: 1 / -1;
+      grid-row: 1;
+    }
+
+    .log__date {
+      grid-row: 2;
+    }
+
+    .log__cat {
+      grid-row: 2;
+      justify-self: end;
+    }
+
+    .log__next {
+      grid-column: 1 / -1;
+      grid-row: 3;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .log__row,
+    .log__plate img {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  document.addEventListener("astro:page-load", () => {
+    const root = document.querySelector<HTMLElement>("[data-log]");
+    const img = root?.querySelector<HTMLImageElement>("[data-preview-img]");
+    const name = root?.querySelector<HTMLElement>("[data-preview-name]");
+    const meta = root?.querySelector<HTMLElement>("[data-preview-meta]");
+    if (!root || !img || !name || !meta) return;
+
+    const rows = [...root.querySelectorAll<HTMLElement>(".log__row")];
+    let current = rows[0];
+    let warmed = false;
+
+    const show = (row: HTMLElement) => {
+      if (row === current) return;
+      current = row;
+      if (!warmed) {
+        warmed = true;
+        rows.forEach((r) => {
+          new Image().src = r.dataset.preview ?? "";
+        });
+      }
+      img.classList.add("is-swapping");
+      window.setTimeout(() => {
+        img.src = row.dataset.preview ?? "";
+        img.classList.remove("is-swapping");
+      }, 120);
+      name.textContent = row.dataset.name ?? "";
+      meta.textContent = `${row.dataset.venue} · ${row.dataset.status}`;
+    };
+
+    rows.forEach((row) => {
+      row.onpointerenter = () => show(row);
+      row.onfocus = () => show(row);
+    });
+    root.onpointerleave = () => rows[0] && show(rows[0]);
+  });
+</script>

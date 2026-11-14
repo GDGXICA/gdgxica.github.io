@@ -1,0 +1,245 @@
+---
+import { fetchLinks } from "@/loaders/transform-site-config";
+import NButton from "./NButton.astro";
+
+const links = await fetchLinks();
+
+const nav = [
+  { text: "Eventos", url: "/events" },
+  { text: "Foro", url: "/foro" },
+  { text: "Nosotros", url: "/about" },
+  { text: "Voluntariado", url: "/volunteers" },
+  { text: "Patrocinadores", url: "/sponsors" },
+];
+
+const current = Astro.url.pathname.replace(/\/$/, "");
+---
+
+<header class="night-header">
+  <div class="n-container night-header__bar">
+    <a href="/" class="night-header__mark">
+      <img src="/gdg-logo.png" width={32} height={32} alt="" />
+      <span>GDG Ica</span>
+    </a>
+    <nav aria-label="Navegación principal" class="night-header__nav">
+      <ul id="night-menu" class="night-header__links">
+        {
+          nav.map((item) => (
+            <li>
+              <a
+                href={item.url}
+                aria-current={current.startsWith(item.url) ? "page" : undefined}
+              >
+                {item.text}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+    <NButton
+      href={links.community}
+      size="sm"
+      icon="none"
+      class="night-header__join">Únete</NButton
+    >
+    <button
+      type="button"
+      class="night-header__toggle"
+      aria-controls="night-menu"
+      aria-expanded="false"
+    >
+      <span class="night-header__toggle-label">Menú</span>
+    </button>
+  </div>
+  <div class="night-header__scrim" aria-hidden="true"></div>
+</header>
+
+<style>
+  .night-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    border-bottom: 1px solid var(--line);
+    background: var(--night);
+  }
+
+  .night-header__bar {
+    display: flex;
+    min-height: 4rem;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .night-header__mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--ink);
+    font-size: 1.125rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    text-decoration: none;
+  }
+
+  .night-header__nav {
+    margin-left: auto;
+  }
+
+  .night-header__links {
+    display: flex;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .night-header__links a {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    padding-inline: 0.8rem;
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    font-weight: 500;
+    text-decoration: none;
+    transition:
+      color 160ms ease,
+      background-color 160ms ease;
+  }
+
+  .night-header__links a:hover {
+    background: var(--surface-1);
+    color: var(--ink);
+  }
+
+  .night-header__links a[aria-current="page"] {
+    color: var(--ink);
+  }
+
+  .night-header__toggle,
+  .night-header__scrim {
+    display: none;
+  }
+
+  @media (max-width: 960px) {
+    .night-header__bar {
+      gap: 0.75rem;
+    }
+
+    :global(.night-header__join) {
+      margin-left: auto;
+    }
+
+    .night-header__toggle {
+      display: inline-flex;
+      min-height: 2.5rem;
+      align-items: center;
+      padding: 0.45rem 0.9rem;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--ink);
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .night-header__nav {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      left: 0;
+      z-index: 2;
+      margin: 0;
+      border-bottom: 1px solid var(--line);
+      background: var(--night);
+      visibility: hidden;
+      opacity: 0;
+      transform: translateY(-6px);
+      transition:
+        opacity 200ms ease,
+        transform 200ms var(--ease-out),
+        visibility 0s 200ms;
+    }
+
+    .night-header__scrim {
+      position: fixed;
+      inset: 4rem 0 0;
+      z-index: 1;
+      display: block;
+      background: rgb(7 11 22 / 0.72);
+      visibility: hidden;
+      opacity: 0;
+      transition:
+        opacity 200ms ease,
+        visibility 0s 200ms;
+    }
+
+    .night-header.is-open .night-header__nav,
+    .night-header.is-open .night-header__scrim {
+      visibility: visible;
+      opacity: 1;
+      transform: none;
+      transition-delay: 0s;
+    }
+
+    .night-header__links {
+      flex-direction: column;
+      gap: 0;
+      padding: 0.5rem var(--margin) 1.25rem;
+    }
+
+    .night-header__links a {
+      display: flex;
+      min-height: 3.25rem;
+      padding-inline: 0;
+      color: var(--ink);
+      font-size: var(--step-lead);
+    }
+
+    .night-header__links a:hover {
+      background: transparent;
+      color: var(--ochre);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .night-header__nav {
+      transform: none;
+    }
+  }
+</style>
+
+<script>
+  function initNightHeader() {
+    const header = document.querySelector<HTMLElement>(".night-header");
+    const toggle = header?.querySelector<HTMLButtonElement>(
+      ".night-header__toggle"
+    );
+    const scrim = header?.querySelector<HTMLElement>(".night-header__scrim");
+    if (!header || !toggle) return;
+
+    const label = toggle.querySelector(".night-header__toggle-label");
+    const setOpen = (open: boolean) => {
+      header.classList.toggle("is-open", open);
+      toggle.setAttribute("aria-expanded", String(open));
+      if (label) label.textContent = open ? "Cerrar" : "Menú";
+    };
+
+    toggle.onclick = () =>
+      setOpen(toggle.getAttribute("aria-expanded") !== "true");
+    if (scrim) scrim.onclick = () => setOpen(false);
+    header.querySelectorAll("nav a").forEach((link) => {
+      (link as HTMLAnchorElement).onclick = () => setOpen(false);
+    });
+    header.onkeydown = (event) => {
+      if (event.key === "Escape" && header.classList.contains("is-open")) {
+        setOpen(false);
+        toggle.focus();
+      }
+    };
+  }
+
+  document.addEventListener("astro:page-load", initNightHeader);
+</script>

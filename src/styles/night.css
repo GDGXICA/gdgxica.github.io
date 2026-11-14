@@ -1,0 +1,334 @@
+/* Night theme for the public site: an aerial survey of the Nazca pampa.
+ *
+ * Scoped to `.theme-night` (set on <body> by Layout when a page passes
+ * `theme="night"`), so pages that have not been migrated keep the light look
+ * untouched. The world: the pampa at night, stepped dark surfaces separated
+ * by fine sand-coloured rules, the geoglyph's ochre for survey marks and
+ * measured data, Google blue only on the action, and the four Google colours
+ * only as category codes. Bricolage Grotesque is the voice; Geist Mono sets
+ * every measured value (dates, hours, coordinates, counts). */
+
+@import "@fontsource-variable/bricolage-grotesque/opsz.css";
+@import "@fontsource-variable/geist-mono";
+
+/* The display face for the name: Chakra Petch, whose cut corners match
+ * the chamfered buttons and command bar. Only the latin 700 cut is used. */
+@import "@fontsource/chakra-petch/latin-700.css";
+
+.theme-night {
+  /* ground and stepped surfaces */
+  --night: #070b16;
+  --surface-1: #0c1322;
+  --surface-2: #121b2f;
+  --surface-3: #1a2540;
+  --line: rgb(236 235 226 / 0.1);
+  --line-strong: rgb(236 235 226 / 0.2);
+  /* ink */
+  --ink: #ecebe2;
+  --muted: #a3abbd;
+  /* the geoglyph */
+  --ochre: #d4ad62;
+  --ochre-ink: #070b16;
+  /* paper: only the credential is a physical object */
+  --paper: #ecebe2;
+  --paper-ink: #0a1021;
+  --paper-muted: #46516a;
+  /* Google, as category codes */
+  --g-blue: #2463eb;
+  --g-red: #ef4444;
+  --g-yellow: #ebb308;
+  --g-green: #16a34a;
+  /* the one action colour */
+  --accent: #2463eb;
+  --accent-hover: #3a75f2;
+  --accent-ink: #ffffff;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+
+  /* type: five steps */
+  --step-small: clamp(0.875rem, 0.85rem + 0.1vw, 0.9375rem);
+  --step-body: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
+  --step-lead: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
+  --step-head: clamp(2rem, 1.35rem + 2.6vw, 3.5rem);
+  --step-display: clamp(4.25rem, 1.8rem + 7.5vw, 7rem);
+  --font-sans: "Bricolage Grotesque Variable", system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+  --font-display: "Chakra Petch", var(--font-sans);
+
+  --margin: clamp(1rem, 0.4rem + 2.4vw, 2rem);
+  --section-gap: clamp(4.5rem, 2.5rem + 6vw, 8.5rem);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  background: var(--night);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--step-body);
+  line-height: 1.55;
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  color-scheme: dark;
+  scrollbar-color: var(--surface-3) var(--night);
+  caret-color: var(--ochre);
+}
+
+.theme-night ::selection {
+  background: var(--ochre);
+  color: var(--ochre-ink);
+}
+
+.theme-night :focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 3px;
+}
+
+.n-container {
+  width: 100%;
+  max-width: 1440px;
+  margin-inline: auto;
+  padding-inline: var(--margin);
+}
+
+.n-display {
+  font-family: var(--font-display);
+  font-size: var(--step-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 0.9;
+}
+
+.n-head {
+  font-size: var(--step-head);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+
+.n-lead {
+  font-size: var(--step-lead);
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
+}
+
+.n-muted {
+  color: var(--muted);
+}
+
+/* Measured values. Normal case at a readable size: data, not costume. */
+.n-mono {
+  font-family: var(--font-mono);
+  font-size: var(--step-small);
+  font-variant-numeric: tabular-nums slashed-zero;
+  letter-spacing: 0;
+}
+
+/* A survey panel: one surface step, a fine rule, and registration marks in
+ * two opposite corners. */
+.n-panel {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+
+.n-marks::before,
+.n-marks::after {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: var(--ochre);
+  border-style: solid;
+  content: "";
+  pointer-events: none;
+}
+
+.n-marks::before {
+  top: -1px;
+  left: -1px;
+  border-width: 2px 0 0 2px;
+  border-top-left-radius: var(--radius);
+}
+
+.n-marks::after {
+  right: -1px;
+  bottom: -1px;
+  border-width: 0 2px 2px 0;
+  border-bottom-right-radius: var(--radius);
+}
+
+/* Buttons: one chamfered shape, two weights. The label and an icon cell
+ * split by a fine rule, the way an instrument panel labels its keys; on
+ * hover a band of light sweeps across and the arrow steps forward. */
+.nb {
+  --cut: 10px;
+  position: relative;
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: stretch;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--cut)) 0,
+    100% var(--cut),
+    100% 100%,
+    var(--cut) 100%,
+    0 calc(100% - var(--cut))
+  );
+  isolation: isolate;
+  transition: background-color 160ms ease;
+}
+
+.nb::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 35%,
+    rgb(255 255 255 / 0.22) 50%,
+    transparent 65%
+  );
+  content: "";
+  transform: translateX(-100%);
+  transition: transform 650ms var(--ease-out);
+}
+
+.nb:hover::after {
+  transform: translateX(100%);
+}
+
+.nb:hover {
+  background: var(--accent-hover);
+}
+
+/* The clip would cut an outline off, so focus draws inside the shape. */
+.nb:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--ochre);
+}
+
+.nb__label {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.25rem;
+  text-align: center;
+}
+
+.nb__icon {
+  display: grid;
+  width: 3rem;
+  flex: none;
+  place-items: center;
+  border-left: 1px solid rgb(255 255 255 / 0.22);
+  background: rgb(7 11 22 / 0.18);
+}
+
+.nb__icon svg {
+  transition: transform 220ms var(--ease-out);
+}
+
+.nb:hover .nb__icon--arrow svg {
+  transform: translateX(3px);
+}
+
+.nb:hover .nb__icon--external svg {
+  transform: translate(2px, -2px);
+}
+
+.nb--ghost {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.nb--ghost:hover {
+  background: var(--surface-3);
+}
+
+.nb--ghost .nb__icon {
+  border-left-color: var(--line);
+  background: transparent;
+  color: var(--ochre);
+}
+
+.nb--sm {
+  --cut: 7px;
+  min-height: 2.5rem;
+}
+
+.nb--sm .nb__label {
+  padding: 0.45rem 0.9rem;
+}
+
+.nb--sm .nb__icon {
+  width: 2.4rem;
+}
+
+.n-link {
+  color: inherit;
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: var(--ochre);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.3em;
+  transition: text-underline-offset 160ms var(--ease-out);
+}
+
+.n-link:hover {
+  text-underline-offset: 0.45em;
+}
+
+/* Section heads: heading and its companion link on one line. */
+.n-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+  margin-bottom: clamp(2rem, 1.2rem + 2.5vw, 3.5rem);
+}
+
+.n-section-head h2 {
+  margin: 0;
+}
+
+/* Entrances. The hidden state only exists once the script has marked the
+ * body, so content never stays invisible when scripting fails. */
+.js-motion [data-reveal] {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 700ms var(--ease-out),
+    transform 700ms var(--ease-out);
+}
+
+.js-motion [data-reveal].is-in {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js-motion [data-reveal] {
+    transform: none;
+    transition-property: opacity;
+  }
+
+  .nb,
+  .nb::after,
+  .nb__icon svg,
+  .n-link {
+    transition: none;
+  }
+}
