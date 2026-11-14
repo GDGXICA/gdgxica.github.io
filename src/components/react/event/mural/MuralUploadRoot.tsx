@@ -180,117 +180,154 @@ export function MuralUploadRoot({ slug, headline }: Props) {
   const canUpload = open && phase === "ready" && left > 0 && consent;
 
   return (
-    <div className="mx-auto max-w-md">
-      <h1 className="text-2xl font-bold">{settings.headline || headline}</h1>
+    <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,31rem)] lg:gap-20">
+      <div className="lg:sticky lg:top-28">
+        <h1 className="m-0 font-(family-name:--font-display) text-[clamp(2.4rem,1.6rem+3vw,4.5rem)] leading-[0.95] font-bold tracking-[-0.02em] text-balance text-(--ink)">
+          {settings.headline || headline}
+        </h1>
 
-      <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
-        Tus fotos aparecen en la pantalla grande del evento.{" "}
-        <strong>
-          Una persona de la organización revisa cada foto antes de que se vea
-        </strong>
-        , así que puede tardar un momento. Si te arrepientes, desde aquí mismo
-        puedes pedir que la quitemos.
-      </p>
-
-      {loadingView ? (
-        <div className="flex justify-center p-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-        </div>
-      ) : blockedReason ? (
-        <p className="mt-4 rounded-lg bg-amber-50 p-4 text-amber-900 dark:bg-amber-950 dark:text-amber-100">
-          {blockedReason}
+        <p className="mt-6 max-w-[46ch] text-(--muted)">
+          Tus fotos aparecen en la pantalla grande del evento.{" "}
+          <strong className="font-semibold text-(--ink)">
+            Una persona de la organización revisa cada foto antes de que se vea
+          </strong>
+          , así que puede tardar un momento. Si te arrepientes, desde aquí mismo
+          puedes pedir que la quitemos.
         </p>
-      ) : !open ? (
-        <p className="mt-4 rounded-lg bg-gray-100 p-4 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-          {settings.state === "paused"
-            ? "Las subidas están en pausa un momento."
-            : "Las subidas al mural están cerradas."}
-        </p>
-      ) : (
-        <>
-          <label
-            className="mt-6 mb-1 block text-sm font-medium"
-            htmlFor="mural-alias"
-          >
-            Tu nombre (opcional)
-          </label>
-          <input
-            id="mural-alias"
-            type="text"
-            maxLength={24}
-            value={alias}
-            onChange={(e) => setAlias(e.target.value)}
-            placeholder="Cómo quieres que aparezca"
-            className="w-full rounded border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
-          />
+      </div>
 
-          <label className="mt-4 flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={consent}
-              onChange={(e) => setConsent(e.target.checked)}
-              className="mt-1"
-            />
-            <span>
-              Confirmo que puedo compartir esta foto y que quienes aparecen en
-              ella están de acuerdo.
-            </span>
-          </label>
-
-          <input
-            ref={fileInput}
-            type="file"
-            accept="image/*"
-            multiple
-            tabIndex={-1}
-            aria-hidden="true"
-            disabled={!canUpload}
-            onChange={(e) =>
-              upload(Array.from(e.target.files ?? []).slice(0, left))
-            }
-            className="sr-only"
-          />
-
-          <button
-            type="button"
-            disabled={!canUpload}
-            onClick={() => fileInput.current?.click()}
-            className="bg-google-blue mt-6 min-h-12 w-full rounded-xl px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-45"
-          >
-            {mine.length > 0 ? "Subir más fotos" : "Elegir fotos"}
-          </button>
-
-          {!consent && left > 0 && (
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-              Marca la casilla de arriba para elegir tus fotos.
-            </p>
-          )}
-
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            {left > 0
-              ? `Te quedan ${left} ${left === 1 ? "foto" : "fotos"}.`
-              : "Ya subiste todas tus fotos. ¡Gracias!"}
+      <div>
+        {loadingView ? (
+          <div className="flex justify-center p-12">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-(--ochre) border-t-transparent motion-reduce:animate-none" />
+          </div>
+        ) : blockedReason ? (
+          <p className="border-l-2 border-(--ochre) bg-(--surface-1) px-5 py-4 text-(--ink)">
+            {blockedReason}
           </p>
+        ) : !open ? (
+          <p className="rounded-(--radius) border border-dashed border-(--line-strong) px-6 py-10 text-center text-(--muted)">
+            {settings.state === "paused"
+              ? "Las subidas están en pausa un momento."
+              : "Las subidas al mural están cerradas."}
+          </p>
+        ) : (
+          <div className="n-panel n-marks p-5 sm:p-7">
+            <label
+              className="mb-2 block text-[0.9375rem] font-medium text-(--ink)"
+              htmlFor="mural-alias"
+            >
+              Tu nombre (opcional)
+            </label>
+            <input
+              id="mural-alias"
+              type="text"
+              maxLength={24}
+              value={alias}
+              onChange={(e) => setAlias(e.target.value)}
+              placeholder="Cómo quieres que aparezca"
+              className="min-h-12 w-full rounded-(--radius-sm) border border-(--line-strong) bg-(--surface-2) px-3.5 py-2.5 text-base text-(--ink) transition-colors placeholder:text-(--muted)/70 hover:border-(--muted) focus:border-(--ochre)"
+            />
 
-          {progress && (
-            <p className="mt-2 text-sm text-blue-700 dark:text-blue-300">
-              Subiendo {progress.done + 1} de {progress.total}…
-            </p>
-          )}
-        </>
-      )}
+            <label className="mt-5 flex min-h-11 items-start gap-3 text-[0.9375rem] leading-6 text-(--ink)">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+                className="mt-0.5 h-5 w-5 shrink-0 accent-(--ochre)"
+              />
+              <span>
+                Confirmo que puedo compartir esta foto y que quienes aparecen en
+                ella están de acuerdo.
+              </span>
+            </label>
 
-      {message && (
-        <p className="mt-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-900 dark:bg-blue-950 dark:text-blue-100">
-          {message}
-        </p>
-      )}
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/*"
+              multiple
+              tabIndex={-1}
+              aria-hidden="true"
+              disabled={!canUpload}
+              onChange={(e) =>
+                upload(Array.from(e.target.files ?? []).slice(0, left))
+              }
+              className="sr-only"
+            />
 
-      <MyPhotosList
-        mine={mine}
-        busyId={busyId}
-        onRequestRemoval={requestRemoval}
-      />
+            <button
+              type="button"
+              disabled={!canUpload}
+              onClick={() => fileInput.current?.click()}
+              className="nb nb--primary mt-6 w-full"
+            >
+              <span className="nb__label">
+                {mine.length > 0 ? "Subir más fotos" : "Elegir fotos"}
+              </span>
+              <span className="nb__icon" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 16V4m0 0-4 4m4-4 4 4M5 20h14" />
+                </svg>
+              </span>
+            </button>
+
+            {!consent && left > 0 && (
+              <p className="mt-3 text-sm text-(--muted)">
+                Marca la casilla de arriba para elegir tus fotos.
+              </p>
+            )}
+
+            <div className="mt-5 border-t border-(--line) pt-4">
+              <p className="m-0 text-[0.9375rem] text-(--muted)">
+                {left > 0
+                  ? `Te quedan ${left} ${left === 1 ? "foto" : "fotos"}.`
+                  : "Ya subiste todas tus fotos. ¡Gracias!"}
+              </p>
+              {settings.maxPerUid > 0 && (
+                <div
+                  className="mt-2.5 h-1 overflow-hidden rounded-full bg-(--surface-3)"
+                  aria-hidden="true"
+                >
+                  <span
+                    className="block h-full rounded-full bg-(--ochre)"
+                    style={{
+                      width: `${Math.min(100, Math.round((100 * (settings.maxPerUid - left)) / settings.maxPerUid))}%`,
+                    }}
+                  />
+                </div>
+              )}
+
+              {progress && (
+                <p className="n-mono mt-3 mb-0 text-(--ochre)">
+                  Subiendo {progress.done + 1} de {progress.total}…
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {message && (
+          <p className="mt-4 border-l-2 border-(--ochre) bg-(--surface-1) px-4 py-3 text-[0.9375rem] text-(--ink)">
+            {message}
+          </p>
+        )}
+
+        <MyPhotosList
+          mine={mine}
+          busyId={busyId}
+          onRequestRemoval={requestRemoval}
+        />
+      </div>
     </div>
   );
 }

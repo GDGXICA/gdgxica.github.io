@@ -1,41 +1,336 @@
 ---
-import { Coffee } from "@lucide/astro";
-const { time, title, name, image, role, type } = Astro.props;
+/**
+ * One stop on an event's agenda timeline: the times in a fixed mono column,
+ * a node on the rail, then the session and its speaker. Breaks and
+ * networking are quieter stops with no speaker.
+ *
+ * Takes either the flat agenda's `time` ("08:30 AM - 09:30 AM") or a track
+ * session's `startTime`/`endTime`, and renders an <li>: wrap rows in an <ol>.
+ * Times are shown exactly as the data writes them, never reinterpreted.
+ */
+interface Props {
+  time?: string;
+  startTime?: string;
+  endTime?: string;
+  title: string;
+  name?: string;
+  image?: string;
+  role?: string;
+  type?: string;
+  duration?: string;
+  isKeynote?: boolean;
+  /** Label the session type (Charla, Taller…): multi-track agendas only. */
+  showType?: boolean;
+  [key: string]: unknown;
+}
+
+const {
+  time,
+  startTime,
+  endTime,
+  title,
+  name = "",
+  image = "",
+  role = "",
+  type = "event",
+  duration,
+  isKeynote = false,
+  showType = false,
+} = Astro.props;
+
+const [start, end] = startTime
+  ? [startTime, endTime]
+  : (time ?? "").split(/\s+-\s+/);
+
+const quiet = type === "break" || type === "networking";
+const names = name
+  .split(", ")
+  .map((n) => n.trim())
+  .filter(Boolean);
+const hasSpeaker = !quiet && names.length > 0;
+const hasPhoto = Boolean(image) && !image.endsWith("/placeholder.svg");
+const initials = (names[0] ?? "")
+  .split(/\s+/)
+  .slice(0, 2)
+  .map((part) => part[0])
+  .join("")
+  .toUpperCase();
+
+const TYPE_LABEL: Record<string, string> = {
+  workshop: "Taller",
+  networking: "Networking",
+  break: "Break",
+};
+const typeLabel = showType ? (TYPE_LABEL[type] ?? "Charla") : null;
+const hasMeta = Boolean(typeLabel || duration || isKeynote);
 ---
 
-{
-  type === "break" ? (
-    <article class="flex items-center justify-center gap-5 p-4">
-      <hr class="text-gray-custom grow" />
-      <div class="flex flex-col items-center justify-center">
-        <h3 class="text-primary flex items-center gap-2 text-sm font-medium">
-          <Coffee size={16} color="#111827" /> {title}
-        </h3>
-        <p class="text-primary text-sm font-medium">{time}</p>
-      </div>
-      <hr class="text-gray-custom grow" />
-    </article>
-  ) : (
-    <article class="bg-section border-gray-custom rounded-md border p-4 md:flex md:items-center md:justify-between">
-      <p class="text-google-blue mb-4 text-sm font-medium md:mb-0">{time}</p>
-      <h3 class="text-primary mb-4 text-base font-semibold md:mb-0 md:basis-1/2">
-        {title}
-      </h3>
-      <div class="flex items-center gap-4 md:basis-[30%]">
-        <img
-          src={image || "/placeholder.svg"}
-          alt={`Foto de ${name}`}
-          height={48}
-          width={48}
-          class="aspect-square h-12 w-12 rounded-md border border-gray-200 bg-gray-100 object-cover"
-          loading="lazy"
-          decoding="async"
-        />
-        <div class="flex flex-col gap-[6px]">
-          <p class="text-secondary text-sm">{name}</p>
-          <p class="text-google-blue text-sm">{role}</p>
+<li class:list={["slot", { "slot--quiet": quiet }]}>
+  <p class="slot__time n-mono">
+    <span class="slot__start">{start}</span>
+    {
+      end && (
+        <>
+          <span class="sr-only"> a </span>
+          <span class="slot__end">{end}</span>
+        </>
+      )
+    }
+  </p>
+  <span class="slot__node" aria-hidden="true"></span>
+  <div class="slot__body">
+    <h3 class="slot__title">{title}</h3>
+    {
+      hasMeta && (
+        <p class="slot__meta">
+          {isKeynote && <span class="slot__keynote">Keynote</span>}
+          {typeLabel && <span>{typeLabel}</span>}
+          {duration && <span class="n-mono">{duration}</span>}
+        </p>
+      )
+    }
+    {
+      hasSpeaker && (
+        <div class="slot__speaker">
+          {hasPhoto ? (
+            <img
+              class="slot__avatar"
+              src={image}
+              alt=""
+              width={40}
+              height={40}
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <span
+              class="slot__avatar slot__avatar--initials"
+              aria-hidden="true"
+            >
+              {initials}
+            </span>
+          )}
+          <p class="slot__who">
+            <span class="slot__name">{names.join(", ")}</span>
+            {names.length === 1 && role && (
+              <span class="slot__role">{role}</span>
+            )}
+          </p>
         </div>
-      </div>
-    </article>
-  )
-}
+      )
+    }
+  </div>
+</li>
+
+<style>
+  /* Three columns: times, the rail, the session. The rail is drawn per row
+     so it runs unbroken from the first node to the last. */
+  .slot {
+    --time-col: 6.25rem;
+    --rail-col: 1.25rem;
+    --gap: 1rem;
+    /* centre of the title's first line, from the top of the row's content */
+    --node-y: 0.75rem;
+    position: relative;
+    display: grid;
+    grid-template-columns: var(--time-col) var(--rail-col) minmax(0, 1fr);
+    column-gap: var(--gap);
+    padding-block: 0.85rem;
+  }
+
+  .slot::before {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--time-col) + var(--gap) + var(--rail-col) / 2);
+    width: 1px;
+    background: var(--line-strong);
+    content: "";
+  }
+
+  .slot:first-child::before {
+    top: calc(0.85rem + var(--node-y));
+  }
+
+  .slot:last-child::before {
+    bottom: calc(100% - 0.85rem - var(--node-y));
+  }
+
+  .slot:only-child::before {
+    display: none;
+  }
+
+  .slot__time {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    margin: 0;
+    padding-top: 0.05rem;
+    text-align: right;
+  }
+
+  .slot__start {
+    color: var(--ink);
+  }
+
+  .slot__end {
+    color: var(--muted);
+  }
+
+  /* An ochre survey point, ringed in the ground colour so the rail stops
+     at its edge. */
+  .slot__node {
+    position: relative;
+    z-index: 1;
+    width: 0.75rem;
+    height: 0.75rem;
+    margin-top: calc(var(--node-y) - 0.375rem);
+    justify-self: center;
+    border: 2px solid var(--ochre);
+    border-radius: 50%;
+    background: var(--night);
+    box-shadow: 0 0 0 4px var(--night);
+  }
+
+  .slot__body {
+    min-width: 0;
+  }
+
+  .slot__title {
+    margin: 0;
+    font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.25rem);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+    text-wrap: pretty;
+  }
+
+  .slot__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.9rem;
+    margin: 0.35rem 0 0;
+    color: var(--muted);
+    font-size: var(--step-small);
+  }
+
+  .slot__keynote {
+    color: var(--ochre);
+    font-weight: 600;
+  }
+
+  .slot__speaker {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+
+  .slot__avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    flex: none;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--surface-2);
+    object-fit: cover;
+  }
+
+  .slot__avatar--initials {
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line-strong);
+    color: var(--ochre);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .slot__who {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    margin: 0;
+    font-size: var(--step-small);
+    line-height: 1.35;
+  }
+
+  .slot__name {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .slot__role {
+    color: var(--muted);
+  }
+
+  /* Breaks: a hollow point and muted type, so the talks carry the line. */
+  .slot--quiet .slot__node {
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-top: calc(var(--node-y) - 0.25rem);
+    border: 0;
+    background: var(--muted);
+    box-shadow: 0 0 0 5px var(--night);
+  }
+
+  .slot--quiet .slot__start {
+    color: var(--muted);
+  }
+
+  .slot--quiet .slot__title {
+    color: var(--muted);
+    font-size: var(--step-body);
+    font-weight: 500;
+  }
+
+  /* Phones: the times move above the title, the rail keeps its column. */
+  @media (max-width: 560px) {
+    .slot {
+      grid-template-columns: var(--rail-col) minmax(0, 1fr);
+      column-gap: 0.75rem;
+    }
+
+    .slot::before {
+      left: calc(var(--rail-col) / 2);
+    }
+
+    .slot__time {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 0 0.4rem;
+      grid-column: 2;
+      grid-row: 1;
+      padding-top: 0;
+      text-align: left;
+    }
+
+    .slot__end::before {
+      content: "– ";
+    }
+
+    .slot__node {
+      grid-column: 1;
+      grid-row: 1;
+      margin-top: 0.325rem;
+    }
+
+    .slot--quiet .slot__node {
+      margin-top: 0.45rem;
+    }
+
+    .slot__body {
+      grid-column: 2;
+      margin-top: 0.3rem;
+    }
+
+    .slot:first-child::before {
+      top: calc(0.85rem + 0.7rem);
+    }
+
+    .slot:last-child::before {
+      bottom: calc(100% - 0.85rem - 0.7rem);
+    }
+  }
+</style>

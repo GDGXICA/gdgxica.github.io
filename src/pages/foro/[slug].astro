@@ -2,7 +2,9 @@
 import Layout from "@/layouts/Layout.astro";
 import Tag from "@/components/Tag.astro";
 import PostCard from "@/components/PostCard.astro";
-import { ArrowLeft, Clock } from "@lucide/astro";
+import PageHeader from "@/components/night/PageHeader.astro";
+import ProseWithContents from "@/components/ProseWithContents.astro";
+import { ArrowLeft } from "@lucide/astro";
 import { getCollection, render } from "astro:content";
 import { buildPostSchema } from "@/utils/schema";
 
@@ -15,7 +17,12 @@ export async function getStaticPaths() {
 }
 
 const { post } = Astro.props;
-const { Content } = await render(post);
+// `headings` sale de los metadatos del render que hizo el loader: los h2 del
+// cuerpo ya traen su id, así que el índice solo enlaza a ellos.
+const { Content, headings } = await render(post);
+const sections = headings
+  .filter((h) => h.depth === 2)
+  .map(({ slug, text }) => ({ slug, text }));
 
 // Tres más, las más recientes que no sean esta. Se calcula aquí y no en el
 // loader porque depende de qué post se está pintando.
@@ -30,6 +37,20 @@ const related = (await getCollection("posts"))
   .filter((other) => other.id !== post.id)
   .sort((a, b) => time(b.data.publishedAt) - time(a.data.publishedAt))
   .slice(0, 3);
+
+// La fecha en hora de Lima, que es donde se publica, con mayúscula inicial.
+const published = time(post.data.publishedAt)
+  ? new Intl.DateTimeFormat("es-PE", {
+      timeZone: "America/Lima",
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(new Date(post.data.publishedAt))
+  : "";
+const publishedText = published.charAt(0).toUpperCase() + published.slice(1);
+
+const { author, cover, tags } = post.data;
 
 const url = `https://gdgica.com/foro/${post.id}/`;
 
@@ -53,121 +74,207 @@ const metadata = {
 ---
 
 <Layout {...metadata}>
-  <article>
-    <header
-      class="bg-gradient-to-br from-[#EFF6FF] via-[#FFFFFF] to-[#F0FDF4] py-10 md:py-16"
-    >
-      <div class="container">
-        <div class="mx-auto max-w-[768px]">
-          <a
-            href="/foro"
-            class="text-secondary hover:text-google-blue mb-6 inline-flex items-center gap-2 text-sm font-medium"
-          >
-            <ArrowLeft stroke-width={1.5} size={16} />
-            Volver al foro
-          </a>
-
+  <main>
+    <article class="post">
+      <div class="post__head">
+        <PageHeader
+          title={post.data.title}
+          label={`${post.data.readingMinutes} min de lectura`}
+          lead={post.data.excerpt || undefined}
+        >
           {
-            post.data.tags.length > 0 && (
-              <ul class="mb-4 flex flex-wrap gap-1">
-                {post.data.tags.map((tag) => (
-                  <li>
-                    <Tag label={tag} />
-                  </li>
-                ))}
-              </ul>
-            )
-          }
-
-          <h1 class="text-primary mb-4 text-3xl font-bold md:text-5xl">
-            {post.data.title}
-          </h1>
-
-          {
-            post.data.excerpt && (
-              <p class="text-secondary mb-6 text-xl">{post.data.excerpt}</p>
-            )
-          }
-
-          <div class="text-tertiary flex flex-wrap items-center gap-3 text-sm">
-            {
-              post.data.author.avatar && (
-                <img
-                  src={post.data.author.avatar}
-                  class="h-8 w-8 rounded-full bg-gray-100 object-cover"
-                  width={32}
-                  height={32}
-                  alt=""
-                  loading="lazy"
-                />
-              )
-            }
-            {
-              post.data.author.name && (
-                <span class="text-secondary font-medium">
-                  {post.data.author.name}
+            (author.name || author.avatar || publishedText) && (
+              <p class="byline">
+                {author.avatar && (
+                  <img
+                    src={author.avatar}
+                    alt=""
+                    width={40}
+                    height={40}
+                    decoding="async"
+                    referrerpolicy="no-referrer"
+                  />
+                )}
+                <span class="byline__text">
+                  {author.name && (
+                    <span class="byline__name">{author.name}</span>
+                  )}
+                  {publishedText && (
+                    <time class="n-mono" datetime={post.data.publishedAt}>
+                      {publishedText}
+                    </time>
+                  )}
                 </span>
-              )
-            }
+              </p>
+            )
+          }
+
+          {
+            cover && (
+              <figure slot="aside" class="post__cover n-panel n-marks">
+                <img
+                  src={cover}
+                  alt=""
+                  width={1200}
+                  height={675}
+                  decoding="async"
+                  fetchpriority="high"
+                />
+              </figure>
+            )
+          }
+
+          <div slot="strip" class="n-container post__strip">
+            <a class="post__back n-link" href="/foro">
+              <ArrowLeft size={16} stroke-width={2} aria-hidden="true" />
+              Volver al foro
+            </a>
             {
-              post.data.publishedLabel && (
-                <time datetime={post.data.publishedAt} class="capitalize">
-                  {post.data.publishedLabel}
-                </time>
+              tags.length > 0 && (
+                <ul class="post__tags" aria-label="Temas">
+                  {tags.map((tag) => (
+                    <li>
+                      <Tag label={tag} />
+                    </li>
+                  ))}
+                </ul>
               )
             }
-            <span class="inline-flex items-center gap-1">
-              <Clock stroke-width={1.5} size={14} />
-              {post.data.readingMinutes} min de lectura
-            </span>
           </div>
-        </div>
+        </PageHeader>
       </div>
-    </header>
+
+      <!-- El cuerpo lo renderizó el loader en el build (y pasó su control de
+           seguridad allí): aquí se inserta tal cual con <Content />, sin
+           ningún parser de markdown en el navegador. -->
+      <ProseWithContents headings={sections}>
+        <Content />
+      </ProseWithContents>
+    </article>
 
     {
-      post.data.cover && (
-        <div class="container">
-          <div class="mx-auto -mt-4 max-w-[768px] md:-mt-8">
-            <img
-              src={post.data.cover}
-              class="border-gray-custom w-full rounded-lg border bg-gray-100 object-cover shadow-sm"
-              width={768}
-              height={432}
-              alt=""
-              decoding="async"
-            />
+      related.length > 0 && (
+        <section class="related" aria-labelledby="related-title">
+          <div class="n-container">
+            <div class="n-section-head">
+              <h2 id="related-title" class="n-head">
+                Sigue leyendo
+              </h2>
+              <a class="n-link" href="/foro">
+                Todas las publicaciones
+              </a>
+            </div>
+            <ol class="related__list">
+              {related.map((other) => (
+                <li>
+                  <PostCard slug={other.id} {...other.data} />
+                </li>
+              ))}
+            </ol>
           </div>
-        </div>
+        </section>
       )
     }
-
-    <div class="container py-12">
-      <!-- `prose` viene del plugin de tipografía de Tailwind, ya cargado en
-           global.css. El cuerpo lo renderizó el loader en el build: aquí no
-           llega ningún parser de markdown al navegador. -->
-      <div
-        class="prose prose-lg prose-headings:text-primary prose-a:text-google-blue prose-img:rounded-lg mx-auto max-w-[768px]"
-      >
-        <Content />
-      </div>
-    </div>
-  </article>
-
-  {
-    related.length > 0 && (
-      <section class="bg-section py-16">
-        <div class="container">
-          <h2 class="text-primary mb-8 text-center text-3xl font-bold">
-            Sigue leyendo
-          </h2>
-          <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {related.map((other) => (
-              <PostCard slug={other.id} {...other.data} />
-            ))}
-          </div>
-        </div>
-      </section>
-    )
-  }
+  </main>
 </Layout>
+
+<style>
+  /* A post title runs long: the display face one step down from a page
+     title, so a four-line headline still reads as one. */
+  .post__head :global(.n-page-title) {
+    font-size: clamp(2.25rem, 1.35rem + 2.6vw, 3.75rem);
+    line-height: 1.02;
+  }
+
+  .byline {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin: 0;
+  }
+
+  .byline img {
+    width: 2.5rem;
+    height: 2.5rem;
+    flex: none;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    background: var(--surface-3);
+    object-fit: cover;
+  }
+
+  .byline__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .byline__name {
+    font-weight: 600;
+  }
+
+  .byline time {
+    color: var(--muted);
+  }
+
+  /* The cover keeps its own shape; a tall one is held to the viewport and
+     shown whole on a plate. */
+  .post__cover {
+    margin: 0;
+    padding: 0;
+  }
+
+  .post__cover img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: min(70vh, 34rem);
+    border-radius: calc(var(--radius) - 1px);
+    background: var(--surface-2);
+    object-fit: contain;
+  }
+
+  .post__strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 2rem;
+    padding-block: 0.9rem;
+  }
+
+  .post__back {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .post__back :global(svg) {
+    color: var(--ochre);
+  }
+
+  .post__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .related {
+    padding-block: var(--section-gap);
+    border-top: 1px solid var(--line);
+  }
+
+  .related__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .related__list > li + li {
+    border-top: 1px solid var(--line);
+  }
+</style>

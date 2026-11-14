@@ -1,0 +1,197 @@
+---
+import { fetchLinks } from "@/loaders/transform-site-config";
+
+const links = await fetchLinks();
+const year = new Date().getFullYear();
+
+const columns = [
+  {
+    title: "Comunidad",
+    items: [
+      { text: "Eventos", url: "/events" },
+      { text: "Foro", url: "/foro" },
+      { text: "Nosotros", url: "/about" },
+      { text: "Voluntariado", url: "/volunteers" },
+      { text: "Patrocinadores", url: "/sponsors" },
+    ],
+  },
+  {
+    title: "Síguenos",
+    items: [
+      { text: "LinkedIn", url: links.social.linkedin, external: true },
+      { text: "Instagram", url: links.social.instagram, external: true },
+      { text: "Facebook", url: links.social.facebook, external: true },
+      {
+        text: "GitHub",
+        url: "https://github.com/GDGXICA/gdgxica.github.io",
+        external: true,
+      },
+    ],
+  },
+];
+
+const legal = [
+  { text: "Términos y condiciones", url: "/terms-and-conditions" },
+  { text: "Privacidad", url: "/privacy-policy" },
+  { text: "Créditos y licencias", url: "/creditos" },
+];
+---
+
+<footer class="night-footer">
+  <div class="n-container">
+    <div class="night-footer__top">
+      <div class="night-footer__brand">
+        <a href="/" class="night-footer__mark">
+          <img src="/gdg-logo.png" width={32} height={32} alt="" />
+          <span>GDG Ica</span>
+        </a>
+        <p>
+          Google Developer Group Ica es una comunidad de desarrolladores
+          organizada por voluntarios en Ica, Perú.
+        </p>
+      </div>
+      {
+        columns.map((column) => (
+          <nav aria-label={column.title}>
+            <h2>{column.title}</h2>
+            <ul>
+              {column.items.map((item) => (
+                <li>
+                  <a
+                    href={item.url}
+                    target={item.external ? "_blank" : undefined}
+                    rel={item.external ? "noopener noreferrer" : undefined}
+                  >
+                    {item.text}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ))
+      }
+    </div>
+    <div class="night-footer__bottom">
+      <p>
+        © {year} Google Developer Group Ica ·{" "}
+        <span class="n-mono">14.07° S 75.73° O</span>
+      </p>
+      <ul>
+        {
+          legal.map((item) => (
+            <li>
+              <a href={item.url}>{item.text}</a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .night-footer {
+    padding-top: clamp(3rem, 2rem + 3vw, 5rem);
+    border-top: 1px solid var(--line);
+    background: var(--night);
+    color: var(--muted);
+  }
+
+  .night-footer__top {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+    gap: 2.5rem clamp(2rem, 5vw, 5rem);
+    padding-bottom: 2.5rem;
+  }
+
+  .night-footer__mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--ink);
+    font-size: 1.125rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .night-footer__brand p {
+    max-width: 38ch;
+    margin: 1rem 0 0;
+  }
+
+  .night-footer h2 {
+    margin: 0 0 0.5rem;
+    color: var(--muted);
+    font-size: var(--step-small);
+    font-weight: 500;
+  }
+
+  .night-footer__bottom {
+    font-size: var(--step-small);
+  }
+
+  .night-footer ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .night-footer__top a:not(.night-footer__mark) {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .night-footer__top a:not(.night-footer__mark):hover {
+    color: var(--ochre);
+  }
+
+  .night-footer__bottom {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 2rem;
+    padding-block: 1rem 1.5rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .night-footer__bottom p {
+    margin: 0;
+  }
+
+  .night-footer__bottom ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1.5rem;
+  }
+
+  .night-footer__bottom a {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    color: var(--muted);
+    text-decoration: none;
+  }
+
+  .night-footer__bottom a:hover {
+    color: var(--ink);
+  }
+
+  @media (max-width: 760px) {
+    .night-footer__top {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .night-footer__brand {
+      grid-column: 1 / -1;
+    }
+
+    .night-footer__bottom {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>

@@ -205,8 +205,11 @@ export function MiniGamesRoot({ slug }: Props) {
 
       {indicatorAlias && (
         <div className="container my-4 flex items-center justify-center">
-          <div className="flex items-center gap-2 rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-700 shadow-sm dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
-            <span aria-hidden>🎉</span>
+          <div className="flex items-center gap-2.5 rounded-(--radius-sm) border border-(--line-strong) bg-(--surface-1) px-4 py-2 text-[0.9375rem] text-(--muted)">
+            <span
+              aria-hidden
+              className="h-2 w-2 shrink-0 rounded-full bg-(--g-green)"
+            />
             <span>
               Conectado como <strong>{indicatorAlias}</strong> ·{" "}
               {liveInstances.length} juego{liveInstances.length !== 1 && "s"} en
@@ -224,15 +227,10 @@ export function MiniGamesRoot({ slug }: Props) {
           }`}
           aria-label="Participación en vivo"
         >
-          <h2 className="text-primary mb-4 text-2xl font-semibold">
-            Participación en vivo
-          </h2>
+          <h2 className="n-head mt-0 mb-6">Participación en vivo</h2>
           <div className="space-y-6">
             {globalLive.map((inst) => (
-              <div
-                key={inst.id}
-                className="border-gray-custom rounded-lg border p-6 shadow-sm"
-              >
+              <div key={inst.id} className="n-panel p-5 sm:p-7">
                 {inst.type === "wordcloud" && (
                   <WordCloudView
                     slug={slug}
@@ -274,7 +272,7 @@ export function MiniGamesRoot({ slug }: Props) {
 
       {step === "joined" && uid && realtimeLive.length > 0 && (
         <div
-          className="border-primary fixed inset-x-0 bottom-0 z-40 max-h-[70vh] overflow-y-auto border-t-4 bg-white/95 p-4 shadow-2xl backdrop-blur-sm dark:bg-gray-900/95"
+          className="fixed inset-x-0 bottom-0 z-40 max-h-[70vh] overflow-y-auto border-t-2 border-(--ochre) bg-(--surface-1) p-4 shadow-[0_-24px_60px_-20px_rgb(0_0_0/0.7)]"
           role="region"
           aria-label="Juegos en tiempo real"
           aria-live="assertive"
@@ -283,7 +281,7 @@ export function MiniGamesRoot({ slug }: Props) {
             {realtimeLive.map((inst) => (
               <div
                 key={inst.id}
-                className="rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-800"
+                className="rounded-(--radius) border border-(--line) bg-(--night) p-5 sm:p-6"
               >
                 {inst.type === "poll" && inst.config && (
                   <PollOverlay

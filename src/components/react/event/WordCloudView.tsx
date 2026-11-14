@@ -86,9 +86,8 @@ export function WordCloudView({
     setError(null);
     try {
       const db = await getFirestore();
-      const { doc, increment, serverTimestamp, setDoc } = await import(
-        "firebase/firestore"
-      );
+      const { doc, increment, serverTimestamp, setDoc } =
+        await import("firebase/firestore");
       const ref = doc(
         db,
         `events/${slug}/minigames/${instanceId}/words/${normalized}`
@@ -117,14 +116,16 @@ export function WordCloudView({
 
   return (
     <div>
-      <div className="mb-4">
-        <h2 className="text-primary text-2xl font-semibold">{title}</h2>
-        <p className="text-secondary mt-1 text-sm">{prompt}</p>
+      <div className="mb-5">
+        <h2 className="m-0 text-[clamp(1.6rem,1.3rem+1.4vw,2.25rem)] leading-tight font-semibold tracking-[-0.02em] text-(--ink)">
+          {title}
+        </h2>
+        <p className="mt-2 text-(--muted)">{prompt}</p>
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="mb-4 flex flex-col gap-2 sm:flex-row"
+        className="mb-3 flex flex-col gap-3 sm:flex-row"
       >
         <input
           type="text"
@@ -135,47 +136,64 @@ export function WordCloudView({
             setError(null);
           }}
           placeholder="Tu palabra..."
-          className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+          className="min-h-12 flex-1 rounded-(--radius-sm) border border-(--line-strong) bg-(--surface-2) px-4 py-2.5 text-base text-(--ink) transition-colors placeholder:text-(--muted)/70 hover:border-(--muted) focus:border-(--ochre) disabled:opacity-50"
           disabled={remaining === 0}
         />
         <button
           type="submit"
           disabled={submitting || remaining === 0 || trimmed.length === 0}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+          className="nb nb--primary disabled:opacity-45 sm:min-w-40"
         >
-          {submitting ? "Enviando..." : "Enviar"}
+          <span className="nb__label">
+            {submitting ? "Enviando..." : "Enviar"}
+          </span>
         </button>
       </form>
-      <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">
-        Te quedan <strong>{remaining}</strong> de {maxWordsPerUser} palabras.
+      <p className="mb-5 text-sm text-(--muted)">
+        Te quedan{" "}
+        <strong className="font-mono font-semibold text-(--ochre)">
+          {remaining}
+        </strong>{" "}
+        de {maxWordsPerUser} palabras.
       </p>
       {error && (
-        <p className="mb-3 text-sm text-red-600 dark:text-red-400" role="alert">
+        <p
+          className="mb-3 border-l-2 border-red-400 pl-3 text-sm text-red-200"
+          role="alert"
+        >
           {error}
         </p>
       )}
 
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/30">
+      <div className="rounded-(--radius) border border-(--line) bg-(--night) px-4 py-6 sm:px-6 sm:py-8">
         {loading && (
-          <p className="text-center text-sm text-gray-500">Cargando nube...</p>
+          <p className="text-center text-sm text-(--muted)">Cargando nube...</p>
         )}
         {!loading && words.length === 0 && (
-          <p className="text-center text-sm text-gray-500">
+          <p className="text-center text-sm text-(--muted)">
             Sé el primero en escribir una palabra.
           </p>
         )}
         {!loading && words.length > 0 && (
-          <ul className="flex flex-wrap items-baseline justify-center gap-x-4 gap-y-2">
+          <ul className="flex flex-wrap items-baseline justify-center gap-x-5 gap-y-2">
             {words.map((w) => {
               const ratio = Math.log(w.count + 1) / Math.log(maxCount + 1);
               const fontSize = Math.max(
                 MIN_FONT_REM,
                 MIN_FONT_REM + ratio * SCALE_PER_LOG * 2
               );
+              // The most repeated words carry the survey ochre; the tail
+              // steps back to muted ink.
+              const tone =
+                ratio > 0.75
+                  ? "text-(--ochre)"
+                  : ratio > 0.4
+                    ? "text-(--ink)"
+                    : "text-(--muted)";
               return (
                 <li
                   key={w.id}
-                  className="text-blue-700 dark:text-blue-300"
+                  className={`font-semibold tracking-[-0.015em] ${tone}`}
                   style={{ fontSize: `${fontSize}rem`, lineHeight: 1.2 }}
                 >
                   {w.text}

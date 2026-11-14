@@ -1,6 +1,15 @@
 import { useState } from "react";
-import { TYPE_COLORS, TYPE_LABELS } from "../admin/minigame-templates/types";
-import type { LiveInstance } from "./types";
+import { TYPE_LABELS } from "../admin/minigame-templates/types";
+import type { LiveInstance, MinigameType } from "./types";
+
+/** Each game type as a category code: a coloured dot, never a filled chip. */
+export const TYPE_DOTS: Record<MinigameType, string> = {
+  poll: "var(--g-blue)",
+  quiz: "var(--g-red)",
+  wordcloud: "var(--g-yellow)",
+  bingo: "var(--g-green)",
+  roulette: "var(--ochre)",
+};
 
 interface Props {
   liveInstances: LiveInstance[];
@@ -65,37 +74,36 @@ export function JoinModal({
       <button
         type="button"
         aria-label="Cerrar haciendo clic fuera"
-        className="fixed inset-0 cursor-default bg-black/60"
+        className="fixed inset-0 cursor-default bg-(--night)/85"
         onClick={onDismiss}
       />
-      <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_-20px_rgba(0,0,0,.5)] dark:bg-gray-900">
-        <div className="flex h-1.5" aria-hidden="true">
-          <span className="bg-google-blue flex-1" />
-          <span className="bg-google-red flex-1" />
-          <span className="bg-google-yellow flex-1" />
-          <span className="bg-google-green flex-1" />
-        </div>
-        <div className="px-6 pt-6">
+      <div className="n-panel n-marks relative z-10 w-full max-w-md shadow-[0_30px_80px_-24px_rgb(0_0_0/0.7)]">
+        <div className="px-6 pt-7">
           <h2
             id="join-modal-title"
-            className="text-2xl leading-tight font-bold text-gray-900 dark:text-white"
+            className="m-0 font-(family-name:--font-display) text-[2rem] leading-none font-bold tracking-[-0.01em] text-(--ink)"
           >
             Únete con un alias
           </h2>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+          <p className="mt-3 text-[0.9375rem] leading-6 text-(--muted)">
             Así te verán en la clasificación y en la pantalla del evento.
           </p>
         </div>
 
-        <div className="space-y-5 px-6 py-5">
+        <div className="space-y-5 px-6 pt-5 pb-6">
           {liveInstances.length > 0 && (
             <div>
               <ul className="flex flex-wrap gap-2">
                 {liveInstances.map((inst) => (
                   <li
                     key={inst.id}
-                    className={`rounded-full px-3 py-1 text-xs font-medium ${TYPE_COLORS[inst.type]}`}
+                    className="inline-flex min-h-7 items-center gap-2 rounded-(--radius-sm) border border-(--line-strong) px-2.5 py-1 text-sm text-(--ink)"
                   >
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ background: TYPE_DOTS[inst.type] }}
+                      aria-hidden="true"
+                    />
                     {TYPE_LABELS[inst.type]} · {inst.title}
                   </li>
                 ))}
@@ -105,7 +113,7 @@ export function JoinModal({
 
           <form onSubmit={handleSubmit} className="space-y-3" noValidate>
             <label className="block">
-              <span className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <span className="mb-2 block text-[0.9375rem] font-medium text-(--ink)">
                 Tu alias
               </span>
               <input
@@ -118,9 +126,9 @@ export function JoinModal({
                 }}
                 placeholder="ej. Ana"
                 autoFocus
-                className="focus-visible:outline-google-blue min-h-12 w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
+                className="min-h-12 w-full rounded-(--radius-sm) border border-(--line-strong) bg-(--surface-2) px-4 py-3 text-base text-(--ink) transition-colors placeholder:text-(--muted)/70 hover:border-(--muted) focus:border-(--ochre)"
               />
-              <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
+              <span className="mt-2 block text-sm text-(--muted)">
                 {trimmed.length}/{ALIAS_MAX} caracteres. No se puede cambiar
                 después.
               </span>
@@ -128,28 +136,44 @@ export function JoinModal({
 
             {error && (
               <p
-                className="text-sm text-red-600 dark:text-red-400"
+                className="border-l-2 border-red-400 pl-3 text-sm text-red-200"
                 role="alert"
               >
                 {error}
               </p>
             )}
 
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex flex-wrap items-center justify-end gap-3 pt-3">
               <button
                 type="button"
                 onClick={onDismiss}
                 disabled={submitting}
-                className="focus-visible:outline-google-blue min-h-11 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-200 dark:hover:bg-gray-800"
+                className="nb nb--ghost"
               >
-                Cerrar
+                <span className="nb__label">Cerrar</span>
               </button>
               <button
                 type="submit"
                 disabled={submitting || !aliasOk}
-                className="bg-google-blue focus-visible:outline-google-blue min-h-11 rounded-lg px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
+                className="nb nb--primary grow sm:grow-0"
               >
-                {submitting ? "Conectando..." : "Conectarme"}
+                <span className="nb__label">
+                  {submitting ? "Conectando..." : "Conectarme"}
+                </span>
+                <span className="nb__icon nb__icon--arrow" aria-hidden="true">
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </span>
               </button>
             </div>
           </form>

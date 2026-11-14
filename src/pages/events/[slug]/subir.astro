@@ -20,7 +20,37 @@ const mural = event.data.mural!;
   url={`https://gdgica.com/events/${event.id}/subir`}
   noindex
 >
-  <main class="container mx-auto px-4 py-10">
-    <MuralUploadRoot client:load slug={event.id} headline={mural.headline} />
+  <main class="subir">
+    <div class="subir__grid-bg" aria-hidden="true"></div>
+    <div class="n-container">
+      <MuralUploadRoot client:load slug={event.id} headline={mural.headline} />
+    </div>
   </main>
 </Layout>
+
+<style>
+  .subir {
+    position: relative;
+    padding-block: clamp(2.5rem, 1.5rem + 4vw, 5.5rem) var(--section-gap);
+    isolation: isolate;
+  }
+
+  /* The survey grid of the inner pages' heads, fading out behind the copy. */
+  .subir__grid-bg {
+    position: absolute;
+    z-index: -1;
+    inset: 0 0 auto;
+    height: 32rem;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-position: right top;
+    background-size: 32px 32px;
+    mask-image: radial-gradient(
+      ellipse 55% 80% at 92% 0%,
+      #000 0%,
+      transparent 75%
+    );
+    pointer-events: none;
+  }
+</style>

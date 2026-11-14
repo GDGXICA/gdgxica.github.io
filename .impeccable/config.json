@@ -44,6 +44,18 @@
         "files": ["src/styles/global.css"],
         "createdAt": "2026-10-18T13:58:21.390Z",
         "reason": "agent: Geist is the public site's font; DESIGN.md is scoped to /admin"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "bricolage grotesque variable",
+        "createdAt": "2026-11-14T03:15:18.579Z",
+        "reason": "user confirmed: chose Bricolage Grotesque for the public night theme (2026-11-13)"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "chakra petch",
+        "createdAt": "2026-11-14T15:08:33.145Z",
+        "reason": "user chose Chakra Petch for the home title from a 5-font comparison (2026-11-14)"
       }
     ]
   }

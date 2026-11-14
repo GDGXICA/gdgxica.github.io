@@ -1,14 +1,13 @@
 ---
 import Layout from "@/layouts/Layout.astro";
+import PageHeader from "@/components/night/PageHeader.astro";
+import NButton from "@/components/night/NButton.astro";
+import StatsBar from "@/components/StatsBar.astro";
 import VolunteerCard from "@/components/VolunteerCard.astro";
+import VolunteerRoleCard from "@/components/VolunteerRoleCard.astro";
 import CallToActionSection from "@/components/CallToActionSection.astro";
-import Button from "@/components/Button.astro";
-import HeroPage from "@/components/HeroPage.astro";
-import { HandshakeIcon } from "@lucide/astro";
 import { getCollection } from "astro:content";
 import { fetchStats, fetchLinks } from "@/loaders/transform-site-config";
-import StatsBar from "@/components/StatsBar.astro";
-import VolunteerRoleCard from "@/components/VolunteerRoleCard.astro";
 
 const volunteersCollection = await getCollection("volunteers");
 const volunteers = volunteersCollection.map((entry) => entry.data);
@@ -30,110 +29,186 @@ const metadata = {
 ---
 
 <Layout {...metadata}>
-  <HeroPage>
-    <p
-      class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-red-500 to-green-600"
+  <main>
+    <PageHeader
+      title="Voluntariado"
+      label="Haz la diferencia como voluntario"
+      lead="El voluntariado es una forma flexible de aportar a iniciativas concretas de GDG Ica. No necesitas formar parte del equipo organizador: puedes colaborar desde tus habilidades, intereses y disponibilidad."
     >
-      <HandshakeIcon stroke-width={1.5} size={64} color="#FFFFFF" />
-    </p>
-    <h1 class="mb-6 text-4xl font-bold md:text-5xl">
-      <span class="text-google-blue">Haz la diferencia como </span>
-      <span class="text-google-red">voluntario</span>
-    </h1>
-
-    <p class="text-secondary mx-auto mb-8 max-w-3xl text-xl">
-      El voluntariado es una forma flexible de aportar a iniciativas concretas
-      de GDG Ica. No necesitas formar parte del equipo organizador: puedes
-      colaborar desde tus habilidades, intereses y disponibilidad.
-    </p>
-    <div class="mt-12">
+      <NButton href={links.forms.volunteer}>Quiero ser voluntario</NButton>
+      <NButton variant="ghost" href="#oportunidades">
+        Ver oportunidades
+      </NButton>
       <StatsBar
+        slot="strip"
         stats={[
           {
             value: `${stats.activeVolunteers}+`,
-            label: "Voluntarios activos",
-            color: "blue",
+            label: "voluntarios activos",
           },
           {
             value: `${stats.volunteerHours}+`,
-            label: "Horas contribuidas",
-            color: "red",
+            label: "horas contribuidas",
           },
           {
             value: `${stats.eventsSupported}+`,
-            label: "Eventos apoyados",
-            color: "yellow",
+            label: "eventos apoyados",
           },
           {
             value: `${stats.volunteerAreas}`,
-            label: "Áreas de apoyo",
-            color: "green",
+            label: "áreas de apoyo",
           },
         ]}
       />
-    </div>
-  </HeroPage>
+    </PageHeader>
 
-  <section id="oportunidades" class="bg-section scroll-mt-8 py-12 md:py-20">
-    <div class="container">
-      <div class="mx-auto mb-14 max-w-2xl text-center">
-        <p class="text-google-green mb-3 font-semibold">Elige cómo aportar</p>
-        <h2 class="text-primary mb-4 text-4xl font-bold">
-          Oportunidades de voluntariado
-        </h2>
-        <p class="text-secondary text-xl">
-          Encuentra un área que conecte con tus habilidades e intereses y
-          descubre cómo puedes aportar.
-        </p>
-      </div>
-
-      <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-        {roles.map((role) => <VolunteerRoleCard {...role} />)}
-      </div>
-    </div>
-  </section>
-
-  {
-    volunteers.length > 0 && (
-      <section class="py-12 md:py-20">
-        <div class="container">
-          <div class="mx-auto mb-14 max-w-2xl text-center">
-            <p class="text-google-blue mb-3 font-semibold">
-              Personas que ya están colaborando
-            </p>
-            <h2 class="text-primary mb-4 text-4xl font-bold">
-              Nuestra comunidad voluntaria
-            </h2>
-            <p class="text-secondary text-xl">
-              Reconocemos a quienes aportan su tiempo y talento para hacer
-              posibles nuestros eventos e iniciativas.
-            </p>
-          </div>
-
-          <div
-            id="volunteers-grid"
-            class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-          >
-            {volunteers.map((volunteer) => (
-              <VolunteerCard volunteer={volunteer} />
-            ))}
-          </div>
+    <section id="oportunidades" class="roles" aria-labelledby="roles-title">
+      <div class="n-container roles__grid">
+        <div class="roles__intro">
+          <h2 id="roles-title" class="n-head">Oportunidades de voluntariado</h2>
+          <p class="n-lead">
+            Encuentra un área que conecte con tus habilidades e intereses y
+            descubre cómo puedes aportar.
+          </p>
         </div>
-      </section>
-    )
+        <ol class="roles__list">
+          {
+            roles.map((role, index) => (
+              <li>
+                <VolunteerRoleCard {...role} index={index + 1} />
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+    </section>
+
+    {
+      volunteers.length > 0 && (
+        <section class="crew" aria-labelledby="crew-title">
+          <div class="n-container">
+            <div class="crew__intro">
+              <h2 id="crew-title" class="n-head">
+                Nuestra comunidad voluntaria
+              </h2>
+              <p class="n-lead">
+                Reconocemos a quienes aportan su tiempo y talento para hacer
+                posibles nuestros eventos e iniciativas.
+              </p>
+            </div>
+            <ul id="volunteers-grid" class="crew__roster">
+              {volunteers.map((volunteer) => (
+                <li>
+                  <VolunteerCard volunteer={volunteer} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )
+    }
+
+    <CallToActionSection>
+      <h2>¿Quieres colaborar con GDG Ica?</h2>
+      <p>
+        Cuéntanos qué te interesa y cuánto tiempo puedes aportar. Buscaremos una
+        oportunidad concreta en la que puedas participar.
+      </p>
+      <NButton href={links.forms.volunteer}>Quiero ser voluntario</NButton>
+    </CallToActionSection>
+  </main>
+</Layout>
+
+<style>
+  /* ---- roles ---- */
+  .roles {
+    padding-block: var(--section-gap);
+    scroll-margin-top: 4rem;
   }
 
-  <CallToActionSection>
-    <h2 class="mb-6 text-3xl font-bold text-white md:text-4xl">
-      ¿Quieres colaborar con GDG Ica?
-    </h2>
-    <p class="mb-8 text-xl text-white">
-      Cuéntanos qué te interesa y cuánto tiempo puedes aportar. Buscaremos una
-      oportunidad concreta en la que puedas participar.
-    </p>
-    <Button variant="white" href={links.forms.volunteer} target="_blank">
-      <HandshakeIcon />
-      Quiero ser voluntario
-    </Button>
-  </CallToActionSection>
-</Layout>
+  .roles__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+    gap: 2.5rem clamp(2rem, 6vw, 6rem);
+    align-items: start;
+  }
+
+  .roles__intro {
+    position: sticky;
+    top: 6rem;
+  }
+
+  .roles__intro h2 {
+    margin: 0;
+  }
+
+  .roles__intro p {
+    max-width: 32ch;
+    margin: 1.25rem 0 0;
+    color: var(--muted);
+  }
+
+  .roles__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .roles__list > li {
+    border-top: 1px solid var(--line);
+  }
+
+  /* ---- the volunteers ---- */
+  .crew {
+    padding-block: var(--section-gap);
+    border-top: 1px solid var(--line);
+  }
+
+  .crew__intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1.25rem clamp(2rem, 6vw, 6rem);
+    align-items: end;
+    margin-bottom: clamp(2.5rem, 1.5rem + 3vw, 4.5rem);
+  }
+
+  .crew__intro h2 {
+    margin: 0;
+  }
+
+  .crew__intro p {
+    max-width: 44ch;
+    margin: 0;
+    color: var(--muted);
+  }
+
+  .crew__roster {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+    column-gap: clamp(1.5rem, 3vw, 3rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .crew__roster > li {
+    border-top: 1px solid var(--line);
+  }
+
+  @media (max-width: 1023px) {
+    .roles__grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .roles__intro {
+      position: static;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .crew__intro {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

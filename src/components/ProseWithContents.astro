@@ -1,0 +1,358 @@
+---
+/**
+ * Long-form reading: the text in `.n-prose` at a reading measure, with a
+ * contents rail beside it on wide screens (a disclosure above it on narrow
+ * ones) when the text has enough sections to need one.
+ *
+ * The contents are never written by hand, so they cannot drift from the text:
+ *  - pass `headings` when the body comes with its own (a forum post: the
+ *    loader rendered it and its h2 already carry ids). The slot is then
+ *    inserted untouched.
+ *  - omit it for a page written in the repo (legal, credits): the slot is
+ *    rendered, its h2 are read, and any h2 without an id gets one.
+ */
+interface Heading {
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  headings?: Heading[];
+  /** Fewer sections than this and the rail is noise: it is left out. */
+  minSections?: number;
+}
+
+const { headings, minSections = 4 } = Astro.props;
+
+const decode = (s: string) =>
+  s
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+
+const slugify = (text: string) =>
+  text
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+let html: string | undefined;
+let sections: Heading[] = headings ?? [];
+
+if (!headings) {
+  const raw = await Astro.slots.render("default");
+  const used = new Set<string>();
+  sections = [];
+  html = raw.replace(
+    /<h2\b([^>]*)>([\s\S]*?)<\/h2>/g,
+    (_match, attrs: string, inner: string) => {
+      const text = decode(inner.replace(/<[^>]+>/g, ""))
+        .replace(/\s+/g, " ")
+        .trim();
+      const existing = /\sid="([^"]+)"/.exec(attrs)?.[1];
+      let slug = existing ?? (slugify(text) || "seccion");
+      if (!existing) {
+        const base = slug;
+        for (let n = 2; used.has(slug); n++) slug = `${base}-${n}`;
+      }
+      used.add(slug);
+      sections.push({ slug, text });
+      return existing
+        ? `<h2${attrs}>${inner}</h2>`
+        : `<h2${attrs} id="${slug}">${inner}</h2>`;
+    }
+  );
+}
+
+const showContents = sections.length >= minSections;
+const pad = (n: number) => String(n + 1).padStart(2, "0");
+---
+
+<div
+  class:list={["reading n-container", { "reading--contents": showContents }]}
+>
+  {
+    showContents && (
+      <details class="reading__drawer">
+        <summary>
+          <span>Contenido</span>
+          <span class="n-mono reading__count">{sections.length} secciones</span>
+        </summary>
+        <nav aria-label="Contenido" data-contents>
+          <ol class="contents">
+            {sections.map((s, i) => (
+              <li>
+                <a href={`#${s.slug}`}>
+                  <span class="n-mono contents__n">{pad(i)}</span>
+                  <span>{s.text}</span>
+                </a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+      </details>
+    )
+  }
+
+  <div class="reading__body n-prose">
+    {html === undefined ? <slot /> : <Fragment set:html={html} />}
+  </div>
+
+  {
+    showContents && (
+      <nav class="reading__rail" aria-label="Contenido" data-contents>
+        <p class="reading__rail-title">Contenido</p>
+        <ol class="contents">
+          {sections.map((s, i) => (
+            <li>
+              <a href={`#${s.slug}`}>
+                <span class="n-mono contents__n">{pad(i)}</span>
+                <span>{s.text}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+    )
+  }
+</div>
+
+<style>
+  .reading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+    padding-block: clamp(2.5rem, 1.5rem + 4vw, 5rem) var(--section-gap);
+  }
+
+  /* ---- the text ---- */
+  /* About 70 characters a line: 68ch of Bricolage runs nearer 85. */
+  .reading__body {
+    min-width: 0;
+    max-width: 36em;
+  }
+
+  .reading__body :global(h2[id]),
+  .reading__body :global(h3[id]) {
+    scroll-margin-top: 6rem;
+  }
+
+  .reading__body :global(strong) {
+    font-weight: 650;
+  }
+
+  .reading__body :global(table) {
+    display: block;
+    overflow-x: auto;
+  }
+
+  /* ---- the contents ---- */
+  .contents {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .contents a {
+    display: grid;
+    min-height: 2.75rem;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem 0.6rem 1rem;
+    border-left: 2px solid transparent;
+    color: var(--muted);
+    font-size: var(--step-small);
+    line-height: 1.35;
+    text-decoration: none;
+    transition:
+      color 160ms ease,
+      border-color 160ms ease;
+  }
+
+  .contents a:hover {
+    color: var(--ink);
+  }
+
+  .contents a[aria-current="true"] {
+    border-left-color: var(--ochre);
+    color: var(--ink);
+  }
+
+  .contents__n {
+    color: var(--muted);
+    font-size: 0.8125rem;
+  }
+
+  .contents a[aria-current="true"] .contents__n {
+    color: var(--ochre);
+  }
+
+  /* narrow screens: a disclosure above the text */
+  .reading__drawer {
+    max-width: 36em;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+  }
+
+  .reading__drawer summary {
+    display: flex;
+    min-height: 3rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .reading__drawer summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .reading__drawer summary::after {
+    width: 0.55rem;
+    height: 0.55rem;
+    flex: none;
+    margin-left: -0.25rem;
+    border-right: 2px solid var(--ochre);
+    border-bottom: 2px solid var(--ochre);
+    content: "";
+    transform: translateY(-2px) rotate(45deg);
+    transition: transform 200ms var(--ease-out);
+  }
+
+  .reading__drawer[open] summary::after {
+    transform: translateY(2px) rotate(-135deg);
+  }
+
+  .reading__count {
+    margin-left: auto;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .reading__drawer .contents {
+    padding: 0 0.5rem 0.75rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .reading__drawer .contents li + li {
+    border-top: 1px solid var(--line);
+  }
+
+  .reading__rail {
+    display: none;
+  }
+
+  @media (min-width: 1100px) {
+    .reading--contents {
+      grid-template-columns: minmax(0, 36em) minmax(14rem, 19rem);
+      justify-content: space-between;
+      gap: 4rem;
+    }
+
+    .reading__drawer {
+      display: none;
+    }
+
+    .reading__rail {
+      position: sticky;
+      top: 6rem;
+      display: block;
+      max-height: calc(100vh - 8rem);
+      align-self: start;
+      overflow-y: auto;
+      scrollbar-width: thin;
+    }
+
+    .reading__rail-title {
+      margin: 0 0 0.75rem;
+      color: var(--muted);
+      font-size: var(--step-small);
+    }
+
+    .reading__rail .contents {
+      border-left: 1px solid var(--line);
+    }
+
+    .reading__rail .contents a {
+      margin-left: -1px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .contents a,
+    .reading__drawer summary::after {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  /* Marks the section being read in the contents. Without the script the
+     contents are plain links and still work. */
+  let stop: AbortController | undefined;
+
+  document.addEventListener("astro:page-load", () => {
+    stop?.abort();
+    const links = [
+      ...document.querySelectorAll<HTMLAnchorElement>(
+        "[data-contents] a[href^='#']"
+      ),
+    ];
+    if (links.length === 0) return;
+    stop = new AbortController();
+
+    const ids = [
+      ...new Set(links.map((a) => a.getAttribute("href")!.slice(1))),
+    ];
+    const targets = ids
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null);
+
+    let current: string | null = null;
+    let queued = false;
+
+    const update = () => {
+      queued = false;
+      const line = window.innerHeight * 0.3;
+      let active: string | null = null;
+      for (const el of targets) {
+        if (el.getBoundingClientRect().top <= line) active = el.id;
+        else break;
+      }
+      if (active === current) return;
+      current = active;
+      for (const a of links) {
+        if (a.getAttribute("href") === `#${active}`) {
+          a.setAttribute("aria-current", "true");
+        } else {
+          a.removeAttribute("aria-current");
+        }
+      }
+    };
+
+    const onScroll = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(update);
+    };
+
+    window.addEventListener("scroll", onScroll, {
+      passive: true,
+      signal: stop.signal,
+    });
+    document.addEventListener("astro:before-swap", () => stop?.abort(), {
+      once: true,
+      signal: stop.signal,
+    });
+    update();
+  });
+</script>

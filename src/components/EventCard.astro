@@ -1,10 +1,44 @@
 ---
-import { Calendar, Clock, MapPin, Globe, Users, Ticket } from "@lucide/astro";
-import Button from "./Button.astro";
-import Tag from "./Tag.astro";
+/**
+ * An event on the /events page, in one of two forms.
+ *
+ * - `featured`: the next highlighted event as a survey panel. The poster on
+ *   a plate beside a readout of date, hour, place and seats, with the two
+ *   actions (event page, registration).
+ * - default: a card in the catalogue. The whole card is one link (the title's
+ *   link is stretched over it), so a screen reader meets one destination per
+ *   event instead of three.
+ *
+ * Posters are never cropped: each sits whole on a plate at its own ratio.
+ */
+import NButton from "@/components/night/NButton.astro";
+import Tag from "@/components/Tag.astro";
+import { getEventDates } from "@/utils/eventDates";
+import { hourRange, shortVenue, surveyDate } from "@/utils/eventShort";
+import { publicImageSize } from "@/utils/imageSize";
+
+interface Props {
+  featured?: boolean;
+  slug: string;
+  name: string;
+  image: string;
+  shortDescription: string;
+  date: string;
+  time: string;
+  location: { name: string };
+  isVirtual: boolean;
+  participants: number;
+  maxParticipants: number;
+  category: { label: string; type: string };
+  status: { label: string; type: string };
+  isHighlight: boolean;
+  tags: string[];
+  registerFormLink?: string;
+}
 
 const {
-  isHorizontal,
+  featured = false,
+  slug,
   name,
   image,
   shortDescription,
@@ -18,207 +52,605 @@ const {
   status,
   isHighlight,
   tags,
-  slug,
+  registerFormLink,
 } = Astro.props;
 
-const registrationPercent =
+const href = `/events/${slug}`;
+const poster = image || "/placeholder.svg";
+const size = publicImageSize(poster) ?? { width: 1280, height: 800 };
+
+const { startISO, endISO } = getEventDates({ date, time });
+const day = surveyDate(startISO);
+const hours = hourRange(startISO, endISO);
+const venue = shortVenue(location.name, isVirtual);
+
+const seats =
   maxParticipants > 0
-    ? Math.min(100, Math.round((participants / maxParticipants) * 100))
-    : 0;
+    ? {
+        percent: Math.min(
+          100,
+          Math.round((participants / maxParticipants) * 100)
+        ),
+      }
+    : null;
+
+// The catalogue shows the first few topics; the search still matches all.
+const SHOWN_TAGS = 3;
+const shownTags = tags.slice(0, SHOWN_TAGS);
+const moreTags = tags.slice(SHOWN_TAGS);
+const titleId = `event-${slug}`;
 ---
 
 {
-  isHorizontal ? (
-    <article class="border-gray-custom relative overflow-hidden rounded-2xl border bg-white text-left shadow-[0_20px_60px_rgba(15,23,42,0.10)] lg:grid lg:grid-cols-[minmax(0,1.08fr)_minmax(380px,0.92fr)]">
-      <div class="relative min-h-[340px] overflow-hidden bg-slate-950 lg:min-h-[500px]">
+  featured ? (
+    <article class="feature n-panel n-marks" aria-labelledby={titleId}>
+      <a class="feature__plate" href={href} tabindex="-1" aria-hidden="true">
         <img
-          src={image || "/placeholder.svg"}
-          class="absolute inset-0 h-full w-full scale-110 object-cover opacity-45 blur-2xl"
-          width={640}
-          height={500}
+          src={poster}
           alt=""
-          aria-hidden="true"
-          loading="lazy"
+          width={size.width}
+          height={size.height}
           decoding="async"
         />
-        <div class="absolute inset-0 bg-gradient-to-br from-slate-950/25 via-transparent to-blue-950/35" />
-        <img
-          src={image || "/placeholder.svg"}
-          class="relative z-10 h-full min-h-[340px] w-full object-contain p-5 lg:min-h-[500px] lg:p-8"
-          width={640}
-          height={500}
-          alt={`Imagen del evento ${name}`}
-          loading="lazy"
-          decoding="async"
-        />
-        <div class="absolute inset-x-0 bottom-0 z-20 h-24 bg-gradient-to-t from-slate-950/45 to-transparent" />
-      </div>
-      <div class="flex min-w-0 flex-col p-6 sm:p-8 lg:p-10">
-        <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div class="flex flex-wrap items-center gap-2">
-            {category && <Tag label={category.label} type={category.type} />}
-            {status && <Tag label={status.label} type={status.type} />}
-          </div>
+      </a>
+
+      <div class="feature__body">
+        <div class="feature__head n-mono">
+          <span class="feature__badge">Próximo evento</span>
+          <span class="feature__count" data-feature-countdown={startISO}>
+            {day}
+          </span>
+        </div>
+
+        <h2 id={titleId} class="feature__title">
+          {name}
+        </h2>
+        <p class="feature__desc">{shortDescription}</p>
+
+        <ul class="feature__chips" aria-label="Tipo, estado y temas">
+          <li>
+            <Tag label={category.label} type={category.type} />
+          </li>
+          <li>
+            <Tag label={status.label} type={status.type} />
+          </li>
           {isHighlight && (
-            <Tag label="Destacado" type="devfest" isHighLight={true} />
-          )}
-        </div>
-
-        <div>
-          <h2 class="text-primary text-3xl leading-tight font-bold tracking-tight">
-            {name}
-          </h2>
-          <p class="text-secondary mt-3 text-base leading-7">
-            {shortDescription}
-          </p>
-        </div>
-
-        <ul class="text-secondary mt-7 grid gap-4 text-sm sm:text-base">
-          <li class="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
-            <Calendar
-              class="mt-0.5"
-              stroke-width={1.8}
-              size={19}
-              color="#2463EB"
-            />
-            <span class="leading-6">{date}</span>
-          </li>
-          <li class="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
-            <Clock
-              class="mt-0.5"
-              stroke-width={1.8}
-              size={19}
-              color="#EF4444"
-            />
-            <span class="leading-6">{time}</span>
-          </li>
-          {isVirtual ? (
-            <li class="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
-              <Globe
-                class="mt-0.5"
-                stroke-width={1.8}
-                size={19}
-                color="#16A34A"
-              />
-              <span class="leading-6">Evento virtual</span>
-            </li>
-          ) : (
-            <li class="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
-              <MapPin
-                class="mt-0.5"
-                stroke-width={1.8}
-                size={19}
-                color="#16A34A"
-              />
-              <span class="leading-6">{location.name}</span>
+            <li>
+              <Tag label="Destacado" isHighLight={true} />
             </li>
           )}
-          <li class="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-3">
-            <Users
-              class="mt-0.5"
-              stroke-width={1.8}
-              size={19}
-              color="#EBB308"
-            />
-            <div>
-              <div class="flex items-center justify-between gap-4 leading-6">
-                <span>{participants} personas registradas</span>
-                <span class="text-tertiary text-sm">
-                  {maxParticipants} cupos
-                </span>
-              </div>
-              <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  class="bg-google-yellow h-full rounded-full"
-                  style={`width: ${registrationPercent}%`}
-                />
-              </div>
-            </div>
-          </li>
+          {tags.map((tag) => (
+            <li>
+              <Tag label={tag} />
+            </li>
+          ))}
         </ul>
 
-        {tags.length > 0 && (
-          <ul class="mt-6 flex flex-wrap gap-2">
-            {tags.map((tag: string) => (
-              <li>
-                <Tag label={tag} />
-              </li>
-            ))}
-          </ul>
+        <dl class="feature__facts">
+          <div>
+            <dt>Fecha</dt>
+            <dd class="n-mono">
+              <time datetime={startISO}>{day}</time>
+            </dd>
+          </div>
+          <div>
+            <dt>Hora</dt>
+            <dd class="n-mono">{hours}</dd>
+          </div>
+          <div class="feature__wide">
+            <dt>Lugar</dt>
+            <dd class="n-mono">
+              {isVirtual ? "Evento virtual" : location.name}
+            </dd>
+          </div>
+        </dl>
+
+        {seats && (
+          <div class="feature__seats">
+            <p class="n-mono">
+              <strong>{participants}</strong> registrados de {maxParticipants}{" "}
+              cupos
+            </p>
+            <div
+              class="bar"
+              role="img"
+              aria-label={`${seats.percent}% de los cupos tomados`}
+            >
+              <span style={`width: ${seats.percent}%`} />
+            </div>
+          </div>
         )}
 
-        <div class="mt-8 lg:mt-auto lg:pt-8">
-          <a
-            href={`/events/${slug}`}
-            class="bg-google-blue inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold text-white shadow-[0_10px_24px_rgba(36,99,235,0.2)] transition hover:-translate-y-0.5 hover:bg-blue-700"
-          >
-            <Ticket stroke-width={1.8} size={20} />
-            Ver detalles del evento
-          </a>
+        <div class="feature__actions">
+          <NButton href={href}>Ver detalles del evento</NButton>
+          {registerFormLink && (
+            <NButton variant="ghost" href={registerFormLink}>
+              Regístrate gratis
+            </NButton>
+          )}
         </div>
       </div>
     </article>
   ) : (
-    <article class="border-gray-custom relative flex h-full flex-col rounded-lg border bg-white">
-      <img
-        src={image ? image : "/placeholder.svg"}
-        class="block h-auto w-full rounded-t-lg"
-        alt={`Imagen del evento ${name}`}
-        loading="lazy"
-        decoding="async"
-      />
-      <div class="flex flex-1 flex-col p-6">
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <div class="flex flex-wrap gap-2">
-            {category && <Tag label={category.label} type={category.type} />}
-            {status && <Tag label={status.label} type={status.type} />}
-          </div>
-          {isHighlight && <Tag label="Destacado" isHighLight={true} />}
-        </div>
-        <p class="text-primary mb-1 text-2xl font-bold">{name}</p>
-        <p class="text-secondary mb-6 line-clamp-2">{shortDescription}</p>
-        <ul class="text-secondary mb-4 flex flex-col gap-3">
-          <li class="flex items-center gap-3">
-            <Calendar stroke-width={1.5} size={16} color="#2463EB" />
-            {date}
+    <article class="card">
+      <div class="card__plate">
+        <img
+          src={poster}
+          alt=""
+          width={size.width}
+          height={size.height}
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+
+      <div class="card__body">
+        <h3 class="card__title">
+          <a class="card__link" href={href}>
+            {name}
+          </a>
+        </h3>
+        <p class="card__desc">{shortDescription}</p>
+
+        <ul class="card__chips" aria-label="Tipo y estado">
+          <li>
+            <Tag label={category.label} type={category.type} />
           </li>
-          <li class="flex items-center gap-3">
-            <Clock stroke-width={1.5} size={16} color="#EF4444" />
-            {time}
+          <li>
+            <Tag label={status.label} type={status.type} />
           </li>
-          {isVirtual ? (
-            <li class="flex items-center gap-3">
-              <Globe stroke-width={1.5} size={16} color="#16A34A" />
-              Evento Virtual
-            </li>
-          ) : (
-            <li class="flex items-center gap-3">
-              <MapPin stroke-width={1.5} size={16} color="#16A34A" />
-              {location.name}
+          {isHighlight && (
+            <li>
+              <Tag label="Destacado" isHighLight={true} />
             </li>
           )}
-          <li class="flex items-center gap-3">
-            <Users stroke-width={1.5} size={16} color="#EBB308" />
-            {participants}/{maxParticipants} registrados
-          </li>
         </ul>
-        {tags.length > 0 && (
-          <ul class="mb-4 flex min-h-[32px] flex-wrap gap-1">
-            {tags.map((tag: string) => (
-              <li>
-                <Tag label={tag} />
-              </li>
-            ))}
-          </ul>
+
+        {shownTags.length > 0 && (
+          <p class="card__topics">
+            {shownTags.join(" · ")}
+            {moreTags.length > 0 && (
+              <>
+                <span class="card__more" aria-hidden="true">
+                  {" "}
+                  +{moreTags.length}
+                </span>
+                <span class="sr-only"> · {moreTags.join(" · ")}</span>
+              </>
+            )}
+          </p>
         )}
 
-        <p class="mt-auto grid">
-          <Button variant="solid" href={`/events/${slug}`}>
-            <Ticket stroke-width={1.5} />
-            Ver Detalles
-          </Button>
-        </p>
+        <dl class="card__facts">
+          <div>
+            <dt>Fecha</dt>
+            <dd class="n-mono">
+              <time datetime={startISO}>{day}</time>
+            </dd>
+          </div>
+          <div>
+            <dt>Hora</dt>
+            <dd class="n-mono card__hours">{hours}</dd>
+          </div>
+          <div class="card__wide">
+            <dt>Lugar</dt>
+            <dd class="n-mono">{venue}</dd>
+          </div>
+          {seats && (
+            <div class="card__wide card__seats">
+              <dt>Registrados</dt>
+              <dd class="n-mono">
+                {participants}
+                <span class="card__of">/{maxParticipants}</span>
+              </dd>
+              <dd class="card__gauge">
+                <div
+                  class="bar"
+                  role="img"
+                  aria-label={`${seats.percent}% de los cupos tomados`}
+                >
+                  <span style={`width: ${seats.percent}%`} />
+                </div>
+              </dd>
+            </div>
+          )}
+        </dl>
       </div>
     </article>
   )
 }
+
+<style>
+  /* ---------- shared ---------- */
+  .bar {
+    height: 4px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: var(--surface-3);
+  }
+
+  .bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--ochre);
+  }
+
+  dl,
+  dd {
+    margin: 0;
+  }
+
+  dt {
+    color: var(--muted);
+    font-size: var(--step-small);
+  }
+
+  dd {
+    color: var(--ink);
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Flex items, so every chip sits on the same line box whatever its icon. */
+  ul > li {
+    display: flex;
+  }
+
+  /* ---------- featured: the next event ---------- */
+  .feature {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    gap: clamp(1.5rem, 1rem + 2vw, 3rem);
+    padding: clamp(0.75rem, 0.5rem + 0.8vw, 1.25rem);
+  }
+
+  /* The whole poster, never cropped, on a plate ruled like survey paper. */
+  .feature__plate {
+    position: relative;
+    display: block;
+    min-height: 22rem;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    background-color: var(--surface-2);
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-position: center;
+    background-size: 28px 28px;
+  }
+
+  .feature__plate img {
+    position: absolute;
+    inset: clamp(0.75rem, 0.5rem + 1vw, 1.5rem);
+    width: calc(100% - 2 * clamp(0.75rem, 0.5rem + 1vw, 1.5rem));
+    height: calc(100% - 2 * clamp(0.75rem, 0.5rem + 1vw, 1.5rem));
+    object-fit: contain;
+    transition: transform 600ms var(--ease-out);
+  }
+
+  .feature:hover .feature__plate img {
+    transform: scale(1.02);
+  }
+
+  .feature__body {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    padding: clamp(0.5rem, 0.25rem + 1vw, 1.5rem)
+      clamp(0.5rem, 0.25rem + 1vw, 1.5rem) clamp(0.5rem, 0.25rem + 1vw, 1.25rem)
+      0;
+  }
+
+  .feature__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+  }
+
+  .feature__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--ochre);
+  }
+
+  .feature__badge::before {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--ochre);
+    content: "";
+    animation: feature-pulse 2.4s ease-in-out infinite;
+  }
+
+  .feature__count {
+    color: var(--muted);
+  }
+
+  .feature__title {
+    margin: 1.25rem 0 0;
+    font-size: clamp(2rem, 1.4rem + 2vw, 3.25rem);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    text-wrap: balance;
+  }
+
+  .feature__desc {
+    max-width: 48ch;
+    margin: 0.9rem 0 0;
+    color: var(--muted);
+    font-size: var(--step-body);
+    text-wrap: pretty;
+  }
+
+  .feature__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 1.25rem;
+  }
+
+  .feature__facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem 1.5rem;
+    margin-top: 1.5rem;
+    padding: 1.1rem 0;
+    border-block: 1px solid var(--line);
+  }
+
+  .feature__facts dd {
+    margin-top: 0.2rem;
+    font-size: var(--step-body);
+  }
+
+  .feature__wide {
+    grid-column: 1 / -1;
+  }
+
+  .feature__seats {
+    margin-top: 1.1rem;
+  }
+
+  .feature__seats p {
+    margin: 0 0 0.55rem;
+    color: var(--muted);
+  }
+
+  .feature__seats strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .feature__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: auto;
+    padding-top: 1.75rem;
+  }
+
+  .feature__actions :global(.nb) {
+    flex: 1 1 14rem;
+  }
+
+  @keyframes feature-pulse {
+    50% {
+      opacity: 0.3;
+    }
+  }
+
+  @media (max-width: 1023px) {
+    .feature {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .feature__plate {
+      min-height: 0;
+      aspect-ratio: 16 / 10;
+    }
+
+    .feature__body {
+      padding: 0.25rem clamp(0.5rem, 0.25rem + 1vw, 1rem) 0.75rem;
+    }
+
+    .feature__title {
+      margin-top: 1rem;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .feature__plate {
+      aspect-ratio: 4 / 3;
+    }
+  }
+
+  /* ---------- catalogue card ---------- */
+  .card {
+    position: relative;
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    padding: 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    transition:
+      background-color 180ms ease,
+      border-color 180ms ease;
+  }
+
+  .card:hover,
+  .card:focus-within {
+    border-color: var(--line-strong);
+    background: var(--surface-1);
+  }
+
+  .card__plate {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    transition: background-color 180ms ease;
+  }
+
+  .card:hover .card__plate {
+    background: var(--surface-3);
+  }
+
+  .card__plate img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 600ms var(--ease-out);
+  }
+
+  .card:hover .card__plate img {
+    transform: scale(1.04);
+  }
+
+  .card__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    padding: 1.1rem 0.75rem 0.85rem;
+  }
+
+  .card__title {
+    margin: 0;
+    font-size: clamp(1.2rem, 1.1rem + 0.35vw, 1.4rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+
+  .card__link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* The title's link covers the card: one target, one name. */
+  .card__link::after {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius);
+    content: "";
+  }
+
+  .card__link:focus-visible {
+    outline: none;
+  }
+
+  .card__link:focus-visible::after {
+    outline: 2px solid var(--ochre);
+    outline-offset: 3px;
+  }
+
+  .card__desc {
+    display: -webkit-box;
+    margin: 0.5rem 0 0;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.5;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .card__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 1rem;
+  }
+
+  .card__topics {
+    margin: 0.7rem 0 0;
+    color: var(--muted);
+    font-size: var(--step-small);
+    line-height: 1.45;
+  }
+
+  .card__more {
+    color: var(--ochre);
+  }
+
+  /* Pushed to the foot, so the rule above the facts sits at the same height
+     in every card of a row, however long the title above it runs. */
+  .card__facts {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 0.75rem 1.5rem;
+    margin-top: auto;
+    padding-top: 1.1rem;
+  }
+
+  .card__facts::before {
+    grid-column: 1 / -1;
+    height: 1px;
+    margin-bottom: 0.1rem;
+    background: var(--line);
+    content: "";
+  }
+
+  .card__facts dd {
+    margin-top: 0.15rem;
+    overflow-wrap: anywhere;
+  }
+
+  .card__facts time,
+  .card__hours {
+    white-space: nowrap;
+  }
+
+  .card__wide {
+    grid-column: 1 / -1;
+  }
+
+  .card__seats {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    gap: 0.5rem 1rem;
+  }
+
+  .card__seats dd {
+    margin: 0;
+  }
+
+  .card__gauge {
+    grid-column: 1 / -1;
+  }
+
+  .card__of {
+    color: var(--muted);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .feature__badge::before {
+      animation: none;
+    }
+
+    .feature__plate img,
+    .card__plate img {
+      transition: none;
+    }
+
+    .feature:hover .feature__plate img,
+    .card:hover .card__plate img {
+      transform: none;
+    }
+  }
+</style>

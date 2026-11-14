@@ -1,6 +1,19 @@
 ---
-import { Clock } from "@lucide/astro";
+/**
+ * A forum post in a list. Two shapes:
+ *  - `featured`: the latest post, as a survey panel with its cover beside
+ *    the copy.
+ *  - `row`: every other post, as a row of the reading list (also used for
+ *    "Sigue leyendo" under a post).
+ *
+ * Either way the title's link is the only link: it is stretched over the
+ * whole card with `::after`, so the accessibility tree has one destination
+ * per post instead of three that lead to the same place.
+ */
+import { ArrowRight } from "@lucide/astro";
 import Tag from "./Tag.astro";
+import { dottedDate } from "@/utils/eventShort";
+import { COLIBRI_STROKE, colibriPath, colibriViewBox } from "@/lib/colibri";
 
 interface Props {
   slug: string;
@@ -12,6 +25,11 @@ interface Props {
   publishedAt: string;
   publishedLabel: string;
   readingMinutes: number;
+  variant?: "featured" | "row";
+  /** Heading level of the title, to fit the page's outline. */
+  level?: 2 | 3;
+  /** The featured card sits near the fold: its cover loads eagerly. */
+  eager?: boolean;
 }
 
 const {
@@ -24,32 +42,88 @@ const {
   publishedAt,
   publishedLabel,
   readingMinutes,
+  variant = "row",
+  level = 3,
+  eager = false,
 } = Astro.props;
+
+const Heading = level === 2 ? "h2" : "h3";
+const href = `/foro/${slug}`;
+const featured = variant === "featured";
+// A post committed by hand may lack a date; Intl would throw on it.
+const date = Number.isNaN(Date.parse(publishedAt || ""))
+  ? ""
+  : dottedDate(publishedAt);
+const loading = eager ? "eager" : "lazy";
 ---
 
-<article
-  class="border-gray-custom flex h-full flex-col overflow-hidden rounded-lg border bg-white shadow-sm transition-shadow hover:shadow-md"
->
-  {
-    cover && (
-      <a href={`/foro/${slug}`} tabindex="-1" aria-hidden="true">
+<article class:list={["pc", `pc--${variant}`, { "n-panel n-marks": featured }]}>
+  <div class:list={["pc__plate", { "pc__plate--glyph": !cover }]}>
+    {
+      cover ? (
         <img
           src={cover}
-          class="h-48 w-full bg-gray-100 object-cover"
-          width={385}
-          height={192}
           alt=""
-          loading="lazy"
+          width={featured ? 960 : 320}
+          height={featured ? 540 : 180}
+          loading={loading}
           decoding="async"
         />
-      </a>
-    )
-  }
-  <div class="flex flex-1 flex-col p-6">
+      ) : (
+        <svg class="pc__glyph" viewBox={colibriViewBox(14)} aria-hidden="true">
+          <path
+            d={colibriPath()}
+            fill="none"
+            stroke="currentColor"
+            stroke-width={COLIBRI_STROKE}
+            stroke-linejoin="round"
+            stroke-linecap="round"
+          />
+        </svg>
+      )
+    }
+  </div>
+
+  <div class="pc__body">
+    <Heading class="pc__title">
+      <a class="pc__link" href={href}>{title}</a>
+    </Heading>
+
+    {excerpt && <p class="pc__excerpt">{excerpt}</p>}
+
+    <div class="pc__meta">
+      {
+        (author.avatar || author.name) && (
+          <span class="pc__author">
+            {author.avatar && (
+              <img
+                src={author.avatar}
+                alt=""
+                width={featured ? 32 : 24}
+                height={featured ? 32 : 24}
+                loading={loading}
+                decoding="async"
+                referrerpolicy="no-referrer"
+              />
+            )}
+            {author.name}
+          </span>
+        )
+      }
+      {
+        date && (
+          <time class="n-mono" datetime={publishedAt} title={publishedLabel}>
+            {date}
+          </time>
+        )
+      }
+      <span class="n-mono">{readingMinutes} min de lectura</span>
+    </div>
+
     {
       tags.length > 0 && (
-        <ul class="mb-3 flex flex-wrap gap-1">
-          {tags.slice(0, 3).map((tag) => (
+        <ul class="pc__tags" aria-label="Temas">
+          {tags.slice(0, featured ? 5 : 3).map((tag) => (
             <li>
               <Tag label={tag} />
             </li>
@@ -57,52 +131,305 @@ const {
         </ul>
       )
     }
-    <h3 class="text-primary mb-2 text-xl font-bold">
-      <!-- El enlace envuelve el título y se estira sobre toda la tarjeta con
-           `after:absolute`: así hay un solo destino en el árbol de
-           accesibilidad en vez de tres que llevan al mismo sitio. -->
-      <a
-        href={`/foro/${slug}`}
-        class="after:absolute after:inset-0 hover:underline"
-      >
-        {title}
-      </a>
-    </h3>
-    {excerpt && <p class="text-secondary mb-6 flex-1">{excerpt}</p>}
-    <div
-      class="text-tertiary mt-auto flex flex-wrap items-center gap-3 text-sm"
-    >
-      {
-        author.avatar && (
-          <img
-            src={author.avatar}
-            class="h-6 w-6 rounded-full bg-gray-100 object-cover"
-            width={24}
-            height={24}
-            alt=""
-            loading="lazy"
-          />
-        )
-      }
-      {author.name && <span>{author.name}</span>}
-      {
-        publishedLabel && (
-          <time datetime={publishedAt} class="first-letter:uppercase">
-            {publishedLabel}
-          </time>
-        )
-      }
-      <span class="inline-flex items-center gap-1">
-        <Clock stroke-width={1.5} size={14} />
-        {readingMinutes} min
-      </span>
-    </div>
+
+    {
+      featured && (
+        <span class="pc__read" aria-hidden="true">
+          Leer la publicación
+          <ArrowRight size={18} stroke-width={2} />
+        </span>
+      )
+    }
   </div>
+
+  {
+    !featured && (
+      <span class="pc__go" aria-hidden="true">
+        <ArrowRight size={18} stroke-width={2} />
+      </span>
+    )
+  }
 </article>
 
 <style>
-  /* La tarjeta es el contexto de posicionamiento del enlace estirado. */
-  article {
+  /* The card is the positioning context of the stretched link. */
+  .pc {
     position: relative;
+    color: var(--ink);
+  }
+
+  .pc__link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .pc__link::after {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    content: "";
+  }
+
+  /* Focus rings the whole card, which is what the link covers. */
+  @supports selector(:has(*)) {
+    .pc:has(.pc__link:focus-visible) {
+      outline: 2px solid var(--ochre);
+      outline-offset: 3px;
+    }
+
+    .pc__link:focus-visible {
+      outline: none;
+    }
+  }
+
+  /* Covers are shown whole, never cropped to the card's shape. */
+  .pc__plate {
+    display: grid;
+    overflow: hidden;
+    place-items: center;
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    aspect-ratio: 16 / 9;
+  }
+
+  .pc__plate img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 600ms var(--ease-out);
+  }
+
+  .pc:hover .pc__plate img {
+    transform: scale(1.03);
+  }
+
+  .pc__glyph {
+    width: 58%;
+    max-height: 80%;
+    color: var(--ochre);
+    opacity: 0.55;
+  }
+
+  .pc__body {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+  }
+
+  .pc__title {
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  .pc__excerpt {
+    margin: 0.6rem 0 0;
+    color: var(--muted);
+    text-wrap: pretty;
+  }
+
+  .pc__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 1.1rem;
+    margin-top: 1rem;
+    color: var(--muted);
+  }
+
+  .pc__author {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: var(--ink);
+    font-size: var(--step-small);
+    font-weight: 500;
+  }
+
+  .pc__author img {
+    flex: none;
+    border-radius: 50%;
+    background: var(--surface-3);
+    object-fit: cover;
+  }
+
+  .pc__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* ---- featured: the latest post ---- */
+  .pc--featured {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: clamp(1.5rem, 1rem + 2.5vw, 3.5rem);
+    align-items: center;
+    padding: clamp(1rem, 0.6rem + 1.4vw, 1.75rem);
+    transition: background-color 200ms ease;
+  }
+
+  .pc--featured:hover {
+    background: var(--surface-2);
+  }
+
+  /* The latest post's cover keeps its own shape; only a very tall one is
+     held down, and then shown whole on the plate. */
+  .pc--featured .pc__plate:not(.pc__plate--glyph) {
+    aspect-ratio: auto;
+  }
+
+  .pc--featured .pc__plate:not(.pc__plate--glyph) img {
+    height: auto;
+    max-height: 28rem;
+  }
+
+  .pc--featured .pc__body {
+    padding-block: 0.5rem;
+    padding-right: clamp(0rem, 1.5vw, 1.5rem);
+  }
+
+  .pc--featured .pc__title {
+    font-size: clamp(1.75rem, 1.3rem + 1.6vw, 2.75rem);
+    line-height: 1.05;
+  }
+
+  .pc--featured .pc__excerpt {
+    margin-top: 1rem;
+    font-size: var(--step-body);
+  }
+
+  .pc--featured .pc__meta {
+    margin-top: 1.5rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .pc__read {
+    display: inline-flex;
+    align-self: flex-start;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.75rem;
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: var(--ochre);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 0.3em;
+  }
+
+  .pc__read :global(svg) {
+    color: var(--ochre);
+    transition: transform 220ms var(--ease-out);
+  }
+
+  .pc--featured:hover .pc__read :global(svg) {
+    transform: translateX(4px);
+  }
+
+  /* ---- row: the reading list ---- */
+  .pc--row {
+    display: grid;
+    grid-template-columns: clamp(9rem, 6rem + 8vw, 14rem) minmax(0, 1fr) 2.5rem;
+    gap: clamp(1rem, 0.5rem + 1.5vw, 2rem);
+    align-items: center;
+    padding: 1rem;
+    border-radius: var(--radius);
+    transition: background-color 160ms ease;
+  }
+
+  .pc--row:hover {
+    background: var(--surface-1);
+  }
+
+  .pc--row .pc__title {
+    font-size: var(--step-lead);
+    line-height: 1.2;
+  }
+
+  .pc--row .pc__excerpt {
+    display: -webkit-box;
+    max-width: 62ch;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .pc--row .pc__meta {
+    margin-top: 0.75rem;
+  }
+
+  .pc--row .pc__tags {
+    margin-top: 0.75rem;
+  }
+
+  .pc__go {
+    display: grid;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    border-radius: 50%;
+    color: var(--muted);
+    transition:
+      color 160ms ease,
+      background-color 160ms ease,
+      transform 220ms var(--ease-out);
+  }
+
+  .pc--row:hover .pc__go {
+    background: var(--surface-3);
+    color: var(--ochre);
+    transform: translateX(3px);
+  }
+
+  @media (max-width: 899px) {
+    .pc--featured {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .pc--featured .pc__body {
+      padding: 0 0.25rem 0.5rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .pc--row {
+      grid-template-columns: 6.5rem minmax(0, 1fr);
+      align-items: start;
+      padding: 1rem 0.25rem;
+    }
+
+    .pc--row .pc__title {
+      font-size: 1.125rem;
+    }
+
+    .pc--row .pc__excerpt {
+      display: none;
+    }
+
+    .pc--row .pc__tags li:nth-child(n + 2) {
+      display: none;
+    }
+
+    .pc__go {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pc__plate img,
+    .pc__read :global(svg),
+    .pc__go {
+      transition: none;
+    }
+
+    .pc:hover .pc__plate img {
+      transform: none;
+    }
   }
 </style>

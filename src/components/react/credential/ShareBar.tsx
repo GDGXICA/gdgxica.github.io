@@ -71,14 +71,16 @@ export function ShareBar({
   };
 
   return (
-    <div className="border-gray-custom flex flex-col gap-4 rounded-2xl border bg-white p-5 shadow-sm">
+    <div className="n-panel flex flex-col gap-4 p-4 sm:p-5">
       <div>
-        <p className="text-primary font-bold">Guárdala y compártela</p>
-        <p className="text-tertiary mt-1 text-xs leading-5">
+        <p className="text-lg font-semibold tracking-[-0.01em] text-(--ink)">
+          Guárdala y compártela
+        </p>
+        <p className="mt-1 text-sm leading-6 text-(--muted)">
           Descarga la imagen en alta calidad o envíala directamente a tus redes.
         </p>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
         {/* No href at all while there is no image, rather than href="#" with
             aria-disabled. An anchor without href is not a link: it leaves the
             tab order and cannot be activated. With "#" it stayed focusable and
@@ -88,35 +90,43 @@ export function ShareBar({
           href={imageDataUrl ?? undefined}
           download={imageDataUrl ? fileName : undefined}
           aria-disabled={!imageDataUrl}
-          className={`bg-google-blue col-span-2 flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-center text-sm font-bold text-white shadow-[0_10px_24px_rgba(36,99,235,0.2)] transition hover:-translate-y-0.5 hover:bg-blue-700 ${
+          className={`nb nb--primary w-full sm:col-span-2 lg:col-span-1 ${
             imageDataUrl ? "" : "opacity-50"
           }`}
         >
-          <DownloadIcon />
-          Descargar imagen
+          <span className="nb__label">Descargar imagen</span>
+          <span className="nb__icon">
+            <DownloadIcon />
+          </span>
         </a>
         <button
           type="button"
           onClick={share}
           disabled={!imageDataUrl}
-          className="border-gray-custom text-primary flex min-h-12 items-center justify-center gap-2 rounded-2xl border bg-white px-4 py-3 text-sm font-semibold transition hover:border-blue-200 hover:bg-blue-50 disabled:opacity-50"
+          className="nb nb--ghost w-full"
         >
-          <ShareIcon />
-          Compartir
+          <span className="nb__label">Compartir</span>
+          <span className="nb__icon">
+            <ShareIcon />
+          </span>
         </button>
         <button
           type="button"
           onClick={copyLink}
-          className="border-gray-custom text-primary flex min-h-12 items-center justify-center gap-2 rounded-2xl border bg-white px-4 py-3 text-sm font-semibold transition hover:border-blue-200 hover:bg-blue-50"
+          className="nb nb--ghost w-full"
         >
-          <LinkIcon />
-          {copied ? "Copiado" : "Copiar enlace"}
+          <span className="nb__label">
+            {copied ? "Copiado" : "Copiar enlace"}
+          </span>
+          <span className="nb__icon">
+            <LinkIcon />
+          </span>
         </button>
       </div>
       {/* Announced, not just drawn: every message here reports the outcome of
           a button the user just pressed, and that button keeps focus. */}
       {status && (
-        <p role="status" className="text-tertiary text-xs">
+        <p role="status" className="text-sm text-(--muted)">
           {status}
         </p>
       )}
