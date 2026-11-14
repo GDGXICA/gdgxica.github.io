@@ -1,7 +1,6 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import Hero from "@/components/home/Hero.astro";
-import CredentialSection from "@/components/home/CredentialSection.astro";
 import EventLog from "@/components/home/EventLog.astro";
 import CommunityPhotos from "@/components/home/CommunityPhotos.astro";
 import Closing from "@/components/home/Closing.astro";
@@ -37,20 +36,6 @@ const heroEvent = next
       maxParticipants: next.data.maxParticipants,
     }
   : null;
-
-// The credential section exists only for an event that opted into the
-// credential page; otherwise its button would lead to a 404.
-const credentialEvent =
-  next && next.data.credential?.enabled
-    ? {
-        slug: next.id,
-        name: next.data.name,
-        date: next.data.date,
-        time: next.data.time,
-        venue: next.data.location.name,
-        isVirtual: next.data.isVirtual,
-      }
-    : null;
 
 const rows = [...upcoming, ...past].map((event) => ({
   slug: event.id,
@@ -111,7 +96,6 @@ const metadata = {
         totalSpeakers: stats.totalSpeakers,
       }}
     />
-    {credentialEvent && <CredentialSection {...credentialEvent} />}
     <EventLog rows={rows} />
     <CommunityPhotos photos={photos} />
     <Closing communityUrl={links.community} contactUrl={links.forms.contact} />
