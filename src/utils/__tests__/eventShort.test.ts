@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  badgeDate,
   dottedDate,
   hourRange,
   shortVenue,
@@ -11,9 +12,13 @@ const START = "2026-11-28T09:00:00-05:00";
 const END = "2026-11-28T13:30:00-05:00";
 
 describe("eventShort", () => {
+  it("prints the badge date in lower case, without abbreviation dots", () => {
+    expect(badgeDate(START)).toBe("sáb 28 nov");
+  });
+
   it("keeps the Lima day even for a late-evening event", () => {
     // 22:00 in Ica is already the next day in UTC.
-    expect(surveyDate("2026-11-28T22:00:00-05:00")).toBe("sáb 28.11.2026");
+    expect(badgeDate("2026-11-28T22:00:00-05:00")).toBe("sáb 28 nov");
   });
 
   it("prints the hour range in 24-hour time, Lima time", () => {
