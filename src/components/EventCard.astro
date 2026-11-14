@@ -160,35 +160,21 @@ const registrationPercent =
     </article>
   ) : (
     <article class="border-gray-custom relative flex h-full flex-col rounded-lg border bg-white">
-      <div class="relative h-[192px] w-full overflow-hidden rounded-t-lg bg-slate-950">
-        <img
-          src={image ? image : "/placeholder.svg"}
-          class="absolute inset-0 h-full w-full scale-110 object-cover opacity-45 blur-2xl"
-          width={385}
-          height={192}
-          alt=""
-          aria-hidden="true"
-          loading="lazy"
-          decoding="async"
-        />
-        <img
-          src={image ? image : "/placeholder.svg"}
-          class="relative z-[1] h-full w-full object-contain"
-          width={385}
-          height={192}
-          alt={`Imagen del evento ${name}`}
-          loading="lazy"
-          decoding="async"
-        />
-      </div>
-      <div class="absolute top-4 left-6 z-10 flex gap-2">
-        {category && <Tag label={category.label} type={category.type} />}
-        {status && <Tag label={status.label} type={status.type} />}
-      </div>
-      <div class="absolute top-4 right-6 z-10">
-        {isHighlight && <Tag label="Destacado" isHighLight={true} />}
-      </div>
+      <img
+        src={image ? image : "/placeholder.svg"}
+        class="block h-auto w-full rounded-t-lg"
+        alt={`Imagen del evento ${name}`}
+        loading="lazy"
+        decoding="async"
+      />
       <div class="flex flex-1 flex-col p-6">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap gap-2">
+            {category && <Tag label={category.label} type={category.type} />}
+            {status && <Tag label={status.label} type={status.type} />}
+          </div>
+          {isHighlight && <Tag label="Destacado" isHighLight={true} />}
+        </div>
         <p class="text-primary mb-1 text-2xl font-bold">{name}</p>
         <p class="text-secondary mb-6 line-clamp-2">{shortDescription}</p>
         <ul class="text-secondary mb-4 flex flex-col gap-3">
