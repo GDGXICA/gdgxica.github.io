@@ -1,5 +1,5 @@
 // Short forms of event data for places with little room: the home page's
-// event readout and event log. Ica is UTC-5 all year, and
+// event readout, credential and event log. Ica is UTC-5 all year, and
 // every date is formatted in that zone so a build machine in another zone
 // cannot shift the day.
 
@@ -10,6 +10,12 @@ function part(date: Date, opts: Intl.DateTimeFormatOptions): string {
     .format(date)
     .replace(".", "")
     .toLowerCase();
+}
+
+/** "sáb 28 nov" — the way a badge prints it. */
+export function badgeDate(iso: string): string {
+  const d = new Date(iso);
+  return `${part(d, { weekday: "short" })} ${part(d, { day: "numeric" })} ${part(d, { month: "short" })}`;
 }
 
 /** "9:00–13:30", 24-hour like a printed programme. */
