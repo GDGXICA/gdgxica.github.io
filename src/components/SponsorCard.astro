@@ -1,58 +1,260 @@
 ---
-import { Globe } from "@lucide/astro";
+/**
+ * A sponsor: its logo whole on a neutral plate, then the name, sector, what
+ * the company does, its record with the community and a link out. Featured
+ * sponsors get a larger panel with the plate beside the copy.
+ *
+ * Sponsor logos ship as opaque squares with a white ground, so the plate is
+ * a light neutral and the logo is multiplied onto it: the white melts into
+ * the plate and every logo sits on the same surface at the same size.
+ */
+import { ArrowUpRight } from "@lucide/astro";
+import { publicImageSize } from "@/utils/imageSize";
 
-const { name, logo, sector, description, eventsSponsored, sinceYear, website } =
-  Astro.props;
+interface Props {
+  name: string;
+  logo: string;
+  sector: string;
+  description: string;
+  eventsSponsored: number;
+  sinceYear: number;
+  website: string;
+  featured?: boolean;
+}
+
+const {
+  name,
+  logo,
+  sector,
+  description,
+  eventsSponsored,
+  sinceYear,
+  website,
+  featured = false,
+} = Astro.props;
+
+const src = logo || "/placeholder.svg";
+const size = publicImageSize(src) ?? { width: 320, height: 320 };
 ---
 
-<article
-  class="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6"
->
-  <img
-    src={logo || "/placeholder.svg"}
-    alt={`Logo ${name}`}
-    class="mx-auto h-28 w-28 rounded-md object-contain"
-    width={112}
-    height={112}
-    loading="lazy"
-  />
-
-  <div class="text-center">
-    <h3 class="text-primary mb-1 text-lg font-semibold">{name}</h3>
-    <p
-      class="text-google-blue mb-3 text-sm font-medium tracking-wide uppercase"
-    >
-      {sector}
-    </p>
-    <p class="text-secondary mx-auto mb-4 line-clamp-5 text-sm">
-      {description}
-    </p>
+<article class:list={["sponsor", { "sponsor--featured n-panel": featured }]}>
+  <div class="sponsor__plate">
+    <img
+      src={src}
+      alt={`Logo ${name}`}
+      width={size.width}
+      height={size.height}
+      loading="lazy"
+      decoding="async"
+    />
   </div>
-
-  <div
-    class="mt-auto flex items-center justify-between gap-4 text-center text-xs"
-  >
-    <div class="flex flex-col">
-      <span class="text-google-blue text-sm font-semibold"
-        >{eventsSponsored}</span
-      >
-      <span class="text-secondary text-sm">Eventos</span>
-    </div>
-    <div class="flex flex-col">
-      <span class="text-google-green text-sm font-semibold">{sinceYear}</span>
-      <span class="text-secondary text-sm">Desde</span>
-    </div>
-  </div>
-
-  <div class="pt-4">
-    <a
-      href={website}
-      target="_blank"
-      rel="noopener noreferrer"
-      class="text-primary hover:border-google-blue hover:text-google-blue inline-flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium transition"
-    >
-      <Globe size={16} stroke-width={1.5} />
-      Visitar Website
-    </a>
+  <div class="sponsor__body">
+    <h3 class="sponsor__name">{name}</h3>
+    <p class="sponsor__sector">{sector}</p>
+    <p class="sponsor__desc">{description}</p>
+    {
+      (eventsSponsored > 0 || sinceYear > 0) && (
+        <dl class="sponsor__facts n-mono">
+          {eventsSponsored > 0 && (
+            <div>
+              <dt>Eventos</dt>
+              <dd>{eventsSponsored}</dd>
+            </div>
+          )}
+          {sinceYear > 0 && (
+            <div>
+              <dt>Desde</dt>
+              <dd>{sinceYear}</dd>
+            </div>
+          )}
+        </dl>
+      )
+    }
+    {
+      website && (
+        <a
+          class="sponsor__link n-link"
+          href={website}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Visitar sitio web<span class="sr-only"> de {name}</span>
+          <ArrowUpRight size={16} stroke-width={2} aria-hidden="true" />
+        </a>
+      )
+    }
   </div>
 </article>
+
+<style>
+  /* Wall entries: the plate, and the copy under it. */
+  .sponsor {
+    --plate: #dddbd2;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .sponsor__plate {
+    position: relative;
+    aspect-ratio: 2 / 1;
+    border-radius: var(--radius-sm);
+    background: var(--plate);
+    isolation: isolate;
+  }
+
+  /* Contained in a fixed box, so a tall logo and a wide one take the same
+     plate and neither is cropped. */
+  .sponsor__plate img {
+    position: absolute;
+    inset: 16% 20%;
+    width: 60%;
+    height: 68%;
+    mix-blend-mode: multiply;
+    object-fit: contain;
+  }
+
+  .sponsor__body {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+  }
+
+  .sponsor__name {
+    margin: 0;
+    font-size: clamp(1.15rem, 1.05rem + 0.35vw, 1.35rem);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+
+  .sponsor__sector {
+    margin: 0.3rem 0 0;
+    color: var(--ink);
+    font-size: var(--step-small);
+    font-weight: 500;
+  }
+
+  .sponsor__desc {
+    max-width: 52ch;
+    margin: 0.6rem 0 0;
+    color: var(--muted);
+    font-size: var(--step-small);
+    line-height: 1.55;
+  }
+
+  .sponsor__facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.75rem;
+    margin: 0.85rem 0 0;
+  }
+
+  .sponsor__facts div {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .sponsor__facts dt {
+    color: var(--muted);
+  }
+
+  .sponsor__facts dd {
+    margin: 0;
+    color: var(--ochre);
+  }
+
+  .sponsor__link {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    align-self: flex-start;
+    gap: 0.35rem;
+    margin-top: 0.25rem;
+    font-size: var(--step-small);
+  }
+
+  .sponsor__link :global(svg) {
+    flex: none;
+    color: var(--ochre);
+  }
+
+  /* ---- featured: a panel, a large plate beside the copy ---- */
+  .sponsor--featured {
+    display: grid;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    gap: clamp(1.25rem, 2.5vw, 2rem);
+    align-items: stretch;
+    padding: clamp(1rem, 0.75rem + 1vw, 1.5rem);
+  }
+
+  .sponsor--featured .sponsor__plate {
+    align-self: start;
+    aspect-ratio: 1;
+  }
+
+  .sponsor--featured .sponsor__plate img {
+    inset: 24%;
+    width: 52%;
+    height: 52%;
+  }
+
+  .sponsor--featured .sponsor__body {
+    padding-block: 0.25rem;
+  }
+
+  .sponsor--featured .sponsor__name {
+    font-size: clamp(1.5rem, 1.25rem + 0.9vw, 2rem);
+    letter-spacing: -0.025em;
+  }
+
+  .sponsor--featured .sponsor__desc {
+    font-size: var(--step-body);
+  }
+
+  .sponsor--featured .sponsor__facts {
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .sponsor--featured .sponsor__link {
+    margin-top: auto;
+    padding-top: 0.75rem;
+  }
+
+  /* On a phone the wall turns into rows: a small plate beside the copy. */
+  @media (max-width: 599px) {
+    .sponsor:not(.sponsor--featured) {
+      display: grid;
+      grid-template-columns: 5.5rem minmax(0, 1fr);
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .sponsor:not(.sponsor--featured) .sponsor__plate {
+      aspect-ratio: 1;
+    }
+
+    .sponsor:not(.sponsor--featured) .sponsor__plate img {
+      inset: 12%;
+      width: 76%;
+      height: 76%;
+    }
+
+    .sponsor--featured {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .sponsor--featured .sponsor__plate {
+      aspect-ratio: 16 / 9;
+    }
+
+    .sponsor--featured .sponsor__plate img {
+      inset: 18% 30%;
+      width: 40%;
+      height: 64%;
+    }
+  }
+</style>

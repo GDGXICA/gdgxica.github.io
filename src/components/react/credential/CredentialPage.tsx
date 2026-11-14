@@ -178,8 +178,8 @@ export function CredentialPage({ event: eventJson }: Props) {
       {done && <Confetti />}
       <Progress current={done ? 3 : step} />
 
-      <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-12 lg:gap-10">
-        <section className="border-gray-custom rounded-2xl border bg-white p-5 shadow-sm sm:p-7 lg:col-span-7">
+      <div className="mt-8 grid grid-cols-1 items-start gap-12 sm:mt-10 lg:grid-cols-12 lg:gap-14">
+        <section className="lg:col-span-7">
           {done ? (
             <SuccessPanel groupLetter={done.groupLetter} />
           ) : (
@@ -209,11 +209,13 @@ export function CredentialPage({ event: eventJson }: Props) {
           )}
         </section>
 
-        <aside className="lg:sticky lg:top-6 lg:col-span-5">
-          <div className="border-gray-custom rounded-2xl border bg-white p-3 shadow-sm sm:p-4">
-            <div className="mb-3 flex items-center justify-between px-1">
-              <p className="text-primary text-sm font-semibold">Vista previa</p>
-              <span className="text-tertiary text-xs">Formato 4:5</span>
+        <aside className="lg:sticky lg:top-24 lg:col-span-5">
+          <div className="n-panel n-marks p-3 sm:p-4">
+            <div className="mb-3 flex items-baseline justify-between gap-3 px-1">
+              <p className="text-[0.9375rem] font-medium text-(--ink)">
+                Vista previa
+              </p>
+              <span className="n-mono text-(--muted)">Formato 4:5</span>
             </div>
             <CredentialPreview
               input={renderInput}
@@ -243,7 +245,7 @@ export function CredentialPage({ event: eventJson }: Props) {
 function Progress({ current }: { current: 1 | 2 | 3 }) {
   const steps = ["Personaliza", "Tus datos", "Lista"];
   return (
-    <ol className="mx-auto flex max-w-2xl items-center" aria-label="Progreso">
+    <ol className="flex max-w-3xl items-center" aria-label="Progreso">
       {steps.map((label, index) => {
         const number = (index + 1) as 1 | 2 | 3;
         const active = number <= current;
@@ -254,22 +256,24 @@ function Progress({ current }: { current: 1 | 2 | 3 }) {
             aria-current={number === current ? "step" : undefined}
           >
             <span
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                active
-                  ? "bg-google-blue text-white"
-                  : "border-gray-custom text-tertiary border bg-white"
+              className={`n-mono flex h-8 w-8 shrink-0 items-center justify-center rounded-(--radius-sm) font-semibold ${
+                number === current
+                  ? "bg-(--ochre) text-(--ochre-ink)"
+                  : active
+                    ? "border border-(--ochre) text-(--ochre)"
+                    : "border border-(--line-strong) text-(--muted)"
               }`}
             >
               {number < current ? "✓" : number}
             </span>
             <span
-              className={`ml-2 hidden text-xs font-semibold sm:inline ${active ? "text-primary" : "text-tertiary"}`}
+              className={`ml-2.5 text-[0.9375rem] font-medium ${number === current ? "inline text-(--ink)" : "hidden text-(--muted) sm:inline"}`}
             >
               {label}
             </span>
             {index < steps.length - 1 && (
               <span
-                className={`mx-3 h-px flex-1 ${number < current ? "bg-google-blue" : "bg-gray-200"}`}
+                className={`mx-3 h-px flex-1 sm:mx-4 ${number < current ? "bg-(--ochre)" : "bg-(--line-strong)"}`}
               />
             )}
           </li>
@@ -281,40 +285,42 @@ function Progress({ current }: { current: 1 | 2 | 3 }) {
 
 function SuccessPanel({ groupLetter }: { groupLetter: string }) {
   return (
-    <div className="flex flex-col gap-5" role="status">
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 via-white to-blue-50 px-6 py-8 text-center">
-        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl text-emerald-600 shadow-[0_10px_30px_rgba(22,163,74,0.18)] ring-1 ring-emerald-100">
-          ✓
-        </span>
-        <p className="text-google-green mt-5 text-xs font-bold tracking-[0.18em] uppercase">
-          Todo salió bien
-        </p>
-        <h1 className="text-primary mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+    <div className="flex flex-col gap-8" role="status">
+      <div className="flex flex-col">
+        <div className="order-2 mt-5 flex items-center gap-2.5">
+          <span className="flex h-7 w-7 items-center justify-center rounded-(--radius-sm) bg-(--ochre) text-sm font-bold text-(--ochre-ink)">
+            ✓
+          </span>
+          <p className="n-mono m-0 text-(--ochre)">Todo salió bien</p>
+        </div>
+        <h1 className="order-1 m-0 font-(family-name:--font-display) text-[clamp(2.25rem,1.7rem+2.2vw,3.5rem)] leading-[0.95] font-bold tracking-[-0.02em] text-balance text-(--ink)">
           ¡Tu credencial está lista!
         </h1>
-        <p className="text-secondary mx-auto mt-3 max-w-md text-sm leading-6">
+        <p className="order-3 mt-4 max-w-xl text-(--muted)">
           Guárdala, compártela y revisa tu correo. También te enviaremos una
           copia para que siempre la tengas a mano.
         </p>
       </div>
 
-      <div className="bg-google-blue flex items-center gap-5 rounded-2xl p-5 text-white shadow-[0_12px_30px_rgba(36,99,235,0.18)]">
-        <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-3xl font-bold text-blue-600 shadow-sm">
+      <div className="flex items-center gap-5 border-t border-(--line) pt-7">
+        <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-(--radius) border border-(--ochre) bg-(--surface-2) font-(family-name:--font-display) text-5xl font-bold text-(--ochre)">
           {groupLetter}
         </span>
         <div>
-          <p className="text-xs font-bold tracking-[0.14em] text-blue-100 uppercase">
+          <p className="text-[0.9375rem] text-(--muted)">
             Tu equipo para las dinámicas
           </p>
-          <p className="mt-1 text-lg font-semibold">Grupo {groupLetter}</p>
-          <p className="mt-1 text-sm text-blue-100">
+          <p className="mt-0.5 text-xl font-semibold tracking-[-0.01em] text-(--ink)">
+            Grupo {groupLetter}
+          </p>
+          <p className="mt-1 text-sm leading-6 text-(--muted)">
             Recuerda esta letra para las actividades del evento.
           </p>
         </div>
       </div>
 
-      <div className="flex gap-4 rounded-2xl border border-blue-100 bg-blue-50/70 p-5">
-        <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-blue-600 shadow-sm">
+      <div className="flex gap-4 border-t border-(--line) pt-7">
+        <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-(--radius-sm) border border-(--line-strong) bg-(--surface-1) text-(--ochre)">
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -328,13 +334,15 @@ function SuccessPanel({ groupLetter }: { groupLetter: string }) {
           </svg>
         </span>
         <div>
-          <p className="text-primary font-bold">Registro oficial en proceso</p>
-          <p className="text-secondary mt-1 text-sm leading-6">
+          <p className="text-lg font-semibold tracking-[-0.01em] text-(--ink)">
+            Registro oficial en proceso
+          </p>
+          <p className="mt-1 max-w-xl text-[0.9375rem] leading-7 text-(--muted)">
             El equipo de GDG ICA usará los datos que enviaste para completar tu
             inscripción en el panel oficial. No necesitas llenar otro
             formulario.
           </p>
-          <p className="text-google-blue mt-2 text-xs font-semibold">
+          <p className="mt-2 text-[0.9375rem] font-medium text-(--ink)">
             Te confirmaremos por correo cuando la carga esté completada.
           </p>
         </div>

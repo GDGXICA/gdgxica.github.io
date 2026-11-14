@@ -134,11 +134,13 @@ export function QuizOverlay({
   if (!question)
     return (
       <div className="py-12 text-center">
-        <h2 className="text-3xl font-bold">{title}</h2>
-        <p className="mt-4 text-gray-600 dark:text-gray-300">
+        <h2 className="m-0 text-3xl font-semibold tracking-[-0.02em] text-balance text-(--ink)">
+          {title}
+        </h2>
+        <p className="mt-4 text-(--muted)">
           Esperando que el organizador inicie la primera pregunta…
         </p>
-        <p className="mt-8 text-3xl font-black text-blue-700 tabular-nums dark:text-blue-300">
+        <p className="mt-8 font-mono text-3xl font-semibold text-(--ochre) tabular-nums">
           {animatedScore} puntos
         </p>
       </div>
@@ -147,18 +149,18 @@ export function QuizOverlay({
   return (
     <div className="mx-auto max-w-3xl">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">
+        <span className="n-mono text-(--muted)">
           Pregunta {currentQuestionIndex + 1} de {config.questions.length}
         </span>
         <span
           aria-label="Tiempo restante"
-          className={`rounded-lg px-3 py-1 text-2xl font-black tabular-nums ${remainingMs <= 5000 ? "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300" : "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"}`}
+          className={`rounded-(--radius-sm) border px-3 py-1 font-mono text-2xl font-semibold tabular-nums ${remainingMs <= 5000 ? "border-red-400/60 text-red-300" : "border-(--line-strong) text-(--ink)"}`}
         >
           {Math.ceil(remainingMs / 1000)}s
         </span>
       </div>
       <div
-        className="mt-4 h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
+        className="mt-4 h-1.5 overflow-hidden rounded-full bg-(--surface-3)"
         role="progressbar"
         aria-label="Tiempo de la pregunta"
         aria-valuenow={Math.ceil(remainingMs / 1000)}
@@ -166,20 +168,23 @@ export function QuizOverlay({
         aria-valuemax={question.timeLimitSec}
       >
         <div
-          className={`h-full rounded-full transition-[width] duration-100 motion-reduce:transition-none ${remainingMs <= 5000 ? "bg-google-red" : "bg-google-blue"}`}
+          className={`h-full rounded-full transition-[width] duration-100 motion-reduce:transition-none ${remainingMs <= 5000 ? "bg-(--g-red)" : "bg-(--ochre)"}`}
           style={{
             width: `${Math.round((100 * remainingMs) / (question.timeLimitSec * 1000))}%`,
           }}
         />
       </div>
-      <h2 className="mt-8 text-sm font-semibold text-gray-600 dark:text-gray-300">
+      <h2 className="mt-8 mb-0 text-[0.9375rem] font-medium text-(--muted)">
         {title}
       </h2>
-      <p className="mt-2 text-2xl leading-tight font-bold tracking-tight text-balance md:text-3xl">
+      <p className="mt-2 text-[clamp(1.6rem,1.3rem+1.4vw,2.25rem)] leading-tight font-semibold tracking-[-0.02em] text-balance text-(--ink)">
         {question.prompt}
       </p>
       {error && (
-        <p role="alert" className="mt-4 text-red-600">
+        <p
+          role="alert"
+          className="mt-4 border-l-2 border-red-400 pl-3 text-red-200"
+        >
           {error}
         </p>
       )}
@@ -189,12 +194,15 @@ export function QuizOverlay({
           const pct = total ? Math.round((100 * count) / total) : 0;
           const correct = revealedAnswer === opt.id;
           const selected = receipt === opt.id;
+          // The same colour per letter as the big screen, so the room can
+          // match an answer at a glance: a coded edge and key, not a fill.
           const colors = [
-            "bg-google-blue",
-            "bg-google-red",
-            "bg-google-yellow",
-            "bg-google-green",
+            "var(--g-blue)",
+            "var(--g-red)",
+            "var(--g-yellow)",
+            "var(--g-green)",
           ];
+          const color = colors[index % colors.length];
           return (
             <button
               key={opt.id}
@@ -206,30 +214,38 @@ export function QuizOverlay({
                 timerExpired ||
                 submitting
               }
-              className={`relative min-h-24 overflow-hidden rounded-xl p-5 text-left text-lg font-bold shadow-[0_8px_18px_-12px_rgba(17,24,39,.5)] transition-[transform,filter] focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-gray-950 enabled:hover:-translate-y-0.5 enabled:hover:brightness-110 enabled:active:translate-y-0 disabled:cursor-default motion-reduce:transition-none dark:focus-visible:outline-white ${index % colors.length === 2 ? "text-gray-950" : "text-white"} ${colors[index % colors.length]} ${selected ? "outline-4 outline-offset-2 outline-blue-800 dark:outline-blue-300" : ""} ${revealedAnswer && !correct ? "opacity-65" : ""}`}
+              className={`relative min-h-20 overflow-hidden rounded-(--radius-sm) border border-l-4 bg-(--surface-2) p-4 text-left text-lg font-semibold text-(--ink) transition-[transform,background-color] enabled:hover:-translate-y-0.5 enabled:hover:bg-(--surface-3) enabled:active:translate-y-0 disabled:cursor-default motion-reduce:transition-none motion-reduce:enabled:hover:translate-y-0 ${selected ? "border-(--ochre) ring-2 ring-(--ochre)" : revealedAnswer && correct ? "border-(--g-green)" : "border-(--line)"} ${revealedAnswer && !correct ? "opacity-55" : ""}`}
+              style={{ borderLeftColor: color }}
             >
               {revealedAnswer && (
                 <span
-                  className="absolute inset-y-0 left-0 bg-white/20 transition-[width] duration-700"
+                  className="absolute inset-y-0 left-0 bg-white/[0.07] transition-[width] duration-700 motion-reduce:transition-none"
                   style={{ width: `${pct}%` }}
                 />
               )}
               <span className="relative flex flex-wrap items-center gap-x-3 gap-y-1">
                 <span
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-current/50 text-sm"
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-(--radius-sm) font-mono text-sm font-semibold ${index % colors.length === 2 ? "text-(--night)" : "text-white"}`}
+                  style={{ background: color }}
                   aria-hidden="true"
                 >
                   {String.fromCharCode(65 + index)}
                 </span>
-                <span className="min-w-0 flex-1 break-words">{opt.label}</span>
+                <span className="min-w-[7rem] flex-1 break-words">
+                  {opt.label}
+                </span>
                 {revealedAnswer && correct && (
-                  <span className="text-sm">✓ Correcto</span>
+                  <span className="text-sm font-medium text-green-300">
+                    ✓ Correcto
+                  </span>
                 )}
                 {revealedAnswer && selected && !correct && (
-                  <span className="text-sm">Tu respuesta</span>
+                  <span className="text-sm font-medium text-(--ochre)">
+                    Tu respuesta
+                  </span>
                 )}
                 {revealedAnswer && (
-                  <span className="ml-auto text-sm tabular-nums">
+                  <span className="ml-auto font-mono text-sm font-normal text-(--muted) tabular-nums">
                     {count} · {pct}%
                   </span>
                 )}
@@ -238,8 +254,8 @@ export function QuizOverlay({
           );
         })}
       </div>
-      <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-5 dark:border-gray-700">
-        <div className="text-sm text-gray-700 dark:text-gray-200" role="status">
+      <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-(--line) pt-5">
+        <div className="text-[0.9375rem] text-(--muted)" role="status">
           {!revealedAnswer && answered && (
             <p>
               Respuesta registrada. Verás la solución al terminar el tiempo.
@@ -251,7 +267,7 @@ export function QuizOverlay({
           {revealedAnswer &&
             participant?.lastQuizQuestionId === question.id && (
               <p
-                className="font-bold text-blue-700 dark:text-blue-300"
+                className="font-mono font-semibold text-(--ochre)"
                 aria-live="polite"
               >
                 +{participant.lastQuizPoints ?? 0} puntos
@@ -262,25 +278,27 @@ export function QuizOverlay({
           )}
         </div>
         <p
-          className="text-2xl font-black text-blue-700 tabular-nums dark:text-blue-300"
+          className="font-mono text-2xl font-semibold text-(--ochre) tabular-nums"
           aria-label="Tu puntuación"
         >
           {animatedScore} puntos
         </p>
       </div>
       {revealedAnswer && (aggregates?.leaderboard?.length ?? 0) > 0 && (
-        <div className="mt-7 border-t border-gray-200 pt-5 dark:border-gray-700">
-          <h3 className="font-bold">Clasificación</h3>
-          <ol className="mt-3 space-y-2">
+        <div className="mt-7 border-t border-(--line) pt-5">
+          <h3 className="m-0 text-lg font-semibold text-(--ink)">
+            Clasificación
+          </h3>
+          <ol className="mt-3 divide-y divide-(--line)">
             {aggregates?.leaderboard?.map((entry, index) => (
               <li
                 key={entry.uid}
-                className={`flex justify-between gap-4 rounded-lg px-2 py-1 ${entry.uid === uid ? "bg-blue-50 font-bold text-blue-800 dark:bg-blue-950/50 dark:text-blue-300" : ""}`}
+                className={`flex min-h-11 items-center justify-between gap-4 rounded-(--radius-sm) px-3 ${entry.uid === uid ? "bg-(--surface-2) font-semibold text-(--ochre)" : "text-(--ink)"}`}
               >
                 <span>
                   {index + 1}. {entry.alias}
                 </span>
-                <span className="tabular-nums">{entry.score}</span>
+                <span className="font-mono tabular-nums">{entry.score}</span>
               </li>
             ))}
           </ol>

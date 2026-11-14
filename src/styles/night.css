@@ -1,8 +1,7 @@
 /* Night theme for the public site: an aerial survey of the Nazca pampa.
  *
- * Scoped to `.theme-night` (set on <body> by Layout when a page passes
- * `theme="night"`), so pages that have not been migrated keep the light look
- * untouched. The world: the pampa at night, stepped dark surfaces separated
+ * Scoped to `.theme-night`, which Layout sets on <body> for every public page;
+ * the admin panel has its own layout and is untouched. The world: the pampa at night, stepped dark surfaces separated
  * by fine sand-coloured rules, the geoglyph's ochre for survey marks and
  * measured data, Google blue only on the action, and the four Google colours
  * only as category codes. Bricolage Grotesque is the voice; Geist Mono sets
@@ -60,6 +59,15 @@
   --section-gap: clamp(4.5rem, 2.5rem + 6vw, 8.5rem);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
+  /* The light theme's Tailwind tokens, remapped so any utility still using
+     them (text-primary, bg-section, border-gray-custom…) reads on the night
+     ground instead of vanishing. New work uses the tokens above. */
+  --color-primary: var(--ink);
+  --color-secondary: var(--muted);
+  --color-tertiary: #8a93a6;
+  --color-section: var(--surface-1);
+  --color-gray-custom: var(--line);
+
   background: var(--night);
   color: var(--ink);
   font-family: var(--font-sans);
@@ -103,6 +111,147 @@
   letter-spacing: -0.03em;
   line-height: 1.02;
   text-wrap: balance;
+}
+
+/* Page titles: the display face at a page's scale, in ink. */
+.n-page-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.75rem, 1.5rem + 4.5vw, 5.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+  text-wrap: balance;
+}
+
+/* Long-form text: forum posts, legal pages, event descriptions. */
+.n-prose {
+  /* about 70 characters a line in Bricolage */
+  max-width: 36em;
+  color: var(--ink);
+  font-size: var(--step-body);
+  line-height: 1.7;
+}
+
+.n-prose > * + *,
+.n-prose section > * + * {
+  margin-top: 1.1em;
+}
+
+.n-prose h2,
+.n-prose h3,
+.n-prose h4 {
+  margin-top: 2em;
+  margin-bottom: 0;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.n-prose h2 {
+  font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem);
+}
+
+.n-prose h3 {
+  font-size: var(--step-lead);
+}
+
+.n-prose h2 + *,
+.n-prose h3 + *,
+.n-prose h4 + * {
+  margin-top: 0.6em;
+}
+
+.n-prose a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--ochre);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.25em;
+}
+
+.n-prose a:hover {
+  color: var(--ochre);
+}
+
+/* The base reset removes list markers; prose wants them back. */
+.n-prose ul,
+.n-prose ol {
+  padding-left: 1.3em;
+  list-style: disc;
+}
+
+.n-prose ol {
+  list-style: decimal;
+}
+
+.n-prose li + li {
+  margin-top: 0.4em;
+}
+
+.n-prose li::marker {
+  color: var(--ochre);
+}
+
+.n-prose blockquote {
+  margin-inline: 0;
+  padding: 0.25em 0 0.25em 1.1em;
+  border-left: 2px solid var(--ochre);
+  color: var(--muted);
+}
+
+.n-prose code {
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+}
+
+.n-prose pre {
+  overflow-x: auto;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  font-size: var(--step-small);
+  line-height: 1.6;
+}
+
+.n-prose pre code {
+  padding: 0;
+  background: none;
+  font-size: inherit;
+}
+
+.n-prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+}
+
+.n-prose hr {
+  height: 1px;
+  border: 0;
+  background: var(--line);
+}
+
+.n-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--step-small);
+}
+
+.n-prose th,
+.n-prose td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.n-prose th {
+  color: var(--muted);
+  font-weight: 500;
 }
 
 .n-lead {
@@ -246,6 +395,18 @@
 
 .nb:hover .nb__icon--external svg {
   transform: translate(2px, -2px);
+}
+
+/* Disabled: dimmed, no light sweep. */
+.nb:disabled,
+.nb[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.nb:disabled::after,
+.nb[aria-disabled="true"]::after {
+  display: none;
 }
 
 .nb--ghost {

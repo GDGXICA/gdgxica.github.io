@@ -1,6 +1,7 @@
 ---
 import { ArrowRight } from "@lucide/astro";
 import NButton from "@/components/night/NButton.astro";
+import { dotColor } from "@/lib/categories";
 
 export interface EventRow {
   slug: string;
@@ -81,7 +82,8 @@ const years = rows.reduce<{ year: string; rows: EventRow[] }[]>(
                           <span>{row.date}</span>
                           <span class="log__cat">
                             <span
-                              class={`log__dot log__dot--${row.categoryType}`}
+                              class="log__dot"
+                              style={`--dot: ${dotColor(row.categoryType) ?? "var(--muted)"}`}
                               aria-hidden="true"
                             />
                             {row.categoryLabel}
@@ -295,21 +297,7 @@ const years = rows.reduce<{ year: string; rows: EventRow[] }[]>(
     height: 0.55rem;
     flex: none;
     border-radius: 50%;
-    background: var(--muted);
-  }
-
-  .log__dot--devfest {
-    background: var(--g-blue);
-  }
-  .log__dot--io,
-  .log__dot--studyjam {
-    background: var(--g-green);
-  }
-  .log__dot--wtm {
-    background: var(--g-red);
-  }
-  .log__dot--meetup {
-    background: var(--g-yellow);
+    background: var(--dot);
   }
 
   .log__next {

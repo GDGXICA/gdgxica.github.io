@@ -1,8 +1,13 @@
 ---
+/**
+ * An instrument strip: figures in mono ochre with their caption, divided by
+ * fine rules. Same look as the strip at the foot of the home hero. `color`
+ * is accepted for compatibility and ignored: figures are always ochre.
+ */
 interface StatItem {
   value: string;
   label: string;
-  color: "blue" | "red" | "yellow" | "green";
+  color?: "blue" | "red" | "yellow" | "green";
 }
 
 interface Props {
@@ -10,26 +15,70 @@ interface Props {
 }
 
 const { stats } = Astro.props;
-
-const colorMap: Record<string, string> = {
-  blue: "text-google-blue",
-  red: "text-google-red",
-  yellow: "text-google-yellow",
-  green: "text-google-green",
-};
 ---
 
-<div
-  class="grid grid-cols-2 place-items-center gap-10 md:flex md:justify-between"
->
-  {
-    stats.map((stat) => (
-      <div>
-        <p class={`${colorMap[stat.color]} text-[2rem] font-bold`}>
-          {stat.value}
-        </p>
-        <p class="text-secondary">{stat.label}</p>
-      </div>
-    ))
+<dl class="stats">
+  <div class="n-container stats__row">
+    {
+      stats.map((stat) => (
+        <div class="stats__cell">
+          <dt class="n-mono">{stat.value}</dt>
+          <dd>{stat.label}</dd>
+        </div>
+      ))
+    }
+  </div>
+</dl>
+
+<style>
+  .stats {
+    margin: 0;
   }
-</div>
+
+  .stats__row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  }
+
+  .stats__cell {
+    display: flex;
+    align-items: baseline;
+    gap: 0.7rem;
+    padding: 1.1rem 0;
+  }
+
+  .stats__cell + .stats__cell {
+    padding-left: clamp(1rem, 2.5vw, 2rem);
+    border-left: 1px solid var(--line);
+  }
+
+  .stats dt {
+    color: var(--ochre);
+    font-size: var(--step-lead);
+  }
+
+  .stats dd {
+    margin: 0;
+    color: var(--muted);
+  }
+
+  @media (max-width: 760px) {
+    .stats__row {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .stats__cell {
+      flex-direction: column;
+      gap: 0.1rem;
+    }
+
+    .stats__cell + .stats__cell:nth-child(odd) {
+      padding-left: 0;
+      border-left: 0;
+    }
+
+    .stats__cell:nth-child(n + 3) {
+      border-top: 1px solid var(--line);
+    }
+  }
+</style>

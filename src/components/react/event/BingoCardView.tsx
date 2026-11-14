@@ -172,7 +172,7 @@ export function BingoCardView({
 
   if (loading) {
     return (
-      <div className="flex justify-center py-8 text-sm text-gray-500">
+      <div className="flex justify-center py-8 text-[0.9375rem] text-(--muted)">
         Cargando tu cartón...
       </div>
     );
@@ -180,7 +180,7 @@ export function BingoCardView({
 
   if (card.length === 0) {
     return (
-      <p className="py-6 text-center text-sm text-gray-500">
+      <p className="py-6 text-center text-[0.9375rem] text-(--muted)">
         No tienes un cartón de bingo asignado todavía. Cierra esta pestaña y
         vuelve a entrar a la página del evento.
       </p>
@@ -189,28 +189,28 @@ export function BingoCardView({
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-primary text-2xl font-semibold">{title}</h2>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="m-0 text-[clamp(1.6rem,1.3rem+1.4vw,2.25rem)] leading-tight font-semibold tracking-[-0.02em] text-(--ink)">
+          {title}
+        </h2>
         {hasWonBefore && (
-          <span className="rounded-full bg-yellow-100 px-3 py-1 text-sm font-semibold text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+          <span className="rounded-(--radius-sm) bg-(--ochre) px-3 py-1 text-[0.9375rem] font-semibold text-(--ochre-ink)">
             {rank > 0
-              ? `🎉 ¡Bingo! Puesto ${rank}${rank <= prizes ? " · premio" : ""}`
-              : "🎉 ¡Bingo!"}
+              ? `¡Bingo! Puesto ${rank}${rank <= prizes ? " · premio" : ""}`
+              : "¡Bingo!"}
           </span>
         )}
       </div>
 
       {isClassic && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800/60">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-y border-(--line) py-4">
           <div>
-            <p className="text-xs tracking-widest text-gray-500 uppercase dark:text-gray-400">
-              Última bola
-            </p>
-            <p className="text-primary text-xl font-bold">
+            <p className="m-0 text-[0.9375rem] text-(--muted)">Última bola</p>
+            <p className="m-0 mt-1 text-2xl font-semibold tracking-[-0.01em] text-(--ochre)">
               {instance?.lastDrawnTerm ?? "—"}
             </p>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="n-mono m-0 text-(--muted)">
             {instance?.drawCount ?? 0} bola
             {(instance?.drawCount ?? 0) !== 1 && "s"} cantada
             {(instance?.drawCount ?? 0) !== 1 && "s"}
@@ -219,7 +219,10 @@ export function BingoCardView({
       )}
 
       {error && (
-        <p className="mb-3 text-sm text-red-600 dark:text-red-400" role="alert">
+        <p
+          className="mb-3 border-l-2 border-red-400 pl-3 text-sm text-red-200"
+          role="alert"
+        >
           {error}
         </p>
       )}
@@ -249,14 +252,14 @@ export function BingoCardView({
               disabled={isLocked}
               aria-pressed={isMarked}
               aria-label={isLocked ? `${term} (aún no cantado)` : term}
-              className={`flex aspect-square items-center justify-center rounded-lg border p-2 text-center text-xs font-medium transition disabled:opacity-50 sm:text-sm ${
+              className={`flex aspect-square items-center justify-center rounded-(--radius-sm) border p-1.5 text-center text-[0.8125rem] leading-tight font-medium transition-colors disabled:opacity-60 sm:p-2 sm:text-[0.9375rem] ${
                 isMarked
                   ? isWinning
-                    ? "border-yellow-400 bg-yellow-200 text-yellow-900 dark:bg-yellow-500/30 dark:text-yellow-100"
-                    : "border-blue-400 bg-blue-100 text-blue-900 dark:bg-blue-500/30 dark:text-blue-100"
+                    ? "border-(--ochre) bg-(--ochre) text-(--ochre-ink)"
+                    : "border-(--ochre) bg-(--ochre)/20 text-(--ink)"
                   : isPending
-                    ? "border-green-500 bg-green-50 text-green-900 ring-2 ring-green-400/60 dark:bg-green-900/20 dark:text-green-200"
-                    : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                    ? "border-(--g-green) bg-(--surface-2) text-(--ink) ring-2 ring-(--g-green)/50"
+                    : "border-(--line) bg-(--surface-2) text-(--muted) hover:border-(--line-strong) hover:bg-(--surface-3) hover:text-(--ink)"
               }`}
             >
               <span className="line-clamp-3 break-words">{term}</span>
@@ -270,13 +273,15 @@ export function BingoCardView({
           type="button"
           onClick={claim}
           disabled={claiming}
-          className="bg-google-green mt-4 w-full rounded-xl px-6 py-4 text-lg font-bold text-white shadow-lg transition hover:brightness-110 disabled:opacity-60"
+          className="nb nb--primary mt-5 w-full disabled:opacity-60"
         >
-          {claiming ? "Cantando..." : "🎉 ¡BINGO!"}
+          <span className="nb__label">
+            {claiming ? "Cantando..." : "¡BINGO!"}
+          </span>
         </button>
       )}
 
-      <p className="mt-3 text-center text-xs text-gray-500 dark:text-gray-400">
+      <p className="mt-4 text-center text-sm text-(--muted)">
         {isClassic
           ? "Marca las casillas que vayan cantando. Cuando completes una línea, pulsa ¡BINGO!"
           : "Toca una celda cuando el speaker mencione el término."}

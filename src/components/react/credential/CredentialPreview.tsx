@@ -88,23 +88,25 @@ export function CredentialPreview({ input, fontsReady, label }: Props) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group relative block w-full cursor-zoom-in rounded-xl text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600"
+        className="group relative block w-full cursor-zoom-in rounded-(--radius-sm) text-left"
         aria-label={`Ampliar ${label.toLowerCase()}`}
       >
         <canvas
           ref={canvasRef}
           role="img"
           aria-label={label}
-          className="border-gray-custom w-full rounded-xl border shadow-sm transition duration-300 group-hover:-translate-y-1 group-hover:shadow-xl"
+          className="w-full rounded-(--radius-sm) transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0"
         />
-        <span className="absolute right-3 bottom-3 flex items-center gap-1.5 rounded-full border border-white/70 bg-slate-950/75 px-3 py-1.5 text-xs font-semibold text-white opacity-0 shadow-lg backdrop-blur transition group-hover:opacity-100 group-focus-visible:opacity-100">
-          <ExpandIcon />
+        <span className="absolute right-3 bottom-3 flex items-center gap-1.5 rounded-(--radius-sm) border border-(--line-strong) bg-(--night) px-3 py-1.5 text-sm font-medium text-(--ink) opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+          <span className="text-(--ochre)">
+            <ExpandIcon />
+          </span>
           Ver en 3D
         </span>
       </button>
 
       {!fontsReady && (
-        <p className="text-tertiary mt-2 text-center text-xs">
+        <p className="mt-2 text-center text-sm text-(--muted)">
           Preparando la tipografía…
         </p>
       )}
@@ -113,18 +115,18 @@ export function CredentialPreview({ input, fontsReady, label }: Props) {
         typeof document !== "undefined" &&
         createPortal(
           <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-md"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-(--night)/95 p-4"
             role="dialog"
             aria-modal="true"
             aria-label="Vista ampliada de la credencial"
             onClick={() => setOpen(false)}
           >
-            <div className="credential-modal-grid absolute inset-0" />
+            <div className="cred-modal-grid absolute inset-0" />
             <button
               type="button"
               autoFocus
               onClick={() => setOpen(false)}
-              className="absolute top-5 right-5 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-2xl text-white backdrop-blur transition hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              className="absolute top-5 right-5 z-20 flex h-11 w-11 items-center justify-center rounded-(--radius-sm) border border-(--line-strong) bg-(--surface-2) text-2xl text-(--ink) transition-colors hover:bg-(--surface-3)"
               aria-label="Cerrar vista ampliada"
             >
               ×
@@ -138,7 +140,7 @@ export function CredentialPreview({ input, fontsReady, label }: Props) {
                 ref={tiltRef}
                 onPointerMove={tilt}
                 onPointerLeave={resetTilt}
-                className="credential-card-tilt relative overflow-hidden rounded-[1.4rem] border border-white/25 bg-white shadow-[0_45px_120px_rgba(0,0,0,0.65),0_0_80px_rgba(36,99,235,0.22)]"
+                className="credential-card-tilt relative overflow-hidden rounded-(--radius) bg-white shadow-[0_40px_100px_rgba(0,0,0,0.6)]"
               >
                 <canvas
                   ref={modalCanvasRef}
@@ -147,9 +149,9 @@ export function CredentialPreview({ input, fontsReady, label }: Props) {
                   className="block h-auto max-h-[82vh] w-auto max-w-[82vw]"
                 />
                 <span className="credential-card-shine pointer-events-none absolute inset-0" />
-                <span className="pointer-events-none absolute inset-0 rounded-[1.4rem] ring-1 ring-white/45 ring-inset" />
+                <span className="pointer-events-none absolute inset-0 rounded-(--radius) ring-1 ring-white/30 ring-inset" />
               </div>
-              <p className="mt-5 text-center text-xs font-medium tracking-[0.18em] text-white/60 uppercase">
+              <p className="mt-5 text-center text-sm text-(--muted)">
                 Mueve el cursor para explorar · Esc para cerrar
               </p>
             </div>

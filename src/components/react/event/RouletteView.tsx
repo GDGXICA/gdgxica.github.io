@@ -26,81 +26,77 @@ export function RouletteView({
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+      <h2 className="m-0 text-[clamp(1.6rem,1.3rem+1.4vw,2.25rem)] leading-tight font-semibold tracking-[-0.02em] text-(--ink)">
         {title}
       </h2>
 
       {prize && (
-        <p className="mt-2 text-base text-gray-700 dark:text-gray-300">
-          Premio: <span className="font-semibold">{prize}</span>
+        <p className="mt-2 text-(--muted)">
+          Premio: <span className="font-semibold text-(--ink)">{prize}</span>
         </p>
       )}
 
       {myWin ? (
         <div
-          className="mt-8 rounded-xl bg-green-50 p-8 text-center dark:bg-green-950/50"
+          className="mt-8 rounded-(--radius) border border-(--ochre) bg-(--surface-2) px-6 py-10 text-center"
           role="status"
         >
           <span
-            className="bg-google-green mx-auto flex h-14 w-14 items-center justify-center rounded-full text-3xl font-bold text-white"
+            className="mx-auto flex h-14 w-14 items-center justify-center rounded-(--radius-sm) bg-(--ochre) text-3xl font-bold text-(--ochre-ink)"
             aria-hidden="true"
           >
             ✓
           </span>
-          <p className="mt-4 text-3xl font-bold text-green-900 dark:text-green-200">
+          <p className="mt-5 font-(family-name:--font-display) text-[2.5rem] leading-none font-bold text-(--ink)">
             ¡Ganaste!
           </p>
-          <p className="mt-2 text-base text-green-800 dark:text-green-200">
+          <p className="mt-3 text-(--muted)">
             Preséntate con el organizador para reclamar tu premio.
           </p>
         </div>
       ) : (
         <div
-          className="mt-8 rounded-xl bg-gray-100 p-8 text-center dark:bg-gray-800"
+          className="mt-8 rounded-(--radius) border border-(--line) bg-(--surface-2) px-6 py-10 text-center"
           role="status"
         >
-          <div className="mx-auto flex w-fit gap-2" aria-hidden="true">
-            <span className="bg-google-blue h-3 w-3 rounded-full" />
-            <span className="bg-google-red h-3 w-3 rounded-full" />
-            <span className="bg-google-yellow h-3 w-3 rounded-full" />
-            <span className="bg-google-green h-3 w-3 rounded-full" />
-          </div>
-          <p className="mt-5 text-2xl font-bold text-gray-900 dark:text-white">
+          <span
+            className="mx-auto block h-2.5 w-2.5 animate-pulse rounded-full bg-(--ochre) motion-reduce:animate-none"
+            aria-hidden="true"
+          />
+          <p className="mt-5 text-2xl font-semibold tracking-[-0.02em] text-(--ink)">
             Estás en la ruleta
           </p>
           {loading ? (
-            <p className="mt-2 text-base text-gray-700 dark:text-gray-300">
-              Cargando participantes…
-            </p>
+            <p className="mt-2 text-(--muted)">Cargando participantes…</p>
           ) : (
-            <p className="mt-2 text-base text-gray-700 tabular-nums dark:text-gray-300">
+            <p className="mt-3 font-mono text-[0.9375rem] text-(--ochre) tabular-nums">
               {eligible.length} participante{eligible.length !== 1 && "s"}{" "}
               elegibles · {winners.length} ganador{winners.length !== 1 && "es"}
             </p>
           )}
-          <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">
+          <p className="mt-4 text-[0.9375rem] text-(--muted)">
             Mira la pantalla del evento para seguir el giro.
           </p>
         </div>
       )}
 
       {winners.length > 0 && (
-        <div className="mt-8 border-t border-gray-200 pt-5 dark:border-gray-700">
-          <h3 className="mb-3 font-bold text-gray-900 dark:text-white">
+        <div className="mt-8 border-t border-(--line) pt-5">
+          <h3 className="mt-0 mb-3 text-lg font-semibold text-(--ink)">
             Ganadores anteriores
           </h3>
-          <ol className="space-y-2">
+          <ol className="divide-y divide-(--line)">
             {winners.map((w, i) => (
               <li
                 key={w.uid}
-                className={`flex items-center gap-3 rounded-lg bg-gray-50 px-4 py-3 text-base dark:bg-gray-800 ${
+                className={`flex min-h-12 items-center gap-3 px-1 ${
                   w.uid === uid
-                    ? "font-bold text-green-700 dark:text-green-400"
-                    : "text-gray-700 dark:text-gray-300"
+                    ? "font-semibold text-(--ochre)"
+                    : "text-(--ink)"
                 }`}
               >
                 <span
-                  className="text-sm font-bold tabular-nums"
+                  className="font-mono text-sm text-(--muted) tabular-nums"
                   aria-hidden="true"
                 >
                   {i + 1}.
