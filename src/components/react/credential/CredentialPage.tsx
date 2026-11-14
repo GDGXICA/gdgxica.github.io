@@ -1,4 +1,11 @@
-import { useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+import { nameFromQuery } from "./prefill";
 import { api } from "@/lib/api";
 import { signInAnonymouslyIfNeeded } from "@/lib/firebase";
 import { PRIVACY_POLICY_VERSION } from "@/lib/consent";
@@ -57,6 +64,19 @@ export function CredentialPage({ event: eventJson }: Props) {
   const [serverError, setServerError] = useState<string | null>(null);
   const [done, setDone] = useState<{ groupLetter: string } | null>(null);
   const submissionIdRef = useRef<string | null>(null);
+
+  // A name typed on the home page's preview arrives as ?nombre=. Read after
+  // mount (the island is server-rendered, so the first render must match the
+  // empty server markup) and never over something already typed here.
+  useEffect(() => {
+    const prefill = nameFromQuery(window.location.search);
+    if (!prefill) return;
+    setCard((current) =>
+      current.firstName || current.lastName
+        ? current
+        : { ...current, ...prefill }
+    );
+  }, []);
 
   const fontsReady = useFontsReady();
   const avatarSrc =
