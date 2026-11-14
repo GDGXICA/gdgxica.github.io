@@ -1,0 +1,53 @@
+---
+import { ArrowRight, ArrowUpRight } from "@lucide/astro";
+
+interface Props {
+  href?: string;
+  type?: "button" | "submit";
+  variant?: "primary" | "ghost";
+  size?: "md" | "sm";
+  /** Defaults to an arrow; links that leave the site get the outbound one. */
+  icon?: "arrow" | "external" | "none";
+  class?: string;
+  [attr: string]: unknown;
+}
+
+const {
+  href,
+  type = "button",
+  variant = "primary",
+  size = "md",
+  icon,
+  class: className,
+  ...rest
+} = Astro.props;
+
+const external = Boolean(href?.startsWith("http"));
+const glyph = icon ?? (external ? "external" : "arrow");
+const Tag = href ? "a" : "button";
+const linkAttrs = href
+  ? {
+      href,
+      ...(external ? { target: "_blank", rel: "noopener noreferrer" } : {}),
+    }
+  : { type };
+---
+
+<Tag
+  class:list={["nb", `nb--${variant}`, `nb--${size}`, className]}
+  {...linkAttrs}
+  {...rest}
+>
+  <span class="nb__label"><slot /></span>
+  {
+    glyph !== "none" && (
+      <span class:list={["nb__icon", `nb__icon--${glyph}`]} aria-hidden="true">
+        {glyph === "external" ? (
+          <ArrowUpRight size={18} stroke-width={2} />
+        ) : (
+          <ArrowRight size={18} stroke-width={2} />
+        )}
+      </span>
+    )
+  }
+</Tag>

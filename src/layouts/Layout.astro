@@ -2,6 +2,8 @@
 import "@/styles/global.css";
 import Header from "@/components/Header.astro";
 import Footer from "@/components/Footer.astro";
+import NightHeader from "@/components/night/NightHeader.astro";
+import NightFooter from "@/components/night/NightFooter.astro";
 import { ClientRouter } from "astro:transitions";
 import { serializeJsonLd } from "@/utils/schema";
 
@@ -12,9 +14,20 @@ interface Props {
   url: string;
   schema?: object | object[];
   noindex?: boolean;
+  /** "night" is the dark redesign, rolled out page by page. */
+  theme?: "light" | "night";
 }
 
-const { title, description, image, url, schema, noindex } = Astro.props;
+const {
+  title,
+  description,
+  image,
+  url,
+  schema,
+  noindex,
+  theme = "light",
+} = Astro.props;
+const night = theme === "night";
 ---
 
 <!doctype html>
@@ -27,6 +40,7 @@ const { title, description, image, url, schema, noindex } = Astro.props;
     <link rel="preconnect" href="https://www.google.com" crossorigin />
     <link rel="dns-prefetch" href="https://www.google.com" />
     <meta name="generator" content={Astro.generator} />
+    {night && <meta name="theme-color" content="#0a1021" />}
 
     <title>{title}</title>
     <meta name="description" content={description} />
@@ -58,9 +72,9 @@ const { title, description, image, url, schema, noindex } = Astro.props;
     }
     <ClientRouter />
   </head>
-  <body>
-    <Header />
+  <body class={night ? "theme-night" : undefined}>
+    {night ? <NightHeader /> : <Header />}
     <slot />
-    <Footer />
+    {night ? <NightFooter /> : <Footer />}
   </body>
 </html>

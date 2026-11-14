@@ -1,0 +1,891 @@
+---
+import { COLIBRI_STROKE, colibriPath, colibriViewBox } from "@/lib/colibri";
+import { getEventDates } from "@/utils/eventDates";
+import { hourRange, shortVenue, surveyDate } from "@/utils/eventShort";
+import NButton from "@/components/night/NButton.astro";
+
+interface HeroEvent {
+  slug: string;
+  name: string;
+  date: string;
+  time: string;
+  venue: string;
+  isVirtual: boolean;
+  registerFormLink: string;
+  participants: number;
+  maxParticipants: number;
+}
+
+interface Props {
+  /** The next highlighted event, or null between seasons. */
+  event: HeroEvent | null;
+  communityUrl: string;
+  stats: {
+    yearsActive: number;
+    totalMembers: number;
+    totalEvents: number;
+    totalSpeakers: number;
+  };
+}
+
+const { event, communityUrl, stats } = Astro.props;
+
+const dates = event ? getEventDates(event) : null;
+const facts =
+  event && dates
+    ? [
+        { label: "Fecha", value: surveyDate(dates.startISO) },
+        { label: "Hora", value: hourRange(dates.startISO, dates.endISO) },
+        { label: "Lugar", value: shortVenue(event.venue, event.isVirtual) },
+        { label: "Entrada", value: "Gratis" },
+      ]
+    : [];
+
+const seats =
+  event && event.maxParticipants > 0
+    ? {
+        taken: event.participants,
+        total: event.maxParticipants,
+        percent: Math.min(
+          100,
+          Math.round((event.participants / event.maxParticipants) * 100)
+        ),
+      }
+    : null;
+
+const instruments = [
+  { value: `${stats.yearsActive}`, label: "años en Ica" },
+  { value: `${stats.totalMembers}+`, label: "miembros" },
+  { value: `${stats.totalEvents}+`, label: "eventos organizados" },
+  { value: `${stats.totalSpeakers}`, label: "speakers invitados" },
+];
+
+const path = colibriPath();
+---
+
+<section class="hero" data-hero aria-labelledby="hero-title">
+  <div class="hero__scene" aria-hidden="true" data-scene>
+    <canvas class="hero__canvas" data-scene-canvas></canvas>
+  </div>
+
+  <div class="n-container hero__inner">
+    <!-- The name, traced like a geoglyph, over a dimension line. -->
+    <div class="hero__intro">
+      <div class="hero__mark">
+        <h1 id="hero-title" class="hero__title">
+          <span class="sr-only">GDG Ica</span>
+          <svg
+            class="hero__trace"
+            viewBox="0 0 330 100"
+            aria-hidden="true"
+            data-title-trace
+          >
+            <defs>
+              <!-- Lit from above, like the geoglyph in the scene. -->
+              <linearGradient id="hero-title-light" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#fff1cf"></stop>
+                <stop offset="0.45" stop-color="#e8c47e"></stop>
+                <stop offset="1" stop-color="#b8853a"></stop>
+              </linearGradient>
+            </defs>
+            <text x="0" y="84">GDG Ica</text>
+          </svg>
+        </h1>
+        <!-- A dimension line under the name, as on a survey drawing. -->
+        <p class="hero__dim n-mono" aria-hidden="true">
+          <span>Google Developer Group · Ica, Perú</span>
+        </p>
+      </div>
+      <p class="n-lead hero__lead">
+        Una comunidad abierta y gratuita para aprender tecnología.
+      </p>
+    </div>
+
+    <!-- The empty box the geoglyph sits in. The WebGL scene centres on it;
+         without WebGL it holds the same figure, drawn on a tilted plane. -->
+    <div class="hero__stage" data-scene-anchor aria-hidden="true">
+      <div class="hero__plateau">
+        <svg viewBox={colibriViewBox(14)}>
+          <defs>
+            <pattern
+              id="hero-grid"
+              width="10"
+              height="10"
+              patternUnits="userSpaceOnUse"
+            >
+              <path
+                d="M10 0H0V10"
+                fill="none"
+                stroke="#3b4c6b"
+                stroke-width="0.35"></path>
+            </pattern>
+          </defs>
+          <rect
+            x="-200"
+            y="-200"
+            width="400"
+            height="400"
+            fill="url(#hero-grid)"></rect>
+          <path
+            d={path}
+            fill="none"
+            stroke="#d4ad62"
+            stroke-width={COLIBRI_STROKE}
+            stroke-linejoin="round"
+            stroke-linecap="round"></path>
+        </svg>
+      </div>
+    </div>
+
+    {
+      event ? (
+        <article
+          class="readout n-panel n-marks"
+          aria-labelledby="readout-title"
+        >
+          <div class="readout__head">
+            <h2 id="readout-title" class="readout__title">
+              {event.name}
+            </h2>
+            {dates && (
+              <p class="readout__status n-mono" data-countdown={dates.startISO}>
+                Registro abierto
+              </p>
+            )}
+          </div>
+          <dl class="readout__facts n-mono">
+            {facts.map((fact) => (
+              <div>
+                <dt>{fact.label}</dt>
+                <dd>{fact.value}</dd>
+              </div>
+            ))}
+          </dl>
+          {seats && (
+            <div class="readout__seats">
+              <p class="n-mono">
+                <strong>{seats.taken}</strong> registrados de {seats.total}{" "}
+                cupos
+              </p>
+              <div
+                class="readout__bar"
+                role="img"
+                aria-label={`${seats.percent}% de los cupos tomados`}
+              >
+                <span style={`width: ${seats.percent}%`} />
+              </div>
+            </div>
+          )}
+          <div class="readout__actions">
+            {event.registerFormLink && (
+              <NButton href={event.registerFormLink}>Regístrate gratis</NButton>
+            )}
+            <NButton variant="ghost" href={`/events/${event.slug}`}>
+              Agenda y speakers
+            </NButton>
+          </div>
+        </article>
+      ) : (
+        <article
+          class="readout n-panel n-marks"
+          aria-labelledby="readout-title"
+        >
+          <h2 id="readout-title" class="readout__title">
+            Nuevos eventos muy pronto
+          </h2>
+          <p class="readout__note">
+            Únete a la comunidad y te avisamos del próximo por correo.
+          </p>
+          <div class="readout__actions">
+            <NButton href={communityUrl}>Únete a la comunidad</NButton>
+            <NButton variant="ghost" href="/events">
+              Ver eventos pasados
+            </NButton>
+          </div>
+        </article>
+      )
+    }
+
+    <div class="hero__survey">
+      <div
+        class="hero__switch n-mono"
+        role="group"
+        aria-label="Lugar del relevamiento"
+        data-scene-switch
+        hidden
+      >
+        <button type="button" data-variant="colibri" aria-pressed="true">
+          Colibrí
+        </button>
+        <button type="button" data-variant="huacachina" aria-pressed="false">
+          Huacachina
+        </button>
+      </div>
+      <p class="hero__caption n-mono" data-scene-caption>
+        Colibrí, líneas de Nazca · 14°41′ S 75°08′ O
+      </p>
+    </div>
+  </div>
+
+  <dl class="hero__instruments">
+    <div class="n-container hero__instruments-row">
+      {
+        instruments.map((item) => (
+          <div>
+            <dt class="n-mono">{item.value}</dt>
+            <dd>{item.label}</dd>
+          </div>
+        ))
+      }
+    </div>
+  </dl>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    display: grid;
+    min-height: calc(100svh - 4rem);
+    grid-template-rows: 1fr auto;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .hero__scene {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+  }
+
+  .hero__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 1400ms ease;
+  }
+
+  .hero__scene.is-live .hero__canvas {
+    opacity: 1;
+  }
+
+  /* A veil of night behind the copy column, so neither the survey grid
+     nor the Huacachina contours run through the title and the lead. */
+  .hero__scene::after {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      rgb(7 11 22 / 0.88) 0%,
+      rgb(7 11 22 / 0.7) 28%,
+      rgb(7 11 22 / 0) 50%
+    );
+    content: "";
+    pointer-events: none;
+  }
+
+  .hero__scene.is-live.is-swapping .hero__canvas {
+    opacity: 0;
+    transition-duration: 300ms;
+  }
+
+  .hero__inner {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 36rem) 1fr;
+    grid-template-rows: 1fr auto;
+    gap: 1.5rem clamp(2rem, 5vw, 5rem);
+    padding-block: clamp(1.25rem, 3.5vh, 3rem) clamp(1.25rem, 3vh, 2.25rem);
+  }
+
+  .hero__intro {
+    position: relative;
+    grid-column: 1 / -1;
+    justify-self: start;
+    max-width: 42rem;
+  }
+
+  /* The name, scanned in from the left on arrival, with a dimension line
+     the width of the word underneath. */
+  .hero__mark {
+    position: relative;
+    width: max-content;
+    max-width: 100%;
+  }
+
+  .hero__title {
+    margin: 0;
+    line-height: 0;
+  }
+
+  /* The name is traced first as an ochre outline, the way the geoglyphs
+     were drawn, and then filled. */
+  .hero__trace {
+    display: block;
+    width: calc(var(--step-display) * 3.3);
+    max-width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .hero__trace {
+    filter: drop-shadow(0 0 0 rgb(212 173 98 / 0));
+    animation: title-glow 900ms 1650ms ease forwards;
+  }
+
+  .hero__trace text {
+    fill: url(#hero-title-light);
+    fill-opacity: 0;
+    font-family: var(--font-display);
+    font-size: 100px;
+    font-weight: 700;
+    letter-spacing: -2px;
+    paint-order: stroke;
+    stroke: #ffe2a6;
+    stroke-dasharray: 520;
+    stroke-dashoffset: 520;
+    stroke-linejoin: round;
+    stroke-width: 1.6px;
+    animation:
+      title-trace 1900ms 150ms cubic-bezier(0.45, 0, 0.2, 1) forwards,
+      title-fill 700ms 1650ms ease forwards;
+  }
+
+  .hero__dim {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.9rem 0 0;
+    color: var(--ochre);
+    white-space: nowrap;
+    animation: hero-rise 900ms 700ms var(--ease-out) both;
+  }
+
+  .hero__dim::before,
+  .hero__dim::after {
+    height: 10px;
+    flex: 1;
+    border-color: var(--ochre);
+    border-style: solid;
+    background: linear-gradient(var(--ochre), var(--ochre)) center / 100% 1.5px
+      no-repeat;
+    content: "";
+  }
+
+  .hero__dim::before {
+    border-width: 0 0 0 1.5px;
+  }
+
+  .hero__dim::after {
+    border-width: 0 1.5px 0 0;
+  }
+
+  @keyframes title-trace {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes title-fill {
+    to {
+      fill-opacity: 1;
+      stroke-opacity: 0.6;
+    }
+  }
+
+  /* The lit line's halo: a tight core and a wide, soft glow. */
+  @keyframes title-glow {
+    to {
+      filter: drop-shadow(0 0 3px rgb(255 214 140 / 0.45))
+        drop-shadow(0 0 22px rgb(212 173 98 / 0.4));
+    }
+  }
+
+  .hero__lead {
+    max-width: 30ch;
+    margin: 1.25rem 0 0;
+    color: var(--ink);
+    animation: hero-rise 900ms 80ms var(--ease-out) both;
+  }
+
+  /* The geoglyph's box: right of the panel on wide screens. */
+  .hero__stage {
+    position: absolute;
+    top: 18%;
+    right: 4%;
+    bottom: 6%;
+    left: 42%;
+    pointer-events: none;
+  }
+
+  .hero__plateau {
+    position: absolute;
+    inset: 0;
+    perspective: 700px;
+    transition: opacity 1400ms ease;
+  }
+
+  .hero:has(.hero__scene.is-live) .hero__plateau {
+    opacity: 0;
+  }
+
+  .hero__plateau svg {
+    width: 100%;
+    height: 100%;
+    transform: rotateX(58deg) scale(1.2);
+    transform-origin: 50% 60%;
+  }
+
+  /* ---- the readout panel ---- */
+  .readout {
+    grid-column: 1;
+    align-self: end;
+    padding: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+    background: rgb(12 19 34 / 0.92);
+    animation: hero-rise 900ms 160ms var(--ease-out) both;
+  }
+
+  .readout__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+  }
+
+  .readout__title {
+    margin: 0;
+    font-size: clamp(1.6rem, 1.3rem + 1vw, 2.1rem);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+  }
+
+  .readout__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    color: var(--ochre);
+  }
+
+  .readout__status::before {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--ochre);
+    content: "";
+    animation: status-pulse 2.4s ease-in-out infinite;
+  }
+
+  .readout__facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem 1.5rem;
+    margin: 1.2rem 0 0;
+    padding: 1rem 0;
+    border-block: 1px solid var(--line);
+  }
+
+  .readout__facts dt {
+    color: var(--muted);
+  }
+
+  .readout__facts dd {
+    margin: 0.15rem 0 0;
+    color: var(--ink);
+  }
+
+  .readout__seats {
+    margin-top: 1.1rem;
+  }
+
+  .readout__seats p {
+    margin: 0 0 0.55rem;
+    color: var(--muted);
+  }
+
+  .readout__seats strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .readout__bar {
+    height: 4px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: var(--surface-3);
+  }
+
+  .readout__bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--ochre);
+  }
+
+  .readout__note {
+    margin: 0.75rem 0 0;
+    color: var(--muted);
+  }
+
+  .readout__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.4rem;
+  }
+
+  .readout__actions :global(.nb) {
+    flex: 1 1 0;
+    white-space: nowrap;
+  }
+
+  .hero__survey {
+    display: flex;
+    flex-wrap: wrap;
+    grid-column: 2;
+    align-items: center;
+    align-self: end;
+    justify-content: flex-end;
+    justify-self: end;
+    gap: 0.6rem;
+  }
+
+  /* Which site the survey shows. The scene picks one at random on each
+     visit; this lets the visitor see the other. */
+  .hero__switch {
+    display: inline-flex;
+    padding: 3px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    background: rgb(7 11 22 / 0.82);
+  }
+
+  .hero__switch[hidden] {
+    display: none;
+  }
+
+  .hero__switch button {
+    min-height: 2.25rem;
+    padding: 0.3rem 0.75rem;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    cursor: pointer;
+    transition:
+      background-color 160ms ease,
+      color 160ms ease;
+  }
+
+  .hero__switch button:hover {
+    color: var(--ink);
+  }
+
+  .hero__switch button[aria-pressed="true"] {
+    background: var(--ochre);
+    color: var(--ochre-ink);
+  }
+
+  .hero__caption {
+    margin: 0;
+    padding: 0.3rem 0.6rem;
+    border-radius: var(--radius-sm);
+    background: rgb(7 11 22 / 0.82);
+    color: var(--muted);
+  }
+
+  /* ---- instrument strip at the foot of the hero ---- */
+  .hero__instruments {
+    margin: 0;
+    border-top: 1px solid var(--line);
+    background: rgb(7 11 22 / 0.86);
+  }
+
+  .hero__instruments-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .hero__instruments-row > div {
+    display: flex;
+    align-items: baseline;
+    gap: 0.7rem;
+    padding: 1.1rem 0;
+  }
+
+  .hero__instruments-row > div + div {
+    padding-left: clamp(1rem, 2.5vw, 2rem);
+    border-left: 1px solid var(--line);
+  }
+
+  .hero__instruments dt {
+    color: var(--ochre);
+    font-size: var(--step-lead);
+  }
+
+  .hero__instruments dd {
+    margin: 0;
+    color: var(--muted);
+  }
+
+  @keyframes hero-rise {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+  }
+
+  @keyframes status-pulse {
+    50% {
+      opacity: 0.35;
+    }
+  }
+
+  @media (max-width: 899px) {
+    .hero {
+      min-height: auto;
+    }
+
+    .hero__inner {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto;
+      padding-top: 2.25rem;
+    }
+
+    /* On a phone the copy sits above the scene's band: veil the top. */
+    .hero__scene::after {
+      background: linear-gradient(
+        180deg,
+        rgb(7 11 22 / 0.9) 0%,
+        rgb(7 11 22 / 0.7) 22%,
+        rgb(7 11 22 / 0) 34%
+      );
+    }
+
+    /* On a phone the geoglyph gets its own band between copy and panel. */
+    .hero__stage {
+      position: relative;
+      inset: auto;
+      height: clamp(15rem, 52vw, 24rem);
+      margin-inline: calc(var(--margin) * -1);
+    }
+
+    .readout,
+    .hero__survey {
+      grid-column: 1;
+    }
+
+    .hero__survey {
+      justify-content: flex-start;
+      justify-self: start;
+      order: 3;
+    }
+
+    .hero__instruments-row {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .hero__instruments-row > div {
+      flex-direction: column;
+      gap: 0.1rem;
+    }
+
+    /* Two by two: the left column has no rule, the second row has one
+       on top. Written as "div + div" so it outranks the wide rule. */
+    .hero__instruments-row > div + div:nth-child(odd) {
+      padding-left: 0;
+      border-left: 0;
+    }
+
+    .hero__instruments-row > div + div:nth-child(n + 3) {
+      border-top: 1px solid var(--line);
+    }
+  }
+
+  @media (max-width: 420px) {
+    .readout__facts {
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem 1rem;
+    }
+
+    .readout__actions :global(.nb) {
+      flex-basis: 100%;
+      white-space: normal;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero__lead,
+    .hero__dim,
+    .readout {
+      animation-name: hero-fade;
+    }
+
+    .hero__trace text {
+      fill-opacity: 1;
+      stroke-dashoffset: 0;
+      stroke-opacity: 0.6;
+      animation: none;
+    }
+
+    .hero__trace {
+      filter: drop-shadow(0 0 3px rgb(255 214 140 / 0.45))
+        drop-shadow(0 0 22px rgb(212 173 98 / 0.4));
+      animation: none;
+    }
+
+    .readout__status::before {
+      animation: none;
+    }
+
+    @keyframes hero-fade {
+      from {
+        opacity: 0;
+      }
+    }
+  }
+</style>
+
+<script>
+  import type { SceneVariant, SceneController } from "@/scripts/desert-scene";
+
+  let scene: SceneController | null = null;
+
+  const CAPTIONS: Record<SceneVariant, string> = {
+    colibri: "Colibrí, líneas de Nazca · 14°41′ S 75°08′ O",
+    huacachina: "Oasis de Huacachina, Ica · 14°05′ S 75°46′ O",
+  };
+
+  function canUseWebGL(): boolean {
+    const connection = (
+      navigator as Navigator & { connection?: { saveData?: boolean } }
+    ).connection;
+    if (connection?.saveData) return false;
+    try {
+      const probe = document.createElement("canvas");
+      return Boolean(probe.getContext("webgl2") || probe.getContext("webgl"));
+    } catch {
+      return false;
+    }
+  }
+
+  function startScene(hero: HTMLElement) {
+    const holder = hero.querySelector<HTMLElement>("[data-scene]");
+    const canvas = hero.querySelector<HTMLCanvasElement>("[data-scene-canvas]");
+    const anchor = hero.querySelector<HTMLElement>("[data-scene-anchor]");
+    const toggle = hero.querySelector<HTMLElement>("[data-scene-switch]");
+    const caption = hero.querySelector<HTMLElement>("[data-scene-caption]");
+    if (!holder || !canvas || !canUseWebGL()) return;
+
+    // Each visit lands on one of the two sites at random.
+    let variant: SceneVariant = Math.random() < 0.5 ? "colibri" : "huacachina";
+    const buttons = [
+      ...(toggle?.querySelectorAll<HTMLButtonElement>("[data-variant]") ?? []),
+    ];
+    const reflect = () => {
+      if (caption) caption.textContent = CAPTIONS[variant];
+      buttons.forEach((button) =>
+        button.setAttribute(
+          "aria-pressed",
+          String(button.dataset.variant === variant)
+        )
+      );
+    };
+
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const load = () =>
+      import("@/scripts/desert-scene")
+        .then(({ mountDesertScene }) => {
+          if (!canvas.isConnected) return;
+          scene = mountDesertScene(canvas, {
+            still,
+            anchor,
+            variant,
+            onReady: () => {
+              holder.classList.add("is-live");
+              reflect();
+              toggle?.removeAttribute("hidden");
+            },
+          });
+        })
+        .catch(() => {
+          // The drawn plateau stays: the page is complete without WebGL.
+        });
+
+    buttons.forEach((button) => {
+      button.onclick = () => {
+        const next = button.dataset.variant as SceneVariant;
+        if (!scene || next === variant) return;
+        variant = next;
+        reflect();
+        // A short fade hides the swap of one landscape for the other.
+        holder.classList.add("is-swapping");
+        window.setTimeout(
+          () => {
+            scene?.setVariant(next);
+            holder.classList.remove("is-swapping");
+          },
+          still ? 0 : 320
+        );
+      };
+    });
+
+    if ("requestIdleCallback" in window) {
+      window.requestIdleCallback(load, { timeout: 1500 });
+    } else {
+      setTimeout(load, 300);
+    }
+  }
+
+  /** "Faltan 14 días" from the event's start, in the visitor's own time. */
+  function countdown(hero: HTMLElement) {
+    const el = hero.querySelector<HTMLElement>("[data-countdown]");
+    const iso = el?.dataset.countdown;
+    if (!el || !iso) return;
+    const start = new Date(iso);
+    const day = (d: Date) =>
+      Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86_400_000;
+    const days = day(start) - day(new Date());
+    if (days > 1) el.textContent = `Faltan ${days} días`;
+    else if (days === 1) el.textContent = "Es mañana";
+    else if (days === 0) el.textContent = "Es hoy";
+  }
+
+  /** Fit the traced title's viewBox to its glyphs once the font is in. */
+  function fitTitle(hero: HTMLElement) {
+    const svg = hero.querySelector<SVGSVGElement>("[data-title-trace]");
+    const text = svg?.querySelector("text");
+    if (!svg || !text) return;
+    document.fonts.ready.then(() => {
+      const box = text.getBBox();
+      if (!box.width) return;
+      // Down to the baseline only: "GDG Ica" has no descenders, and the
+      // font's descent would leave a gap above the dimension line.
+      const baseline = Number(text.getAttribute("y")) || 84;
+      // and from the cap line, not the font's ascent above it
+      const top = box.y + (baseline - box.y) * 0.16;
+      svg.setAttribute(
+        "viewBox",
+        `${box.x - 2} ${top} ${box.width + 4} ${baseline - top + 3}`
+      );
+      svg.style.width = `calc(var(--step-display) * ${(box.width + 4) / 100})`;
+    });
+  }
+
+  document.addEventListener("astro:page-load", () => {
+    const hero = document.querySelector<HTMLElement>("[data-hero]");
+    if (!hero) return;
+    fitTitle(hero);
+    countdown(hero);
+    startScene(hero);
+  });
+
+  document.addEventListener("astro:before-swap", () => {
+    scene?.dispose();
+    scene = null;
+  });
+</script>
