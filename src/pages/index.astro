@@ -8,7 +8,12 @@ import Closing from "@/components/home/Closing.astro";
 import { getCollection } from "astro:content";
 import { parseSpanishDate } from "@/utils/parseSpanishDate";
 import { getEventDates } from "@/utils/eventDates";
-import { dottedDate, shortVenue } from "@/utils/eventShort";
+import {
+  dottedDate,
+  hourRange,
+  shortVenue,
+  surveyDate,
+} from "@/utils/eventShort";
 import { fetchStats, fetchLinks } from "@/loaders/transform-site-config";
 
 const allEvents = await getCollection("events");
@@ -52,16 +57,40 @@ const credentialEvent =
       }
     : null;
 
-const rows = [...upcoming, ...past].map((event) => ({
-  slug: event.id,
-  name: event.data.name,
-  image: event.data.image,
-  categoryType: event.data.category.type,
-  categoryLabel: event.data.category.label,
-  date: dottedDate(getEventDates(event.data).startISO),
-  venue: shortVenue(event.data.location.name, event.data.isVirtual),
-  upcoming: event.data.status.type === "upcoming",
-}));
+// The event log pins the next event on the right and lists every other
+// one, upcoming then past, on the left.
+const nextDates = next ? getEventDates(next.data) : null;
+const nextEvent =
+  next && nextDates
+    ? {
+        slug: next.id,
+        name: next.data.name,
+        image: next.data.image,
+        categoryLabel: next.data.category.label,
+        date: surveyDate(nextDates.startISO),
+        hours: hourRange(nextDates.startISO, nextDates.endISO),
+        venue: shortVenue(next.data.location.name, next.data.isVirtual),
+        startISO: nextDates.startISO,
+        registerFormLink: next.data.registerFormLink,
+      }
+    : null;
+
+const rows = [...upcoming, ...past]
+  .filter((event) => event.id !== next?.id)
+  .map((event) => {
+    const startISO = getEventDates(event.data).startISO;
+    return {
+      slug: event.id,
+      name: event.data.name,
+      image: event.data.image,
+      categoryType: event.data.category.type,
+      categoryLabel: event.data.category.label,
+      date: dottedDate(startISO),
+      year: dottedDate(startISO).slice(-4),
+      venue: shortVenue(event.data.location.name, event.data.isVirtual),
+      upcoming: event.data.status.type === "upcoming",
+    };
+  });
 
 const photos = (await getCollection("gallery")).slice(0, 8).map((photo) => ({
   src: photo.data.src,
@@ -112,7 +141,7 @@ const metadata = {
       }}
     />
     {credentialEvent && <CredentialSection {...credentialEvent} />}
-    <EventLog rows={rows} />
+    <EventLog next={nextEvent} rows={rows} communityUrl={links.community} />
     <CommunityPhotos photos={photos} />
     <Closing communityUrl={links.community} contactUrl={links.forms.contact} />
   </main>
