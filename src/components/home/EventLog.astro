@@ -1,4 +1,7 @@
 ---
+import { ArrowRight } from "@lucide/astro";
+import NButton from "@/components/night/NButton.astro";
+
 export interface EventRow {
   slug: string;
   name: string;
@@ -6,16 +9,43 @@ export interface EventRow {
   categoryType: string;
   categoryLabel: string;
   date: string;
+  year: string;
   venue: string;
   upcoming: boolean;
 }
 
-interface Props {
-  rows: EventRow[];
+export interface NextEvent {
+  slug: string;
+  name: string;
+  image: string;
+  categoryLabel: string;
+  date: string;
+  hours: string;
+  venue: string;
+  startISO: string;
+  registerFormLink: string;
 }
 
-const { rows } = Astro.props;
-const first = rows[0];
+interface Props {
+  /** The next event, pinned on the right. Null between seasons. */
+  next: NextEvent | null;
+  /** Every other event, newest first. */
+  rows: EventRow[];
+  communityUrl: string;
+}
+
+const { next, rows, communityUrl } = Astro.props;
+
+// Grouped by year, like the pages of a logbook.
+const years = rows.reduce<{ year: string; rows: EventRow[] }[]>(
+  (groups, row) => {
+    const last = groups.at(-1);
+    if (last && last.year === row.year) last.rows.push(row);
+    else groups.push({ year: row.year, rows: [row] });
+    return groups;
+  },
+  []
+);
 ---
 
 <section class="log" aria-labelledby="log-title">
@@ -25,60 +55,132 @@ const first = rows[0];
       <a class="n-link" href="/events">Ver el calendario completo</a>
     </div>
 
-    <div class="log__body" data-log>
-      <ol class="log__list">
+    <div class="log__body">
+      <div class="log__years">
         {
-          rows.map((row) => (
-            <li>
-              <a
-                class="log__row"
-                href={`/events/${row.slug}`}
-                data-preview={row.image}
-                data-venue={row.venue}
-                data-status={row.upcoming ? "Próximo" : "Realizado"}
-                data-name={row.name}
-              >
-                <span class="log__date n-mono">{row.date}</span>
-                <span class="log__name">{row.name}</span>
-                <span class="log__cat n-mono">
-                  <span
-                    class={`log__dot log__dot--${row.categoryType}`}
-                    aria-hidden="true"
-                  />
-                  {row.categoryLabel}
-                </span>
-                {row.upcoming && <span class="log__next n-mono">Próximo</span>}
-              </a>
-            </li>
+          years.map((group) => (
+            <section class="log__year" aria-label={`Eventos de ${group.year}`}>
+              <h3 class="log__year-label n-mono">{group.year}</h3>
+              <ol class="log__list">
+                {group.rows.map((row) => (
+                  <li>
+                    <a class="log__row" href={`/events/${row.slug}`}>
+                      <span class="log__thumb">
+                        <img
+                          src={row.image}
+                          alt=""
+                          width={96}
+                          height={96}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </span>
+                      <span class="log__text">
+                        <span class="log__name">{row.name}</span>
+                        <span class="log__meta n-mono">
+                          <span>{row.date}</span>
+                          <span class="log__cat">
+                            <span
+                              class={`log__dot log__dot--${row.categoryType}`}
+                              aria-hidden="true"
+                            />
+                            {row.categoryLabel}
+                          </span>
+                          <span>{row.venue}</span>
+                          {row.upcoming && (
+                            <span class="log__next">Próximo</span>
+                          )}
+                        </span>
+                      </span>
+                      <span class="log__go" aria-hidden="true">
+                        <ArrowRight size={18} stroke-width={2} />
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </section>
           ))
         }
-      </ol>
+      </div>
 
-      {
-        first && (
-          <figure class="log__preview n-panel n-marks" aria-hidden="true">
-            <div class="log__plate">
-              <img
-                src={first.image}
-                alt=""
-                width={640}
-                height={480}
-                loading="lazy"
-                decoding="async"
-                data-preview-img
-              />
-            </div>
-            <figcaption>
-              <span class="log__plate-name" data-preview-name>
-                {first.name}
-              </span>
-              <span class="n-mono n-muted" data-preview-meta>
-                {first.venue} · {first.upcoming ? "Próximo" : "Realizado"}
-              </span>
-            </figcaption>
-          </figure>
-        )
-      }
+      <aside class="log__aside" aria-labelledby="log-next-title">
+        <div class="next n-panel n-marks">
+          {
+            next ? (
+              <>
+                <div class="next__head n-mono">
+                  <span class="next__badge">Próximo evento</span>
+                  <span class="next__count" data-next-countdown={next.startISO}>
+                    {next.date}
+                  </span>
+                </div>
+                <a
+                  class="next__plate"
+                  href={`/events/${next.slug}`}
+                  tabindex="-1"
+                  aria-hidden="true"
+                >
+                  <img
+                    src={next.image}
+                    alt=""
+                    width={640}
+                    height={480}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </a>
+                <h3 id="log-next-title" class="next__title">
+                  {next.name}
+                </h3>
+                <dl class="next__facts n-mono">
+                  <div>
+                    <dt>Fecha</dt>
+                    <dd>{next.date}</dd>
+                  </div>
+                  <div>
+                    <dt>Hora</dt>
+                    <dd>{next.hours}</dd>
+                  </div>
+                  <div>
+                    <dt>Lugar</dt>
+                    <dd>{next.venue}</dd>
+                  </div>
+                  <div>
+                    <dt>Tipo</dt>
+                    <dd>{next.categoryLabel}</dd>
+                  </div>
+                </dl>
+                <div class="next__actions">
+                  <NButton href={`/events/${next.slug}`}>
+                    Ver detalles del evento
+                  </NButton>
+                  {next.registerFormLink && (
+                    <NButton variant="ghost" href={next.registerFormLink}>
+                      Regístrate gratis
+                    </NButton>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div class="next__head n-mono">
+                  <span class="next__badge">Próximo evento</span>
+                </div>
+                <h3 id="log-next-title" class="next__title">
+                  Nuevos eventos muy pronto
+                </h3>
+                <p class="next__note">
+                  Únete a la comunidad y te avisamos del próximo por correo.
+                </p>
+                <div class="next__actions">
+                  <NButton href={communityUrl}>Únete a la comunidad</NButton>
+                </div>
+              </>
+            )
+          }
+        </div>
+      </aside>
     </div>
   </div>
 </section>
@@ -90,31 +192,46 @@ const first = rows[0];
 
   .log__body {
     display: grid;
-    grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr);
-    gap: clamp(2rem, 4vw, 4rem);
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    gap: clamp(2rem, 4vw, 4.5rem);
     align-items: start;
+  }
+
+  /* ---- the logbook ---- */
+  .log__year + .log__year {
+    margin-top: 2.25rem;
+  }
+
+  .log__year-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 0 0.5rem;
+    color: var(--ochre);
+    font-size: var(--step-small);
+    font-weight: 400;
+  }
+
+  .log__year-label::after {
+    height: 1px;
+    flex: 1;
+    background: var(--line);
+    content: "";
   }
 
   .log__list {
     margin: 0;
     padding: 0;
-    border-top: 1px solid var(--line);
     list-style: none;
   }
 
-  .log__list li {
-    border-bottom: 1px solid var(--line);
-  }
-
-  /* Fixed columns, so the date and the category never move with the
-     length of the title. */
   .log__row {
     display: grid;
-    grid-template-columns: 7.5rem minmax(0, 1fr) 10.5rem;
-    align-items: baseline;
-    gap: 0.25rem 1.5rem;
-    padding: 1.05rem 0.75rem;
-    border-radius: var(--radius-sm);
+    grid-template-columns: 4.5rem minmax(0, 1fr) 2.5rem;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.7rem;
+    border-radius: var(--radius);
     color: var(--ink);
     text-decoration: none;
     transition: background-color 160ms ease;
@@ -125,22 +242,52 @@ const first = rows[0];
     background: var(--surface-1);
   }
 
-  .log__date {
-    color: var(--muted);
+  .log__thumb {
+    display: grid;
+    aspect-ratio: 1;
+    overflow: hidden;
+    place-items: center;
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+  }
+
+  .log__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 500ms var(--ease-out);
+  }
+
+  .log__row:hover .log__thumb img {
+    transform: scale(1.06);
+  }
+
+  .log__text {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.35rem;
   }
 
   .log__name {
     font-size: var(--step-lead);
     font-weight: 600;
     letter-spacing: -0.015em;
-    line-height: 1.3;
+    line-height: 1.25;
+  }
+
+  .log__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 1.1rem;
+    color: var(--muted);
   }
 
   .log__cat {
     display: inline-flex;
     align-items: center;
-    gap: 0.55rem;
-    color: var(--muted);
+    gap: 0.5rem;
   }
 
   .log__dot {
@@ -154,9 +301,7 @@ const first = rows[0];
   .log__dot--devfest {
     background: var(--g-blue);
   }
-  .log__dot--io {
-    background: var(--g-green);
-  }
+  .log__dot--io,
   .log__dot--studyjam {
     background: var(--g-green);
   }
@@ -168,129 +313,183 @@ const first = rows[0];
   }
 
   .log__next {
-    grid-column: 2;
     color: var(--ochre);
   }
 
-  /* The preview: the whole poster on a plate, never cropped to fit. */
-  .log__preview {
-    position: sticky;
-    top: 6rem;
-    margin: 0;
-    padding: 0.75rem;
+  .log__go {
+    display: grid;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    border-radius: 50%;
+    color: var(--muted);
+    transition:
+      color 160ms ease,
+      background-color 160ms ease,
+      transform 220ms var(--ease-out);
   }
 
-  .log__plate {
+  .log__row:hover .log__go,
+  .log__row:focus-visible .log__go {
+    background: var(--surface-3);
+    color: var(--ochre);
+    transform: translateX(3px);
+  }
+
+  /* ---- the next event, pinned ---- */
+  .log__aside {
+    position: sticky;
+    top: 5.5rem;
+  }
+
+  .next {
+    padding: clamp(1.1rem, 0.9rem + 0.8vw, 1.5rem);
+  }
+
+  .next__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .next__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--ochre);
+  }
+
+  .next__badge::before {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--ochre);
+    content: "";
+    animation: next-pulse 2.4s ease-in-out infinite;
+  }
+
+  .next__count {
+    color: var(--muted);
+  }
+
+  /* The whole poster, never cropped, on a plate behind it. */
+  .next__plate {
     position: relative;
+    display: block;
     aspect-ratio: 4 / 3;
     overflow: hidden;
     border-radius: var(--radius-sm);
     background: var(--surface-2);
   }
 
-  .log__plate img {
+  .next__plate img {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     object-fit: contain;
-    transition: opacity 200ms ease;
+    transition: transform 600ms var(--ease-out);
   }
 
-  .log__plate img.is-swapping {
-    opacity: 0;
+  .next__plate:hover img {
+    transform: scale(1.03);
   }
 
-  .log__preview figcaption {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    padding: 0.85rem 0.25rem 0.15rem;
-  }
-
-  .log__plate-name {
+  .next__title {
+    margin: 1.1rem 0 0;
+    font-size: clamp(1.5rem, 1.25rem + 0.9vw, 2rem);
     font-weight: 600;
-    line-height: 1.3;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
   }
 
-  @media (max-width: 1099px) {
+  .next__facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem 1.25rem;
+    margin: 1rem 0 0;
+    padding: 1rem 0;
+    border-block: 1px solid var(--line);
+  }
+
+  .next__facts dt {
+    color: var(--muted);
+  }
+
+  .next__facts dd {
+    margin: 0.15rem 0 0;
+    color: var(--ink);
+  }
+
+  .next__note {
+    margin: 0.75rem 0 0;
+    color: var(--muted);
+  }
+
+  .next__actions {
+    display: grid;
+    gap: 0.6rem;
+    margin-top: 1.25rem;
+  }
+
+  @keyframes next-pulse {
+    50% {
+      opacity: 0.3;
+    }
+  }
+
+  @media (max-width: 1023px) {
     .log__body {
       grid-template-columns: 1fr;
     }
 
-    .log__preview {
+    /* On narrower screens the next event leads, above the logbook. */
+    .log__aside {
+      position: static;
+      order: -1;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .log__row {
+      grid-template-columns: 3.5rem minmax(0, 1fr);
+      gap: 0.9rem;
+      padding-inline: 0.25rem;
+    }
+
+    .log__go {
       display: none;
     }
   }
 
-  @media (max-width: 640px) {
-    .log__row {
-      grid-template-columns: 1fr auto;
-      padding-inline: 0.25rem;
-    }
-
-    .log__name {
-      grid-column: 1 / -1;
-      grid-row: 1;
-    }
-
-    .log__date {
-      grid-row: 2;
-    }
-
-    .log__cat {
-      grid-row: 2;
-      justify-self: end;
-    }
-
-    .log__next {
-      grid-column: 1 / -1;
-      grid-row: 3;
-    }
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .log__row,
-    .log__plate img {
+    .next__badge::before {
+      animation: none;
+    }
+
+    .log__thumb img,
+    .next__plate img,
+    .log__go {
       transition: none;
     }
   }
 </style>
 
 <script>
+  /** "Faltan 14 días" next to the badge, in the visitor's own time. */
   document.addEventListener("astro:page-load", () => {
-    const root = document.querySelector<HTMLElement>("[data-log]");
-    const img = root?.querySelector<HTMLImageElement>("[data-preview-img]");
-    const name = root?.querySelector<HTMLElement>("[data-preview-name]");
-    const meta = root?.querySelector<HTMLElement>("[data-preview-meta]");
-    if (!root || !img || !name || !meta) return;
-
-    const rows = [...root.querySelectorAll<HTMLElement>(".log__row")];
-    let current = rows[0];
-    let warmed = false;
-
-    const show = (row: HTMLElement) => {
-      if (row === current) return;
-      current = row;
-      if (!warmed) {
-        warmed = true;
-        rows.forEach((r) => {
-          new Image().src = r.dataset.preview ?? "";
-        });
-      }
-      img.classList.add("is-swapping");
-      window.setTimeout(() => {
-        img.src = row.dataset.preview ?? "";
-        img.classList.remove("is-swapping");
-      }, 120);
-      name.textContent = row.dataset.name ?? "";
-      meta.textContent = `${row.dataset.venue} · ${row.dataset.status}`;
-    };
-
-    rows.forEach((row) => {
-      row.onpointerenter = () => show(row);
-      row.onfocus = () => show(row);
-    });
-    root.onpointerleave = () => rows[0] && show(rows[0]);
+    const el = document.querySelector<HTMLElement>("[data-next-countdown]");
+    const iso = el?.dataset.nextCountdown;
+    if (!el || !iso) return;
+    const start = new Date(iso);
+    const day = (d: Date) =>
+      Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86_400_000;
+    const days = day(start) - day(new Date());
+    if (days > 1) el.textContent = `Faltan ${days} días`;
+    else if (days === 1) el.textContent = "Es mañana";
+    else if (days === 0) el.textContent = "Es hoy";
   });
 </script>
