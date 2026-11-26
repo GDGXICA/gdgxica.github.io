@@ -121,7 +121,6 @@ const AUDITED_ROUTES = [
   "POST /api/events/:slug/minigames/:id/bingo/draw",
   "POST /api/events/:slug/minigames/:id/bingo/claim",
   "PATCH /api/events/:slug/minigames/:id/words/:wordId/hidden",
-  "POST /api/certificates/send",
   "PUT /api/events/:slug/certificates/settings",
   "POST /api/events/:slug/certificates/people",
   "POST /api/events/:slug/certificates/send",

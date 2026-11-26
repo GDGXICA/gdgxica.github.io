@@ -86,6 +86,12 @@ function EventRow({
         >
           Staff
         </a>
+        <a
+          href={`/admin/certificates?slug=${slug}`}
+          className={buttonClass.quiet}
+        >
+          Certificados
+        </a>
         <button
           type="button"
           onClick={onDelete}

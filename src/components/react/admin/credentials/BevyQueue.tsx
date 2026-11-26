@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import { api } from "@/lib/api";
-import { buttonClass, inputClass } from "../ui/atlas";
+import { Tag, buttonClass, inputClass } from "../ui/atlas";
 import { maskDni } from "./maskDni";
 import {
   BEVY_STATUS_LABEL,
@@ -91,25 +91,6 @@ function CopyField({
         )}
       </div>
     </div>
-  );
-}
-
-function Tag({
-  children,
-  tone = "border-atlas-line text-atlas-mist",
-  title,
-}: {
-  children: React.ReactNode;
-  tone?: string;
-  title?: string;
-}) {
-  return (
-    <span
-      className={`rounded-xs border px-1.5 py-0.5 text-xs font-semibold ${tone}`}
-      title={title}
-    >
-      {children}
-    </span>
   );
 }
 

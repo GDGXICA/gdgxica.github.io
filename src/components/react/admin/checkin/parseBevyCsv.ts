@@ -1,13 +1,14 @@
 // Parser for the registrations CSV exported from the Bevy dashboard
 // (gdg.community.dev → event → Registrations → Download).
 //
-// This deliberately does NOT reuse parseCsv.ts from ../certificates: that
-// one splits on /[,;\t]/ with no quote handling, which is fine for a
-// two-column name/email list but shatters on Bevy's 21-column export the
-// first time someone's Company or Title contains a comma ("Acme, Inc.").
-// Its EMAIL_RE is still the right shared definition, so we reuse that.
+// Bevy's 21-column export has commas inside quoted cells the first time
+// someone's Company or Title is "Acme, Inc.", so this goes through the
+// RFC 4180 tokenizer in @/lib/csv rather than a plain split.
 
-import { EMAIL_RE } from "../certificates/parseCsv";
+import { tokenizeCsv } from "@/lib/csv";
+import { EMAIL_RE } from "@/lib/email";
+
+export { tokenizeCsv };
 
 export interface BevyRegistration {
   ticketNumber: string;
@@ -27,74 +28,6 @@ export interface ParseBevyCsvResult {
   rows: BevyRegistration[];
   /** Non-fatal problems worth showing the organizer before they import. */
   warnings: string[];
-}
-
-/**
- * Splits CSV text into rows of raw cells, per RFC 4180: double-quoted
- * fields, "" as an escaped quote, and commas/newlines inside quotes.
- */
-export function tokenizeCsv(text: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = "";
-  let inQuotes = false;
-  // Excel and some Bevy exports prepend a UTF-8 BOM, which would
-  // otherwise become part of the first header name and break lookup.
-  let i = text.charCodeAt(0) === 0xfeff ? 1 : 0;
-
-  const endRow = () => {
-    row.push(field);
-    rows.push(row);
-    row = [];
-    field = "";
-  };
-
-  while (i < text.length) {
-    const c = text[i];
-
-    if (inQuotes) {
-      if (c === '"') {
-        if (text[i + 1] === '"') {
-          field += '"';
-          i += 2;
-        } else {
-          inQuotes = false;
-          i++;
-        }
-      } else {
-        // Note: a \r or \n here is real content, not a row break.
-        field += c;
-        i++;
-      }
-      continue;
-    }
-
-    if (c === '"') {
-      inQuotes = true;
-      i++;
-    } else if (c === ",") {
-      row.push(field);
-      field = "";
-      i++;
-    } else if (c === "\n") {
-      endRow();
-      i++;
-    } else if (c === "\r") {
-      // Break the row here and swallow a following \n, so CRLF, LF and a
-      // lone CR all behave. Treating \r as filler collapsed a CR-only file
-      // (some Excel export paths still emit them) into a single row, and
-      // the organizer got "faltan columnas obligatorias" — a message
-      // pointing at entirely the wrong cause.
-      endRow();
-      i += text[i + 1] === "\n" ? 2 : 1;
-    } else {
-      field += c;
-      i++;
-    }
-  }
-
-  if (field !== "" || row.length > 0) endRow();
-  return rows;
 }
 
 const normalizeHeader = (h: string) =>

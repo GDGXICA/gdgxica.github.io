@@ -19,7 +19,8 @@ import { LocationList } from "./locations/LocationList";
 import { MinigameTemplateList } from "./minigame-templates/MinigameTemplateList";
 import { EventMinigameManager } from "./event-minigames/EventMinigameManager";
 import { EventMuralManager } from "./event-mural/EventMuralManager";
-import { CertificateSender } from "./certificates/CertificateSender";
+import { CertificatesHome } from "./certificates/CertificatesHome";
+import { ManualCertificates } from "./certificates/ManualCertificates";
 import { CheckinPanel } from "./checkin/CheckinPanel";
 import { CredentialsPanel } from "./credentials/CredentialsPanel";
 import { RoleMatrix } from "./roles/RoleMatrix";
@@ -82,6 +83,7 @@ const PAGE_PERMISSIONS: Record<string, Permission> = {
   // `users:role:write` y lo comprueba el endpoint.
   "event-staff": "roster:read",
   certificates: "certificates:send",
+  "certificates-manual": "certificates:send",
   checkin: "roster:read",
   // Faltaba, y `renderPage` trata la ausencia como "sin requisito": cualquiera
   // que entrase al panel podía abrir /admin/credentials y recibir la pantalla
@@ -135,7 +137,9 @@ function pageContent(page: string) {
     case "proposals":
       return <ProposalsPanel />;
     case "certificates":
-      return <CertificateSender />;
+      return <CertificatesHome />;
+    case "certificates-manual":
+      return <ManualCertificates />;
     case "checkin":
       return <CheckinPanel />;
     case "credentials":

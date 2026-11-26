@@ -74,7 +74,6 @@ export const AUDIT_ACTIONS = [
   // Operaciones
   "site.rebuild",
   "settings.email_transport",
-  "certificate.send",
   "certificate.settings",
   "certificate.person.add",
   "certificate.person.update",

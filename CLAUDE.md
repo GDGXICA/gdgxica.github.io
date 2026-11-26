@@ -80,7 +80,7 @@ Protected admin UI at `/admin/*` using React islands (`client:load`). Firebase A
 - `auth.ts` — Google Sign-In, token management
 - `api.ts` — fetch wrapper with automatic ID token
 
-**Admin pages:** `/admin` (dashboard), `/admin/events`, `/admin/team`, `/admin/speakers`, `/admin/posts` (forum), `/admin/sponsors`, `/admin/stats`, `/admin/users`, `/admin/roles` (read-only permission matrix), `/admin/audit` (audit log viewer)
+**Admin pages:** `/admin` (dashboard), `/admin/events`, `/admin/team`, `/admin/speakers`, `/admin/posts` (forum), `/admin/sponsors`, `/admin/stats`, `/admin/users`, `/admin/roles` (read-only permission matrix), `/admin/audit` (audit log viewer), `/admin/certificates` (pick an event; `?slug=` is that event's certificates) and `/admin/certificates/manual` (extraordinary cases, typed in or from a CSV)
 
 **Testing the rules:** `pnpm test:rules` boots the Firestore emulator on port 8080. If another checkout of this project is already running one, set `FIRESTORE_EMULATOR_PORT` (and optionally `FIRESTORE_EMULATOR_HOST_ADDR`) and point the emulator at the same port — `tests/rules/setup.ts` reads both — so two worktrees can run their suites concurrently.
 
@@ -109,6 +109,7 @@ The source check is deliberately biased toward _few false positives_ now that th
   - attendee: a hash of slug and roster ticket;
   - volunteer and speaker: a hash of slug, kind and email;
   - manual: a hash of the form's `submissionId`.
+- **Panel:** per event, attendees appear only with a check-in, volunteers and speakers are registered by hand or CSV, and nothing leaves until someone presses send. The panel polls `?since=` while anything is queued. The panel's `EMAIL_RE` (`src/lib/email.ts`) is zod's own pattern, pinned by `functions/src/schemas/emailParity.test.ts`, so a row the panel accepts is never rejected by the API.
 - **Event data** for the certificate (`events/{slug}/certificateMeta/settings`, times stored as `HH:mm`) is derived once from the event JSON and must be saved by the organizer before anything is sent. Manual certificates carry their own copy.
 
 **Onboarding:** two ways in, both in `functions/src/handlers/access.ts`. A signed-in `member` submits a request at `/admin/solicitar` (doc id = their uid, so requests cannot pile up); reviewers with `access:review` approve or reject at `/admin/access`, and the granted role may differ from the one requested. Alternatively a reviewer sends an invitation: a 32-byte token is emailed, and only its SHA-256 hash is stored, so the `invitations` collection cannot be used to redeem anything. Redemption at `/admin/invitacion` requires the redeemer's verified email to match the invitee — without that check a forwarded link would hand over the role. Both paths refuse to grant beyond the actor's own permissions, and the failure message for a bad redemption is deliberately identical across "wrong token", "expired", "revoked" and "not yours" so the endpoint cannot be used to probe other people's invitations.

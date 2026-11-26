@@ -128,12 +128,20 @@ export const EVENT_TOOLS: EventTool[] = [
     href: "/admin/events/minigames",
     permission: "minigames:operate",
   },
+  // After the event, not at the door: only organizers hold the permission,
+  // so the staff's bottom bar keeps its four tools.
+  {
+    label: "Certificados",
+    href: "/admin/certificates",
+    permission: "certificates:send",
+  },
 ];
 
 const EXTRA_TITLES: Record<string, string> = {
   "/admin/events/new": "Nuevo evento",
   "/admin/events/staff": "Staff del evento",
   "/admin/events/minigames": "Minijuegos",
+  "/admin/certificates/manual": "Certificados manuales",
 };
 
 export function pageTitle(path: string, editing: boolean): string {
