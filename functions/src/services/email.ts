@@ -1,4 +1,5 @@
 import nodemailer, { type Transporter } from "nodemailer";
+import type { CertificateKind } from "./certificatePdf";
 import { GMAIL_USER, GMAIL_APP_PASSWORD } from "../config";
 
 // Single transporter reused across invocations within a warm instance.
@@ -31,6 +32,7 @@ export function getTransporter(): Transporter {
 }
 
 export interface CertificateEmail {
+  kind: CertificateKind;
   to: string;
   recipientName: string;
   eventName: string;
@@ -148,6 +150,30 @@ export async function sendAccessDecisionEmail(mail: {
   );
 }
 
+// Wording per certificate kind. `thanks` receives the event name already
+// escaped for its channel (plain text, or <strong>…</strong> in HTML).
+const CERTIFICATE_EMAIL_COPY: Record<
+  CertificateKind,
+  { what: string; file: string; thanks: (event: string) => string }
+> = {
+  attendee: {
+    what: "de participación",
+    file: "participacion",
+    thanks: (event) => `¡Gracias por participar en ${event}!`,
+  },
+  volunteer: {
+    what: "de voluntariado",
+    file: "voluntariado",
+    thanks: (event) =>
+      `¡Gracias por sumar tu tiempo y tu trabajo al equipo de voluntariado de ${event}!`,
+  },
+  speaker: {
+    what: "de reconocimiento como speaker",
+    file: "speaker",
+    thanks: (event) => `¡Gracias por compartir tu conocimiento en ${event}!`,
+  },
+};
+
 /** Sends one certificate email with the PDF attached. */
 export async function sendCertificateEmail(
   mail: CertificateEmail
@@ -155,7 +181,8 @@ export async function sendCertificateEmail(
   const fromName = "GDG ICA";
   const eventName = singleLine(mail.eventName);
   const recipientName = singleLine(mail.recipientName);
-  const subject = `Tu certificado de participación — ${eventName}`;
+  const copy = CERTIFICATE_EMAIL_COPY[mail.kind];
+  const subject = `Tu certificado ${copy.what} — ${eventName}`;
   // ASCII slug for the attachment filename: NFD splits accents into
   // base + combining mark, then we strip everything non-ASCII and keep
   // only [a-z0-9] runs as dashes.
@@ -173,17 +200,17 @@ export async function sendCertificateEmail(
     subject,
     text:
       `Hola ${recipientName},\n\n` +
-      `¡Gracias por participar en ${eventName}! ` +
-      `Adjuntamos tu certificado de participación en PDF.\n\n` +
+      `${copy.thanks(eventName)} ` +
+      `Adjuntamos tu certificado ${copy.what} en PDF.\n\n` +
       `Un abrazo,\nComunidad GDG ICA`,
     html:
       `<p>Hola <strong>${htmlEscape(recipientName)}</strong>,</p>` +
-      `<p>¡Gracias por participar en <strong>${htmlEscape(eventName)}</strong>! ` +
-      `Adjuntamos tu certificado de participación en PDF.</p>` +
+      `<p>${copy.thanks(`<strong>${htmlEscape(eventName)}</strong>`)} ` +
+      `Adjuntamos tu certificado ${copy.what} en PDF.</p>` +
       `<p>Un abrazo,<br/>Comunidad GDG ICA</p>`,
     attachments: [
       {
-        filename: `certificado-${safeFile || "gdg-ica"}.pdf`,
+        filename: `certificado-${copy.file}-${safeFile || "gdg-ica"}.pdf`,
         content: Buffer.from(mail.pdf),
         contentType: "application/pdf",
       },

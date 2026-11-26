@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 85 41">
+  <title>Google Developer Groups</title>
+  <!-- Marca GDG: cuatro cápsulas a ±30° (trazos con remate redondo).
+       En cada chevron el brazo inferior/derecho va encima, como en el logo oficial. -->
+  <g fill="none" stroke-width="14" stroke-linecap="round">
+    <line x1="7" y1="20.5" x2="30.4" y2="7" stroke="#EA4335"/>
+    <line x1="7" y1="20.5" x2="30.4" y2="34" stroke="#4285F4"/>
+    <line x1="54.6" y1="34" x2="78" y2="20.5" stroke="#F9AB00"/>
+    <line x1="54.6" y1="7" x2="78" y2="20.5" stroke="#0F9D58"/>
+  </g>
+</svg>

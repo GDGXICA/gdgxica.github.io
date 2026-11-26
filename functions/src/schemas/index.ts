@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { validateUrl, validateMapEmbedUrl } from "../middleware/validate";
 import { MARKDOWN_ISSUE_MESSAGES, findMarkdownIssue } from "../utils/markdown";
+import { CERTIFICATE_KINDS } from "../services/certificatePdf";
 
 // Reused primitives ---------------------------------------------------------
 
@@ -526,6 +527,10 @@ const certificateRecipientSchema = z
 
 export const certificateSendSchema = z
   .object({
+    // Which template and wording: asistente, voluntario or speaker. One
+    // request sends a single kind; a mixed list is two sends. Defaults to
+    // attendee, the only certificate that existed before kinds did.
+    kind: z.enum(CERTIFICATE_KINDS).default("attendee"),
     eventName: z.string().trim().min(1).max(300),
     startTime: z.string().trim().min(1).max(40),
     endTime: z.string().trim().min(1).max(40),
