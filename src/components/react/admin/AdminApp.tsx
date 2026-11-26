@@ -91,7 +91,9 @@ const PAGE_PERMISSIONS: Record<string, Permission> = {
   // deniegan los datos— pero sí justo el agujero que el comentario de arriba
   // dice que no existe. Mismo permiso que el check-in: una credencial son
   // datos personales del asistente, y el panel enseña el DNI.
-  credentials: "roster:read",
+  // Su propio permiso desde que quien solo marca asistencia necesita el
+  // roster pero no las credenciales (DNI, encuesta, fotos).
+  credentials: "credentials:read",
 };
 
 function pageContent(page: string) {

@@ -266,6 +266,42 @@ describe("CheckinPanel — exporting for Bevy", () => {
   });
 });
 
+// Quien solo marca asistencia (un voluntario con la capacidad de check-in)
+// no tiene `checkin:import`: no debe ver ni la exportación ni la importación.
+describe("CheckinPanel — someone who can only mark", () => {
+  beforeEach(() => {
+    mocks.useAuth.mockReturnValue({
+      user: { uid: "vol-1", displayName: "Vol", email: "v@x.com" },
+      can: () => false,
+    });
+  });
+
+  it("can mark but sees no export or import", async () => {
+    render(<CheckinPanel initialSlug="devfest-ica-2026" />);
+    expect(
+      screen.queryByRole("button", { name: "Exportar para Bevy" })
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /Importar CSV/ })).toBeNull();
+    await userEvent.click(screen.getAllByRole("button", { name: /Marcar/ })[0]);
+    expect(mocks.setCheckedIn).toHaveBeenCalled();
+  });
+
+  it("tells them an organizer has to import an empty roster", () => {
+    mocks.useRoster.mockReturnValue(
+      rosterState({ attendees: [], syncedOnce: true })
+    );
+    render(<CheckinPanel initialSlug="devfest-ica-2026" />);
+    expect(
+      screen.queryByRole("button", { name: "Importar el CSV de Bevy" })
+    ).toBeNull();
+    expect(
+      screen.getByText(
+        "Un organizador tiene que importar la lista de inscritos."
+      )
+    ).toBeInTheDocument();
+  });
+});
+
 describe("CheckinPanel — empty and error states", () => {
   // Regression: a cold cache reported a fully populated event as empty and
   // offered a re-import — the one action a volunteer must not take mid-door.

@@ -109,7 +109,7 @@ describe("credential storage rules", () => {
   });
 
   // These images are the same class of personal data as the roster, so the
-  // rule has to mirror canOnEvent('roster:read', …) in firestore.rules. It
+  // rule has to mirror canOnEvent('credentials:read', …) in firestore.rules. It
   // did not: it checked only that the staff document EXISTED, so a volunteer
   // whose assignment had expired kept downloading DNI photos of an event
   // they no longer worked — while Firestore already denied them the
@@ -181,29 +181,45 @@ describe("credential storage rules", () => {
       await assertFails(getBytes(ref(st, PHOTO)));
     });
 
-    it("denies an organizer whose roster:read was revoked", async () => {
+    it("denies an organizer whose credentials:read was revoked", async () => {
       const env = await getTestEnv();
       await seedObject(PHOTO);
-      await seedRole("org-1", "organizer", { revocations: ["roster:read"] });
+      await seedRole("org-1", "organizer", {
+        revocations: ["credentials:read"],
+      });
       const st = env.authenticatedContext("org-1").storage();
       await assertFails(getBytes(ref(st, PHOTO)));
     });
 
-    it("denies an admin whose roster:read was revoked", async () => {
+    it("denies an admin whose credentials:read was revoked", async () => {
       const env = await getTestEnv();
       await seedObject(CARD);
-      await seedRole("adm-1", "admin", { revocations: ["roster:read"] });
+      await seedRole("adm-1", "admin", { revocations: ["credentials:read"] });
       const st = env.authenticatedContext("adm-1").storage();
       await assertFails(getBytes(ref(st, CARD)));
     });
 
-    it("denies an assigned volunteer whose roster:read was revoked", async () => {
+    it("denies an assigned volunteer whose credentials:read was revoked", async () => {
       const env = await getTestEnv();
       await seedObject(PHOTO);
-      await seedRole("vol-1", "volunteer", { revocations: ["roster:read"] });
+      await seedRole("vol-1", "volunteer", {
+        revocations: ["credentials:read"],
+      });
       await seedStaff("vol-1");
       const st = env.authenticatedContext("vol-1").storage();
       await assertFails(getBytes(ref(st, PHOTO)));
+    });
+
+    // Credentials are their own permission now: someone who only marks
+    // attendance needs the roster but not the photos and DNI. Revoking the
+    // roster no longer touches them (scripts/migrate-split-permissions.cjs
+    // carried existing roster revocations over to credentials:read).
+    it("does not tie credential images to roster:read anymore", async () => {
+      const env = await getTestEnv();
+      await seedObject(PHOTO);
+      await seedRole("org-1", "organizer", { revocations: ["roster:read"] });
+      const st = env.authenticatedContext("org-1").storage();
+      await assertSucceeds(getBytes(ref(st, PHOTO)));
     });
 
     it("still allows an organizer with an unrelated permission revoked", async () => {

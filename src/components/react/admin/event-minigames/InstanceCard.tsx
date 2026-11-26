@@ -13,7 +13,11 @@ interface Props {
   onSetState: (state: InstanceState) => Promise<void> | void;
   onAdvanceQuiz: () => Promise<void> | void;
   onAdvancePoll?: () => Promise<void> | void;
-  onDelete: () => Promise<void> | void;
+  /**
+   * Omitted for someone who can only operate the dynamics: deleting one is
+   * managing the event (`minigames:manage`), and the API refuses it anyway.
+   */
+  onDelete?: () => Promise<void> | void;
   busy: boolean;
   onOpenModeration?: () => void;
   onSpin?: () => Promise<void> | void;
@@ -164,7 +168,7 @@ export function InstanceCard({
             >
               ▶ Iniciar
             </button>
-            {!confirmDelete && (
+            {onDelete && !confirmDelete && (
               <button
                 type="button"
                 onClick={() => setConfirmDelete(true)}
@@ -174,7 +178,7 @@ export function InstanceCard({
                 🗑 Eliminar
               </button>
             )}
-            {confirmDelete && (
+            {onDelete && confirmDelete && (
               <span className="flex items-center gap-2">
                 <button
                   type="button"

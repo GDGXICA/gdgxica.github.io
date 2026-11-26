@@ -16,6 +16,21 @@ const SLUG = "devfest-2026";
 const CREDENTIAL = `events/${SLUG}/credentials/cred-abc123`;
 const COUNTER = `events/${SLUG}/credentialMeta/counters`;
 
+async function setRevokedRole(
+  uid: string,
+  role: string,
+  revocations: string[]
+) {
+  const env = await getTestEnv();
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), `users/${uid}`), {
+      uid,
+      role,
+      revocations,
+    });
+  });
+}
+
 async function seedRole(uid: string, role: string) {
   const env = await getTestEnv();
   await env.withSecurityRulesDisabled(async (ctx) => {
@@ -113,6 +128,25 @@ describe("credential rules", () => {
       await assertFails(
         getDocs(collection(anon, `events/${SLUG}/credentials`))
       );
+    });
+
+    // Credentials have their own permission: marking attendance needs the
+    // roster, not the DNI and survey answers held here.
+    it("denies an organizer whose credentials:read was revoked", async () => {
+      const env = await getTestEnv();
+      await seedCredential();
+      await setRevokedRole("org-1", "organizer", ["credentials:read"]);
+      const db = env.authenticatedContext("org-1").firestore();
+      await assertFails(getDoc(doc(db, CREDENTIAL)));
+      await assertFails(getDoc(doc(db, COUNTER)));
+    });
+
+    it("no longer ties credentials to roster:read", async () => {
+      const env = await getTestEnv();
+      await seedCredential();
+      await setRevokedRole("org-1", "organizer", ["roster:read"]);
+      const db = env.authenticatedContext("org-1").firestore();
+      await assertSucceeds(getDoc(doc(db, CREDENTIAL)));
     });
   });
 

@@ -4,7 +4,12 @@ import type { MuralPhoto } from "@/lib/mural";
 interface Props {
   photos: MuralPhoto[];
   busyId: string | null;
-  onTakedown: (
+  /**
+   * Omitted for someone who can only approve or reject: taking a published
+   * photo down is managing the mural (`mural:manage`), and the API refuses
+   * it anyway.
+   */
+  onTakedown?: (
     id: string,
     reason: "owner_request" | "moderation" | "other",
     note: string
@@ -40,7 +45,7 @@ export function ApprovedGrid({ photos, busyId, onTakedown }: Props) {
       window.alert("Retirar una foto necesita un motivo.");
       return;
     }
-    onTakedown(
+    onTakedown?.(
       photo.id,
       requested ? "owner_request" : "moderation",
       note.trim()
@@ -101,18 +106,20 @@ export function ApprovedGrid({ photos, busyId, onTakedown }: Props) {
                 <p className="truncate text-xs text-gray-700 dark:text-gray-300">
                   {photo.alias || "Sin nombre"}
                 </p>
-                <button
-                  type="button"
-                  disabled={busyId === photo.id}
-                  onClick={() => takedown(photo)}
-                  className={`mt-2 w-full rounded px-2 py-1.5 text-xs font-medium text-white disabled:opacity-50 ${
-                    requested
-                      ? "bg-red-600 hover:bg-red-700"
-                      : "bg-gray-700 hover:bg-gray-800"
-                  }`}
-                >
-                  Retirar
-                </button>
+                {onTakedown && (
+                  <button
+                    type="button"
+                    disabled={busyId === photo.id}
+                    onClick={() => takedown(photo)}
+                    className={`mt-2 w-full rounded px-2 py-1.5 text-xs font-medium text-white disabled:opacity-50 ${
+                      requested
+                        ? "bg-red-600 hover:bg-red-700"
+                        : "bg-gray-700 hover:bg-gray-800"
+                    }`}
+                  >
+                    Retirar
+                  </button>
+                )}
               </div>
             </div>
           );

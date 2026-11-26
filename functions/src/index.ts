@@ -780,8 +780,14 @@ app.delete(
 
 // Minigame Instances — acotadas al evento: `scopeParam` permite que un
 // voluntario asignado a ESE evento las opere, sin darle los demás.
+//
+// Operar (iniciar, cerrar, pasar preguntas, ruleta, bingo, palabras) y
+// gestionar (agregar o quitar dinámicas del evento) son permisos distintos:
+// quien conduce las dinámicas en vivo no tiene por qué poder crearlas.
 const minigamesOfEvent = () =>
   requirePermission("minigames:operate", { scopeParam: "slug" });
+const manageMinigamesOfEvent = () =>
+  requirePermission("minigames:manage", { scopeParam: "slug" });
 
 app.get(
   "/api/events/:slug/minigames",
@@ -791,7 +797,7 @@ app.get(
 );
 app.post(
   "/api/events/:slug/minigames",
-  minigamesOfEvent(),
+  manageMinigamesOfEvent(),
   slugP,
   writeLimiter,
   validateBody(minigameInstanceCreateSchema),
@@ -842,7 +848,7 @@ app.post(
 );
 app.delete(
   "/api/events/:slug/minigames/:id",
-  minigamesOfEvent(),
+  manageMinigamesOfEvent(),
   slugP,
   vid,
   writeLimiter,
@@ -938,8 +944,14 @@ app.post(
   credentials.reconcileCredentials
 );
 
+// Moderar el mural (aprobar o rechazar lo pendiente) y gestionarlo (retirar
+// fotos ya publicadas, ajustes y límites, bloquear a quien sube) son permisos
+// distintos: quien revisa fotos en el evento no tiene por qué poder cerrar el
+// mural ni cambiar sus límites.
 const muralOfEvent = () =>
   requirePermission("mural:moderate", { scopeParam: "slug" });
+const manageMuralOfEvent = () =>
+  requirePermission("mural:manage", { scopeParam: "slug" });
 
 app.post(
   "/api/events/:slug/mural/photos",
@@ -972,7 +984,7 @@ app.patch(
 );
 app.patch(
   "/api/events/:slug/mural/photos/:id/takedown",
-  muralOfEvent(),
+  manageMuralOfEvent(),
   slugP,
   vid,
   muralReviewLimiter,
@@ -981,7 +993,7 @@ app.patch(
 );
 app.patch(
   "/api/events/:slug/mural/settings",
-  muralOfEvent(),
+  manageMuralOfEvent(),
   slugP,
   writeLimiter,
   validateBody(muralSettingsSchema),
@@ -989,7 +1001,7 @@ app.patch(
 );
 app.patch(
   "/api/events/:slug/mural/uploaders/:uid/block",
-  muralOfEvent(),
+  manageMuralOfEvent(),
   slugP,
   vuid,
   writeLimiter,
