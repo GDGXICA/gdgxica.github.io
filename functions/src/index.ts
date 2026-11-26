@@ -27,6 +27,13 @@ import {
   minigameQuizAnswerSchema,
   minigameWordHiddenSchema,
   certificateSendSchema,
+  certificateSettingsSchema,
+  certificatePeopleCreateSchema,
+  certificatePersonUpdateSchema,
+  certificateEnqueueSchema,
+  certificateCancelSchema,
+  certificatePreviewSchema,
+  certificateManualSchema,
   checkinImportSchema,
   credentialCreateSchema,
   credentialImageSchema,
@@ -68,6 +75,7 @@ import * as minigameBingo from "./handlers/minigameBingo";
 import * as minigameQuiz from "./handlers/minigameQuiz";
 import * as minigamePoll from "./handlers/minigamePoll";
 import * as certificates from "./handlers/certificates";
+import * as eventCertificates from "./handlers/eventCertificates";
 import * as checkin from "./handlers/checkin";
 import * as credentials from "./handlers/credentials";
 import * as mural from "./handlers/mural";
@@ -1081,6 +1089,100 @@ app.post(
   certificates.sendCertificates
 );
 
+// Certificates per event. A queue: these routes decide who receives which
+// certificate and flip them to `queued`; triggers/drainCertificateEmails.ts
+// sends them. Attendees are re-checked against the roster's check-in on
+// the server, never taken from the client.
+const certificatesOfEvent = () =>
+  requirePermission("certificates:send", { scopeParam: "slug" });
+app.get(
+  "/api/events/:slug/certificates",
+  certificatesOfEvent(),
+  slugP,
+  // Names and emails of every attendee who checked in.
+  auditedRead("read.certificates", "event", {
+    dedupe: true,
+    targetIdParam: "slug",
+  }),
+  eventCertificates.getEventCertificates
+);
+app.get(
+  "/api/events/:slug/certificates/settings",
+  certificatesOfEvent(),
+  slugP,
+  eventCertificates.getCertificateSettings
+);
+app.put(
+  "/api/events/:slug/certificates/settings",
+  certificatesOfEvent(),
+  slugP,
+  writeLimiter,
+  validateBody(certificateSettingsSchema),
+  eventCertificates.saveCertificateSettings
+);
+app.post(
+  "/api/events/:slug/certificates/people",
+  certificatesOfEvent(),
+  slugP,
+  writeLimiter,
+  validateBody(certificatePeopleCreateSchema),
+  eventCertificates.addCertificatePeople
+);
+app.post(
+  "/api/events/:slug/certificates/send",
+  certificatesOfEvent(),
+  slugP,
+  writeLimiter,
+  validateBody(certificateEnqueueSchema),
+  eventCertificates.enqueueCertificates
+);
+app.post(
+  "/api/events/:slug/certificates/cancel",
+  certificatesOfEvent(),
+  slugP,
+  writeLimiter,
+  validateBody(certificateCancelSchema),
+  eventCertificates.cancelCertificates
+);
+app.patch(
+  "/api/events/:slug/certificates/:id",
+  certificatesOfEvent(),
+  slugP,
+  vid,
+  writeLimiter,
+  validateBody(certificatePersonUpdateSchema),
+  eventCertificates.updateCertificatePerson
+);
+app.delete(
+  "/api/events/:slug/certificates/:id",
+  certificatesOfEvent(),
+  slugP,
+  vid,
+  writeLimiter,
+  eventCertificates.removeCertificatePerson
+);
+// Not tied to an event: the preview renders whatever the form holds, and
+// manual certificates carry their own event data.
+app.post(
+  "/api/certificates/preview",
+  requirePermission("certificates:send"),
+  writeLimiter,
+  validateBody(certificatePreviewSchema),
+  eventCertificates.previewCertificate
+);
+app.get(
+  "/api/certificates/manual",
+  requirePermission("certificates:send"),
+  eventCertificates.listManualCertificates
+);
+app.post(
+  "/api/certificates/manual",
+  requirePermission("certificates:send"),
+  writeLimiter,
+  validateBody(certificateManualSchema),
+  eventCertificates.createManualCertificates
+);
+
 // On-site check-in. The roster import is the only write that goes
 // through the API — volunteers toggle check-in straight against
 // Firestore so the write can be queued when venue wifi drops.
@@ -1158,6 +1260,13 @@ export { onRosterCheckinWritten } from "./triggers/auditCheckin";
 // Deploying this creates a Cloud Scheduler job. It declares the Gmail
 // secrets itself; the `api` function's secrets array does not extend here.
 export { drainCredentialEmails } from "./triggers/drainCredentialEmails";
+// The certificate queue: a Cloud Tasks drain (the API enqueues it when an
+// organizer sends) and a five-minute schedule for retries and leftovers.
+// Both declare their own secrets, like the credential drain.
+export {
+  drainCertificateEmails,
+  scheduleCertificateDrain,
+} from "./triggers/drainCertificateEmails";
 // Aviso por correo de lo que hay que revisar en el registro: sin esto, toda la
 // instrumentación solo sirve si alguien se acuerda de abrir el panel.
 export { auditAlerts } from "./triggers/auditAlerts";

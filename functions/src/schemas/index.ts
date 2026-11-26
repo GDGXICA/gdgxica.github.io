@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { validateUrl, validateMapEmbedUrl } from "../middleware/validate";
 import { MARKDOWN_ISSUE_MESSAGES, findMarkdownIssue } from "../utils/markdown";
-import { CERTIFICATE_KINDS } from "../services/certificatePdf";
+import { CERTIFICATE_KINDS } from "../services/certificateKinds";
 
 // Reused primitives ---------------------------------------------------------
 
@@ -574,4 +574,5 @@ export type CheckinImportBody = z.infer<typeof checkinImportSchema>;
 // Attendee credentials live in their own file — this one is already long,
 // and minigameTemplate.test.ts established per-topic modules here.
 export * from "./credentials";
+export * from "./certificates";
 export * from "./mural";

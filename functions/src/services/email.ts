@@ -1,5 +1,4 @@
 import nodemailer, { type Transporter } from "nodemailer";
-import type { CertificateKind } from "./certificatePdf";
 import { GMAIL_USER, GMAIL_APP_PASSWORD } from "../config";
 
 // Single transporter reused across invocations within a warm instance.
@@ -29,14 +28,6 @@ export function getTransporter(): Transporter {
     },
   });
   return transporter;
-}
-
-export interface CertificateEmail {
-  kind: CertificateKind;
-  to: string;
-  recipientName: string;
-  eventName: string;
-  pdf: Uint8Array;
 }
 
 // Collapse any control characters (CR/LF included) to a space so a
@@ -148,74 +139,6 @@ export async function sendAccessDecisionEmail(mail: {
     `Hola,\n\nPor ahora no hemos podido aprobar tu solicitud.\n${noteText}\n` +
       `Gracias por el interés.\n\nComunidad GDG ICA`
   );
-}
-
-// Wording per certificate kind. `thanks` receives the event name already
-// escaped for its channel (plain text, or <strong>…</strong> in HTML).
-const CERTIFICATE_EMAIL_COPY: Record<
-  CertificateKind,
-  { what: string; file: string; thanks: (event: string) => string }
-> = {
-  attendee: {
-    what: "de participación",
-    file: "participacion",
-    thanks: (event) => `¡Gracias por participar en ${event}!`,
-  },
-  volunteer: {
-    what: "de voluntariado",
-    file: "voluntariado",
-    thanks: (event) =>
-      `¡Gracias por sumar tu tiempo y tu trabajo al equipo de voluntariado de ${event}!`,
-  },
-  speaker: {
-    what: "de reconocimiento como speaker",
-    file: "speaker",
-    thanks: (event) => `¡Gracias por compartir tu conocimiento en ${event}!`,
-  },
-};
-
-/** Sends one certificate email with the PDF attached. */
-export async function sendCertificateEmail(
-  mail: CertificateEmail
-): Promise<void> {
-  const fromName = "GDG ICA";
-  const eventName = singleLine(mail.eventName);
-  const recipientName = singleLine(mail.recipientName);
-  const copy = CERTIFICATE_EMAIL_COPY[mail.kind];
-  const subject = `Tu certificado ${copy.what} — ${eventName}`;
-  // ASCII slug for the attachment filename: NFD splits accents into
-  // base + combining mark, then we strip everything non-ASCII and keep
-  // only [a-z0-9] runs as dashes.
-  const safeFile = mail.eventName
-    .normalize("NFD")
-    .replace(/[^\x20-\x7E]/g, "")
-    .replace(/[^a-zA-Z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .toLowerCase()
-    .slice(0, 60);
-
-  await getTransporter().sendMail({
-    from: `"${fromName}" <${GMAIL_USER.value()}>`,
-    to: mail.to,
-    subject,
-    text:
-      `Hola ${recipientName},\n\n` +
-      `${copy.thanks(eventName)} ` +
-      `Adjuntamos tu certificado ${copy.what} en PDF.\n\n` +
-      `Un abrazo,\nComunidad GDG ICA`,
-    html:
-      `<p>Hola <strong>${htmlEscape(recipientName)}</strong>,</p>` +
-      `<p>${copy.thanks(`<strong>${htmlEscape(eventName)}</strong>`)} ` +
-      `Adjuntamos tu certificado ${copy.what} en PDF.</p>` +
-      `<p>Un abrazo,<br/>Comunidad GDG ICA</p>`,
-    attachments: [
-      {
-        filename: `certificado-${copy.file}-${safeFile || "gdg-ica"}.pdf`,
-        content: Buffer.from(mail.pdf),
-        contentType: "application/pdf",
-      },
-    ],
-  });
 }
 
 /**
