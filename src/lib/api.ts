@@ -342,7 +342,15 @@ const realApi = {
     request("PUT", `/events/${slug}/staff/${uid}`, data),
   removeEventStaff: (slug: string, uid: string) =>
     request("DELETE", `/events/${slug}/staff/${uid}`),
-  listMyEvents: () => request("GET", "/me/events"),
+  listMyEvents: () =>
+    request<
+      {
+        eventSlug: string;
+        role: string | null;
+        expiresAt?: unknown;
+        permissions: string[] | null;
+      }[]
+    >("GET", "/me/events"),
 
   // Access — solicitudes e invitaciones
   getMyAccessRequest: () => request("GET", "/access/requests/me"),

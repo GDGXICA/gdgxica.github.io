@@ -19,6 +19,7 @@ import { EventPicker } from "../EventPicker";
 function signedInWith(permissions: string[]) {
   mocks.useAuth.mockReturnValue({
     can: (p: string) => permissions.includes(p),
+    profile: { role: "volunteer", status: "active" },
   });
 }
 
@@ -126,5 +127,38 @@ describe("EventPicker", () => {
     expect(
       await screen.findByText(/No se pudieron cargar los eventos/)
     ).toBeVisible();
+  });
+});
+
+describe("EventPicker — per-tool assignments", () => {
+  it("offers only the events where the tool is assigned", async () => {
+    signedInWith([]);
+    mocks.listMyEvents.mockResolvedValue({
+      success: true,
+      data: [
+        {
+          eventSlug: "solo-mural",
+          role: "volunteer",
+          permissions: ["mural:moderate"],
+        },
+        {
+          eventSlug: "solo-puerta",
+          role: "volunteer",
+          permissions: ["checkin:operate", "roster:read"],
+        },
+        // Before capabilities: the whole bundle.
+        { eventSlug: "todo", role: "volunteer", permissions: null },
+      ],
+    });
+    render(
+      <EventPicker
+        basePath="/admin/checkin"
+        title="Check-in"
+        permission="checkin:operate"
+      />
+    );
+    expect(await screen.findByText("solo-puerta")).toBeInTheDocument();
+    expect(screen.getByText("todo")).toBeInTheDocument();
+    expect(screen.queryByText("solo-mural")).toBeNull();
   });
 });

@@ -31,7 +31,15 @@ async function seedRole(
  */
 async function seedStaff(
   uid: string,
-  { slug = SLUG, expiresAt }: { slug?: string; expiresAt?: Date | null } = {}
+  {
+    slug = SLUG,
+    expiresAt,
+    permissions,
+  }: {
+    slug?: string;
+    expiresAt?: Date | null;
+    permissions?: string[];
+  } = {}
 ) {
   const env = await getTestEnv();
   await env.withSecurityRulesDisabled(async (ctx) => {
@@ -39,6 +47,7 @@ async function seedStaff(
       uid,
       role: "volunteer",
       ...(expiresAt === undefined ? {} : { expiresAt }),
+      ...(permissions === undefined ? {} : { permissions }),
     });
   });
 }
@@ -115,6 +124,30 @@ describe("credential storage rules", () => {
   // they no longer worked — while Firestore already denied them the
   // credential document holding the same person's name and DNI.
   describe("volunteer, scoped by assignment", () => {
+    // An assignment narrowed to the check-in gets the roster, not the DNI
+    // photos of the credentials.
+    it("denies a volunteer whose assignment here is check-in only", async () => {
+      const env = await getTestEnv();
+      await seedObject(PHOTO);
+      await seedRole("vol-1", "volunteer");
+      await seedStaff("vol-1", {
+        permissions: ["checkin:operate", "roster:read"],
+      });
+      const st = env.authenticatedContext("vol-1").storage();
+      await assertFails(getBytes(ref(st, PHOTO)));
+    });
+
+    it("allows a volunteer whose assignment includes credentials", async () => {
+      const env = await getTestEnv();
+      await seedObject(PHOTO);
+      await seedRole("vol-1", "volunteer");
+      await seedStaff("vol-1", {
+        permissions: ["credentials:operate", "credentials:read"],
+      });
+      const st = env.authenticatedContext("vol-1").storage();
+      await assertSucceeds(getBytes(ref(st, PHOTO)));
+    });
+
     it("allows a volunteer assigned to this event", async () => {
       const env = await getTestEnv();
       await seedObject(PHOTO);

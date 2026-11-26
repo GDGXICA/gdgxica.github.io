@@ -21,7 +21,11 @@ export function CertificatesHome() {
 
   return (
     <div className="max-w-3xl space-y-10">
-      <EventPicker basePath="/admin/certificates" title="Certificados" />
+      <EventPicker
+        basePath="/admin/certificates"
+        title="Certificados"
+        permission="certificates:send"
+      />
       <a
         href="/admin/certificates/manual"
         className="border-atlas-line hover:bg-atlas-deep/60 group relative flex items-center gap-4 rounded-xs border px-5 py-4 transition-colors"

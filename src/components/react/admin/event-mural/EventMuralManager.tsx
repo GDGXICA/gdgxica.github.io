@@ -116,7 +116,11 @@ export function EventMuralManager({ initialSlug }: Props) {
 
   if (!slug) {
     return (
-      <EventPicker basePath="/admin/events/mural" title="Mural de fotos" />
+      <EventPicker
+        basePath="/admin/events/mural"
+        title="Mural de fotos"
+        permission="mural:moderate"
+      />
     );
   }
 

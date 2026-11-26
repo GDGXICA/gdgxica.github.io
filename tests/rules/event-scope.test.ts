@@ -148,6 +148,57 @@ describe("alcance por evento", () => {
       );
     });
 
+    // Una asignación puede acotarse a algunas herramientas.
+    it("NO marca ni lee el roster si su asignación es solo del mural", async () => {
+      const env = await getTestEnv();
+      await seedAttendee(ATTENDEE_A);
+      await seedUser("vol-1", { role: "volunteer" });
+      await seedStaff(EVENT_A, "vol-1", { permissions: ["mural:moderate"] });
+      const vol = env.authenticatedContext("vol-1").firestore();
+      await assertFails(getDoc(doc(vol, ATTENDEE_A)));
+      await assertFails(
+        updateDoc(doc(vol, ATTENDEE_A), {
+          checkedIn: true,
+          checkedInBy: "vol-1",
+          lastActionBy: "vol-1",
+          lastActionAt: serverTimestamp(),
+        })
+      );
+    });
+
+    it("marca con una asignación acotada al check-in, sin ver credenciales", async () => {
+      const env = await getTestEnv();
+      await seedAttendee(ATTENDEE_A);
+      await seedUser("vol-1", { role: "volunteer" });
+      await seedStaff(EVENT_A, "vol-1", {
+        permissions: ["checkin:operate", "roster:read"],
+      });
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), `events/${EVENT_A}/credentials/c1`), {
+          dni: "12345678",
+        });
+      });
+      const vol = env.authenticatedContext("vol-1").firestore();
+      await assertSucceeds(
+        updateDoc(doc(vol, ATTENDEE_A), {
+          checkedIn: true,
+          checkedInBy: "vol-1",
+          lastActionBy: "vol-1",
+          lastActionAt: serverTimestamp(),
+        })
+      );
+      await assertFails(getDoc(doc(vol, `events/${EVENT_A}/credentials/c1`)));
+    });
+
+    it("una lista de permisos mal formada no concede nada", async () => {
+      const env = await getTestEnv();
+      await seedAttendee(ATTENDEE_A);
+      await seedUser("vol-1", { role: "volunteer" });
+      await seedStaff(EVENT_A, "vol-1", { permissions: "roster:read" });
+      const vol = env.authenticatedContext("vol-1").firestore();
+      await assertFails(getDoc(doc(vol, ATTENDEE_A)));
+    });
+
     it("sigue sin poder reescribir el email del asistente", async () => {
       const env = await getTestEnv();
       await seedAttendee(ATTENDEE_A);

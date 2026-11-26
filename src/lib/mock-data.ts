@@ -237,6 +237,8 @@ export const MOCK_EVENT_STAFF = [
     assignedBy: "dev-admin",
     expiresAt: new Date(Date.now() + 2 * 86400_000).toISOString(),
     reason: "Apoyo en puerta",
+    permissions: ["checkin:operate", "roster:read"],
+    capabilities: ["checkin"],
     active: true,
   },
   {
@@ -245,6 +247,8 @@ export const MOCK_EVENT_STAFF = [
     assignedBy: "dev-admin",
     expiresAt: new Date(Date.now() - 30 * 86400_000).toISOString(),
     reason: "Edición anterior",
+    permissions: null,
+    capabilities: ["checkin", "minigames", "credentials"],
     active: false,
   },
 ];

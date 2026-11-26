@@ -7,6 +7,11 @@ import {
   type Role,
 } from "@/lib/permissions";
 import { EVENT_TOOLS, NAV_GROUPS, isEventTool, pageTitle } from "./nav";
+import {
+  anyAssignmentGrants,
+  eventPermissions,
+  useMyAssignments,
+} from "./useMyAssignments";
 import { useEventCatalog } from "./useEventCatalog";
 import { usePendingCounts, type PendingKey } from "./usePendingCounts";
 import {
@@ -153,10 +158,24 @@ export function AdminShell({ currentPage, children }: Props) {
   // check-in que es su único trabajo — mientras el servidor sí le habría dejado
   // operar su evento. La segunda condición abre esas entradas a quien pueda
   // alcanzarlas estando asignado; el evento concreto lo decide el servidor.
+  //
+  // Desde que las asignaciones pueden acotar lo que conceden, "alcanzable" se
+  // mira en las asignaciones reales: alguien asignado solo al mural no ve el
+  // check-in. Mientras cargan, se usa el rol para no hacer parpadear el menú.
+  const mine = useMyAssignments();
   const reaches = (permission?: Permission) =>
     !permission ||
     can(permission) ||
-    (profile !== null && canReachByAssignment(profile, permission));
+    (mine.assignments
+      ? anyAssignmentGrants(profile, mine.assignments, permission)
+      : profile !== null && canReachByAssignment(profile, permission));
+  // Las pestañas del evento en vivo: solo lo que la asignación de ESTE
+  // evento concede.
+  const reachesHere = (permission: Permission) =>
+    can(permission) ||
+    (slug !== null && mine.assignments
+      ? eventPermissions(profile, mine.assignments, slug).has(permission)
+      : reaches(permission));
 
   const groups = NAV_GROUPS.map((group) => ({
     ...group,
@@ -169,7 +188,7 @@ export function AdminShell({ currentPage, children }: Props) {
 
   const liveMode = isEventTool(currentPage) && slug !== null;
   const liveEvent = slug ? events?.find((e) => e.slug === slug) : undefined;
-  const liveTools = EVENT_TOOLS.filter((tool) => reaches(tool.permission));
+  const liveTools = EVENT_TOOLS.filter((tool) => reachesHere(tool.permission));
   const countFor = (href: string) =>
     pending.find((p) => p.key === PENDING_BY_HREF[href])?.count ?? 0;
 
@@ -451,7 +470,9 @@ export function AdminShell({ currentPage, children }: Props) {
           id="contenido"
           tabIndex={-1}
           className={`min-w-0 flex-1 overflow-auto px-4 py-6 focus:outline-none sm:px-8 ${
-            liveMode ? "pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-6" : ""
+            liveMode
+              ? "pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-6"
+              : ""
           }`}
         >
           {children}

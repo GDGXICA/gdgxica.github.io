@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
 import { useAuth } from "./AuthProvider";
-import { api } from "@/lib/api";
-import { canReachByAssignment, type Permission } from "@/lib/permissions";
+import type { Permission } from "@/lib/permissions";
 import { EVENT_TOOLS } from "./nav";
 import { useEventCatalog, type CatalogEvent } from "./useEventCatalog";
 import { usePendingCounts } from "./usePendingCounts";
+import { eventPermissions, useMyAssignments } from "./useMyAssignments";
 import {
   ArrowIcon,
   CornerNodes,
@@ -19,11 +18,6 @@ import {
 const DAY = 24 * 60 * 60 * 1000;
 const WINDOW_DAYS = 120;
 
-interface Assignment {
-  eventSlug: string;
-  role: string | null;
-}
-
 function magnitude(participants: number): number {
   if (participants >= 250) return 18;
   if (participants >= 100) return 13;
@@ -34,30 +28,6 @@ function magnitude(participants: number): number {
 function startOfToday(): number {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-}
-
-function useAssignments() {
-  const [assignments, setAssignments] = useState<Assignment[] | null>(null);
-  const [failed, setFailed] = useState(false);
-  const [attempt, setAttempt] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    setFailed(false);
-    api
-      .listMyEvents()
-      .then((res) => {
-        if (cancelled) return;
-        if (!res.success) return setFailed(true);
-        setAssignments((res.data ?? []) as Assignment[]);
-      })
-      .catch(() => !cancelled && setFailed(true));
-    return () => {
-      cancelled = true;
-    };
-  }, [attempt]);
-
-  return { assignments, failed, retry: () => setAttempt((n) => n + 1) };
 }
 
 function Ephemeris({
@@ -288,12 +258,15 @@ function EventRow({
 export function Dashboard() {
   const { can, profile, permissions } = useAuth();
   const catalog = useEventCatalog();
-  const mine = useAssignments();
+  const mine = useMyAssignments();
   const pending = usePendingCounts(can);
 
-  const reaches = (permission: Permission) =>
+  // Each assigned event shows only what THAT assignment grants: a volunteer
+  // assigned to one event's mural and another's check-in sees each tool in
+  // its own row.
+  const reachesIn = (slug: string) => (permission: Permission) =>
     can(permission) ||
-    (profile !== null && canReachByAssignment(profile, permission));
+    eventPermissions(profile, mine.assignments, slug).has(permission);
 
   const assigned = new Set((mine.assignments ?? []).map((a) => a.eventSlug));
   const today = startOfToday();
@@ -391,7 +364,7 @@ export function Dashboard() {
                   key={slug}
                   slug={slug}
                   event={event}
-                  reaches={(p) => (assigned.has(slug) ? reaches(p) : can(p))}
+                  reaches={assigned.has(slug) ? reachesIn(slug) : can}
                   canEdit={can("events:write")}
                 />
               ))}

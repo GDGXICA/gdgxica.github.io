@@ -12,6 +12,12 @@ import {
   hasPermission,
   isGrantActive,
   roleCanScopePermission,
+  LEGACY_STAFF_PERMISSIONS,
+  STAFF_CAPABILITIES,
+  STAFF_CAPABILITY_IDS,
+  capabilitiesFromPermissions,
+  permissionsForCapabilities,
+  readStaffPermissions,
   type Permission,
 } from "./permissions";
 import * as client from "../../../src/lib/permissions";
@@ -133,7 +139,20 @@ describe("sincronía con las reglas", () => {
   const expected = (perms: readonly Permission[]) =>
     perms.filter((p) => enforced.has(p)).sort();
 
+  function legacyList(file: string): string[] {
+    const source = readFileSync(join(ROOT, file), "utf8");
+    const body = source.match(
+      /function legacyStaffHas\(perm\) \{\s*return perm in \[([^\]]*)\]/
+    );
+    expect(body, `legacyStaffHas en ${file}`).not.toBeNull();
+    return [...body![1].matchAll(/'([^']+)'/g)].map((m) => m[1]).sort();
+  }
+
   for (const file of ["firestore.rules", "storage.rules"]) {
+    it(`${file}: las asignaciones sin lista conceden lo mismo que en el código`, () => {
+      expect(legacyList(file)).toEqual(expected(LEGACY_STAFF_PERMISSIONS));
+    });
+
     it(`${file}: el organizador tiene los mismos permisos globales`, () => {
       expect(ruleList(file, "roleHasGlobal", "organizer")).toEqual(
         expected(ROLE_BUNDLES.organizer.global)
@@ -155,6 +174,135 @@ describe("sincronía con las reglas", () => {
       expect(
         [...bundle.global, ...bundle.perEvent].filter((p) => enforced.has(p))
       ).toEqual([]);
+    }
+  });
+});
+
+// Lo que un admin elige al asignar a alguien a un evento.
+describe("capacidades de staff", () => {
+  it("juntas son exactamente el paquete por evento del voluntario", () => {
+    expect(permissionsForCapabilities(STAFF_CAPABILITY_IDS)).toEqual(
+      [...ROLE_BUNDLES.volunteer.perEvent].sort()
+    );
+  });
+
+  it("cada una trae lo que necesita para funcionar", () => {
+    // Marcar asistencia sin poder leer el roster deja la pantalla vacía.
+    expect(STAFF_CAPABILITIES.checkin).toContain("roster:read");
+    expect(STAFF_CAPABILITIES.credentials).toContain("credentials:read");
+  });
+
+  it("se reconstruyen desde los permisos guardados", () => {
+    const perms = permissionsForCapabilities(["checkin", "mural"]);
+    expect(capabilitiesFromPermissions(perms)).toEqual(["checkin", "mural"]);
+    // Sin lista: lo que concedían las asignaciones antes de las capacidades.
+    expect(capabilitiesFromPermissions(null)).toEqual([
+      "checkin",
+      "minigames",
+      "credentials",
+    ]);
+    // Una capacidad a medias no cuenta como elegida.
+    expect(capabilitiesFromPermissions(["roster:read"])).toEqual([]);
+  });
+
+  it("leen la lista del doc de staff fallando cerrado", () => {
+    expect(readStaffPermissions(undefined)).toBeNull();
+    expect(readStaffPermissions(null)).toBeNull();
+    expect(readStaffPermissions(["roster:read", "inventado"])).toEqual([
+      "roster:read",
+    ]);
+    expect(readStaffPermissions("roster:read")).toEqual([]);
+    expect(readStaffPermissions({ 0: "roster:read" })).toEqual([]);
+  });
+});
+
+describe("asignación acotada", () => {
+  const volunteer = { role: "volunteer" };
+  const at = (staffPermissions: readonly Permission[] | null) =>
+    effectivePermissions(volunteer, {
+      scope: "devfest",
+      isEventStaff: true,
+      staffPermissions,
+    });
+
+  // Congelado: que el paquete crezca no amplía a quien ya estaba asignado.
+  it("sin lista concede lo de antes de las capacidades, sin el mural", () => {
+    expect([...at(null)].sort()).toEqual([...LEGACY_STAFF_PERMISSIONS].sort());
+    expect(at(null).has("mural:moderate")).toBe(false);
+  });
+
+  it("lo congelado cabe en el paquete actual", () => {
+    for (const perm of LEGACY_STAFF_PERMISSIONS) {
+      expect(ROLE_BUNDLES.volunteer.perEvent).toContain(perm);
+    }
+  });
+
+  it("con lista concede solo lo que nombra", () => {
+    const perms = at(permissionsForCapabilities(["mural"]));
+    expect([...perms]).toEqual(["mural:moderate"]);
+    expect(perms.has("roster:read")).toBe(false);
+    expect(perms.has("checkin:operate")).toBe(false);
+  });
+
+  it("una lista vacía no concede nada", () => {
+    expect(at([]).size).toBe(0);
+  });
+
+  it("nunca añade lo que el rol no tiene por evento", () => {
+    expect(at(["minigames:manage", "mural:manage", "users:read"]).size).toBe(0);
+  });
+
+  it("no concede nada fuera del evento, aunque la lista lo nombre", () => {
+    expect(
+      effectivePermissions(volunteer, {
+        scope: "*",
+        isEventStaff: true,
+        staffPermissions: ["roster:read"],
+      }).size
+    ).toBe(0);
+  });
+
+  it("las revocaciones siguen restando", () => {
+    const perms = effectivePermissions(
+      { role: "volunteer", revocations: ["checkin:operate"] },
+      {
+        scope: "devfest",
+        isEventStaff: true,
+        staffPermissions: permissionsForCapabilities(["checkin"]),
+      }
+    );
+    expect([...perms]).toEqual(["roster:read"]);
+  });
+
+  it("el espejo de cliente evalúa igual a nivel de evento", () => {
+    const cases: [object, readonly Permission[] | null][] = [
+      [volunteer, null],
+      [volunteer, permissionsForCapabilities(["checkin"])],
+      [volunteer, permissionsForCapabilities(["minigames", "mural"])],
+      [
+        { role: "volunteer", revocations: ["mural:moderate"] },
+        ["mural:moderate"],
+      ],
+      [{ role: "organizer" }, ["mural:moderate"]],
+    ];
+    for (const [subject, staffPermissions] of cases) {
+      const ctx = {
+        scope: "devfest",
+        isEventStaff: true,
+        staffPermissions,
+        nowMs: NOW,
+      };
+      expect([...client.effectivePermissions(subject, ctx)].sort()).toEqual(
+        [...effectivePermissions(subject, ctx)].sort()
+      );
+    }
+  });
+
+  it("el espejo de cliente expone las mismas capacidades", () => {
+    expect(client.STAFF_CAPABILITIES).toEqual(STAFF_CAPABILITIES);
+    for (const cap of STAFF_CAPABILITY_IDS) {
+      expect(client.STAFF_CAPABILITY_LABELS[cap].label).toBeTruthy();
+      expect(client.STAFF_CAPABILITY_LABELS[cap].description).toBeTruthy();
     }
   });
 });

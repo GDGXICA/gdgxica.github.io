@@ -6,6 +6,7 @@ import {
   GLOBAL_SCOPE,
   effectivePermissions,
   isNotExpired,
+  readStaffPermissions,
   isRole,
   roleCanScopePermission,
   type Permission,
@@ -92,15 +93,19 @@ async function verifyBearer(
 }
 
 /**
- * `true` si la persona figura en `events/{slug}/staff/{uid}` con una
- * asignación vigente. Una asignación caducada no vale, sin que nadie tenga
+ * La asignación vigente de la persona en `events/{slug}/staff/{uid}`, o
+ * `null` si no la tiene. Una asignación caducada no vale, sin que nadie tenga
  * que acordarse de borrarla.
+ *
+ * Devuelve los permisos que concede ESA asignación (`null` = todo el paquete
+ * del rol, el caso de las asignaciones anteriores a las capacidades): un
+ * voluntario asignado solo al mural no opera el check-in del mismo evento.
  */
-async function isActiveEventStaff(
+async function readActiveStaffAssignment(
   slug: string,
   uid: string,
   nowMs: number
-): Promise<boolean> {
+): Promise<{ permissions: Permission[] | null } | null> {
   const doc = await admin
     .firestore()
     .collection("events")
@@ -109,8 +114,10 @@ async function isActiveEventStaff(
     .doc(uid)
     .get();
 
-  if (!doc.exists) return false;
-  return isNotExpired(doc.data()?.expiresAt, nowMs);
+  if (!doc.exists) return null;
+  const data = doc.data() ?? {};
+  if (!isNotExpired(data.expiresAt, nowMs)) return null;
+  return { permissions: readStaffPermissions(data.permissions) };
 }
 
 /** Mismo formato que `safeId` en schemas: un slug de evento y nada más. */
@@ -215,12 +222,17 @@ export function requirePermission(
         scope !== GLOBAL_SCOPE &&
         roleCanScopePermission(data, permission)
       ) {
-        const isStaff = await isActiveEventStaff(scope, token.uid, nowMs);
-        if (isStaff) {
+        const assignment = await readActiveStaffAssignment(
+          scope,
+          token.uid,
+          nowMs
+        );
+        if (assignment) {
           permissions = effectivePermissions(data, {
             scope,
             nowMs,
             isEventStaff: true,
+            staffPermissions: assignment.permissions,
           });
         }
       }

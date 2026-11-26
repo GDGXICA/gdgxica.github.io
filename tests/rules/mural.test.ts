@@ -30,11 +30,16 @@ async function seedUser(uid: string, data: Record<string, unknown>) {
   });
 }
 
-async function seedStaff(slug: string, uid: string) {
+async function seedStaff(
+  slug: string,
+  uid: string,
+  data: Record<string, unknown> = {}
+) {
   const env = await getTestEnv();
   await env.withSecurityRulesDisabled(async (ctx) => {
     await setDoc(doc(ctx.firestore(), `events/${slug}/staff/${uid}`), {
       assignedBy: "admin-1",
+      ...data,
     });
   });
 }
@@ -226,14 +231,47 @@ describe("reglas del mural", () => {
       await assertSucceeds(getDocs(collection(admin, PHOTOS_A)));
     });
 
-    it("NIEGA a un voluntario ASIGNADO a ese evento — no modera el mural", async () => {
+    // Moderar el mural es una capacidad que se elige al asignar.
+    it("deja moderar a un voluntario con la capacidad del mural en ese evento", async () => {
+      const env = await getTestEnv();
+      await seedUser("vol-1", { role: "volunteer" });
+      await seedStaff(EVENT_A, "vol-1", { permissions: ["mural:moderate"] });
+      await seedPhoto("p");
+      const vol = env.authenticatedContext("vol-1").firestore();
+      await assertSucceeds(getDoc(doc(vol, `${PHOTOS_A}/p`)));
+      await assertSucceeds(getDocs(collection(vol, PHOTOS_A)));
+    });
+
+    it("NIEGA a un voluntario asignado al evento sin la capacidad del mural", async () => {
+      const env = await getTestEnv();
+      await seedUser("vol-1", { role: "volunteer" });
+      await seedStaff(EVENT_A, "vol-1", {
+        permissions: ["checkin:operate", "roster:read"],
+      });
+      await seedPhoto("p");
+      const vol = env.authenticatedContext("vol-1").firestore();
+      await assertFails(getDoc(doc(vol, `${PHOTOS_A}/p`)));
+      await assertFails(getDocs(collection(vol, PHOTOS_A)));
+    });
+
+    // Una asignación anterior a las capacidades (sin lista) conserva lo que
+    // tenía, que no incluía el mural.
+    it("NIEGA a un voluntario con una asignación anterior, sin lista", async () => {
       const env = await getTestEnv();
       await seedUser("vol-1", { role: "volunteer" });
       await seedStaff(EVENT_A, "vol-1");
       await seedPhoto("p");
       const vol = env.authenticatedContext("vol-1").firestore();
       await assertFails(getDoc(doc(vol, `${PHOTOS_A}/p`)));
-      await assertFails(getDocs(collection(vol, PHOTOS_A)));
+    });
+
+    it("NIEGA al voluntario con el mural en OTRO evento", async () => {
+      const env = await getTestEnv();
+      await seedUser("vol-1", { role: "volunteer" });
+      await seedStaff(EVENT_B, "vol-1", { permissions: ["mural:moderate"] });
+      await seedPhoto("p");
+      const vol = env.authenticatedContext("vol-1").firestore();
+      await assertFails(getDoc(doc(vol, `${PHOTOS_A}/p`)));
     });
 
     it("NIEGA a un member y a un contributor", async () => {

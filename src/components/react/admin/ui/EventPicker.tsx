@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "../AuthProvider";
 import { useEventCatalog } from "../useEventCatalog";
+import { eventPermissions, type MyAssignment } from "../useMyAssignments";
+import type { Permission } from "@/lib/permissions";
 import { ArrowIcon, ErrorState, LoadingState, SectionHeading } from "./atlas";
 
 /**
@@ -31,6 +33,12 @@ interface Props {
   basePath: string;
   /** Qué se va a hacer con el evento, para el encabezado. */
   title: string;
+  /**
+   * El permiso que la herramienta necesita. A quien trabaja por asignación
+   * solo se le ofrecen los eventos donde su asignación lo concede: alguien
+   * asignado al mural de un evento no lo ve en el selector del check-in.
+   */
+  permission?: Permission;
 }
 
 /** Normaliza la fecha que llega de Firestore por JSON. */
@@ -43,8 +51,8 @@ function toDateLabel(value: unknown): string | null {
   return Number.isNaN(raw.getTime()) ? null : raw.toLocaleDateString("es-PE");
 }
 
-export function EventPicker({ basePath, title }: Props) {
-  const { can } = useAuth();
+export function EventPicker({ basePath, title, permission }: Props) {
+  const { can, profile } = useAuth();
   const [options, setOptions] = useState<EventOption[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const catalog = useEventCatalog();
@@ -80,12 +88,19 @@ export function EventPicker({ basePath, title }: Props) {
           setError(res.error || "No se pudieron cargar tus eventos");
           return;
         }
-        const assignments = (res.data ?? []) as {
-          eventSlug: string;
-          expiresAt?: unknown;
-        }[];
+        const assignments = ((res.data ?? []) as MyAssignment[]).map((a) => ({
+          ...a,
+          permissions: Array.isArray(a.permissions) ? a.permissions : null,
+        }));
+        const usable = permission
+          ? assignments.filter((a) =>
+              eventPermissions(profile, assignments, a.eventSlug).has(
+                permission
+              )
+            )
+          : assignments;
         setOptions(
-          assignments.map((a) => ({
+          usable.map((a) => ({
             slug: a.eventSlug,
             // El endpoint devuelve la asignación, no el evento, así que no hay
             // título que enseñar. El slug es legible y es lo que la persona ve
@@ -102,7 +117,7 @@ export function EventPicker({ basePath, title }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [canListAll]);
+  }, [canListAll, permission, profile]);
 
   if (error) {
     return <ErrorState message={error} />;
