@@ -12,8 +12,12 @@ import { publicImageSize } from "@/utils/imageSize";
 
 const organizersCollection = await getCollection("organizers");
 const organizers = organizersCollection.map((entry) => entry.data);
-const membersCollection = await getCollection("members");
-const members = membersCollection.map((entry) => entry.data);
+// Team members are hidden for now: only organizers are listed. Set this to
+// true to show the "Miembros del equipo" group again.
+const SHOW_TEAM_MEMBERS = false;
+const members = SHOW_TEAM_MEMBERS
+  ? (await getCollection("members")).map((entry) => entry.data)
+  : [];
 const teamGroups = [
   { title: "Organizadores", people: organizers },
   { title: "Miembros del equipo", people: members },
