@@ -12,6 +12,7 @@ import {
   hasPermission,
   isGrantActive,
   roleCanScopePermission,
+  LEGACY_STAFF_PERMISSIONS,
   STAFF_CAPABILITIES,
   STAFF_CAPABILITY_IDS,
   capabilitiesFromPermissions,
@@ -138,7 +139,20 @@ describe("sincronía con las reglas", () => {
   const expected = (perms: readonly Permission[]) =>
     perms.filter((p) => enforced.has(p)).sort();
 
+  function legacyList(file: string): string[] {
+    const source = readFileSync(join(ROOT, file), "utf8");
+    const body = source.match(
+      /function legacyStaffHas\(perm\) \{\s*return perm in \[([^\]]*)\]/
+    );
+    expect(body, `legacyStaffHas en ${file}`).not.toBeNull();
+    return [...body![1].matchAll(/'([^']+)'/g)].map((m) => m[1]).sort();
+  }
+
   for (const file of ["firestore.rules", "storage.rules"]) {
+    it(`${file}: las asignaciones sin lista conceden lo mismo que en el código`, () => {
+      expect(legacyList(file)).toEqual(expected(LEGACY_STAFF_PERMISSIONS));
+    });
+
     it(`${file}: el organizador tiene los mismos permisos globales`, () => {
       expect(ruleList(file, "roleHasGlobal", "organizer")).toEqual(
         expected(ROLE_BUNDLES.organizer.global)
@@ -181,7 +195,12 @@ describe("capacidades de staff", () => {
   it("se reconstruyen desde los permisos guardados", () => {
     const perms = permissionsForCapabilities(["checkin", "mural"]);
     expect(capabilitiesFromPermissions(perms)).toEqual(["checkin", "mural"]);
-    expect(capabilitiesFromPermissions(null)).toEqual(STAFF_CAPABILITY_IDS);
+    // Sin lista: lo que concedían las asignaciones antes de las capacidades.
+    expect(capabilitiesFromPermissions(null)).toEqual([
+      "checkin",
+      "minigames",
+      "credentials",
+    ]);
     // Una capacidad a medias no cuenta como elegida.
     expect(capabilitiesFromPermissions(["roster:read"])).toEqual([]);
   });
@@ -206,10 +225,16 @@ describe("asignación acotada", () => {
       staffPermissions,
     });
 
-  it("sin lista concede todo el paquete (asignaciones anteriores)", () => {
-    expect([...at(null)].sort()).toEqual(
-      [...ROLE_BUNDLES.volunteer.perEvent].sort()
-    );
+  // Congelado: que el paquete crezca no amplía a quien ya estaba asignado.
+  it("sin lista concede lo de antes de las capacidades, sin el mural", () => {
+    expect([...at(null)].sort()).toEqual([...LEGACY_STAFF_PERMISSIONS].sort());
+    expect(at(null).has("mural:moderate")).toBe(false);
+  });
+
+  it("lo congelado cabe en el paquete actual", () => {
+    for (const perm of LEGACY_STAFF_PERMISSIONS) {
+      expect(ROLE_BUNDLES.volunteer.perEvent).toContain(perm);
+    }
   });
 
   it("con lista concede solo lo que nombra", () => {

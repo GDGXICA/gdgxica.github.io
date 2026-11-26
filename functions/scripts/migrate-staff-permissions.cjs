@@ -1,19 +1,15 @@
-// Pins every existing staff assignment to exactly the access it has today.
+// Writes onto every existing staff assignment the permissions it grants
+// today, so each one is explicit and shows its real capabilities.
 //
 // Staff docs (events/{slug}/staff/{uid}) written before capabilities have
-// no `permissions` list, and "no list" means "the whole per-event bundle of
-// the role". The release that introduces capabilities also adds
-// mural:moderate to the volunteer bundle, so without this every existing
-// volunteer would start moderating the mural of their events without anyone
-// choosing it. This writes today's bundle, mural excluded, onto each doc.
+// no `permissions` list. The code and the rules already treat that as the
+// frozen LEGACY_STAFF_PERMISSIONS (functions/src/auth/permissions.ts), so
+// nothing depends on running this: it only replaces an implicit default
+// with the same list, written down. Safe to run before or after the deploy.
 //
 // Usage (from functions/):
 //   GOOGLE_CLOUD_PROJECT=appgdgica node scripts/migrate-staff-permissions.cjs
 //   GOOGLE_CLOUD_PROJECT=appgdgica node scripts/migrate-staff-permissions.cjs --apply
-//
-// Run --apply BEFORE merging the capabilities release (the current code
-// ignores the field) and once more right after its deploy: until then, the
-// current assign endpoint overwrites the whole doc and drops the list.
 
 const admin = require("firebase-admin");
 const projectId = process.env.GOOGLE_CLOUD_PROJECT;
@@ -23,8 +19,7 @@ if (!projectId)
   );
 admin.initializeApp({ projectId });
 
-// The volunteer's per-event bundle before capabilities, sorted as the API
-// stores it.
+// LEGACY_STAFF_PERMISSIONS, sorted as the API stores it.
 const TODAY = [
   "checkin:operate",
   "credentials:operate",
@@ -52,8 +47,7 @@ async function main() {
   console.log(
     `Inspected ${staff.size} assignments; ${pinned} had no permission list.`
   );
-  if (!apply && pinned)
-    console.log("Run again with --apply before merging, and after deploying.");
+  if (!apply && pinned) console.log("Run again with --apply to write them.");
 }
 
 main().catch((err) => {

@@ -310,7 +310,7 @@ describe("requirePermission — alcance por evento", () => {
     ]);
   });
 
-  it("una asignación sin lista concede todo el paquete (anterior a las capacidades)", async () => {
+  it("una asignación sin lista concede lo de antes de las capacidades, sin el mural", async () => {
     docs.set("users/u1", { role: "volunteer" });
     docs.set("events/devfest-2025/staff/u1", { assignedBy: "admin" });
     const { passed } = await run(
@@ -318,6 +318,11 @@ describe("requirePermission — alcance por evento", () => {
       buildReq({ slug: "devfest-2025" })
     );
     expect(passed).toBe(true);
+    const mural = await run(
+      requirePermission("mural:moderate", { scopeParam: "slug" }),
+      buildReq({ slug: "devfest-2025" })
+    );
+    expect(mural.res.__status).toBe(403);
   });
 
   it("una lista mal formada no concede nada", async () => {
