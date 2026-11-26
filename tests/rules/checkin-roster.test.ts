@@ -258,7 +258,7 @@ describe("checkin roster rules", () => {
           doc(org, ATTENDEE),
           checkin("org-1", {
             checkedIn: true,
-            checkedInAt: new Date(),
+            checkedInAt: serverTimestamp(),
             checkedInBy: "org-1",
             checkedInByName: "Alvaro",
           })
@@ -355,6 +355,105 @@ describe("checkin roster rules", () => {
   });
 
   describe("check-in writes", () => {
+    // When someone was marked is the server's clock: the row can be neither
+    // backdated nor left half-marked.
+    it("rejects a backdated check-in", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("org-1", "organizer");
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertFails(
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", {
+            checkedIn: true,
+            checkedInAt: new Date(Date.now() - 86_400_000),
+            checkedInBy: "org-1",
+          })
+        )
+      );
+    });
+
+    it("rejects marking someone present without the server time", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("org-1", "organizer");
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertFails(
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", { checkedIn: true, checkedInBy: "org-1" })
+        )
+      );
+    });
+
+    it("rejects an unmark that leaves the check-in time or author behind", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("org-1", "organizer");
+      const org = env.authenticatedContext("org-1").firestore();
+      await assertSucceeds(
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", {
+            checkedIn: true,
+            checkedInAt: serverTimestamp(),
+            checkedInBy: "org-1",
+          })
+        )
+      );
+      await assertFails(
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", { checkedIn: false, checkedInBy: null })
+        )
+      );
+      await assertFails(
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", { checkedIn: false, checkedInAt: null })
+        )
+      );
+      await assertSucceeds(
+        updateDoc(
+          doc(org, ATTENDEE),
+          checkin("org-1", {
+            checkedIn: false,
+            checkedInAt: null,
+            checkedInBy: null,
+          })
+        )
+      );
+    });
+
+    // Nothing in the app writes these; a client could only have used them to
+    // fake a DNI verification or stash data on the row.
+    it("rejects writing a note or the DNI verification fields", async () => {
+      const env = await getTestEnv();
+      await seedAttendee();
+      await seedRole("org-1", "organizer");
+      const org = env.authenticatedContext("org-1").firestore();
+      for (const extra of [
+        { note: "ok" },
+        { dniVerified: true },
+        { dniMatchScore: 1 },
+        { dniMatchedName: "Alex" },
+        { dniVerifiedAt: serverTimestamp() },
+      ]) {
+        await assertFails(
+          updateDoc(
+            doc(org, ATTENDEE),
+            checkin("org-1", {
+              checkedIn: true,
+              checkedInAt: serverTimestamp(),
+              checkedInBy: "org-1",
+              ...extra,
+            })
+          )
+        );
+      }
+    });
+
     it("allows an organizer to mark someone present", async () => {
       const env = await getTestEnv();
       await seedAttendee();
@@ -365,7 +464,7 @@ describe("checkin roster rules", () => {
           doc(org, ATTENDEE),
           checkin("org-1", {
             checkedIn: true,
-            checkedInAt: new Date(),
+            checkedInAt: serverTimestamp(),
             checkedInBy: "org-1",
             checkedInByName: "Alvaro",
           })

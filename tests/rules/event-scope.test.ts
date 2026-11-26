@@ -124,6 +124,7 @@ describe("alcance por evento", () => {
       await assertSucceeds(
         updateDoc(doc(vol, ATTENDEE_A), {
           checkedIn: true,
+          checkedInAt: serverTimestamp(),
           checkedInBy: "vol-1",
           // Las reglas exigen atribución de la ACCIÓN en toda escritura del
           // roster, para que el trigger de auditoría sepa quién la hizo, y la
@@ -182,6 +183,7 @@ describe("alcance por evento", () => {
       await assertSucceeds(
         updateDoc(doc(vol, ATTENDEE_A), {
           checkedIn: true,
+          checkedInAt: serverTimestamp(),
           checkedInBy: "vol-1",
           lastActionBy: "vol-1",
           lastActionAt: serverTimestamp(),

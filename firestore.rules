@@ -330,11 +330,15 @@ service cloud.firestore {
         // hasOnly() pins them to the check-in fields, so a volunteer
         // cannot rewrite an attendee's email, name or bevyCheckinAt.
         allow update: if canOnEvent('checkin:operate', eventSlug)
+                      // Only the check-in itself. `note` and the dni*
+                      // verification fields used to be allowed here too,
+                      // but nothing in the app writes them (the DNI lands on
+                      // the row server-side, from reconciliation), so a
+                      // client could only have used them to fabricate a
+                      // verification that never happened.
                       && request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['checkedIn', 'checkedInAt', 'checkedInBy',
-                                   'checkedInByName', 'note',
-                                   'dniVerified', 'dniVerifiedAt',
-                                   'dniMatchScore', 'dniMatchedName',
+                                   'checkedInByName',
                                    'lastActionBy', 'lastActionByName',
                                    'lastActionAt'])
                       && request.resource.data.checkedIn is bool
@@ -342,6 +346,17 @@ service cloud.firestore {
                       // un-checking may leave checkedInBy unset.
                       && (request.resource.data.checkedIn == false
                           || request.resource.data.checkedInBy == request.auth.uid)
+                      // When the person was marked is the server's clock, not
+                      // the client's: marking pins checkedInAt to this write,
+                      // and unmarking clears it together with checkedInBy,
+                      // so a row can neither be backdated nor left half-marked.
+                      // Writes queued offline still pass: the client sends
+                      // serverTimestamp(), resolved when the write lands.
+                      && ((request.resource.data.checkedIn == true
+                           && request.resource.data.get('checkedInAt', null) == request.time)
+                          || (request.resource.data.checkedIn == false
+                              && request.resource.data.get('checkedInAt', null) == null
+                              && request.resource.data.get('checkedInBy', null) == null))
                       // Quién tocó la fila, en LAS DOS direcciones.
                       //
                       // `checkedInBy` no sirve para esto: al desmarcar se pone
@@ -363,15 +378,10 @@ service cloud.firestore {
                       // `checkedInByName`, que existe para que un voluntario
                       // no pueda escribir varios megabytes en una fila.
                       && request.resource.data.lastActionAt == request.time
-                      && (!('note' in request.resource.data)
-                          || request.resource.data.note == null
-                          || request.resource.data.note.size() <= 200)
                       // The remaining allowlisted keys need bounds too. The
                       // client is untrusted even when the caller holds the
                       // organizer role, and without these a volunteer could
-                      // write a multi-megabyte checkedInByName or fabricate
-                      // the DNI-verification state these fields are reserved
-                      // for.
+                      // write a multi-megabyte checkedInByName.
                       && (!('checkedInByName' in request.resource.data)
                           || request.resource.data.checkedInByName == null
                           || (request.resource.data.checkedInByName is string
@@ -379,18 +389,7 @@ service cloud.firestore {
                       && (!('lastActionByName' in request.resource.data)
                           || request.resource.data.lastActionByName == null
                           || (request.resource.data.lastActionByName is string
-                              && request.resource.data.lastActionByName.size() <= 120))
-                      && (!('dniVerified' in request.resource.data)
-                          || request.resource.data.dniVerified is bool)
-                      && (!('dniMatchedName' in request.resource.data)
-                          || request.resource.data.dniMatchedName == null
-                          || (request.resource.data.dniMatchedName is string
-                              && request.resource.data.dniMatchedName.size() <= 200))
-                      && (!('dniMatchScore' in request.resource.data)
-                          || request.resource.data.dniMatchScore == null
-                          || (request.resource.data.dniMatchScore is number
-                              && request.resource.data.dniMatchScore >= 0
-                              && request.resource.data.dniMatchScore <= 1));
+                              && request.resource.data.lastActionByName.size() <= 120));
       }
 
       // Import metadata (last import id, roster count, last Bevy sync).
