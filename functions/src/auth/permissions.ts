@@ -214,6 +214,22 @@ export function isPermission(value: unknown): value is Permission {
 }
 
 /**
+ * Lo que concede una asignación SIN lista de permisos: las hechas antes de
+ * que existieran las capacidades. Es el paquete por evento del voluntario de
+ * entonces, congelado aquí a propósito: si el paquete crece (como cuando ganó
+ * `mural:moderate`), esas asignaciones no ganan nada que nadie eligió. Las
+ * reglas repiten la parte que aplican en `legacyStaffHas()`, y el test de
+ * sincronía lo comprueba.
+ */
+export const LEGACY_STAFF_PERMISSIONS = [
+  "roster:read",
+  "checkin:operate",
+  "minigames:operate",
+  "credentials:read",
+  "credentials:operate",
+] as const satisfies readonly Permission[];
+
+/**
  * Lo que un admin elige al asignar a alguien a un evento.
  *
  * Una asignación de staff puede dar todo el paquete por evento del rol o solo
@@ -258,22 +274,23 @@ export function permissionsForCapabilities(
 
 /**
  * Las capacidades que una lista de permisos cubre por completo. `null` (una
- * asignación sin lista, anterior a las capacidades) las cubre todas.
+ * asignación sin lista, anterior a las capacidades) es lo congelado en
+ * LEGACY_STAFF_PERMISSIONS.
  */
 export function capabilitiesFromPermissions(
   permissions: readonly Permission[] | null
 ): StaffCapability[] {
-  if (permissions === null) return [...STAFF_CAPABILITY_IDS];
+  const list: readonly Permission[] = permissions ?? LEGACY_STAFF_PERMISSIONS;
   return STAFF_CAPABILITY_IDS.filter((cap) =>
-    STAFF_CAPABILITIES[cap].every((p) => permissions.includes(p))
+    STAFF_CAPABILITIES[cap].every((p) => list.includes(p))
   );
 }
 
 /**
  * Lee `permissions` de un doc de staff.
  *
- * - Ausente o `null`: `null`, que significa "todo el paquete del rol". Es el
- *   caso de las asignaciones hechas antes de que existieran las capacidades.
+ * - Ausente o `null`: `null`, que significa "lo que concedía una asignación
+ *   antes de las capacidades" (LEGACY_STAFF_PERMISSIONS).
  * - Una lista: sus permisos válidos.
  * - Cualquier otra cosa: lista vacía. Ante un dato que no entendemos se
  *   niega, igual que con una fecha de caducidad ilegible.
@@ -363,8 +380,9 @@ export interface PermissionContext {
   isEventStaff?: boolean;
   /**
    * Los permisos que concede ESA asignación (`staff.permissions`), o `null`
-   * si no tiene lista y concede todo el paquete del rol. Solo acota: nunca
-   * añade nada que el rol no tenga por evento.
+   * si no tiene lista (anterior a las capacidades: vale lo congelado en
+   * LEGACY_STAFF_PERMISSIONS). Solo acota: nunca añade nada que el rol no
+   * tenga por evento.
    */
   staffPermissions?: readonly Permission[] | null;
   nowMs?: number;
@@ -392,11 +410,13 @@ export function effectivePermissions(
   // Los permisos perEvent solo aplican dentro de un evento concreto y con
   // la asignación de staff confirmada. Nunca satisfacen una consulta global.
   if (scope !== GLOBAL_SCOPE && ctx.isEventStaff) {
-    const allowed = ctx.staffPermissions;
+    // Sin lista (asignación anterior a las capacidades) vale lo congelado
+    // en LEGACY_STAFF_PERMISSIONS, nunca el paquete actual: así un paquete
+    // que crece no amplía en silencio a quien ya estaba asignado.
+    const allowed: readonly Permission[] =
+      ctx.staffPermissions ?? LEGACY_STAFF_PERMISSIONS;
     for (const perm of bundle.perEvent) {
-      if (allowed === null || allowed === undefined || allowed.includes(perm)) {
-        granted.add(perm);
-      }
+      if (allowed.includes(perm)) granted.add(perm);
     }
   }
 

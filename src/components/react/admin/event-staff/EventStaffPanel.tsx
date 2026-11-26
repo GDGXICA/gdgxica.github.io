@@ -412,19 +412,18 @@ export function EventStaffPanel() {
                       {entry.reason && ` · ${entry.reason}`}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {legacy ? (
+                      {(entry.capabilities ?? []).map((cap) => (
+                        <Tag key={cap}>
+                          {STAFF_CAPABILITY_LABELS[cap].label}
+                        </Tag>
+                      ))}
+                      {legacy && (
                         <Tag
                           tone="border-atlas-glow/50 text-atlas-glow"
-                          title="Asignada antes de que existieran las capacidades: puede hacer todo lo de su rol. Edítala para acotarla."
+                          title="Asignada antes de que existieran las capacidades: conserva lo que tenía entonces. Edítala para elegir qué puede hacer."
                         >
-                          Todo (asignación anterior)
+                          Asignación anterior
                         </Tag>
-                      ) : (
-                        (entry.capabilities ?? []).map((cap) => (
-                          <Tag key={cap}>
-                            {STAFF_CAPABILITY_LABELS[cap].label}
-                          </Tag>
-                        ))
                       )}
                     </div>
                   </div>

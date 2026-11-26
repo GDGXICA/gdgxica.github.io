@@ -254,6 +254,17 @@ describe("reglas del mural", () => {
       await assertFails(getDocs(collection(vol, PHOTOS_A)));
     });
 
+    // Una asignación anterior a las capacidades (sin lista) conserva lo que
+    // tenía, que no incluía el mural.
+    it("NIEGA a un voluntario con una asignación anterior, sin lista", async () => {
+      const env = await getTestEnv();
+      await seedUser("vol-1", { role: "volunteer" });
+      await seedStaff(EVENT_A, "vol-1");
+      await seedPhoto("p");
+      const vol = env.authenticatedContext("vol-1").firestore();
+      await assertFails(getDoc(doc(vol, `${PHOTOS_A}/p`)));
+    });
+
     it("NIEGA al voluntario con el mural en OTRO evento", async () => {
       const env = await getTestEnv();
       await seedUser("vol-1", { role: "volunteer" });

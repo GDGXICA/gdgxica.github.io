@@ -61,7 +61,7 @@ beforeEach(() => {
         role: "volunteer",
         reason: "Edición pasada",
         permissions: null,
-        capabilities: ["checkin", "minigames", "mural", "credentials"],
+        capabilities: ["checkin", "minigames", "credentials"],
         active: true,
       },
     ],
@@ -84,8 +84,9 @@ describe("EventStaffPanel", () => {
     expect(within(items[0]).getByText("Check-in")).toBeInTheDocument();
     expect(within(items[0]).queryByText("Mural")).toBeNull();
     expect(
-      within(items[1]).getByText("Todo (asignación anterior)")
+      within(items[1]).getByText("Asignación anterior")
     ).toBeInTheDocument();
+    expect(within(items[1]).queryByText("Mural")).toBeNull();
   });
 
   it("only offers roles that work by event", async () => {

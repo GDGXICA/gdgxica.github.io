@@ -378,10 +378,10 @@ describe("listStaff", () => {
 
     const data = res.__body?.data as { uid: string; capabilities: string[] }[];
     expect(data.find((s) => s.uid === "a")?.capabilities).toEqual(["checkin"]);
+    // No list: what assignments granted before capabilities, no mural.
     expect(data.find((s) => s.uid === "b")?.capabilities).toEqual([
       "checkin",
       "minigames",
-      "mural",
       "credentials",
     ]);
   });

@@ -248,7 +248,7 @@ export const MOCK_EVENT_STAFF = [
     expiresAt: new Date(Date.now() - 30 * 86400_000).toISOString(),
     reason: "Edición anterior",
     permissions: null,
-    capabilities: ["checkin", "minigames", "mural", "credentials"],
+    capabilities: ["checkin", "minigames", "credentials"],
     active: false,
   },
 ];

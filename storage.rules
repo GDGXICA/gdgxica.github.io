@@ -43,8 +43,10 @@ service firebase.storage {
       return staff != null
              && (staff.data.get('expiresAt', null) == null
                  || staff.data.get('expiresAt', null) > request.time)
-             && (staff.data.get('permissions', null) == null
-                 || perm in staff.data.permissions);
+             && ((staff.data.get('permissions', null) == null
+                  && legacyStaffHas(perm))
+                 || (staff.data.get('permissions', null) != null
+                     && perm in staff.data.permissions));
     }
 
     // Mismas listas que `roleHasGlobal` / `roleHasPerEvent` en firestore.rules
@@ -60,6 +62,15 @@ service firebase.storage {
     function roleHasPerEvent(role, perm) {
       return role == 'volunteer'
           && perm in ['roster:read', 'checkin:operate', 'credentials:read', 'mural:moderate'];
+    }
+
+    // Lo que concede una asignación SIN lista de permisos (anterior a las
+    // capacidades): LEGACY_STAFF_PERMISSIONS en functions/src/auth/
+    // permissions.ts, solo con los permisos que aplican las reglas. Congelado
+    // a propósito: que el paquete del voluntario crezca no amplía en silencio
+    // a quien ya estaba asignado. El test de sincronía lo comprueba.
+    function legacyStaffHas(perm) {
+      return perm in ['roster:read', 'checkin:operate', 'credentials:read'];
     }
 
     // Espejo de `canOnEvent('credentials:read', …)` en firestore.rules: estas

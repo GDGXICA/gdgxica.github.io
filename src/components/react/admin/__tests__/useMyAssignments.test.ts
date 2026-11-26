@@ -19,10 +19,11 @@ describe("eventPermissions", () => {
     ]);
   });
 
-  it("gives the whole bundle for an assignment without a list", () => {
+  it("gives the pre-capabilities access for an assignment without a list", () => {
     const perms = eventPermissions(volunteer, assignments, "b");
     expect(perms.has("checkin:operate")).toBe(true);
-    expect(perms.has("mural:moderate")).toBe(true);
+    // Frozen: the bundle grew mural moderation, old assignments did not.
+    expect(perms.has("mural:moderate")).toBe(false);
   });
 
   it("gives nothing where there is no assignment", () => {
