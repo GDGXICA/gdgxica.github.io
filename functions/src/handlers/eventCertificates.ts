@@ -151,10 +151,15 @@ export async function loadSettings(
   if (snap.exists) {
     return { settings: pickSettings(snap.data() ?? {}), saved: true };
   }
+  // The route already validates the slug; checked again here because it
+  // becomes part of a GitHub API URL.
+  if (!/^[a-zA-Z0-9_-]{1,100}$/.test(slug)) {
+    return { settings: null, saved: false };
+  }
   try {
     const github = new GitHubService(GITHUB_TOKEN.value());
     const file = await github.getFileContentIfExists<Record<string, unknown>>(
-      `events/${slug}.json`
+      `events/${encodeURIComponent(slug)}.json`
     );
     return { settings: file ? deriveSettings(file.data) : null, saved: false };
   } catch (err) {

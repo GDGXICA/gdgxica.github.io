@@ -45,13 +45,19 @@ const COPY: Record<
   },
 };
 
-/** ASCII slug for the attachment filename. */
+/**
+ * ASCII slug for the attachment filename. Split-and-join rather than
+ * trimming dashes with a regex, which is quadratic on a name made of
+ * many separators.
+ */
 function asciiSlug(value: string): string {
   return value
+    .slice(0, 300)
     .normalize("NFD")
     .replace(/[^\x20-\x7E]/g, "")
-    .replace(/[^a-zA-Z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .join("-")
     .toLowerCase()
     .slice(0, 60);
 }

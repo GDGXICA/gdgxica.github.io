@@ -128,12 +128,14 @@ export class FakeFirestore {
     if (mode === "update" && previous === undefined) {
       throw new Error(`NOT_FOUND: ${path}`);
     }
-    const base: Data = mode === "set" ? {} : { ...(previous ?? {}) };
+    const fields = new Map<string, unknown>(
+      mode === "set" ? [] : Object.entries(previous ?? {})
+    );
     for (const [k, v] of Object.entries(data)) {
       if (v === undefined) continue;
-      base[k] = resolve(v, previous?.[k]);
+      fields.set(k, resolve(v, previous?.[k]));
     }
-    this.docs.set(path, base);
+    this.docs.set(path, Object.fromEntries(fields));
   }
 }
 
