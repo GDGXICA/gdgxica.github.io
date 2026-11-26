@@ -67,13 +67,13 @@ export function AvatarPicker({
 
   return (
     <fieldset className="flex flex-col gap-3">
-      <legend className="text-primary text-sm font-semibold">
+      <legend className="mb-1 text-[0.9375rem] font-medium text-(--ink)">
         Elige tu avatar
       </legend>
 
       {/* Mascots first and selected by default. Photo is the deliberate
           opt-in, which keeps the moderation queue small. */}
-      <ul className="grid grid-cols-4 gap-2 sm:grid-cols-8">
+      <ul className="grid grid-cols-4 gap-3 sm:grid-cols-8 sm:gap-2.5">
         {MASCOTS.map((m) => {
           const selected = avatarKind === "mascot" && mascotId === m.id;
           return (
@@ -83,10 +83,10 @@ export function AvatarPicker({
                 onClick={() => onPickMascot(m.id)}
                 aria-pressed={selected}
                 aria-label={m.label}
-                className={`w-full overflow-hidden rounded-full border-2 bg-gray-50 shadow-sm transition hover:-translate-y-0.5 hover:shadow ${
+                className={`block w-full overflow-hidden rounded-full border-2 bg-(--surface-2) transition-[transform,border-color] duration-200 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${
                   selected
-                    ? "border-google-blue ring-google-blue/15 ring-4"
-                    : "border-transparent"
+                    ? "border-(--ochre) ring-2 ring-(--ochre)/35 ring-offset-2 ring-offset-(--night)"
+                    : "border-transparent hover:border-(--line-strong)"
                 }`}
               >
                 {/* object-cover so a future asset that is not perfectly
@@ -109,15 +109,15 @@ export function AvatarPicker({
       {/* Attribution sits next to the use, not three clicks away. Several of
           these licences require the credit to be given wherever the art is
           used, so this link is an obligation rather than a courtesy. */}
-      <p className="text-tertiary text-xs leading-5">
+      <p className="text-sm leading-6 text-(--muted)">
         Mascotas de Go, Rust, Linux y Android usadas con licencia abierta.{" "}
-        <a href="/creditos" className="hover:text-google-blue underline">
+        <a href="/creditos" className="n-link text-(--ink)">
           Ver créditos y licencias
         </a>
         .
       </p>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="mt-1 flex flex-wrap items-center gap-3">
         <input
           ref={inputRef}
           type="file"
@@ -132,9 +132,25 @@ export function AvatarPicker({
           type="button"
           disabled={busy}
           onClick={() => inputRef.current?.click()}
-          className="border-gray-custom text-secondary min-h-11 rounded-xl border bg-white px-4 py-2 text-sm font-medium shadow-sm disabled:opacity-50"
+          className="nb nb--ghost"
         >
-          {busy ? "Procesando…" : "Subir mi foto (opcional)"}
+          <span className="nb__label">
+            {busy ? "Procesando…" : "Subir mi foto (opcional)"}
+          </span>
+          <span className="nb__icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 16V4m0 0-4 4m4-4 4 4M5 20h14" />
+            </svg>
+          </span>
         </button>
 
         {photoDataUrl && (
@@ -142,12 +158,12 @@ export function AvatarPicker({
             <img
               src={photoDataUrl}
               alt="Foto seleccionada"
-              className="h-10 w-10 rounded-full object-cover"
+              className="h-11 w-11 rounded-full object-cover ring-2 ring-(--ochre)"
             />
             <button
               type="button"
               onClick={() => onPickPhoto(null)}
-              className="text-tertiary text-sm hover:underline"
+              className="n-link min-h-11 text-[0.9375rem] text-(--muted)"
             >
               Quitar foto
             </button>
@@ -155,12 +171,12 @@ export function AvatarPicker({
         )}
       </div>
 
-      <p className="text-tertiary text-xs">
+      <p className="text-sm leading-6 text-(--muted)">
         Si subes una foto, la revisamos antes de conservarla. Se ajusta a
         512&nbsp;px en tu dispositivo, así que su ubicación GPS nunca se envía.
       </p>
 
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && <p className="text-sm font-medium text-red-300">{error}</p>}
     </fieldset>
   );
 }

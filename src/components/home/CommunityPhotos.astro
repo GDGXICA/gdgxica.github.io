@@ -1,0 +1,97 @@
+---
+import { publicImageSize } from "@/utils/imageSize";
+
+interface Photo {
+  src: string;
+  alt: string;
+}
+
+interface Props {
+  photos: Photo[];
+}
+
+// Justified rows: every photo keeps its own shape and every photo in a row
+// shares one height, so the wall ends on a common baseline. Each item grows
+// in proportion to its aspect ratio, which is what keeps a row level.
+const photos = Astro.props.photos.map((photo) => {
+  const size = publicImageSize(photo.src);
+  return { ...photo, size, ratio: size ? size.width / size.height : 1.33 };
+});
+---
+
+<section class="photos" aria-labelledby="photos-title">
+  <div class="n-container">
+    <div class="n-section-head" data-reveal>
+      <h2 id="photos-title" class="n-head">La comunidad, en fotos</h2>
+      <a class="n-link" href="/about">Conoce al equipo</a>
+    </div>
+    <ul class="photos__wall" data-reveal>
+      {
+        photos.map((photo) => (
+          <li style={`--ar: ${photo.ratio.toFixed(3)}`}>
+            <img
+              src={photo.src}
+              alt={photo.alt}
+              width={photo.size?.width}
+              height={photo.size?.height}
+              loading="lazy"
+              decoding="async"
+            />
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<style>
+  .photos {
+    padding-block: var(--section-gap);
+  }
+
+  .photos__wall {
+    --row: clamp(6rem, 15vw, 15rem);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .photos__wall li {
+    flex: var(--ar) 1 calc(var(--ar) * var(--row));
+    aspect-ratio: var(--ar);
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    background: var(--surface-1);
+  }
+
+  .photos__wall img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 700ms var(--ease-out);
+  }
+
+  .photos__wall li:hover img {
+    transform: scale(1.03);
+  }
+
+  @media (max-width: 899px) {
+    .photos__wall {
+      gap: 0.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .photos__wall img {
+      transition: none;
+    }
+
+    .photos__wall li:hover img {
+      transform: none;
+    }
+  }
+</style>

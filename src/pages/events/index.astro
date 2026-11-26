@@ -1,14 +1,13 @@
 ---
-import Button from "@/components/Button.astro";
 import CallToActionSection from "@/components/CallToActionSection.astro";
 import EventCard from "@/components/EventCard.astro";
-import HeroPage from "@/components/HeroPage.astro";
+import StatsBar from "@/components/StatsBar.astro";
+import NButton from "@/components/night/NButton.astro";
+import PageHeader from "@/components/night/PageHeader.astro";
 import Layout from "@/layouts/Layout.astro";
-import { Calendar } from "@lucide/astro";
 import { getCollection } from "astro:content";
 import { parseSpanishDate } from "@/utils/parseSpanishDate";
 import { fetchStats, fetchLinks } from "@/loaders/transform-site-config";
-import StatsBar from "@/components/StatsBar.astro";
 import { EventFilters } from "@/components/react/EventFilters";
 
 const allEventsRaw = await getCollection("events");
@@ -29,12 +28,20 @@ const pastEvents = allEventsRaw
     return dateB.getTime() - dateA.getTime();
   });
 
+// Upcoming first (soonest first), then the archive (newest first).
 const allEvents = [...upcomingEvents, ...pastEvents];
 
 const highLightEvent = upcomingEvents.find((event) => event.data.isHighlight);
 
 const stats = await fetchStats();
 const links = await fetchLinks();
+
+const figures = [
+  { value: `${stats.totalMembers}+`, label: "miembros activos" },
+  { value: `${stats.totalEvents}+`, label: "eventos" },
+  { value: `${stats.totalSpeakers}+`, label: "speakers expertos" },
+  { value: `${stats.yearsActive}+`, label: "años activos" },
+];
 
 const metadata = {
   title: "Eventos - Google Developer Group Ica",
@@ -46,112 +53,157 @@ const metadata = {
 ---
 
 <Layout {...metadata}>
-  <HeroPage wide={true}>
-    <div class="mx-auto max-w-[768px] text-center">
-      <p
-        class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-red-500 to-green-600"
-      >
-        <Calendar stroke-width={1.5} size={64} color="#FFFFFF" />
-      </p>
-      <h1 class="mb-6 text-4xl font-bold md:text-5xl">
-        <span class="text-google-blue">Nuestros</span>
-        <span class="text-google-red">Eventos</span>
-      </h1>
-      <p class="text-secondary mb-8 text-xl">
-        Una comunidad vibrante de desarrolladores unidos por la pasión de crear,
-        aprender y compartir conocimiento sobre las tecnologías de Google. Desde
-        2019, hemos sido el punto de encuentro para desarrolladores de todos los
-        niveles.
-      </p>
+  <main>
+    <PageHeader
+      title="Eventos"
+      label="Charlas, talleres y DevFest"
+      lead="El punto de encuentro de desarrolladores de todos los niveles para crear, aprender y compartir conocimiento sobre las tecnologías de Google."
+    >
+      <StatsBar slot="strip" stats={figures} />
+    </PageHeader>
 
-      <StatsBar
-        stats={[
-          {
-            value: `${stats.totalMembers}+`,
-            label: "Miembros activos",
-            color: "blue",
-          },
-          { value: `${stats.totalEvents}+`, label: "Eventos", color: "red" },
-          {
-            value: `${stats.totalSpeakers}+`,
-            label: "Expertos speakers",
-            color: "yellow",
-          },
-          {
-            value: `${stats.yearsActive}+`,
-            label: "Años activos",
-            color: "green",
-          },
-        ]}
-      />
-      {
-        highLightEvent && (
-          <>
-            <p class="mt-16 mb-8 text-2xl font-bold">
-              Próximo Evento Destacado
-            </p>
-          </>
-        )
-      }
-    </div>
     {
       highLightEvent && (
-        <div class="mx-auto max-w-[1120px]">
-          <EventCard
-            isHorizontal={true}
-            slug={highLightEvent?.id}
-            {...highLightEvent?.data}
-          />
-        </div>
+        <section class="next" aria-label="Próximo evento destacado">
+          <div class="n-container">
+            <EventCard
+              featured={true}
+              slug={highLightEvent.id}
+              {...highLightEvent.data}
+            />
+          </div>
+        </section>
       )
     }
-  </HeroPage>
-  <section class="py-20">
-    <div class="container">
-      <h2 class="text-primary mb-6 text-center text-4xl font-bold">
-        Todos los Eventos
-      </h2>
-      <p class="text-secondary text-center text-xl">
-        Explora nuestro catálogo completo de eventos pasados y próximos
-      </p>
-      <EventFilters client:visible />
-      <div
-        class="grid-col-1 sm:grid-col-2 md:grid-col-2 mt-12 grid gap-8 lg:grid-cols-3"
-      >
-        {
-          allEvents.map((event) => (
-            <div
-              class="h-full"
-              data-event-card
-              data-name={event.data.name.toLowerCase()}
-              data-category={event.data.category.type}
-              data-status={event.data.status.type}
-              data-tags={event.data.tags.join(",").toLowerCase()}
-            >
-              <EventCard slug={event.id} {...event.data} />
-            </div>
-          ))
-        }
+
+    <section class="catalog" aria-labelledby="catalog-title">
+      <div class="n-container">
+        <div class="n-section-head catalog__head">
+          <h2 id="catalog-title" class="n-head">Todos los eventos</h2>
+          <p class="catalog__intro">
+            Explora nuestro catálogo completo de eventos pasados y próximos.
+          </p>
+        </div>
+
+        <EventFilters client:visible total={allEvents.length} />
+
+        <!-- EventFilters shows and hides these wrappers by their data-*
+             attributes (toggling `hidden`), and #events-empty when none is
+             left. Keep both contracts if this markup changes. -->
+        <ul class="catalog__grid" role="list">
+          {
+            allEvents.map((event) => (
+              <li
+                class="catalog__item"
+                data-event-card
+                data-name={event.data.name.toLowerCase()}
+                data-category={event.data.category.type}
+                data-status={event.data.status.type}
+                data-tags={event.data.tags.join(",").toLowerCase()}
+              >
+                <EventCard slug={event.id} {...event.data} />
+              </li>
+            ))
+          }
+        </ul>
+
+        <div id="events-empty" class="catalog__empty hidden">
+          <p class="catalog__empty-title">
+            No hay eventos que coincidan con tu búsqueda.
+          </p>
+          <p class="catalog__empty-hint">
+            Prueba con otro nombre o tema, o quita alguno de los filtros.
+          </p>
+        </div>
       </div>
-      <p
-        id="events-empty"
-        class="text-secondary mt-12 hidden text-center text-xl"
-      >
-        No hay eventos que coincidan con tu búsqueda.
+    </section>
+
+    <CallToActionSection>
+      <h2>¿Tienes una idea para un evento?</h2>
+      <p>
+        Ayúdanos a crear eventos increíbles. Propón un tema, sugiere un speaker
+        o colabora en la organización de nuestros próximos eventos.
       </p>
-    </div>
-  </section>
-  <CallToActionSection>
-    <h2 class="mb-6 text-3xl font-bold text-white md:text-4xl">
-      ¿Tienes una idea para un evento?
-    </h2>
-    <p class="mb-8 text-xl text-white">
-      Ayúdanos a crear eventos increíbles. Propón un tema, sugiere un speaker o
-      colabora en la organización de nuestros próximos eventos.
-    </p>
-    <Button variant="white" href={links.forms.proposeEvent} target="_blank">
-      <Calendar />
-      Proponer Evento
-    </Button>
-  </CallToActionSection>
+      <NButton href={links.forms.proposeEvent}>Proponer evento</NButton>
+    </CallToActionSection>
+  </main>
 </Layout>
+
+<style>
+  .next {
+    padding-top: clamp(2.5rem, 1.5rem + 4vw, 5rem);
+  }
+
+  .catalog {
+    padding-block: var(--section-gap) 0;
+  }
+
+  .catalog__head {
+    margin-bottom: clamp(1.5rem, 1rem + 1.5vw, 2.25rem);
+  }
+
+  .catalog__intro {
+    max-width: 36ch;
+    margin: 0;
+    color: var(--muted);
+  }
+
+  .catalog__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(1rem, 0.6rem + 1.2vw, 1.75rem);
+    margin: clamp(1.75rem, 1.25rem + 1.5vw, 2.5rem) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  @media (min-width: 640px) {
+    .catalog__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .catalog__grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  /* Nothing left after filtering. Only padding and a rule here: `hidden`
+     (display: none) is what EventFilters toggles, so no display is set. */
+  .catalog__empty {
+    margin-top: clamp(1.75rem, 1.25rem + 1.5vw, 2.5rem);
+    padding: clamp(2rem, 1.5rem + 2vw, 3.5rem) clamp(1.25rem, 3vw, 2.5rem);
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius);
+    text-align: center;
+  }
+
+  .catalog__empty-title {
+    margin: 0;
+    font-size: var(--step-lead);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
+  .catalog__empty-hint {
+    margin: 0.5rem 0 0;
+    color: var(--muted);
+  }
+</style>
+
+<script>
+  /** "Faltan 14 días" beside the featured event, in the visitor's own time. */
+  document.addEventListener("astro:page-load", () => {
+    const el = document.querySelector<HTMLElement>("[data-feature-countdown]");
+    const iso = el?.dataset.featureCountdown;
+    if (!el || !iso) return;
+    const start = new Date(iso);
+    const day = (d: Date) =>
+      Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86_400_000;
+    const days = day(start) - day(new Date());
+    if (days > 1) el.textContent = `Faltan ${days} días`;
+    else if (days === 1) el.textContent = "Es mañana";
+    else if (days === 0) el.textContent = "Es hoy";
+  });
+</script>

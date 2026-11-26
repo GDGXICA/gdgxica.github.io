@@ -1,6 +1,8 @@
 ---
 import { getCollection } from "astro:content";
+import { ArrowLeft } from "@lucide/astro";
 import Layout from "@/layouts/Layout.astro";
+import PageHeader from "@/components/night/PageHeader.astro";
 import { MuralGallery } from "@/components/react/event/mural/MuralGallery";
 
 export async function getStaticPaths() {
@@ -18,17 +20,60 @@ const { event } = Astro.props;
   description={`Las fotos que compartió la comunidad en ${event.data.name}.`}
   url={`https://gdgica.com/events/${event.id}/fotos`}
 >
-  <main class="container mx-auto px-4 py-10">
-    <a
-      href={`/events/${event.id}`}
-      class="text-sm text-blue-600 hover:underline">← {event.data.name}</a
+  <main>
+    <PageHeader
+      title="Fotos de la comunidad"
+      label={event.data.name}
+      lead="Las subieron los asistentes durante el evento y pasaron por revisión. Si sale alguna tuya y prefieres que no esté, escríbenos y la quitamos."
     >
-    <h1 class="mt-2 text-3xl font-bold">Fotos de la comunidad</h1>
-    <p class="mt-2 mb-8 max-w-2xl text-gray-600 dark:text-gray-400">
-      Las subieron los asistentes durante el evento y pasaron por revisión. Si
-      sale alguna tuya y prefieres que no esté, escríbenos y la quitamos.
-    </p>
+      <div slot="strip" class="n-container fotos__strip">
+        <a class="fotos__back n-link" href={`/events/${event.id}`}>
+          <ArrowLeft size={16} stroke-width={2} aria-hidden="true" />
+          {event.data.name}
+        </a>
+      </div>
+    </PageHeader>
 
-    <MuralGallery client:visible slug={event.id} eventName={event.data.name} />
+    <div class="n-container fotos__wall">
+      <MuralGallery
+        client:visible
+        slug={event.id}
+        eventName={event.data.name}
+      />
+    </div>
   </main>
 </Layout>
+
+<style>
+  .fotos__strip {
+    padding-block: 0.6rem;
+  }
+
+  .fotos__back {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: var(--step-small);
+  }
+
+  .fotos__back :global(svg) {
+    color: var(--ochre);
+  }
+
+  .fotos__wall {
+    padding-block: clamp(2rem, 1.25rem + 3vw, 3.5rem) var(--section-gap);
+  }
+
+  /* "Ver más fotos" while the next page loads. */
+  .fotos__wall :global(.nb:disabled) {
+    cursor: progress;
+  }
+
+  /* Fancybox opens over the page; put its backdrop on the night ground.
+     The extra `body` outranks the library's own stylesheet, which loads
+     later. */
+  :global(body .fancybox__container) {
+    --fancybox-backdrop-bg: rgb(7 11 22 / 0.96);
+  }
+</style>

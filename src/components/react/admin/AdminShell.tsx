@@ -289,7 +289,7 @@ export function AdminShell({ currentPage, children }: Props) {
   );
 
   return (
-    <div className="bg-atlas-night text-atlas-dust flex h-screen overflow-hidden">
+    <div className="bg-atlas-night text-atlas-dust flex h-dvh overflow-hidden">
       <a
         href="#contenido"
         className="bg-atlas-ember sr-only z-50 rounded-md px-4 py-2 font-semibold text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
@@ -451,7 +451,7 @@ export function AdminShell({ currentPage, children }: Props) {
           id="contenido"
           tabIndex={-1}
           className={`min-w-0 flex-1 overflow-auto px-4 py-6 focus:outline-none sm:px-8 ${
-            liveMode ? "pb-24 sm:pb-6" : ""
+            liveMode ? "pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-6" : ""
           }`}
         >
           {children}

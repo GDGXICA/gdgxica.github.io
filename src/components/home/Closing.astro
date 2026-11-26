@@ -1,0 +1,115 @@
+---
+import { COLIBRI_STROKE, colibriPath, colibriViewBox } from "@/lib/colibri";
+import NButton from "@/components/night/NButton.astro";
+
+interface Props {
+  communityUrl: string;
+  contactUrl: string;
+}
+
+const { communityUrl, contactUrl } = Astro.props;
+---
+
+<section class="closing" aria-labelledby="closing-title">
+  <div class="n-container">
+    <div class="closing__panel n-panel n-marks" data-reveal>
+      <div class="closing__copy">
+        <h2 id="closing-title" class="n-head">Una comunidad hecha en Ica</h2>
+        <p>
+          Somos estudiantes, profesionales y curiosos que se juntan para
+          aprender tecnología de Google y todo lo que la rodea: Android, Cloud,
+          IA, web, Firebase y Flutter.
+        </p>
+        <p>
+          Durante el año organizamos charlas, talleres y study jams, y una vez
+          al año el DevFest. Todo es gratuito. Si te interesa la tecnología, ya
+          eres parte: ven al próximo evento y preséntate.
+        </p>
+        <div class="closing__actions">
+          <NButton href={communityUrl}>Únete a la comunidad</NButton>
+          <NButton variant="ghost" href={contactUrl}>
+            Proponer una charla
+          </NButton>
+        </div>
+        <p class="closing__sponsor">
+          ¿Tu empresa quiere apoyar los eventos?{" "}
+          <a class="n-link" href="/sponsors">Sé patrocinador</a>
+        </p>
+      </div>
+      <svg
+        class="closing__figure"
+        viewBox={colibriViewBox(4)}
+        aria-hidden="true"
+      >
+        <path
+          d={colibriPath()}
+          fill="none"
+          stroke="currentColor"
+          stroke-width={COLIBRI_STROKE * 0.8}
+          stroke-linejoin="round"
+          stroke-linecap="round"></path>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<style>
+  .closing {
+    padding-block: var(--section-gap);
+  }
+
+  .closing__panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 2rem clamp(2rem, 6vw, 6rem);
+    align-items: center;
+    padding: clamp(1.75rem, 1rem + 4vw, 4.5rem);
+  }
+
+  .closing__copy h2 {
+    margin: 0 0 1.5rem;
+  }
+
+  .closing__copy p {
+    max-width: 52ch;
+    margin: 0 0 1rem;
+    color: var(--muted);
+  }
+
+  .closing__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2rem;
+  }
+
+  .closing__copy .closing__sponsor {
+    margin: 1.75rem 0 0;
+    color: var(--muted);
+  }
+
+  .closing__figure {
+    width: 100%;
+    max-width: 26rem;
+    justify-self: center;
+    color: var(--ochre);
+  }
+
+  @media (max-width: 899px) {
+    .closing__panel {
+      grid-template-columns: 1fr;
+    }
+
+    .closing__figure {
+      order: -1;
+      max-width: 13rem;
+      justify-self: start;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .closing__actions :global(.nb) {
+      flex: 1 1 100%;
+    }
+  }
+</style>

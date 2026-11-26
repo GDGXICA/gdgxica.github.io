@@ -1,11 +1,30 @@
 ---
+/**
+ * A speaker as a compact row: round portrait, name, role, a short bio and
+ * their links. No card: rows are divided by the list's rules. Without a
+ * photo the portrait is their initials.
+ */
 import { Globe } from "@lucide/astro";
 import GithubIcon from "./icons/GithubIcon.astro";
 import LinkedinIcon from "./icons/LinkedinIcon.astro";
 import TwitterIcon from "./icons/TwitterIcon.astro";
 import YoutubeIcon from "./icons/YoutubeIcon.astro";
+
+interface Props {
+  image?: string;
+  name: string;
+  role?: string;
+  description?: string;
+  linkedin?: string;
+  web?: string;
+  youtube?: string;
+  twitter?: string;
+  github?: string;
+  [key: string]: unknown;
+}
+
 const {
-  image,
+  image = "",
   name,
   role,
   description,
@@ -15,70 +34,151 @@ const {
   twitter,
   github,
 } = Astro.props;
+
+const hasPhoto = Boolean(image) && !image.endsWith("/placeholder.svg");
+const initials = name
+  .split(/\s+/)
+  .slice(0, 2)
+  .map((part) => part[0])
+  .join("")
+  .toUpperCase();
+
+const links = [
+  { href: linkedin, label: "LinkedIn", Icon: LinkedinIcon },
+  { href: twitter, label: "X (Twitter)", Icon: TwitterIcon },
+  { href: github, label: "GitHub", Icon: GithubIcon },
+  { href: youtube, label: "YouTube", Icon: YoutubeIcon },
+  { href: web, label: "Sitio web", Icon: Globe },
+].filter((link) => link.href?.startsWith("http"));
 ---
 
-<article class="flex flex-col items-start gap-5 sm:flex-row md:flex-row">
-  <img
-    src={image || "/placeholder.svg"}
-    width={120}
-    height={120}
-    alt={`Foto del speaker ${name}`}
-    class="h-[120px] w-[120px] flex-shrink-0 rounded-md object-cover object-center"
-    loading="lazy"
-    decoding="async"
-  />
-  <div>
-    <h3 class="text-primary font-bold">{name}</h3>
-    <p class="text-google-blue mb-2 text-sm">{role}</p>
-    <ul class="mb-2 flex gap-2">
-      {
-        linkedin?.startsWith("http") && (
-          <li>
-            <a href={linkedin} target="_blank" rel="noopener noreferrer">
-              <LinkedinIcon size={16} color="#71717a" />
-            </a>
-          </li>
-        )
-      }
-      {
-        twitter?.startsWith("http") && (
-          <li>
-            <a href={twitter} target="_blank" rel="noopener noreferrer">
-              <TwitterIcon size={16} color="#71717a" />
-            </a>
-          </li>
-        )
-      }
-      {
-        github?.startsWith("http") && (
-          <li>
-            <a href={github} target="_blank" rel="noopener noreferrer">
-              <GithubIcon size={16} color="#71717a" />
-            </a>
-          </li>
-        )
-      }
-      {
-        youtube?.startsWith("http") && (
-          <li>
-            <a href={youtube} target="_blank" rel="noopener noreferrer">
-              <YoutubeIcon size={16} color="#71717a" />
-            </a>
-          </li>
-        )
-      }
-      {
-        web?.startsWith("http") && (
-          <li>
-            <a href={web} target="_blank" rel="noopener noreferrer">
-              <Globe size={16} color="#71717a" />
-            </a>
-          </li>
-        )
-      }
-    </ul>
-    <p class="text-secondary">
-      {description}
-    </p>
+<article class="spk">
+  {
+    hasPhoto ? (
+      <img
+        class="spk__photo"
+        src={image}
+        width={88}
+        height={88}
+        alt={`Foto del speaker ${name}`}
+        loading="lazy"
+        decoding="async"
+      />
+    ) : (
+      <span class="spk__photo spk__photo--initials" aria-hidden="true">
+        {initials}
+      </span>
+    )
+  }
+  <div class="spk__text">
+    <h3 class="spk__name">{name}</h3>
+    {role && <p class="spk__role">{role}</p>}
+    {description && <p class="spk__bio">{description}</p>}
+    {
+      links.length > 0 && (
+        <ul class="spk__links">
+          {links.map(({ href, label, Icon }) => (
+            <li>
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${label} de ${name}`}
+              >
+                <Icon size={18} />
+              </a>
+            </li>
+          ))}
+        </ul>
+      )
+    }
   </div>
 </article>
+
+<style>
+  .spk {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    align-items: start;
+    gap: 1.1rem;
+  }
+
+  /* If a photo fails to load, its alt text stays for assistive tech but
+     does not spill out of the disc. */
+  .spk__photo {
+    width: 4.5rem;
+    height: 4.5rem;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--surface-2);
+    color: transparent;
+    object-fit: cover;
+    object-position: center top;
+  }
+
+  .spk__photo--initials {
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line-strong);
+    color: var(--ochre);
+    font-size: 1.15rem;
+    font-weight: 600;
+  }
+
+  .spk__text {
+    min-width: 0;
+  }
+
+  .spk__name {
+    margin: 0.2rem 0 0;
+    font-size: var(--step-lead);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+  }
+
+  .spk__role {
+    margin: 0.3rem 0 0;
+    color: var(--ink);
+    font-size: var(--step-small);
+    line-height: 1.4;
+  }
+
+  .spk__bio {
+    margin: 0.6rem 0 0;
+    color: var(--muted);
+    font-size: var(--step-small);
+    line-height: 1.55;
+  }
+
+  .spk__links {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0.35rem 0 0 -0.7rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .spk__links a {
+    display: grid;
+    width: 2.75rem;
+    height: 2.75rem;
+    place-items: center;
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    transition:
+      color 160ms ease,
+      background-color 160ms ease;
+  }
+
+  .spk__links a:hover {
+    background: var(--surface-1);
+    color: var(--ochre);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spk__links a {
+      transition: none;
+    }
+  }
+</style>

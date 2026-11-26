@@ -1,57 +1,58 @@
 ---
 import Layout from "@/layouts/Layout.astro";
-import HeroPage from "@/components/HeroPage.astro";
+import PageHeader from "@/components/night/PageHeader.astro";
+import NButton from "@/components/night/NButton.astro";
+import StatsBar from "@/components/StatsBar.astro";
 import CallToActionSection from "@/components/CallToActionSection.astro";
 import OrganizerCard from "@/components/OrganizerCard.astro";
-import Button from "@/components/Button.astro";
-import {
-  ArrowRight,
-  BookOpen,
-  HeartHandshake,
-  Sprout,
-  User,
-  UsersRound,
-} from "@lucide/astro";
 import { getCollection } from "astro:content";
 import { fetchStats, fetchLinks } from "@/loaders/transform-site-config";
 import { buildAboutSchema } from "@/utils/schema";
+import { publicImageSize } from "@/utils/imageSize";
 
 const organizersCollection = await getCollection("organizers");
 const organizers = organizersCollection.map((entry) => entry.data);
-const membersCollection = await getCollection("members");
-const members = membersCollection.map((entry) => entry.data);
-const team = [...organizers, ...members];
+// Team members are hidden for now: only organizers are listed. Set this to
+// true to show the "Miembros del equipo" group again.
+const SHOW_TEAM_MEMBERS = false;
+const members = SHOW_TEAM_MEMBERS
+  ? (await getCollection("members")).map((entry) => entry.data)
+  : [];
+const teamGroups = [
+  { title: "Organizadores", people: organizers },
+  { title: "Miembros del equipo", people: members },
+].filter((group) => group.people.length > 0);
 const stats = await fetchStats();
 const links = await fetchLinks();
 
 const impactStats = [
+  { value: `${stats.yearsActive}`, label: "años creando comunidad" },
+  { value: `${stats.totalMembers}+`, label: "miembros de la comunidad" },
+  { value: `${stats.totalEvents}+`, label: "eventos realizados" },
+  { value: `${stats.totalSpeakers}+`, label: "speakers participantes" },
+];
+
+// One photo of the community beside the page title: the first landscape shot in
+// the gallery, shown whole at its own ratio.
+const gallery = (await getCollection("gallery")).map((entry) => entry.data);
+const headPhoto =
+  gallery
+    .map((photo) => ({ ...photo, size: publicImageSize(photo.src) }))
+    .find((photo) => photo.size && photo.size.width > photo.size.height) ??
+  null;
+
+const values = [
   {
-    value: stats.yearsActive,
-    suffix: "",
-    label: "Años creando comunidad",
-    accent: "bg-google-green",
-    valueStyle: "text-google-green",
+    title: "Aprender",
+    text: "Acercamos conocimiento práctico mediante charlas, talleres y experiencias para todos los niveles.",
   },
   {
-    value: stats.totalMembers,
-    suffix: "+",
-    label: "Miembros de la comunidad",
-    accent: "bg-google-blue",
-    valueStyle: "text-google-blue",
+    title: "Conectar",
+    text: "Reunimos a personas con intereses diversos para formar relaciones, proyectos y nuevas oportunidades.",
   },
   {
-    value: stats.totalEvents,
-    suffix: "+",
-    label: "Eventos realizados",
-    accent: "bg-google-red",
-    valueStyle: "text-google-red",
-  },
-  {
-    value: stats.totalSpeakers,
-    suffix: "+",
-    label: "Speakers participantes",
-    accent: "bg-google-yellow",
-    valueStyle: "text-amber-600",
+    title: "Impulsar",
+    text: "Damos espacio a nuevas voces para que el talento tecnológico local crezca y se haga visible.",
   },
 ];
 
@@ -66,255 +67,361 @@ const metadata = {
 ---
 
 <Layout {...metadata}>
-  <HeroPage>
-    <img
-      src="/gdg-logo.png"
-      alt="Google Developer Group Ica"
-      class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl"
-    />
-    <h1 class="mb-6 text-4xl font-bold md:text-5xl">
-      <span class="text-google-blue">Somos</span>
-      <span class="text-google-red"> GDG Ica</span>
-    </h1>
-    <p class="text-secondary mx-auto mb-8 max-w-3xl text-xl">
-      Una comunidad tecnológica abierta donde las personas de Ica se encuentran
-      para aprender, compartir conocimiento y crear oportunidades juntas.
-    </p>
-    <div class="flex flex-col justify-center gap-4 sm:flex-row">
-      <Button variant="solid" href={links.community} target="_blank">
-        Únete a la comunidad
-        <ArrowRight stroke-width={1.5} />
-      </Button>
-    </div>
-  </HeroPage>
+  <main>
+    <PageHeader
+      title="Somos GDG Ica"
+      label="Ica, Perú · desde 2015"
+      lead="Una comunidad tecnológica abierta donde las personas de Ica se encuentran para aprender, compartir conocimiento y crear oportunidades juntas."
+    >
+      <NButton href={links.community}>Únete a la comunidad</NButton>
+      {
+        headPhoto && headPhoto.size && (
+          <figure slot="aside" class="head-photo n-marks">
+            <img
+              src={headPhoto.src}
+              alt={headPhoto.alt}
+              width={headPhoto.size.width}
+              height={headPhoto.size.height}
+              fetchpriority="high"
+            />
+          </figure>
+        )
+      }
+      <StatsBar slot="strip" stats={impactStats} />
+    </PageHeader>
 
-  <section id="historia" class="scroll-mt-8 py-12 md:py-20">
-    <div class="container">
-      <div
-        class="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:gap-20"
-      >
-        <div>
-          <p class="text-google-red mb-3 font-semibold">Nuestra historia</p>
-          <h2 class="text-primary text-4xl font-bold">
-            <span class="block">Tecnología con</span>
-            <span class="block">raíces en Ica</span>
-          </h2>
-        </div>
-        <div class="text-secondary space-y-4 text-lg">
-          <p>
-            GDG Ica nació en 2015 como un punto de encuentro para quienes
-            querían aprender sobre tecnología y compartir lo que sabían con
-            otras personas de la región.
-          </p>
-          <p>
-            Desde entonces organizamos eventos, talleres y conversaciones que
-            acercan a estudiantes, profesionales, speakers y aliados. Nuestro
-            propósito sigue siendo el mismo: hacer que el conocimiento circule y
-            que el talento local encuentre un espacio para crecer.
+    <section id="historia" class="story" aria-labelledby="story-title">
+      <div class="n-container story__grid">
+        <h2 id="story-title" class="n-head">Tecnología con raíces en Ica</h2>
+        <div class="story__body">
+          <div class="story__text">
+            <p>
+              GDG Ica nació en 2015 como un punto de encuentro para quienes
+              querían aprender sobre tecnología y compartir lo que sabían con
+              otras personas de la región.
+            </p>
+            <p>
+              Desde entonces organizamos eventos, talleres y conversaciones que
+              acercan a estudiantes, profesionales, speakers y aliados. Nuestro
+              propósito sigue siendo el mismo: hacer que el conocimiento circule
+              y que el talento local encuentre un espacio para crecer.
+            </p>
+          </div>
+          <!-- The span of the story, drawn as a survey dimension. -->
+          <p class="story__span n-mono" aria-hidden="true">
+            <span>2015</span>
+            <span class="story__span-line"></span>
+            <span>hoy</span>
           </p>
         </div>
       </div>
+    </section>
 
-      <div
-        class="mx-auto mt-14 max-w-6xl border-y border-gray-200 py-10 md:mt-16 md:py-12"
-        aria-label="Impacto de GDG Ica"
-      >
-        <p
-          class="text-google-blue text-center text-sm font-semibold tracking-[0.16em] uppercase"
-        >
-          Impacto en cifras
-        </p>
-        <dl class="mt-9 grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-4">
+    <section class="values" aria-labelledby="values-title">
+      <div class="n-container values__grid">
+        <div class="values__intro">
+          <h2 id="values-title" class="n-head">
+            Aprender juntos transforma la comunidad
+          </h2>
+          <p class="n-lead">
+            Todo lo que hacemos parte de tres ideas sencillas.
+          </p>
+        </div>
+        <ol class="values__list">
           {
-            impactStats.map((stat) => (
-              <div class="text-center">
-                <span
-                  class:list={[
-                    "mx-auto mb-4 block h-1 w-10 rounded-full",
-                    stat.accent,
-                  ]}
-                  aria-hidden="true"
-                />
-                <dd
-                  class:list={[
-                    "text-4xl font-bold tracking-tight md:text-5xl",
-                    stat.valueStyle,
-                  ]}
-                  aria-label={`${stat.value}${stat.suffix} ${stat.label}`}
-                >
-                  <>
-                    <span data-count-up={stat.value} aria-hidden="true">
-                      {stat.value}
-                    </span>
-                    <span aria-hidden="true">{stat.suffix}</span>
-                  </>
-                </dd>
-                <dt class="text-secondary mx-auto mt-2 max-w-40 text-sm md:text-base">
-                  {stat.label}
-                </dt>
-              </div>
+            values.map((value, index) => (
+              <li class="values__item">
+                <span class="values__index n-mono" aria-hidden="true">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <h3 class="values__title">{value.title}</h3>
+                <p class="values__text">{value.text}</p>
+              </li>
             ))
           }
-        </dl>
+        </ol>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="bg-section py-12 md:py-20">
-    <div class="container">
-      <div class="mx-auto mb-12 max-w-2xl text-center">
-        <p class="text-google-blue mb-3 font-semibold">Lo que nos mueve</p>
-        <h2 class="text-primary mb-4 text-4xl font-bold">
-          Aprender juntos transforma la comunidad
-        </h2>
-        <p class="text-secondary text-xl">
-          Todo lo que hacemos parte de tres ideas sencillas.
-        </p>
-      </div>
+    {
+      teamGroups.length > 0 && (
+        <section id="equipo" class="team" aria-labelledby="team-title">
+          <div class="n-container">
+            <div class="team__intro">
+              <h2 id="team-title" class="n-head">
+                Un equipo, un mismo propósito
+              </h2>
+              <p class="n-lead">
+                Organizamos actividades, cuidamos la comunidad y convertimos las
+                ideas en experiencias donde más personas puedan aprender y
+                conectar.
+              </p>
+            </div>
 
-      <div
-        class="mx-auto grid max-w-5xl divide-y divide-gray-200 md:grid-cols-3 md:divide-x md:divide-y-0"
-      >
-        <article class="px-6 py-8 text-center md:py-2">
-          <BookOpen
-            stroke-width={1.5}
-            size={44}
-            class="text-google-blue mx-auto mb-5"
-          />
-          <h3 class="text-primary mb-3 text-2xl font-bold">Aprender</h3>
-          <p class="text-secondary">
-            Acercamos conocimiento práctico mediante charlas, talleres y
-            experiencias para todos los niveles.
-          </p>
-        </article>
-        <article class="px-6 py-8 text-center md:py-2">
-          <UsersRound
-            stroke-width={1.5}
-            size={44}
-            class="text-google-red mx-auto mb-5"
-          />
-          <h3 class="text-primary mb-3 text-2xl font-bold">Conectar</h3>
-          <p class="text-secondary">
-            Reunimos a personas con intereses diversos para formar relaciones,
-            proyectos y nuevas oportunidades.
-          </p>
-        </article>
-        <article class="px-6 py-8 text-center md:py-2">
-          <Sprout
-            stroke-width={1.5}
-            size={44}
-            class="text-google-green mx-auto mb-5"
-          />
-          <h3 class="text-primary mb-3 text-2xl font-bold">Impulsar</h3>
-          <p class="text-secondary">
-            Damos espacio a nuevas voces para que el talento tecnológico local
-            crezca y se haga visible.
-          </p>
-        </article>
-      </div>
-    </div>
-  </section>
-
-  {
-    team.length > 0 && (
-      <section id="equipo" class="scroll-mt-8 py-12 md:py-20">
-        <div class="container">
-          <div class="mx-auto mb-12 max-w-2xl text-center">
-            <p class="text-google-green mb-3 font-semibold">
-              Las personas detrás de GDG Ica
-            </p>
-            <h2 class="text-primary mb-4 text-4xl font-bold">
-              Un equipo, un mismo propósito
-            </h2>
-            <p class="text-secondary text-xl">
-              Organizamos actividades, cuidamos la comunidad y convertimos las
-              ideas en experiencias donde más personas puedan aprender y
-              conectar.
-            </p>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4 sm:gap-8 lg:grid-cols-3 xl:grid-cols-4">
-            {team.map((person) => (
-              <OrganizerCard organizer={person} />
+            {teamGroups.map((group) => (
+              <div class="team__group">
+                <h3 class="team__group-title">
+                  {group.title}
+                  <span class="n-mono">{group.people.length}</span>
+                </h3>
+                <ul class="team__roster">
+                  {group.people.map((person) => (
+                    <li>
+                      <OrganizerCard organizer={person} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
           </div>
-        </div>
-      </section>
-    )
-  }
-
-  <CallToActionSection>
-    <h2 class="mb-6 text-3xl font-bold text-white md:text-4xl">
-      Encuentra tu forma de participar
-    </h2>
-    <p class="mb-8 text-xl text-white">
-      Asiste a nuestros eventos y comparte con la comunidad, o aporta tus
-      habilidades como parte del voluntariado.
-    </p>
-    <div class="flex flex-col justify-center gap-4 sm:flex-row">
-      <Button variant="white" href={links.forms.joinCommunity} target="_blank">
-        <User />
-        Únete a la comunidad
-      </Button>
-      <Button variant="white" href="/volunteers">
-        <HeartHandshake />
-        Conoce el voluntariado
-      </Button>
-    </div>
-  </CallToActionSection>
-</Layout>
-
-<script is:inline>
-  function initImpactCounters() {
-    const counters = document.querySelectorAll(
-      "[data-count-up]:not([data-count-initialized])"
-    );
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-
-    if (reduceMotion || !("IntersectionObserver" in window)) {
-      counters.forEach((counter) => {
-        counter.dataset.countInitialized = "true";
-      });
-      return;
+        </section>
+      )
     }
 
-    const animateCounter = (counter) => {
-      const target = Number(counter.dataset.countUp);
-      const duration = 1400;
-      const startedAt = performance.now();
+    <CallToActionSection>
+      <h2>Encuentra tu forma de participar</h2>
+      <p>
+        Asiste a nuestros eventos y comparte con la comunidad, o aporta tus
+        habilidades como parte del voluntariado.
+      </p>
+      <div class="cta-actions">
+        <NButton href={links.forms.joinCommunity}>Únete a la comunidad</NButton>
+        <NButton variant="ghost" href="/volunteers">
+          Conoce el voluntariado
+        </NButton>
+      </div>
+    </CallToActionSection>
+  </main>
+</Layout>
 
-      const update = (now) => {
-        const progress = Math.min((now - startedAt) / duration, 1);
-        const easedProgress = 1 - Math.pow(1 - progress, 3);
-        counter.textContent = String(Math.round(target * easedProgress));
-
-        if (progress < 1) requestAnimationFrame(update);
-      };
-
-      requestAnimationFrame(update);
-    };
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-
-          animateCounter(entry.target);
-          observer.unobserve(entry.target);
-        });
-      },
-      { threshold: 0.4 }
-    );
-
-    counters.forEach((counter) => {
-      counter.dataset.countInitialized = "true";
-      counter.textContent = "0";
-      observer.observe(counter);
-    });
+<style>
+  /* ---- header photo ---- */
+  /* The community, framed with the survey's corner marks. */
+  .head-photo {
+    position: relative;
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface-1);
   }
 
-  initImpactCounters();
-  document.addEventListener("astro:after-swap", initImpactCounters);
-</script>
+  .head-photo img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: calc(var(--radius) - 1px);
+  }
+
+  /* ---- story ---- */
+  .story {
+    padding-block: var(--section-gap);
+  }
+
+  .story__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: 2rem clamp(2rem, 6vw, 6rem);
+    align-items: start;
+  }
+
+  .story__grid h2 {
+    max-width: 14ch;
+    margin: 0;
+  }
+
+  .story__text {
+    max-width: 54ch;
+    color: var(--muted);
+  }
+
+  .story__text p {
+    margin: 0;
+  }
+
+  /* The founding line leads, the rest follows at reading size. */
+  .story__text p:first-child {
+    color: var(--ink);
+    font-size: var(--step-lead);
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+    text-wrap: pretty;
+  }
+
+  .story__text p + p {
+    margin-top: 1.25em;
+  }
+
+  /* 2015 |———————| hoy, in the survey's ochre. */
+  .story__span {
+    display: flex;
+    max-width: 54ch;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 2.5rem 0 0;
+    color: var(--ochre);
+  }
+
+  .story__span-line {
+    height: 10px;
+    flex: 1;
+    border-inline: 1.5px solid var(--ochre);
+    background: linear-gradient(var(--ochre), var(--ochre)) center / 100% 1.5px
+      no-repeat;
+  }
+
+  /* ---- values ---- */
+  .values {
+    padding-block: var(--section-gap);
+    border-block: 1px solid var(--line);
+    background: var(--surface-1);
+  }
+
+  .values__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+    gap: 2.5rem clamp(2rem, 6vw, 6rem);
+    align-items: start;
+  }
+
+  .values__intro {
+    position: sticky;
+    top: 6rem;
+  }
+
+  .values__intro h2 {
+    margin: 0;
+  }
+
+  .values__intro p {
+    max-width: 30ch;
+    margin: 1.25rem 0 0;
+    color: var(--muted);
+  }
+
+  .values__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .values__item {
+    display: grid;
+    grid-template-columns: 3rem minmax(9rem, 0.8fr) minmax(0, 1.2fr);
+    gap: 0.5rem 1.5rem;
+    align-items: baseline;
+    padding-block: clamp(1.5rem, 1rem + 1.5vw, 2.25rem);
+    border-top: 1px solid var(--line);
+  }
+
+  .values__index {
+    color: var(--ochre);
+  }
+
+  .values__title {
+    margin: 0;
+    font-size: clamp(1.75rem, 1.25rem + 1.6vw, 2.5rem);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+
+  .values__text {
+    max-width: 40ch;
+    margin: 0;
+    color: var(--muted);
+  }
+
+  /* ---- team ---- */
+  .team {
+    padding-block: var(--section-gap);
+    scroll-margin-top: 4rem;
+  }
+
+  .team__intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1.25rem clamp(2rem, 6vw, 6rem);
+    align-items: end;
+    margin-bottom: clamp(2.5rem, 1.5rem + 3vw, 4.5rem);
+  }
+
+  .team__intro h2 {
+    margin: 0;
+  }
+
+  .team__intro p {
+    max-width: 44ch;
+    margin: 0;
+    color: var(--muted);
+  }
+
+  .team__group + .team__group {
+    margin-top: clamp(2.5rem, 1.5rem + 2.5vw, 4rem);
+  }
+
+  /* The group's name and head count, over a fine rule. */
+  .team__group-title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin: 0 0 0.25rem;
+    font-size: var(--step-body);
+    font-weight: 600;
+  }
+
+  .team__group-title .n-mono {
+    color: var(--ochre);
+  }
+
+  .team__roster {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+    column-gap: clamp(1.5rem, 3vw, 3rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .team__roster > li {
+    border-top: 1px solid var(--line);
+  }
+
+  /* ---- closing ---- */
+  .cta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  @media (max-width: 1023px) {
+    .story__grid,
+    .values__grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .values__intro {
+      position: static;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .team__intro {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .values__item {
+      grid-template-columns: 2.25rem minmax(0, 1fr);
+    }
+
+    .values__text {
+      grid-column: 2;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .cta-actions :global(.nb) {
+      flex: 1 1 100%;
+    }
+  }
+</style>

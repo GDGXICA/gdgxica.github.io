@@ -1,33 +1,26 @@
 ---
-import { Image } from "astro:assets";
 import { getCollection } from "astro:content";
 import QRCode from "qrcode";
-import Button from "@/components/Button.astro";
-import FeatureCard from "@/components/FeatureCard.astro";
 import Tag from "@/components/Tag.astro";
 import Layout from "@/layouts/Layout.astro";
+import NButton from "@/components/night/NButton.astro";
 import ScheduleCard from "@/components/ScheduleCard.astro";
 import TrackTabSchedule from "@/components/TrackTabSchedule.astro";
 import SpeakerCard from "@/components/SpeakerCard.astro";
 import {
-  Ticket,
-  Share2,
+  ArrowUpRight,
   Calendar,
   CalendarPlus,
+  Check,
   Download,
-  Clock,
-  Building,
-  Users,
-  ExternalLink,
-  CircleCheckBig,
-  Heart,
   MapPinned,
-  MicVocal,
-  NotebookText,
-  Store,
+  Plus,
 } from "@lucide/astro";
 import SharedButton from "@/components/react/SharedButton";
+import { COLIBRI_STROKE, colibriPath, colibriViewBox } from "@/lib/colibri";
 import { getEventDates, googleCalendarUrl } from "@/utils/eventDates";
+import { hourRange, shortVenue, surveyDate } from "@/utils/eventShort";
+import { publicImageSize } from "@/utils/imageSize";
 
 export async function getStaticPaths() {
   const events = await getCollection("events");
@@ -126,34 +119,111 @@ const hasSchedule = isArraySchedule
       ).length > 0
     : false;
 
+type TrackSchedule = {
+  trackSessions: Record<
+    string,
+    {
+      id: number;
+      title: string;
+      name: string;
+      image: string;
+      role: string;
+      type: string;
+      startTime: string;
+      endTime: string;
+      duration: string;
+      isKeynote?: boolean;
+    }[]
+  >;
+};
+
+// A multi-track agenda without its `tracks` list still gets one tab per
+// track key, named after the key, instead of failing the build.
+const tracks =
+  event.data.tracks ??
+  (isTrackSchedule
+    ? Object.keys((schedule as TrackSchedule).trackSessions).map((id) => ({
+        id,
+        name: id,
+        color: "var(--muted)",
+        description: "",
+      }))
+    : []);
+
+// A finished event no longer takes registrations: it shows who came instead.
+const isPast = event.data.status.type === "completed";
+const canRegister = !isPast && Boolean(event.data.registerFormLink);
+
+// Never negative: a data entry with more registrations than seats (or a stale
+// `maxParticipants`) must read as "sold out", not as "-12 lugares disponibles".
+const spotsLeft = Math.max(
+  0,
+  event.data.maxParticipants - event.data.participants
+);
+const spotsLabel =
+  spotsLeft === 0
+    ? "Cupos agotados"
+    : `${spotsLeft} ${spotsLeft === 1 ? "lugar disponible" : "lugares disponibles"}`;
+const seatsPercent =
+  event.data.maxParticipants > 0
+    ? Math.min(
+        100,
+        Math.round((event.data.participants / event.data.maxParticipants) * 100)
+      )
+    : null;
+
 const whatsappGroupLink = event.data.whatsappGroupLink;
 // Data URL rather than an SVG string so it goes into an <img src>, without
 // injecting raw HTML into the page. Same approach as credencial.astro.
+// Printed in the theme's paper and ink: a scanner needs dark on light.
 const whatsappQrDataUrl = whatsappGroupLink
   ? await QRCode.toDataURL(whatsappGroupLink, {
       errorCorrectionLevel: "M",
       margin: 1,
       width: 480,
-      color: { dark: "#111827", light: "#ffffff" },
+      color: { dark: "#0a1021", light: "#ecebe2" },
     })
   : null;
+
+// ---- the head's readout -------------------------------------------------
+const dates = getEventDates(event.data);
+const venueShort = shortVenue(event.data.location.name, event.data.isVirtual);
+
+/** "14.07° S · 75.74° O" from the Google Maps embed's own pin, if any. */
+function coordinates(embed: string): string | null {
+  const lat = Number(embed.match(/!3d(-?\d+(?:\.\d+)?)/)?.[1]);
+  const lng = Number(embed.match(/!2d(-?\d+(?:\.\d+)?)/)?.[1]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || (!lat && !lng)) {
+    return null;
+  }
+  const fmt = (v: number, pos: string, neg: string) =>
+    `${Math.abs(v).toFixed(2)}° ${v < 0 ? neg : pos}`;
+  return `${fmt(lat, "N", "S")} · ${fmt(lng, "E", "O")}`;
+}
+
+const dimLabel = event.data.isVirtual
+  ? "Evento en línea"
+  : (coordinates(event.data.location.googleMapEmbed) ?? "Ica, Perú");
+
+const poster = event.data.image || "/placeholder.svg";
+const posterSize = publicImageSize(poster) ?? { width: 1200, height: 900 };
+const longTitle = event.data.name.length > 34;
+
+const paragraphs = event.data.largeDescription
+  .split(/\n+/)
+  .map((p) => p.trim())
+  .filter(Boolean);
+
+const colibri = colibriPath();
 ---
 
 <Layout {...metadata}>
-  <section
-    class="relative flex min-h-[24rem] items-end py-12 md:min-h-[28rem] md:py-16"
-  >
-    <span class="absolute inset-0 z-[1] bg-black/50"></span>
-    <Image
-      src={event.data.image || "/placeholder.svg"}
-      alt={`Foto de evento ${event.data.name}`}
-      class="absolute inset-0 h-full w-full object-cover object-center"
-      width={1920}
-      height={1080}
-    />
-    <div class="relative z-[2] container">
-      <div class="max-w-[768px] lg:max-w-[960px]">
-        <div class="mb-4 flex gap-2">
+  <!-- ======== head: name, readout and poster ======== -->
+  <header class="ev-head" aria-labelledby="ev-title">
+    <div class="ev-head__grid" aria-hidden="true"></div>
+    <div class="n-container ev-head__inner">
+      <div class="ev-head__copy">
+        <div class="ev-head__tags">
           {
             event.data.category && (
               <Tag
@@ -171,38 +241,117 @@ const whatsappQrDataUrl = whatsappGroupLink
             )
           }
         </div>
-        <h1 class="mb-4 text-4xl font-bold text-white lg:text-5xl">
-          {event.data.name}
-        </h1>
-        <p class="mb-6 max-w-[768px] text-xl text-white">
-          {event.data.shortDescription}
-        </p>
-        <div class="flex flex-col gap-4 md:flex-row md:flex-wrap">
-          <Button
-            variant="solid"
-            href={event.data.registerFormLink}
-            target="_blank"
+        <div class="ev-head__mark">
+          <h1
+            id="ev-title"
+            class:list={[
+              "n-page-title",
+              "ev-head__title",
+              { "ev-head__title--long": longTitle },
+            ]}
           >
-            <Ticket size={16} /> Registrarse Gratis
-          </Button>
+            {event.data.name}
+          </h1>
+          <p class="ev-head__dim n-mono"><span>{dimLabel}</span></p>
+        </div>
+        <p class="n-lead ev-head__lead">{event.data.shortDescription}</p>
+      </div>
+
+      <figure class="ev-plate">
+        <img
+          src={poster}
+          alt={`Afiche del evento ${event.data.name}`}
+          width={posterSize.width}
+          height={posterSize.height}
+          decoding="async"
+          fetchpriority="high"
+        />
+      </figure>
+
+      <section class="ev-readout n-panel n-marks" aria-label="Datos del evento">
+        <dl class="ev-facts">
+          <div>
+            <dt>Fecha</dt>
+            <dd class="n-mono">
+              <time datetime={dates.startISO}>{surveyDate(dates.startISO)}</time
+              >
+            </dd>
+          </div>
+          <div>
+            <dt>Hora</dt>
+            <dd class="n-mono">{hourRange(dates.startISO, dates.endISO)}</dd>
+          </div>
+          <div>
+            <dt>Lugar</dt>
+            <dd class="n-mono">
+              {
+                event.data.isVirtual ? (
+                  venueShort
+                ) : (
+                  <a class="n-link ev-facts__place" href="#ubicacion">
+                    {venueShort}
+                  </a>
+                )
+              }
+            </dd>
+          </div>
+          <div>
+            <dt>Cupos</dt>
+            <dd class="n-mono">
+              <span class="ev-facts__seats">
+                <strong>{event.data.participants}</strong>
+                {
+                  event.data.maxParticipants > 0 && (
+                    <span class="n-muted">/{event.data.maxParticipants}</span>
+                  )
+                }
+              </span>
+              {
+                seatsPercent !== null && (
+                  <span
+                    class="ev-bar"
+                    role="img"
+                    aria-label={`${seatsPercent}% de los cupos tomados`}
+                  >
+                    <span style={`width: ${seatsPercent}%`} />
+                  </span>
+                )
+              }
+            </dd>
+          </div>
+        </dl>
+
+        <div class="ev-actions">
           {
-            /* Only for events that opt into the credential block in
-               gdg-ica-data. The route does not exist otherwise — the page's
-               getStaticPaths filters on the same flag — so an
-               unconditional link would 404. */
-            event.data.credential?.enabled && (
-              <Button variant="white" href={`/events/${event.id}/credencial`}>
-                Crea tu credencial
-              </Button>
+            canRegister && (
+              <NButton href={event.data.registerFormLink}>
+                Regístrate gratis
+              </NButton>
             )
           }
-          {
-            event.data.mural?.enabled && (
-              <Button variant="white" href={`/events/${event.id}/fotos`}>
-                Ver las fotos
-              </Button>
-            )
-          }
+          <details class="ev-cal" data-cal>
+            <summary class="nb nb--ghost nb--md">
+              <span class="nb__label">Añadir al calendario</span>
+              <span class="nb__icon" aria-hidden="true">
+                <CalendarPlus size={18} stroke-width={2} />
+              </span>
+            </summary>
+            <div class="ev-cal__menu">
+              <a href={gcalUrl} target="_blank" rel="noopener noreferrer">
+                <Calendar size={18} aria-hidden="true" />
+                <span>Google Calendar</span>
+                <ArrowUpRight
+                  size={16}
+                  aria-hidden="true"
+                  class="ev-cal__out"
+                />
+              </a>
+              <a href={icsUrl} download>
+                <Download size={18} aria-hidden="true" />
+                <span>Descargar .ics</span>
+              </a>
+            </div>
+          </details>
           <SharedButton
             client:visible
             title={event.data.name}
@@ -216,380 +365,335 @@ const whatsappQrDataUrl = whatsappGroupLink
             eventHashtags={JSON.stringify(event.data.tags)}
             eventOrganization="Google Developer Group Ica"
           />
-          <details class="group relative">
-            <summary
-              class="border-gray-custom text-primary inline-flex cursor-pointer list-none items-center justify-center gap-[10px] rounded-md border bg-white px-8 py-[10px] font-medium whitespace-nowrap [&::-webkit-details-marker]:hidden"
-            >
-              <CalendarPlus size={16} /> Añadir a calendario
-            </summary>
-            <div
-              class="absolute z-10 mt-2 flex w-60 flex-col overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
-            >
-              <a
-                href={gcalUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-primary flex items-center gap-2 px-4 py-3 hover:bg-gray-100"
-              >
-                <Calendar size={16} /> Google Calendar
-              </a>
-              <a
-                href={icsUrl}
-                download
-                class="text-primary flex items-center gap-2 px-4 py-3 hover:bg-gray-100"
-              >
-                <Download size={16} /> Descargar .ics
-              </a>
-            </div>
-          </details>
-        </div>
-      </div>
-    </div>
-  </section>
-  <section class="bg-section py-20">
-    <div class="container">
-      <div
-        class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-      >
-        <FeatureCard className="text-center">
-          <Calendar stroke-width={1.5} color="#2463EB" class="mx-auto mb-3" />
-          <strong class="text-primary mb-2 font-semibold">Fecha</strong>
-          <p class="text-secondary">{event.data.date}</p>
-        </FeatureCard>
-        <FeatureCard className="text-center">
-          <Clock stroke-width={1.5} color="#EF4444" class="mx-auto mb-3" />
-          <strong class="text-primary mb-2 font-semibold">Horario</strong>
-          <p class="text-secondary">{event.data.time}</p>
-        </FeatureCard>
-        <FeatureCard className="text-center">
-          <Building stroke-width={1.5} color="#16A34A" class="mx-auto mb-3" />
-          <strong class="text-primary mb-2 font-semibold">
-            {event.data.isVirtual ? "Modalidad" : "Ubicación"}
-          </strong>
-          <p class="text-secondary">
-            {event.data.isVirtual ? "Virtual" : event.data.location.name}
-          </p>
-        </FeatureCard>
-        <FeatureCard className="text-center">
-          <Users stroke-width={1.5} color="#EBB308" class="mx-auto mb-3" />
-          <strong class="text-primary mb-2 font-semibold">Asistentes</strong>
-          <p class="text-secondary">
-            <span>{event.data.participants}</span>/<span
-              >{event.data.maxParticipants}</span
-            >
-          </p>
-        </FeatureCard>
-      </div>
-    </div>
-  </section>
-  <section class="py-12">
-    <div class="container">
-      <div class="flex flex-col gap-8 lg:flex-row">
-        <div class="flex basis-8/12 flex-col gap-8">
-          <!-- about -->
-          <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-            <h2 class="text-primary mb-6 text-2xl font-semibold">
-              Acerca del Evento
-            </h2>
-
-            <p class="text-secondary">
-              {event.data.largeDescription}
-            </p>
-          </div>
-          <!-- agenda -->
-          <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-            <div class="mb-6">
-              <h2 class="text-primary mb-2 text-2xl font-semibold">Agenda</h2>
-            </div>
-            {
-              hasSchedule ? (
-                isTrackSchedule ? (
-                  <TrackTabSchedule
-                    schedule={
-                      schedule as {
-                        trackSessions: Record<
-                          string,
-                          {
-                            id: number;
-                            title: string;
-                            name: string;
-                            image: string;
-                            role: string;
-                            type: string;
-                            startTime: string;
-                            endTime: string;
-                            duration: string;
-                            isKeynote?: boolean;
-                          }[]
-                        >;
-                      }
-                    }
-                    tracks={event.data.tracks!}
-                  />
-                ) : (
-                  <div class="flex flex-col gap-4">
-                    {isArraySchedule &&
-                      (
-                        schedule as {
-                          id: number;
-                          time: string;
-                          title: string;
-                          name: string;
-                          image: string;
-                          role: string;
-                          type: string;
-                        }[]
-                      ).map((item) => <ScheduleCard {...item} />)}
-                  </div>
-                )
-              ) : (
-                <div class="flex flex-col items-center justify-center gap-4 text-center text-gray-400">
-                  <NotebookText size={48} stroke-width={1} />
-                  <p>Nuestra agenda está en construcción. ¡Vuelve pronto!</p>
-                </div>
-              )
-            }
-          </div>
-          <!-- speakers -->
-          <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-            <h2 class="text-primary mb-6 text-2xl font-semibold">Speakers</h2>
-            {
-              event.data.speakers.length > 0 ? (
-                <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
-                  {event.data.speakers.map((speaker) => (
-                    <SpeakerCard {...speaker} />
-                  ))}
-                </div>
-              ) : (
-                <div class="flex flex-col items-center justify-center gap-4 text-center text-gray-400">
-                  <MicVocal size={48} stroke-width={1} />
-                  <p>
-                    Pronto revelaremos a nuestros speakers invitados. ¡Estate
-                    atento!
-                  </p>
-                </div>
-              )
-            }
-          </div>
-          <!-- sponsors -->
-          <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-            <h2 class="text-primary mb-6 text-2xl font-semibold">Sponsors</h2>
-            {
-              event.data.sponsors.length > 0 ? (
-                <div class="grid grid-cols-2 gap-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                  {event.data.sponsors.map((sponsor) => (
-                    <div class="flex items-center justify-center rounded-lg border border-gray-100 bg-white p-4 shadow-sm transition-shadow duration-200 hover:shadow-md">
-                      <Image
-                        src={sponsor.image || "/placeholder.svg"}
-                        width={100}
-                        height={100}
-                        class="h-16 w-auto max-w-[100px] object-contain sm:h-20 md:h-24"
-                        alt={`Logo de ${sponsor.alt}`}
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div class="flex flex-col items-center justify-center gap-4 text-center text-gray-400">
-                  <Store size={48} stroke-width={1} />
-                  <p>
-                    Estamos preparando una gran alianza de patrocinadores. ¡Muy
-                    pronto!
-                  </p>
-                </div>
-              )
-            }
-          </div>
-        </div>
-        <div class="flex flex-col gap-8 lg:basis-1/3">
-          <!-- register -->
-          <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-            <h2 class="text-primary mb-6 text-2xl font-semibold">Registro</h2>
-            <p class="text-google-green mb-2 text-center text-2xl font-bold">
-              Gratuito
-            </p>
-            <p class="text-secondary mb-4 text-center">
-              {event.data.maxParticipants - event.data.participants} lugares disponibles
-            </p>
-            <div class="flex flex-col gap-4">
-              <Button variant="solid" href={event.data.registerFormLink}>
-                <Ticket size={16} /> Registrarse Gratis
-              </Button>
-              <Button variant="outline" href="/"
-                ><Share2 size={16} /> Compartir Evento
-              </Button>
-            </div>
-          </div>
           {
-            whatsappGroupLink && whatsappQrDataUrl && (
-              <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-                <h2 class="text-primary mb-4 text-2xl font-semibold">
-                  Grupo de WhatsApp
-                </h2>
-                <p class="text-secondary mb-4 text-sm">
-                  Únete al grupo del evento para recibir información sobre
-                  salones, charlas y novedades en tiempo real.
-                </p>
-                <div class="mb-4 flex items-center justify-center rounded-lg bg-white p-4">
-                  <img
-                    src={whatsappQrDataUrl}
-                    alt="QR del grupo de WhatsApp del evento"
-                    class="h-auto w-full max-w-[240px]"
-                  />
-                </div>
-                <div class="flex justify-center">
-                  <Button
-                    variant="solid"
-                    href={whatsappGroupLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      width="16"
-                      height="16"
-                      fill="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12.05 21.785h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.002-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.892 6.994c-.003 5.45-4.437 9.884-9.884 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.88 11.88 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.82 11.82 0 0 0-3.48-8.413" />
-                    </svg>
-                    Unirse al grupo
-                  </Button>
-                </div>
-              </div>
+            /* Only for events that opt into the credential block in
+               gdg-ica-data. The route does not exist otherwise — the page's
+               getStaticPaths filters on the same flag — so an
+               unconditional link would 404. */
+            event.data.credential?.enabled && (
+              <NButton variant="ghost" href={`/events/${event.id}/credencial`}>
+                Crea tu credencial
+              </NButton>
             )
           }
-          <!-- requeriments -->
-          <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-            <h2 class="text-primary mb-6 text-2xl font-semibold">Requisitos</h2>
-            <ul class="flex flex-col gap-2">
-              {
-                event.data.requirements.map((requeriment) => (
-                  <li class="text-secondary flex items-center gap-3 text-sm">
-                    <CircleCheckBig size={16} color="#16A34A" />
-                    {requeriment}
-                  </li>
-                ))
-              }
+          {
+            event.data.mural?.enabled && (
+              <NButton variant="ghost" href={`/events/${event.id}/fotos`}>
+                Ver las fotos
+              </NButton>
+            )
+          }
+        </div>
+      </section>
+    </div>
+  </header>
+
+  <!-- ======== body: the programme and the practical side ======== -->
+  <div class="n-container ev-body">
+    <div class="ev-main">
+      <section class="ev-sec" aria-labelledby="sec-about">
+        <h2 id="sec-about" class="n-head ev-h2">Acerca del evento</h2>
+        <div class="n-prose ev-prose">
+          {paragraphs.map((text) => <p>{text}</p>)}
+        </div>
+      </section>
+
+      <section class="ev-sec" id="agenda" aria-labelledby="sec-agenda">
+        <h2 id="sec-agenda" class="n-head ev-h2">Agenda</h2>
+        {
+          hasSchedule ? (
+            isTrackSchedule ? (
+              <TrackTabSchedule
+                schedule={schedule as TrackSchedule}
+                tracks={tracks}
+              />
+            ) : (
+              <ol class="ev-timeline">
+                {isArraySchedule &&
+                  (
+                    schedule as {
+                      id: number;
+                      time: string;
+                      title: string;
+                      name: string;
+                      image: string;
+                      role: string;
+                      type: string;
+                    }[]
+                  ).map((item) => <ScheduleCard {...item} />)}
+              </ol>
+            )
+          ) : (
+            <p class="ev-empty">
+              Nuestra agenda está en construcción. ¡Vuelve pronto!
+            </p>
+          )
+        }
+      </section>
+
+      <section class="ev-sec" id="speakers" aria-labelledby="sec-speakers">
+        <div class="ev-sec__head">
+          <h2 id="sec-speakers" class="n-head ev-h2">Speakers</h2>
+          {
+            event.data.speakers.length > 0 && (
+              <p class="n-mono n-muted">
+                {event.data.speakers.length}{" "}
+                {event.data.speakers.length === 1 ? "speaker" : "speakers"}
+              </p>
+            )
+          }
+        </div>
+        {
+          event.data.speakers.length > 0 ? (
+            <ul class="ev-speakers">
+              {event.data.speakers.map((speaker) => (
+                <li>
+                  <SpeakerCard {...speaker} />
+                </li>
+              ))}
             </ul>
-          </div>
-          <!-- includes -->
-          <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-            <h2 class="text-primary mb-6 text-2xl font-semibold">Incluye</h2>
-            <ul class="flex flex-col gap-2">
-              {
-                event.data.include.map((item) => (
-                  <li class="text-secondary flex items-center gap-3 text-sm">
-                    <Heart size={16} color="#EF4444" />
-                    {item}
-                  </li>
-                ))
-              }
+          ) : (
+            <p class="ev-empty">
+              Pronto revelaremos a nuestros speakers invitados. ¡Estate atento!
+            </p>
+          )
+        }
+      </section>
+
+      <section class="ev-sec" id="sponsors" aria-labelledby="sec-sponsors">
+        <h2 id="sec-sponsors" class="n-head ev-h2">Sponsors</h2>
+        {
+          event.data.sponsors.length > 0 ? (
+            <ul class="ev-sponsors">
+              {event.data.sponsors.map((sponsor) => (
+                <li class="ev-sponsor">
+                  <img
+                    src={sponsor.image || "/placeholder.svg"}
+                    width={160}
+                    height={96}
+                    alt={`Logo de ${sponsor.alt}`}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </li>
+              ))}
             </ul>
-          </div>
-          <!-- technologies -->
-          <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-            <h2 class="text-primary mb-6 text-2xl font-semibold">
+          ) : (
+            <p class="ev-empty">
+              Estamos preparando una gran alianza de patrocinadores. ¡Muy
+              pronto!
+            </p>
+          )
+        }
+      </section>
+    </div>
+
+    <aside class="ev-side" aria-label="Información práctica">
+      {
+        whatsappGroupLink && whatsappQrDataUrl && (
+          <section class="ev-panel n-panel" aria-labelledby="side-wa">
+            <h2 id="side-wa" class="ev-panel__title">
+              Grupo de WhatsApp
+            </h2>
+            <p class="ev-panel__note">
+              Únete al grupo del evento para recibir información sobre salones,
+              charlas y novedades en tiempo real.
+            </p>
+            <div class="ev-qr">
+              <img
+                src={whatsappQrDataUrl}
+                alt="QR del grupo de WhatsApp del evento"
+                width={480}
+                height={480}
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+            <NButton variant="ghost" href={whatsappGroupLink} class="ev-wide">
+              Unirse al grupo
+            </NButton>
+          </section>
+        )
+      }
+
+      {
+        event.data.requirements.length > 0 && (
+          <section class="ev-panel n-panel" aria-labelledby="side-req">
+            <h2 id="side-req" class="ev-panel__title">
+              Requisitos
+            </h2>
+            <ul class="ev-list">
+              {event.data.requirements.map((requirement) => (
+                <li>
+                  <Check size={16} stroke-width={2.4} aria-hidden="true" />
+                  <span>{requirement}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      }
+
+      {
+        event.data.include.length > 0 && (
+          <section class="ev-panel n-panel" aria-labelledby="side-inc">
+            <h2 id="side-inc" class="ev-panel__title">
+              Incluye
+            </h2>
+            <ul class="ev-list">
+              {event.data.include.map((item) => (
+                <li>
+                  <Plus size={16} stroke-width={2.4} aria-hidden="true" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      }
+
+      {
+        event.data.technologies.length > 0 && (
+          <section class="ev-panel n-panel" aria-labelledby="side-tech">
+            <h2 id="side-tech" class="ev-panel__title">
               Tecnologías
             </h2>
-            <ul class="flex flex-wrap gap-2">
-              {
-                event.data.technologies.map((technology) => (
-                  <li>
-                    <Tag label={technology} />
-                  </li>
-                ))
-              }
+            <ul class="ev-tags">
+              {event.data.technologies.map((technology) => (
+                <li>
+                  <Tag label={technology} />
+                </li>
+              ))}
             </ul>
-          </div>
-          <!-- ubication -->
-          {
-            !event.data.isVirtual && (
-              <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-                <h2 class="text-primary mb-6 text-2xl font-semibold">
-                  Ubicación
-                </h2>
-                <p class="text-primary font-semibold">
-                  {event.data.location.name}
-                </p>
-                <p class="text-secondary mb-3 text-sm">
-                  {event.data.location.direction}
-                </p>
-                {event.data.location.googleMapEmbed ? (
-                  <iframe
-                    src={event.data.location.googleMapEmbed}
-                    width="600"
-                    height="450"
-                    style="border:0;"
-                    allowfullscreen=""
-                    loading="lazy"
-                    referrerpolicy="no-referrer-when-downgrade"
-                    class="h-60 w-full"
-                  />
-                ) : (
-                  <div class="flex h-32 items-center justify-center gap-2 rounded-lg bg-gray-100">
-                    <MapPinned size={16} color="#4b5563" />
-                    <span class="text-secondary">Mapa interactivo</span>
-                  </div>
-                )}
-                <div class="mt-3 grid">
-                  <Button
-                    variant="outline"
-                    target="_blank"
-                    href={event.data.location.googleMapLink}
-                  >
-                    <ExternalLink />
-                    Ver en Google Maps
-                  </Button>
-                </div>
+          </section>
+        )
+      }
+
+      {
+        !event.data.isVirtual && (
+          <section
+            class="ev-panel n-panel"
+            id="ubicacion"
+            aria-labelledby="side-loc"
+          >
+            <h2 id="side-loc" class="ev-panel__title">
+              Ubicación
+            </h2>
+            <p class="ev-loc__name">{event.data.location.name}</p>
+            <p class="ev-panel__note">{event.data.location.direction}</p>
+            {event.data.location.googleMapEmbed ? (
+              <div class="ev-map">
+                <iframe
+                  src={event.data.location.googleMapEmbed}
+                  title={`Mapa de ${event.data.location.name}`}
+                  width="600"
+                  height="450"
+                  style="border:0;"
+                  allowfullscreen=""
+                  loading="lazy"
+                  referrerpolicy="no-referrer-when-downgrade"
+                />
               </div>
-            )
-          }
-          {
-            event.data.isVirtual && (
-              <div class="border-gray-custom rounded-lg border p-6 shadow-sm">
-                <h2 class="text-primary mb-6 text-2xl font-semibold">
-                  Modalidad
-                </h2>
-                <div class="flex flex-col items-center justify-center gap-4 text-center">
-                  <div class="rounded-full bg-blue-50 p-4">
-                    <ExternalLink
-                      size={32}
-                      color="#2463EB"
-                      stroke-width={1.5}
-                    />
-                  </div>
-                  <div>
-                    <p class="text-primary mb-2 text-lg font-semibold">
-                      Evento Virtual
-                    </p>
-                    <p class="text-secondary text-sm">
-                      Este evento se realizará de manera virtual. El enlace de
-                      acceso se enviará a tu correo después del registro.
-                    </p>
-                  </div>
-                </div>
+            ) : (
+              <div class="ev-map ev-map--empty">
+                <MapPinned size={18} aria-hidden="true" />
+                <span>Mapa interactivo</span>
               </div>
-            )
+            )}
+            {event.data.location.googleMapLink && (
+              <NButton
+                variant="ghost"
+                href={event.data.location.googleMapLink}
+                class="ev-wide"
+              >
+                Ver en Google Maps
+              </NButton>
+            )}
+          </section>
+        )
+      }
+      {
+        event.data.isVirtual && (
+          <section class="ev-panel n-panel" aria-labelledby="side-mode">
+            <h2 id="side-mode" class="ev-panel__title">
+              Modalidad
+            </h2>
+            <p class="ev-loc__name">Evento Virtual</p>
+            <p class="ev-panel__note">
+              Este evento se realizará de manera virtual. El enlace de acceso se
+              enviará a tu correo después del registro.
+            </p>
+          </section>
+        )
+      }
+
+      <!-- Last in the column so it can stay in view beside the agenda and
+           the speakers once the rest of the column has scrolled past. -->
+      <section
+        class="ev-panel ev-reg n-panel n-marks"
+        aria-labelledby="side-reg"
+      >
+        <h2 id="side-reg" class="ev-panel__title">
+          {isPast ? "Asistencia" : "Registro"}
+        </h2>
+        <p class="ev-reg__price">{isPast ? "Evento realizado" : "Gratuito"}</p>
+        <p class="ev-reg__spots n-mono">
+          {
+            isPast
+              ? `${event.data.participants} ${event.data.participants === 1 ? "persona registrada" : "personas registradas"}`
+              : spotsLabel
           }
-        </div>
+        </p>
+        {
+          !isPast && seatsPercent !== null && (
+            <span
+              class="ev-bar"
+              role="img"
+              aria-label={`${seatsPercent}% de los cupos tomados`}
+            >
+              <span style={`width: ${seatsPercent}%`} />
+            </span>
+          )
+        }
+        {
+          canRegister && (
+            <NButton href={event.data.registerFormLink} class="ev-wide">
+              Regístrate gratis
+            </NButton>
+          )
+        }
+      </section>
+    </aside>
+  </div>
+
+  <!-- ======== live games ======== -->
+  <section class="n-container ev-play-wrap" aria-labelledby="play-title">
+    <div class="ev-play n-panel">
+      <svg
+        class="ev-play__glyph"
+        viewBox={colibriViewBox(10)}
+        aria-hidden="true"
+      >
+        <path
+          d={colibri}
+          fill="none"
+          stroke="currentColor"
+          stroke-width={COLIBRI_STROKE}
+          stroke-linejoin="round"
+          stroke-linecap="round"></path>
+      </svg>
+      <div class="ev-play__text">
+        <h2 id="play-title" class="ev-play__title">Dinámicas en vivo</h2>
+        <p class="ev-play__note">
+          Participa en los juegos de este evento desde una pantalla dedicada.
+        </p>
       </div>
+      <NButton variant="ghost" href={`/events/${event.id}/jugar`}>
+        Entrar a los juegos
+      </NButton>
     </div>
   </section>
 
-  <section
-    class="container my-12 rounded-2xl border border-blue-200 bg-blue-50 p-8 text-center"
-  >
-    <h2 class="text-2xl font-bold text-gray-900">Dinámicas en vivo</h2>
-    <p class="mt-2 text-gray-700">
-      Participa en los juegos de este evento desde una pantalla dedicada.
-    </p>
-    <a
-      class="bg-google-blue mt-5 inline-block rounded-lg px-6 py-3 font-semibold text-white"
-      href={`/events/${event.id}/jugar`}>Entrar a los juegos</a
-    >
-  </section>
   <script>
     if (new URLSearchParams(window.location.search).get("play") === "1") {
       window.location.replace(
@@ -597,4 +701,648 @@ const whatsappQrDataUrl = whatsappGroupLink
       );
     }
   </script>
+  <script>
+    // The calendar menu is a native <details>: close it on Escape (focus
+    // back on its summary) and on a click anywhere outside it.
+    document.addEventListener("astro:page-load", () => {
+      const menu = document.querySelector<HTMLDetailsElement>("[data-cal]");
+      if (!menu || menu.dataset.ready) return;
+      menu.dataset.ready = "true";
+      menu.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape" || !menu.open) return;
+        menu.open = false;
+        menu.querySelector("summary")?.focus();
+      });
+      document.addEventListener("click", (event) => {
+        if (menu.open && !menu.contains(event.target as Node)) {
+          menu.open = false;
+        }
+      });
+    });
+  </script>
 </Layout>
+
+<style>
+  /* ---- head ---- */
+  .ev-head {
+    position: relative;
+    border-bottom: 1px solid var(--line);
+    isolation: isolate;
+  }
+
+  /* The survey grid of the inner pages, fading out towards the copy. Its
+     own clip, so the calendar menu can overhang the head. */
+  .ev-head__grid {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    overflow: hidden;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-position: right top;
+    background-size: 32px 32px;
+    mask-image: radial-gradient(
+      ellipse 55% 90% at 85% 30%,
+      #000 0%,
+      transparent 75%
+    );
+  }
+
+  .ev-head__inner {
+    display: grid;
+    grid-template-areas:
+      "copy plate"
+      "readout plate";
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.85fr);
+    grid-template-rows: auto 1fr;
+    gap: 2.25rem clamp(2rem, 5vw, 5rem);
+    padding-block: clamp(2.5rem, 1.5rem + 4vw, 5.5rem)
+      clamp(2.5rem, 1.75rem + 3vw, 4.5rem);
+  }
+
+  .ev-head__copy {
+    grid-area: copy;
+    min-width: 0;
+  }
+
+  .ev-head__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .ev-head__mark {
+    width: max-content;
+    max-width: 100%;
+  }
+
+  .ev-head__title--long {
+    font-size: clamp(2.1rem, 1.3rem + 2.6vw, 3.6rem);
+    line-height: 1.02;
+  }
+
+  /* A dimension line under the name, as on a survey drawing. */
+  .ev-head__dim {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1rem 0 0;
+    color: var(--ochre);
+    white-space: nowrap;
+  }
+
+  .ev-head__dim::before,
+  .ev-head__dim::after {
+    height: 10px;
+    min-width: 1.5rem;
+    flex: 1;
+    border-color: var(--ochre);
+    border-style: solid;
+    background: linear-gradient(var(--ochre), var(--ochre)) center / 100% 1.5px
+      no-repeat;
+    content: "";
+  }
+
+  .ev-head__dim::before {
+    border-width: 0 0 0 1.5px;
+  }
+
+  .ev-head__dim::after {
+    border-width: 0 1.5px 0 0;
+  }
+
+  .ev-head__lead {
+    max-width: 46ch;
+    margin: 1.5rem 0 0;
+    color: var(--muted);
+  }
+
+  /* The poster, whole, on a plate. */
+  .ev-plate {
+    position: relative;
+    grid-area: plate;
+    align-self: center;
+    margin: 0;
+    padding: clamp(0.5rem, 0.3rem + 0.6vw, 0.875rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface-2);
+  }
+
+  .ev-plate img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: min(36rem, 75vh);
+    border-radius: var(--radius-sm);
+    object-fit: contain;
+  }
+
+  /* ---- readout ---- */
+  .ev-readout {
+    grid-area: readout;
+    align-self: start;
+    padding: clamp(1.1rem, 0.9rem + 0.8vw, 1.5rem);
+    container-type: inline-size;
+  }
+
+  .ev-facts {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin: 0;
+  }
+
+  .ev-facts > div {
+    min-width: 0;
+    padding-inline: 1rem;
+    border-left: 1px solid var(--line);
+  }
+
+  .ev-facts > div:first-child {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .ev-facts dt {
+    color: var(--muted);
+    font-size: var(--step-small);
+  }
+
+  .ev-facts dd {
+    margin: 0.3rem 0 0;
+    color: var(--ink);
+  }
+
+  .ev-facts__place {
+    font-weight: 400;
+  }
+
+  .ev-facts__seats strong {
+    font-weight: 600;
+  }
+
+  .ev-bar {
+    display: block;
+    height: 4px;
+    margin-top: 0.55rem;
+    overflow: hidden;
+    border-radius: 2px;
+    background: var(--surface-3);
+  }
+
+  .ev-bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--ochre);
+  }
+
+  .ev-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+  }
+
+  /* Each row of keys fills the panel's width, whatever wraps where. The
+     share island's wrapper is display: contents, so its button is the item. */
+  .ev-actions > :global(*),
+  .ev-actions :global(astro-island > .nb) {
+    flex: 1 1 auto;
+  }
+
+  .ev-cal summary {
+    width: 100%;
+  }
+
+  @container (max-width: 36rem) {
+    .ev-facts {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      row-gap: 1rem;
+    }
+
+    .ev-facts > div:nth-child(odd) {
+      padding-left: 0;
+      border-left: 0;
+    }
+  }
+
+  /* ---- calendar menu ---- */
+  .ev-cal {
+    position: relative;
+  }
+
+  .ev-cal summary {
+    list-style: none;
+  }
+
+  .ev-cal summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .ev-cal[open] summary {
+    background: var(--surface-3);
+  }
+
+  .ev-cal__menu {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    display: grid;
+    min-width: 15.5rem;
+    padding: 0.35rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--surface-2);
+    box-shadow: 0 18px 48px -12px rgb(0 0 0 / 0.65);
+  }
+
+  .ev-cal__menu a {
+    display: flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .ev-cal__menu a :global(svg) {
+    flex: none;
+    color: var(--ochre);
+  }
+
+  .ev-cal__menu a:hover {
+    background: var(--surface-3);
+  }
+
+  .ev-cal__menu a:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .ev-cal__menu :global(.ev-cal__out) {
+    margin-left: auto;
+    color: var(--muted);
+  }
+
+  /* ---- body ---- */
+  .ev-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(19rem, 23rem);
+    gap: clamp(2.5rem, 5vw, 5.5rem);
+    padding-block: clamp(3rem, 2rem + 3vw, 5rem) var(--section-gap);
+  }
+
+  .ev-main {
+    min-width: 0;
+  }
+
+  .ev-sec + .ev-sec {
+    margin-top: clamp(3.5rem, 2.5rem + 3vw, 5.5rem);
+  }
+
+  /* In-page links (#agenda, #ubicacion…) land below the sticky header. */
+  .ev-sec,
+  .ev-panel {
+    scroll-margin-top: 5.5rem;
+  }
+
+  .ev-h2 {
+    margin: 0 0 clamp(1.25rem, 1rem + 1vw, 2rem);
+    font-size: clamp(1.9rem, 1.4rem + 1.6vw, 2.75rem);
+  }
+
+  .ev-sec__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 2rem;
+  }
+
+  .ev-sec__head p {
+    margin: 0;
+  }
+
+  .ev-prose {
+    color: var(--ink);
+  }
+
+  .ev-empty {
+    margin: 0;
+    padding: 1.25rem 1.4rem;
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius);
+    color: var(--muted);
+  }
+
+  .ev-timeline {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Speakers: rows under fine rules, two columns where there is room. */
+  .ev-speakers {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+    column-gap: clamp(1.5rem, 3vw, 3rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .ev-speakers > li {
+    padding-block: 1.4rem;
+    border-top: 1px solid var(--line);
+  }
+
+  /* Most logos ship as opaque files on white, and some are near-black
+     marks: they sit on paper, multiplied in so their white grounds vanish. */
+  .ev-sponsors {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .ev-sponsor {
+    display: grid;
+    aspect-ratio: 5 / 3;
+    padding: 1rem 1.25rem;
+    place-items: center;
+    border-radius: var(--radius-sm);
+    background: var(--paper);
+    isolation: isolate;
+  }
+
+  .ev-sponsor img {
+    width: 100%;
+    height: 100%;
+    max-height: 5rem;
+    mix-blend-mode: multiply;
+    object-fit: contain;
+  }
+
+  /* ---- sidebar ---- */
+  .ev-side {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .ev-panel {
+    padding: clamp(1.1rem, 0.95rem + 0.6vw, 1.4rem);
+  }
+
+  .ev-panel__title {
+    margin: 0 0 0.9rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+  }
+
+  .ev-panel__note {
+    margin: 0;
+    color: var(--muted);
+    font-size: var(--step-small);
+    line-height: 1.5;
+  }
+
+  .ev-list {
+    display: grid;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    font-size: var(--step-small);
+    line-height: 1.45;
+    list-style: none;
+  }
+
+  .ev-list li {
+    display: grid;
+    grid-template-columns: 1rem minmax(0, 1fr);
+    gap: 0.65rem;
+  }
+
+  .ev-list li :global(svg) {
+    margin-top: 0.15rem;
+    color: var(--ochre);
+  }
+
+  .ev-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .ev-loc__name {
+    margin: 0 0 0.3rem;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  /* The map, darkened to sit on the night ground: inverted and turned back
+     round the hue wheel, so water stays blue and the pin stays red. */
+  .ev-map {
+    height: 14rem;
+    margin-block: 1rem;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+  }
+
+  .ev-map iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    filter: invert(0.9) hue-rotate(180deg) saturate(0.7) brightness(0.95);
+  }
+
+  .ev-map--empty {
+    display: flex;
+    height: 8rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--muted);
+  }
+
+  .ev-qr {
+    width: min(100%, 13rem);
+    margin: 1rem auto;
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+    background: var(--paper);
+  }
+
+  .ev-qr img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .ev-side :global(.ev-wide) {
+    display: flex;
+    width: 100%;
+  }
+
+  /* Registration: last in the column, held in view on wide screens. */
+  .ev-reg {
+    position: sticky;
+    top: 5.5rem;
+  }
+
+  .ev-reg__price {
+    margin: 0;
+    font-size: clamp(1.6rem, 1.3rem + 1vw, 2rem);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+  }
+
+  .ev-reg__spots {
+    margin: 0.4rem 0 0;
+    color: var(--muted);
+  }
+
+  .ev-reg .ev-bar {
+    margin-top: 0.75rem;
+  }
+
+  .ev-reg > :global(.nb) {
+    margin-top: 1.25rem;
+  }
+
+  /* ---- live games ---- */
+  .ev-play-wrap {
+    padding-bottom: var(--section-gap);
+  }
+
+  .ev-play {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem 3rem;
+    overflow: hidden;
+    padding: clamp(1.5rem, 1rem + 2vw, 2.75rem);
+    padding-left: clamp(1.5rem, 1rem + 2vw, 2.75rem);
+  }
+
+  .ev-play__glyph {
+    position: absolute;
+    z-index: 0;
+    top: 50%;
+    right: clamp(12rem, 22vw, 20rem);
+    width: clamp(9rem, 14vw, 13rem);
+    color: var(--ochre);
+    opacity: 0.35;
+    pointer-events: none;
+    transform: translateY(-50%) rotate(-8deg);
+  }
+
+  .ev-play__text,
+  .ev-play > :global(.nb) {
+    position: relative;
+    z-index: 1;
+  }
+
+  .ev-play__text {
+    max-width: 36rem;
+  }
+
+  .ev-play__title {
+    margin: 0;
+    font-size: clamp(1.6rem, 1.25rem + 1.2vw, 2.25rem);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+  }
+
+  .ev-play__note {
+    margin: 0.6rem 0 0;
+    color: var(--muted);
+  }
+
+  /* ---- narrower screens ---- */
+  @media (max-width: 1100px) {
+    .ev-body {
+      grid-template-columns: minmax(0, 1fr) minmax(17rem, 20rem);
+    }
+  }
+
+  @media (max-width: 899px) {
+    .ev-head__inner {
+      grid-template-areas:
+        "copy"
+        "readout"
+        "plate";
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto;
+      gap: 2rem;
+    }
+
+    .ev-head__mark {
+      width: auto;
+    }
+
+    .ev-head__dim {
+      white-space: normal;
+    }
+
+    .ev-body {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* Back in the flow, still the anchor for its corner marks. */
+    .ev-reg {
+      position: relative;
+      top: auto;
+    }
+
+    .ev-play__glyph {
+      right: -1.5rem;
+      opacity: 0.2;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .ev-actions > :global(*) {
+      flex: 1 1 100%;
+    }
+
+    .ev-actions :global(.nb) {
+      width: 100%;
+    }
+
+    .ev-cal__menu {
+      right: 0;
+      min-width: 0;
+    }
+
+    .ev-play > :global(.nb) {
+      width: 100%;
+    }
+
+    /* No room beside the text for the figure on a phone. */
+    .ev-play__glyph {
+      display: none;
+    }
+  }
+</style>

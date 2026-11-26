@@ -78,6 +78,11 @@ ${description}
   return messages[platform] || messages.default;
 }
 
+// One neutral tile per network: the brand mark carries the identity and
+// the tile stays on the night theme's surfaces.
+const TILE =
+  "inline-flex h-11 w-full items-center justify-center rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-3)] text-white transition-colors hover:border-[var(--ochre)]";
+
 export default function SharedButton({
   title,
   eventDate,
@@ -146,48 +151,54 @@ export default function SharedButton({
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
+        {/* The night theme's ghost button: classes from night.css. */}
         <button
-          className="text-primary inline-flex items-center justify-center gap-[10px] rounded-md border border-white bg-white px-8 py-[10px] font-medium whitespace-nowrap"
+          type="button"
+          className="nb nb--ghost nb--md"
           aria-label="Compartir evento"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="lucide lucide-share2-icon lucide-share-2"
-          >
-            <circle cx="18" cy="5" r="3" />
-            <circle cx="6" cy="12" r="3" />
-            <circle cx="18" cy="19" r="3" />
-            <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" />
-            <line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />
-          </svg>
-          Compartir evento
+          <span className="nb__label">Compartir</span>
+          <span className="nb__icon" aria-hidden="true">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="18" cy="5" r="3" />
+              <circle cx="6" cy="12" r="3" />
+              <circle cx="18" cy="19" r="3" />
+              <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" />
+              <line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />
+            </svg>
+          </span>
         </button>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          className="focus:shadow-[0_10px_38px_-10px_hsla(206,22%,7%,.35),0_10px_20px_-15px_hsla(206,22%,7%,.2),0_0_0_2px_theme(colors.violet7)] data-[state=open]:data-[side=bottom]:animate-slideUpAndFade data-[state=open]:data-[side=left]:animate-slideRightAndFade data-[state=open]:data-[side=right]:animate-slideLeftAndFade data-[state=open]:data-[side=top]:animate-slideDownAndFade z-5 w-[260px] rounded bg-white p-5 shadow-[0_10px_38px_-10px_hsla(206,22%,7%,.35),0_10px_20px_-15px_hsla(206,22%,7%,.2)] will-change-[transform,opacity]"
-          sideOffset={5}
+          className="z-50 w-[17rem] rounded-[var(--radius)] border border-[var(--line-strong)] bg-[var(--surface-2)] p-5 text-[var(--ink)] shadow-[0_18px_48px_-12px_rgb(0_0_0/0.65)]"
+          sideOffset={8}
+          align="start"
+          collisionPadding={16}
         >
-          <div className="flex flex-col gap-2.5">
-            <p className="text-mauve12 mb-2.5 text-[15px] leading-[19px] font-medium">
+          <div className="flex flex-col gap-3">
+            <p className="m-0 pr-10 text-[0.9375rem] leading-snug font-semibold">
               Compartir en:
             </p>
             {/* Twitter */}
-            <div className="mb-3 grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               <a
                 href={`https://x.com/intent/tweet?url=${shareUrl}&text=${twitterMessage}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-11 w-11 items-center gap-2 rounded-md bg-black px-3 py-3 text-center text-white transition-colors hover:bg-gray-800"
+                className={TILE}
                 title="Compartir en X (Twitter)"
+                aria-label="Compartir en X (Twitter)"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -208,8 +219,9 @@ export default function SharedButton({
                 href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}&quote=${facebookMessage}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-blue-700 px-3 py-3 text-center text-white transition-colors hover:bg-blue-800"
+                className={TILE}
                 title="Compartir en Facebook"
+                aria-label="Compartir en Facebook"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -226,8 +238,8 @@ export default function SharedButton({
                       y2="0%"
                       id="facebook__a"
                     >
-                      <stop offset="0%" stop-color="#0062E0" />
-                      <stop offset="100%" stop-color="#19AFFF" />
+                      <stop offset="0%" stopColor="#0062E0" />
+                      <stop offset="100%" stopColor="#19AFFF" />
                     </linearGradient>
                   </defs>
                   <path d="M15 35.8C6.5 34.3 0 26.9 0 18 0 8.1 8.1 0 18 0s18 8.1 18 18c0 8.9-6.5 16.3-15 17.8l-1-.8h-4l-1 .8z" />
@@ -243,8 +255,9 @@ export default function SharedButton({
                 href={`https://api.whatsapp.com/send?text=${whatsappMessage}%0A%0A${shareUrl}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-green-500 px-3 py-3 text-center text-white transition-colors hover:bg-green-600"
+                className={TILE}
                 title="Compartir en WhatsApp"
+                aria-label="Compartir en WhatsApp"
               >
                 <svg
                   viewBox="0 0 256 259"
@@ -268,8 +281,9 @@ export default function SharedButton({
                 href={`https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}&summary=${linkedinMessage}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-blue-600 px-3 py-3 text-center text-white transition-colors hover:bg-blue-700"
+                className={TILE}
                 title="Compartir en LinkedIn"
+                aria-label="Compartir en LinkedIn"
               >
                 <svg
                   width="24"
@@ -280,22 +294,24 @@ export default function SharedButton({
                 >
                   <path
                     d="M218.123 218.127h-37.931v-59.403c0-14.165-.253-32.4-19.728-32.4-19.756 0-22.779 15.434-22.779 31.369v60.43h-37.93V95.967h36.413v16.694h.51a39.907 39.907 0 0 1 35.928-19.733c38.445 0 45.533 25.288 45.533 58.186l-.016 67.013ZM56.955 79.27c-12.157.002-22.014-9.852-22.016-22.009-.002-12.157 9.851-22.014 22.008-22.016 12.157-.003 22.014 9.851 22.016 22.008A22.013 22.013 0 0 1 56.955 79.27m18.966 138.858H37.95V95.967h37.97v122.16ZM237.033.018H18.89C8.58-.098.125 8.161-.001 18.471v219.053c.122 10.315 8.576 18.582 18.89 18.474h218.144c10.336.128 18.823-8.139 18.966-18.474V18.454c-.147-10.33-8.635-18.588-18.966-18.453"
-                    fill="#0A66C2"
+                    fill="#ffffff"
                   />
                 </svg>
               </a>
             </div>
 
             {/* Botón copiar enlace */}
-            <div className="border-t border-gray-200 pt-3">
+            <div className="border-t border-[var(--line)] pt-3">
               <button
+                type="button"
                 onClick={copyToClipboard}
-                className={`inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-colors ${
+                className={`inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-sm)] border px-4 py-2.5 text-[0.9375rem] font-medium transition-colors ${
                   copySuccess
-                    ? "border border-green-200 bg-green-50 text-green-700"
-                    : "border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
+                    ? "border-[var(--ochre)] bg-transparent text-[var(--ochre)]"
+                    : "border-[var(--line-strong)] bg-[var(--surface-3)] text-[var(--ink)] hover:border-[var(--ochre)]"
                 }`}
                 title="Copiar enlace del evento"
+                aria-live="polite"
               >
                 {copySuccess ? (
                   <>
@@ -338,26 +354,26 @@ export default function SharedButton({
             </div>
           </div>
           <Popover.Close
-            className="text-violet11 hover:bg-violet4 focus:shadow-violet7 absolute top-[5px] right-[5px] inline-flex size-[25px] cursor-default items-center justify-center rounded-full outline-none focus:shadow-[0_0_0_2px]"
-            aria-label="Close"
+            className="absolute top-2 right-2 inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] text-[var(--muted)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--ink)]"
+            aria-label="Cerrar"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
+              width="20"
+              height="20"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              class="lucide lucide-x-icon lucide-x"
+              aria-hidden="true"
             >
               <path d="M18 6 6 18" />
               <path d="m6 6 12 12" />
             </svg>
           </Popover.Close>
-          <Popover.Arrow className="fill-white" />
+          <Popover.Arrow className="fill-[var(--surface-2)]" />
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

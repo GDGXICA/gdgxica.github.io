@@ -1,6 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import QRCode from "qrcode";
+import { ArrowLeft } from "@lucide/astro";
 import Layout from "@/layouts/Layout.astro";
 import { CredentialPage } from "@/components/react/credential/CredentialPage";
 
@@ -54,14 +55,13 @@ const metadata = {
 ---
 
 <Layout {...metadata}>
-  <main class="min-h-screen bg-slate-50 py-8 md:py-12">
-    <div class="container">
-      <nav class="mx-auto mb-6 max-w-[1180px]">
-        <a
-          href={`/events/${event.id}`}
-          class="text-secondary hover:text-google-blue inline-flex items-center gap-2 text-sm font-medium"
-        >
-          ← Volver a {event.data.name}
+  <main class="cred">
+    <div class="cred__grid-bg" aria-hidden="true"></div>
+    <div class="n-container">
+      <nav class="cred__nav">
+        <a href={`/events/${event.id}`} class="cred__back n-link">
+          <ArrowLeft size={16} stroke-width={2} aria-hidden="true" />
+          Volver a {event.data.name}
         </a>
       </nav>
 
@@ -72,3 +72,97 @@ const metadata = {
     </div>
   </main>
 </Layout>
+
+<style>
+  .cred {
+    position: relative;
+    padding-block: clamp(1rem, 0.5rem + 2vw, 2rem) var(--section-gap);
+    isolation: isolate;
+  }
+
+  /* The survey grid of the inner pages' heads, fading out behind the form. */
+  .cred__grid-bg {
+    position: absolute;
+    z-index: -1;
+    inset: 0 0 auto;
+    height: 34rem;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-position: right top;
+    background-size: 32px 32px;
+    mask-image: radial-gradient(
+      ellipse 55% 80% at 92% 0%,
+      #000 0%,
+      transparent 75%
+    );
+    pointer-events: none;
+  }
+
+  .cred__nav {
+    max-width: 1180px;
+    margin: 0 auto clamp(1.25rem, 0.75rem + 2vw, 2.5rem);
+  }
+
+  .cred__back {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: var(--step-small);
+  }
+
+  .cred__back :global(svg) {
+    color: var(--ochre);
+  }
+</style>
+
+<!-- The island's own pieces that utilities cannot express: the survey
+     dimension line under each step's title, the disabled and busy states of
+     the chamfered button, and the grid behind the enlarged card (the modal
+     is portalled to <body>, so these stay global). -->
+<style is:global>
+  .cred-dim {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    max-width: 26rem;
+    margin: 1rem 0 0;
+    color: var(--ochre);
+    white-space: nowrap;
+  }
+
+  .cred-dim::before,
+  .cred-dim::after {
+    height: 10px;
+    min-width: 1.5rem;
+    flex: 1;
+    border-color: var(--ochre);
+    border-style: solid;
+    background: linear-gradient(var(--ochre), var(--ochre)) center / 100% 1.5px
+      no-repeat;
+    content: "";
+  }
+
+  .cred-dim::before {
+    border-width: 0 0 0 1.5px;
+  }
+
+  .cred-dim::after {
+    border-width: 0 1.5px 0 0;
+  }
+
+  .cred .nb.nb--busy:disabled {
+    cursor: wait;
+    opacity: 0.6;
+  }
+
+  .cred-modal-grid {
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-position: center;
+    background-size: 42px 42px;
+    mask-image: radial-gradient(circle at center, #000, transparent 72%);
+  }
+</style>
