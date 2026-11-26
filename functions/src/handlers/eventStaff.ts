@@ -6,10 +6,17 @@ import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import {
   ROLE_BUNDLES,
+  STAFF_CAPABILITY_IDS,
+  canGrant,
+  capabilitiesFromPermissions,
   isNotExpired,
   isRole,
+  permissionsForCapabilities,
+  readStaffPermissions,
   type Role,
+  type StaffCapability,
 } from "../auth/permissions";
+import { eventStaffAssignSchema } from "../schemas";
 
 /**
  * Roles cuyos permisos dependen de estar asignado a un evento. Asignar a
@@ -20,8 +27,6 @@ import {
 const SCOPED_ROLES: Role[] = (Object.keys(ROLE_BUNDLES) as Role[]).filter(
   (role) => ROLE_BUNDLES[role].perEvent.length > 0
 );
-
-const MAX_REASON = 500;
 
 /** Lista quién puede operar un evento concreto. */
 export async function listStaff(req: Request, res: Response) {
@@ -37,9 +42,14 @@ export async function listStaff(req: Request, res: Response) {
     const nowMs = Date.now();
     const staff = snapshot.docs.map((doc) => {
       const data = doc.data();
+      const permissions = readStaffPermissions(data.permissions);
       return {
         uid: doc.id,
         ...data,
+        // `null` = todo el paquete del rol: asignaciones anteriores a las
+        // capacidades. El panel las enseña como tal.
+        permissions,
+        capabilities: capabilitiesFromPermissions(permissions),
         // Una asignación caducada sigue en la base pero ya no concede nada;
         // el panel debe distinguirlas o mentiría sobre quién tiene acceso.
         active: isNotExpired(data.expiresAt, nowMs),
@@ -57,16 +67,29 @@ export async function assignStaff(req: Request, res: Response) {
     const slug = req.params.slug as string;
     const uid = req.params.uid as string;
     const performer = (req as AuthenticatedRequest).user;
-    const body = req.body as { expiresAt?: unknown; reason?: unknown };
 
-    const reason = typeof body.reason === "string" ? body.reason.trim() : "";
-    if (reason.length === 0 || reason.length > MAX_REASON) {
+    // Parsed here and not only by a route middleware: the handler is the one
+    // place every caller crosses, tests included.
+    const parsed = eventStaffAssignSchema.safeParse(req.body);
+    if (!parsed.success) {
       res.status(400).json({
         success: false,
-        error: `A reason is required (1-${MAX_REASON} chars)`,
+        error:
+          "Elige al menos una capacidad e indica el motivo (1-500 caracteres).",
+        issues: parsed.error.issues.slice(0, 5).map((issue) => ({
+          path: issue.path.join("."),
+          message: issue.message,
+        })),
       });
       return;
     }
+    const body = parsed.data;
+    const reason = body.reason;
+    const capabilities = [...new Set(body.capabilities)].sort(
+      (a, b) =>
+        STAFF_CAPABILITY_IDS.indexOf(a) - STAFF_CAPABILITY_IDS.indexOf(b)
+    ) as StaffCapability[];
+    const permissions = permissionsForCapabilities(capabilities);
 
     const db = admin.firestore();
     const userDoc = await db.collection("users").doc(uid).get();
@@ -80,6 +103,29 @@ export async function assignStaff(req: Request, res: Response) {
       res.status(400).json({
         success: false,
         error: `Only these roles gain permissions from an assignment: ${SCOPED_ROLES.join(", ")}`,
+      });
+      return;
+    }
+
+    // Una capacidad que el rol no alcanza por evento no concedería nada, y
+    // ninguna puede repartirla quien no la tiene (regla de no escalada).
+    const outsideRole = permissions.filter(
+      (p) => !ROLE_BUNDLES[targetRole].perEvent.includes(p)
+    );
+    if (outsideRole.length > 0) {
+      res.status(400).json({
+        success: false,
+        error: `This role cannot be given: ${outsideRole.join(", ")}`,
+      });
+      return;
+    }
+    const notHeld = permissions.filter(
+      (p) => !canGrant(performer.permissions, p)
+    );
+    if (notHeld.length > 0) {
+      res.status(403).json({
+        success: false,
+        error: "Cannot grant permissions you do not hold",
       });
       return;
     }
@@ -99,10 +145,24 @@ export async function assignStaff(req: Request, res: Response) {
     // Asignar staff concede permisos dentro del evento, así que se registra con
     // la misma atomicidad que un cambio de rol: o queda la asignación con su
     // constancia, o no queda ninguna de las dos.
+    const staffRef = db
+      .collection("events")
+      .doc(slug)
+      .collection("staff")
+      .doc(uid);
+    // Para la auditoría: qué podía hacer antes, si ya estaba asignada.
+    const previous = await staffRef.get();
+    const previousPermissions = previous.exists
+      ? readStaffPermissions(previous.data()?.permissions)
+      : undefined;
+
     const batch = db.batch();
-    batch.set(db.collection("events").doc(slug).collection("staff").doc(uid), {
+    batch.set(staffRef, {
       uid,
       role: targetRole,
+      // Los permisos y no las capacidades: es lo que las reglas comprueban
+      // con `perm in …`, sin una tercera copia del catálogo.
+      permissions,
       assignedBy: performer.uid,
       assignedAt: FieldValue.serverTimestamp(),
       expiresAt,
@@ -118,6 +178,11 @@ export async function assignStaff(req: Request, res: Response) {
         details: {
           eventSlug: slug,
           role: targetRole,
+          capabilities,
+          permissions,
+          // `null` = la asignación anterior no tenía lista (todo el paquete);
+          // ausente = no estaba asignada.
+          ...(previousPermissions !== undefined ? { previousPermissions } : {}),
           expiresAt: expiresAt ? expiresAt.toISOString() : null,
           reason,
         },
@@ -191,6 +256,8 @@ export async function listMyEvents(req: Request, res: Response) {
         eventSlug: doc.ref.parent.parent?.id ?? null,
         role: doc.data()?.role ?? null,
         expiresAt: doc.data()?.expiresAt ?? null,
+        // Qué puede hacer ahí; `null` = todo el paquete de su rol.
+        permissions: readStaffPermissions(doc.data()?.permissions),
       }))
       .filter((entry) => entry.eventSlug !== null);
 

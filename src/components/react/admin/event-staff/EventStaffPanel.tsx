@@ -1,12 +1,26 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Toast } from "../ui/Toast";
+import { FormField } from "../ui/FormField";
 import { useAuth } from "../AuthProvider";
+import { useEventCatalog } from "../useEventCatalog";
+import {
+  CornerNodes,
+  LoadingState,
+  ReticleIcon,
+  SectionHeading,
+  Tag,
+  buttonClass,
+  inputClass,
+} from "../ui/atlas";
 import {
   ROLE_BUNDLES,
   ROLE_LABELS,
+  STAFF_CAPABILITY_IDS,
+  STAFF_CAPABILITY_LABELS,
   isRole,
   type Role,
+  type StaffCapability,
 } from "@/lib/permissions";
 
 /** Roles cuyos permisos dependen de estar asignado a un evento. */
@@ -20,6 +34,9 @@ interface StaffEntry {
   assignedBy?: string;
   expiresAt?: string | { _seconds: number } | null;
   reason?: string;
+  /** `null`: assignment made before capabilities; it grants everything. */
+  permissions?: string[] | null;
+  capabilities?: StaffCapability[];
   active: boolean;
 }
 
@@ -36,18 +53,39 @@ function slugFromUrl(): string | null {
   return new URLSearchParams(window.location.search).get("slug");
 }
 
-function formatDate(value: StaffEntry["expiresAt"]): string {
-  if (!value) return "Sin caducidad";
+function toDate(value: StaffEntry["expiresAt"]): Date | null {
+  if (!value) return null;
   const ms =
     typeof value === "object" && "_seconds" in value
       ? value._seconds * 1000
       : new Date(value as string).getTime();
-  return Number.isNaN(ms) ? "—" : new Date(ms).toLocaleDateString("es-PE");
+  return Number.isNaN(ms) ? null : new Date(ms);
 }
 
+/** "2026-11-28" for a date input, in local time. */
+function toDateInput(value: StaffEntry["expiresAt"]): string {
+  const d = toDate(value);
+  if (!d) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+const EMPTY_FORM = {
+  uid: "",
+  capabilities: [] as StaffCapability[],
+  expiresAt: "",
+  reason: "",
+};
+
+/**
+ * Who works an event, and what each person can do there. Every capability
+ * is chosen explicitly: an external volunteer who only marks attendance at
+ * the door gets only the check-in, nothing else.
+ */
 export function EventStaffPanel() {
   const { can } = useAuth();
   const canAssign = can("users:role:write");
+  const catalog = useEventCatalog();
 
   const [slug] = useState<string | null>(slugFromUrl());
   const [staff, setStaff] = useState<StaffEntry[]>([]);
@@ -58,10 +96,9 @@ export function EventStaffPanel() {
     message: string;
     type: "success" | "error";
   } | null>(null);
-
-  const [pickedUid, setPickedUid] = useState("");
-  const [expiresAt, setExpiresAt] = useState("");
-  const [reason, setReason] = useState("");
+  const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [editing, setEditing] = useState(false);
+  const [triedSubmit, setTriedSubmit] = useState(false);
 
   const load = useCallback(async () => {
     if (!slug) {
@@ -95,26 +132,62 @@ export function EventStaffPanel() {
     load();
   }, [load]);
 
-  async function assign(e: React.FormEvent) {
+  const toggle = (cap: StaffCapability) =>
+    setForm((f) => ({
+      ...f,
+      capabilities: f.capabilities.includes(cap)
+        ? f.capabilities.filter((c) => c !== cap)
+        : [...f.capabilities, cap],
+    }));
+
+  const startEditing = (entry: StaffEntry) => {
+    setForm({
+      uid: entry.uid,
+      capabilities: entry.capabilities ?? [],
+      expiresAt: toDateInput(entry.expiresAt),
+      reason: entry.reason ?? "",
+    });
+    setEditing(true);
+    setTriedSubmit(false);
+  };
+
+  const resetForm = () => {
+    setForm({ ...EMPTY_FORM });
+    setEditing(false);
+    setTriedSubmit(false);
+  };
+
+  const missing = [
+    !form.uid && "la persona",
+    form.capabilities.length === 0 && "al menos una capacidad",
+    !form.reason.trim() && "el motivo",
+  ].filter(Boolean) as string[];
+
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!slug || !pickedUid) return;
-    setBusy(pickedUid);
-    const res = await api.assignEventStaff(slug, pickedUid, {
-      reason: reason.trim(),
-      expiresAt: expiresAt
-        ? new Date(`${expiresAt}T23:59:59`).toISOString()
+    setTriedSubmit(true);
+    if (!slug || missing.length > 0) return;
+    setBusy(form.uid);
+    const res = await api.assignEventStaff(slug, form.uid, {
+      capabilities: form.capabilities,
+      reason: form.reason.trim(),
+      expiresAt: form.expiresAt
+        ? new Date(`${form.expiresAt}T23:59:59`).toISOString()
         : null,
     });
+    setBusy(null);
     if (res.success) {
-      setToast({ message: "Persona asignada al evento", type: "success" });
-      setPickedUid("");
-      setReason("");
-      setExpiresAt("");
+      setToast({
+        message: editing
+          ? "Asignación actualizada"
+          : "Persona asignada al evento",
+        type: "success",
+      });
+      resetForm();
       load();
     } else {
-      setToast({ message: res.error || "Error", type: "error" });
+      setToast({ message: res.error || "No se pudo asignar", type: "error" });
     }
-    setBusy(null);
   }
 
   async function remove(entry: StaffEntry) {
@@ -124,6 +197,7 @@ export function EventStaffPanel() {
     const res = await api.removeEventStaff(slug, entry.uid);
     if (res.success) {
       setStaff((prev) => prev.filter((s) => s.uid !== entry.uid));
+      if (form.uid === entry.uid) resetForm();
       setToast({ message: "Asignación retirada", type: "success" });
     } else {
       setToast({ message: res.error || "Error", type: "error" });
@@ -133,29 +207,23 @@ export function EventStaffPanel() {
 
   if (!slug) {
     return (
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-        Falta el evento. Entra desde la lista de eventos o añade{" "}
-        <code>?slug=mi-evento</code> a la URL.
-      </div>
+      <p className="border-atlas-line text-atlas-mist rounded-xs border border-dashed px-5 py-6 text-sm">
+        Falta el evento. Entra desde la lista de eventos, en «Staff».
+      </p>
     );
   }
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-      </div>
-    );
-  }
+  if (loading) return <LoadingState label="Cargando el equipo del evento…" />;
 
-  const inputClass =
-    "rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white";
-
-  const named = (uid: string) =>
-    candidates.find((c) => c.uid === uid)?.displayName ?? uid;
+  const eventName = catalog.events?.find((e) => e.slug === slug)?.name ?? slug;
+  const named = (uid: string) => {
+    const c = candidates.find((x) => x.uid === uid);
+    return c ? c.displayName || c.email : uid;
+  };
+  const alreadyAssigned = new Set(staff.map((s) => s.uid));
 
   return (
-    <div>
+    <div className="max-w-4xl space-y-10">
       {toast && (
         <Toast
           message={toast.message}
@@ -164,128 +232,237 @@ export function EventStaffPanel() {
         />
       )}
 
-      <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
-        Equipo de <strong>{slug}</strong>. Quien esté aquí puede operar el
-        check-in y los minijuegos <em>de este evento y solo de este</em>. Al
-        caducar la asignación, el acceso se apaga solo.
+      <p className="text-atlas-mist max-w-[70ch] text-sm leading-relaxed">
+        Equipo de <span className="text-atlas-dust">{eventName}</span>. Cada
+        persona hace solo lo que marques, en este evento y mientras dure su
+        asignación; al caducar, el acceso se apaga solo.
       </p>
 
       {canAssign && (
-        <form
-          onSubmit={assign}
-          className="mb-8 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
-        >
-          <h2 className="mb-3 font-medium text-gray-900 dark:text-white">
-            Asignar a alguien
-          </h2>
+        <section aria-labelledby="staff-form">
+          <SectionHeading>
+            <span id="staff-form">
+              {editing ? `Editar a ${named(form.uid)}` : "Asignar a alguien"}
+            </span>
+          </SectionHeading>
           {candidates.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              No hay nadie con un rol acotable a eventos ({" "}
-              {SCOPED_ROLES.map((r) => ROLE_LABELS[r]).join(", ")} ). Cambia
-              primero su rol en Usuarios.
+            <p className="border-atlas-line text-atlas-mist rounded-xs border border-dashed px-5 py-6 text-sm">
+              No hay nadie con un rol que se asigne por evento (
+              {SCOPED_ROLES.map((r) => ROLE_LABELS[r]).join(", ")}). Invítalo o
+              cambia su rol en Usuarios.
             </p>
           ) : (
-            <div className="flex flex-wrap items-end gap-2">
-              <label className="flex-1">
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  Persona
-                </span>
+            <form
+              onSubmit={submit}
+              className="border-atlas-line bg-atlas-deep/40 relative space-y-5 rounded-xs border p-5"
+            >
+              <CornerNodes />
+              <FormField label="Persona" required>
                 <select
-                  required
-                  value={pickedUid}
-                  onChange={(e) => setPickedUid(e.target.value)}
-                  className={`${inputClass} mt-1 w-full`}
+                  value={form.uid}
+                  disabled={editing}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, uid: e.target.value }))
+                  }
+                  className={inputClass}
                 >
                   <option value="">Elige…</option>
                   {candidates.map((c) => (
                     <option key={c.uid} value={c.uid}>
                       {c.displayName || c.email} ·{" "}
                       {ROLE_LABELS[c.role as Role] ?? c.role}
+                      {alreadyAssigned.has(c.uid) && !editing
+                        ? " · ya asignada"
+                        : ""}
                     </option>
                   ))}
                 </select>
-              </label>
-              <label>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  Caduca (opcional)
-                </span>
-                <input
-                  type="date"
-                  value={expiresAt}
-                  onChange={(e) => setExpiresAt(e.target.value)}
-                  className={`${inputClass} mt-1`}
-                />
-              </label>
-              <label className="flex-1">
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  Motivo
-                </span>
-                <input
-                  type="text"
-                  required
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder="Apoyo en puerta"
-                  className={`${inputClass} mt-1 w-full`}
-                />
-              </label>
-              <button
-                type="submit"
-                disabled={busy !== null || !pickedUid || !reason.trim()}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                Asignar
-              </button>
-            </div>
+              </FormField>
+
+              <fieldset>
+                <legend className="text-atlas-mist mb-1.5 text-sm font-semibold">
+                  Qué puede hacer en este evento
+                  <span className="text-atlas-star"> *</span>
+                </legend>
+                <div className="border-atlas-line rounded-xs border">
+                  {STAFF_CAPABILITY_IDS.map((cap) => {
+                    const checked = form.capabilities.includes(cap);
+                    const info = STAFF_CAPABILITY_LABELS[cap];
+                    return (
+                      <label
+                        key={cap}
+                        className={`border-atlas-line has-focus-visible:outline-atlas-star flex cursor-pointer gap-3 border-b px-4 py-3 transition-colors last:border-b-0 has-focus-visible:outline-2 has-focus-visible:-outline-offset-2 ${
+                          checked ? "bg-atlas-deep" : "hover:bg-atlas-deep/60"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggle(cap)}
+                          className="sr-only"
+                        />
+                        <ReticleIcon
+                          className={`mt-0.5 size-4 shrink-0 ${
+                            checked ? "text-atlas-star" : "text-atlas-line"
+                          }`}
+                        />
+                        <span className="min-w-0">
+                          <span
+                            className={`block text-sm ${
+                              checked
+                                ? "text-atlas-dust font-semibold"
+                                : "text-atlas-mist"
+                            }`}
+                          >
+                            {info.label}
+                          </span>
+                          <span className="text-atlas-fog mt-0.5 block text-sm leading-snug">
+                            {info.description}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-[12rem_minmax(0,1fr)]">
+                <FormField label="Caduca (opcional)">
+                  <input
+                    type="date"
+                    value={form.expiresAt}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, expiresAt: e.target.value }))
+                    }
+                    className={inputClass}
+                  />
+                </FormField>
+                <FormField label="Motivo" required>
+                  <input
+                    type="text"
+                    value={form.reason}
+                    maxLength={500}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, reason: e.target.value }))
+                    }
+                    placeholder="Apoyo en la puerta del DevFest"
+                    className={inputClass}
+                  />
+                </FormField>
+              </div>
+
+              {triedSubmit && missing.length > 0 && (
+                <p role="alert" className="text-atlas-rose text-sm">
+                  Falta {missing.join(", ")}.
+                </p>
+              )}
+
+              <div className="flex flex-wrap justify-end gap-2">
+                {editing && (
+                  <button
+                    type="button"
+                    className={buttonClass.quiet}
+                    onClick={resetForm}
+                  >
+                    Cancelar
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={busy !== null}
+                  className={buttonClass.primary}
+                >
+                  {editing ? "Guardar cambios" : "Asignar"}
+                </button>
+              </div>
+            </form>
           )}
-        </form>
+        </section>
       )}
 
-      {staff.length === 0 ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Todavía no hay nadie asignado a este evento.
-        </p>
-      ) : (
-        <ul className="space-y-2">
-          {staff.map((entry) => (
-            <li
-              key={entry.uid}
-              className={`flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800 ${
-                entry.active ? "" : "opacity-60"
-              }`}
-            >
-              <div className="min-w-0 flex-1">
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {named(entry.uid)}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {ROLE_LABELS[entry.role as Role] ?? entry.role} ·{" "}
-                  {formatDate(entry.expiresAt)}
-                  {entry.reason && ` · ${entry.reason}`}
-                </p>
-              </div>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                  entry.active
-                    ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
-                    : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
-                }`}
-              >
-                {entry.active ? "Activa" : "Caducada"}
-              </span>
-              {canAssign && (
-                <button
-                  onClick={() => remove(entry)}
-                  disabled={busy === entry.uid}
-                  className="rounded border border-red-300 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+      <section aria-labelledby="staff-list">
+        <SectionHeading>
+          <span id="staff-list">Quiénes trabajan este evento</span>
+        </SectionHeading>
+        {staff.length === 0 ? (
+          <p className="border-atlas-line text-atlas-mist rounded-xs border border-dashed px-5 py-6 text-sm">
+            Todavía no hay nadie asignado a este evento.
+          </p>
+        ) : (
+          <ul className="border-atlas-line rounded-xs border">
+            {staff.map((entry) => {
+              const expires = toDate(entry.expiresAt);
+              const legacy = entry.permissions === null;
+              return (
+                <li
+                  key={entry.uid}
+                  className={`border-atlas-line flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-3 last:border-b-0 ${
+                    entry.active ? "" : "opacity-60"
+                  }`}
                 >
-                  Quitar
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+                  <div className="min-w-0 flex-1 basis-60">
+                    <p className="text-atlas-dust font-semibold">
+                      {named(entry.uid)}
+                    </p>
+                    <p className="text-atlas-fog text-sm">
+                      {ROLE_LABELS[entry.role as Role] ?? entry.role} ·{" "}
+                      {expires
+                        ? `hasta el ${expires.toLocaleDateString("es-PE")}`
+                        : "sin caducidad"}
+                      {entry.reason && ` · ${entry.reason}`}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {legacy ? (
+                        <Tag
+                          tone="border-atlas-glow/50 text-atlas-glow"
+                          title="Asignada antes de que existieran las capacidades: puede hacer todo lo de su rol. Edítala para acotarla."
+                        >
+                          Todo (asignación anterior)
+                        </Tag>
+                      ) : (
+                        (entry.capabilities ?? []).map((cap) => (
+                          <Tag key={cap}>
+                            {STAFF_CAPABILITY_LABELS[cap].label}
+                          </Tag>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                  <Tag
+                    tone={
+                      entry.active
+                        ? "border-atlas-ok/50 text-atlas-ok"
+                        : "border-atlas-line text-atlas-fog"
+                    }
+                  >
+                    {entry.active ? "Activa" : "Caducada"}
+                  </Tag>
+                  {canAssign && (
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => startEditing(entry)}
+                        disabled={busy === entry.uid}
+                        className={buttonClass.quiet}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => remove(entry)}
+                        disabled={busy === entry.uid}
+                        className={`${buttonClass.quiet} hover:text-atlas-rose`}
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

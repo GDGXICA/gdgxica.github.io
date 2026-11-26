@@ -34,11 +34,17 @@ service firebase.storage {
     // mismo cuerpo que `isEventStaff()`, que es lo que un espejo tiene que
     // ser — y en una carga del panel de moderación esto corre una vez por
     // cada imagen, así que la diferencia es factura, no microoptimización.
-    function staffAssignmentActive(eventSlug) {
+    //
+    // Y como `isEventStaff()`, la asignación puede acotar qué concede: sin
+    // lista de `permissions` vale todo el paquete del rol; con lista, solo lo
+    // que nombra. Mismo documento, sin lecturas extra.
+    function staffAssignmentActive(eventSlug, perm) {
       let staff = firestore.get(staffPath(eventSlug));
       return staff != null
              && (staff.data.get('expiresAt', null) == null
-                 || staff.data.get('expiresAt', null) > request.time);
+                 || staff.data.get('expiresAt', null) > request.time)
+             && (staff.data.get('permissions', null) == null
+                 || perm in staff.data.permissions);
     }
 
     // Mismas listas que `roleHasGlobal` / `roleHasPerEvent` en firestore.rules
@@ -53,7 +59,7 @@ service firebase.storage {
 
     function roleHasPerEvent(role, perm) {
       return role == 'volunteer'
-          && perm in ['roster:read', 'checkin:operate', 'credentials:read'];
+          && perm in ['roster:read', 'checkin:operate', 'credentials:read', 'mural:moderate'];
     }
 
     // Espejo de `canOnEvent('credentials:read', …)` en firestore.rules: estas
@@ -98,7 +104,7 @@ service firebase.storage {
         && (
           roleHasGlobal(role, 'credentials:read')
           || (roleHasPerEvent(role, 'credentials:read')
-              && staffAssignmentActive(eventSlug))
+              && staffAssignmentActive(eventSlug, 'credentials:read'))
         );
     }
 

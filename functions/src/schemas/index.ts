@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  STAFF_CAPABILITY_IDS,
+  type StaffCapability,
+} from "../auth/permissions";
 import { validateUrl, validateMapEmbedUrl } from "../middleware/validate";
 import { MARKDOWN_ISSUE_MESSAGES, findMarkdownIssue } from "../utils/markdown";
 
@@ -511,6 +515,22 @@ export const minigameWordHiddenSchema = z
     hidden: z.boolean(),
   })
   .strict();
+
+// Asignar a alguien como staff de un evento: qué capacidades tiene ahí (al
+// menos una), hasta cuándo, y por qué. Lo valida el propio handler.
+export const eventStaffAssignSchema = z
+  .object({
+    capabilities: z
+      .array(
+        z.enum(STAFF_CAPABILITY_IDS as [StaffCapability, ...StaffCapability[]])
+      )
+      .min(1)
+      .max(STAFF_CAPABILITY_IDS.length),
+    expiresAt: z.string().max(40).nullable().optional(),
+    reason: z.string().trim().min(1).max(500),
+  })
+  .strict();
+export type EventStaffAssignBody = z.infer<typeof eventStaffAssignSchema>;
 
 // Check-in roster import. The client parses the Bevy registrations CSV
 // and posts the rows; the handler writes them to Firestore. The 2000-row

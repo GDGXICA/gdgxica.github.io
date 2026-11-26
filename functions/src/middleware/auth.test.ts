@@ -289,6 +289,50 @@ describe("requirePermission — alcance por evento", () => {
     expect(passed).toBe(true);
   });
 
+  // La asignación puede acotar lo que concede: alguien asignado solo al mural
+  // no marca asistencia en ese mismo evento.
+  it("una asignación acotada solo concede lo que nombra", async () => {
+    docs.set("users/u1", { role: "volunteer" });
+    docs.set("events/devfest-2025/staff/u1", {
+      permissions: ["mural:moderate"],
+    });
+    const denied = await run(scoped(), buildReq({ slug: "devfest-2025" }));
+    expect(denied.res.__status).toBe(403);
+
+    const req = buildReq({ slug: "devfest-2025" });
+    const allowed = await run(
+      requirePermission("mural:moderate", { scopeParam: "slug" }),
+      req
+    );
+    expect(allowed.passed).toBe(true);
+    expect([...(req as AuthenticatedRequest).user.permissions]).toEqual([
+      "mural:moderate",
+    ]);
+  });
+
+  it("una asignación sin lista concede todo el paquete (anterior a las capacidades)", async () => {
+    docs.set("users/u1", { role: "volunteer" });
+    docs.set("events/devfest-2025/staff/u1", { assignedBy: "admin" });
+    const { passed } = await run(
+      requirePermission("credentials:read", { scopeParam: "slug" }),
+      buildReq({ slug: "devfest-2025" })
+    );
+    expect(passed).toBe(true);
+  });
+
+  it("una lista mal formada no concede nada", async () => {
+    docs.set("users/u1", { role: "volunteer" });
+    docs.set("events/devfest-2025/staff/u1", {
+      permissions: "checkin:operate",
+    });
+    const { res, passed } = await run(
+      scoped(),
+      buildReq({ slug: "devfest-2025" })
+    );
+    expect(res.__status).toBe(403);
+    expect(passed).toBe(false);
+  });
+
   it("un voluntario no alcanza permisos fuera de su bundle ni asignado", async () => {
     docs.set("users/u1", { role: "volunteer" });
     docs.set("events/devfest-2025/staff/u1", {});

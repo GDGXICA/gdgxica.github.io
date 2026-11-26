@@ -3,7 +3,12 @@ import { AuthProvider, DevAuthProvider, useAuth } from "./AuthProvider";
 import { LoginScreen } from "./LoginScreen";
 import { isDevPreview } from "@/lib/api";
 import { AdminShell } from "./AdminShell";
-import { ChartRule, LoadingState, buttonClass } from "./ui/atlas";
+import { ChartRule, ErrorState, LoadingState, buttonClass } from "./ui/atlas";
+import {
+  anyAssignmentGrants,
+  eventPermissions,
+  useMyAssignments,
+} from "./useMyAssignments";
 import { Dashboard } from "./Dashboard";
 import { EventList } from "./events/EventList";
 import { EventForm } from "./events/EventForm";
@@ -166,14 +171,60 @@ function renderPage(page: string, guards: Guards | null) {
   // devuelve false igual. La lista era una segunda fuente de verdad que había
   // que acordarse de ampliar al añadir una página — y a la que ya se le había
   // olvidado `credentials`.
-  if (
-    required &&
-    !guards.can(required) &&
-    !(guards.profile && canReachByAssignment(guards.profile, required))
-  ) {
+  if (!required || guards.can(required)) return content;
+  if (!(guards.profile && canReachByAssignment(guards.profile, required))) {
     return <AccessDenied role={guards.role} />;
   }
-  return content;
+  // The role reaches the permission by assignment; whether THIS person's
+  // assignments actually grant it is the next question, since an assignment
+  // can be narrowed to some tools only.
+  return (
+    <AssignedPage
+      required={required}
+      profile={guards.profile}
+      role={guards.role}
+    >
+      {content}
+    </AssignedPage>
+  );
+}
+
+/**
+ * Opens a page reached through an event assignment only if an assignment
+ * grants it: the one named by `?slug=` when the URL has it, otherwise any
+ * (the page then offers only the events where that tool is assigned). The
+ * server and the rules decide again on every action; this keeps the panel
+ * from showing a screen that would only answer "sin permisos".
+ */
+function AssignedPage({
+  required,
+  profile,
+  role,
+  children,
+}: {
+  required: Permission;
+  profile: PermissionSubject;
+  role: string | null;
+  children: React.ReactNode;
+}) {
+  const mine = useMyAssignments();
+  if (mine.failed) {
+    return (
+      <ErrorState
+        message="No se pudieron cargar tus eventos asignados."
+        onRetry={mine.retry}
+      />
+    );
+  }
+  if (!mine.assignments) return <LoadingState label="Comprobando tu acceso…" />;
+  const slug =
+    typeof window === "undefined"
+      ? null
+      : new URLSearchParams(window.location.search).get("slug");
+  const allowed = slug
+    ? eventPermissions(profile, mine.assignments, slug).has(required)
+    : anyAssignmentGrants(profile, mine.assignments, required);
+  return allowed ? <>{children}</> : <AccessDenied role={role} />;
 }
 
 function AdminContent({ page, currentPath }: Props) {

@@ -185,7 +185,11 @@ export function EventMinigameManager({ initialSlug }: Props) {
 
   if (!slug) {
     return (
-      <EventPicker basePath="/admin/events/minigames" title="Mini-juegos" />
+      <EventPicker
+        basePath="/admin/events/minigames"
+        title="Mini-juegos"
+        permission="minigames:operate"
+      />
     );
   }
 

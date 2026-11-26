@@ -21,6 +21,7 @@ vi.mock("@/lib/api", () => ({
 vi.mock("../AuthProvider", () => ({ useAuth: mocks.useAuth }));
 
 import { Dashboard } from "../Dashboard";
+import { resetMyAssignmentsCache } from "../useMyAssignments";
 
 const CATALOG = [
   {
@@ -61,6 +62,8 @@ function signedInAs(role: string, permissions: string[]) {
 }
 
 beforeEach(() => {
+  // The assignments request is cached per page load; each test is a new page.
+  resetMyAssignmentsCache();
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date(2026, 9, 18, 10));
   vi.stubGlobal(
@@ -101,6 +104,32 @@ describe("Dashboard", () => {
     expect(screen.queryByRole("link", { name: "Nuevo evento" })).toBeNull();
     expect(screen.queryByRole("region", { name: "Te esperan" })).toBeNull();
     expect(mocks.listProposals).not.toHaveBeenCalled();
+  });
+
+  // An assignment can be narrowed to some tools: someone assigned only to
+  // the mural sees the mural, not the check-in.
+  it("muestra solo las herramientas que concede cada asignación", async () => {
+    signedInAs("volunteer", []);
+    mocks.listMyEvents.mockResolvedValue({
+      success: true,
+      data: [
+        {
+          eventSlug: "devfest-2026",
+          role: "volunteer",
+          permissions: ["mural:moderate"],
+        },
+      ],
+    });
+    render(<Dashboard />);
+
+    const section = await screen.findByRole("region", { name: "Tus eventos" });
+    expect(await within(section).findByText("DevFest ICA 2026")).toBeVisible();
+    expect(
+      within(section).queryByRole("link", { name: "Abrir check-in" })
+    ).toBeNull();
+    expect(
+      within(section).getByRole("link", { name: "Abrir mural" })
+    ).toHaveAttribute("href", "/admin/events/mural?slug=devfest-2026");
   });
 
   it("explica qué hacer al voluntario sin asignaciones", async () => {

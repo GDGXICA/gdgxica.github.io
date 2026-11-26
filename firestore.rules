@@ -49,7 +49,7 @@ service cloud.firestore {
     // Roles whose permission only applies inside an assigned event.
     function roleHasPerEvent(role, perm) {
       return role == 'volunteer'
-          && perm in ['roster:read', 'checkin:operate', 'credentials:read'];
+          && perm in ['roster:read', 'checkin:operate', 'credentials:read', 'mural:moderate'];
     }
 
     // An assignment with no expiresAt never expires; one with a past date
@@ -59,12 +59,21 @@ service cloud.firestore {
     // back as null, and binding it to a local keeps this to one document
     // access. On a roster subscribe this runs once per attendee doc, so the
     // difference is a real bill, not a micro-optimisation.
-    function isEventStaff(eventSlug) {
+    //
+    // The assignment may also narrow WHAT it grants: `permissions` lists the
+    // per-event permissions chosen for this person in this event (a
+    // volunteer assigned only to the mural does not read the roster). No
+    // list means the whole role bundle — assignments made before capabilities
+    // existed. A list that is not a list makes `in` fail, and the read is
+    // denied. Same document, so no extra read.
+    function isEventStaff(eventSlug, perm) {
       let staff = get(/databases/$(database)/documents/events/$(eventSlug)/staff/$(request.auth.uid));
       return staff != null
              && (!('expiresAt' in staff.data)
                  || staff.data.expiresAt == null
-                 || staff.data.expiresAt > request.time);
+                 || staff.data.expiresAt > request.time)
+             && (staff.data.get('permissions', null) == null
+                 || perm in staff.data.permissions);
     }
 
     // Permission for an action on a specific event. The caller's doc is read
@@ -80,7 +89,7 @@ service cloud.firestore {
              && notRevoked(caller, perm)
              && (
                roleHasGlobal(caller.role, perm)
-               || (roleHasPerEvent(caller.role, perm) && isEventStaff(eventSlug))
+               || (roleHasPerEvent(caller.role, perm) && isEventStaff(eventSlug, perm))
              );
     }
 

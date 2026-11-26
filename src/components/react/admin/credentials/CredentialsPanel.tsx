@@ -92,7 +92,13 @@ export function CredentialsPanel({ initialSlug }: { initialSlug?: string }) {
   };
 
   if (!slug) {
-    return <EventPicker basePath="/admin/credentials" title="Credenciales" />;
+    return (
+      <EventPicker
+        basePath="/admin/credentials"
+        title="Credenciales"
+        permission="credentials:read"
+      />
+    );
   }
 
   if (loading) {

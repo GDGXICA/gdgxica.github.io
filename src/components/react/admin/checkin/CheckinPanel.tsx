@@ -213,7 +213,13 @@ export function CheckinPanel({ initialSlug }: Props) {
   }
 
   if (!slug) {
-    return <EventPicker basePath="/admin/checkin" title="Check-in" />;
+    return (
+      <EventPicker
+        basePath="/admin/checkin"
+        title="Check-in"
+        permission="checkin:operate"
+      />
+    );
   }
 
   if (loading) {

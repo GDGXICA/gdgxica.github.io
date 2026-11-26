@@ -88,7 +88,15 @@ export const mockApi = {
   listEventStaff: () => ok(MOCK_EVENT_STAFF),
   assignEventStaff: () => ok({ uid: "dev-volunteer" }),
   removeEventStaff: () => ok(null),
-  listMyEvents: () => ok([{ eventSlug: "devfest-2026", role: "volunteer" }]),
+  listMyEvents: () =>
+    ok([
+      {
+        eventSlug: "devfest-2026",
+        role: "volunteer",
+        expiresAt: null,
+        permissions: ["checkin:operate", "roster:read"],
+      },
+    ]),
 
   getMyAccessRequest: () => ok(null),
   createAccessRequest: () => ok({ status: "pending" }),

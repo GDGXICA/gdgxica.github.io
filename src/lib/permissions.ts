@@ -154,12 +154,111 @@ export const ROLE_BUNDLES: Record<Role, RoleBundle> = {
       "roster:read",
       "checkin:operate",
       "minigames:operate",
+      "mural:moderate",
       "credentials:read",
       "credentials:operate",
     ],
   },
   organizer: { global: ORGANIZER_GLOBAL, perEvent: [] },
   admin: { global: PERMISSIONS, perEvent: [] },
+};
+
+/**
+ * Lo que un admin elige al asignar a alguien a un evento.
+ *
+ * Una asignación de staff puede dar todo el paquete por evento del rol o solo
+ * una parte. La API recibe capacidades (lo que se ve en el panel) y guarda en
+ * `events/{slug}/staff/{uid}.permissions` los permisos en que se traducen,
+ * porque eso es lo que las reglas pueden comprobar con `perm in …` sin una
+ * tercera copia de este catálogo. Cada capacidad trae lo que necesita para
+ * funcionar: marcar asistencia no sirve sin leer el roster.
+ *
+ * Espejo del canónico en functions/src/auth/permissions.ts; el test de paridad lo comprueba.
+ */
+export const STAFF_CAPABILITIES = {
+  checkin: ["roster:read", "checkin:operate"],
+  minigames: ["minigames:operate"],
+  mural: ["mural:moderate"],
+  credentials: ["credentials:read", "credentials:operate"],
+} as const satisfies Record<string, readonly Permission[]>;
+
+export type StaffCapability = keyof typeof STAFF_CAPABILITIES;
+
+export const STAFF_CAPABILITY_IDS = Object.keys(
+  STAFF_CAPABILITIES
+) as StaffCapability[];
+
+export function isStaffCapability(value: unknown): value is StaffCapability {
+  return (
+    typeof value === "string" &&
+    (STAFF_CAPABILITY_IDS as readonly string[]).includes(value)
+  );
+}
+
+/** Los permisos de unas capacidades, sin repetir y en orden estable. */
+export function permissionsForCapabilities(
+  capabilities: readonly StaffCapability[]
+): Permission[] {
+  const set = new Set<Permission>();
+  for (const cap of capabilities) {
+    for (const perm of STAFF_CAPABILITIES[cap]) set.add(perm);
+  }
+  return [...set].sort();
+}
+
+/**
+ * Las capacidades que una lista de permisos cubre por completo. `null` (una
+ * asignación sin lista, anterior a las capacidades) las cubre todas.
+ */
+export function capabilitiesFromPermissions(
+  permissions: readonly Permission[] | null
+): StaffCapability[] {
+  if (permissions === null) return [...STAFF_CAPABILITY_IDS];
+  return STAFF_CAPABILITY_IDS.filter((cap) =>
+    STAFF_CAPABILITIES[cap].every((p) => permissions.includes(p))
+  );
+}
+
+/**
+ * Lee `permissions` de un doc de staff.
+ *
+ * - Ausente o `null`: `null`, que significa "todo el paquete del rol". Es el
+ *   caso de las asignaciones hechas antes de que existieran las capacidades.
+ * - Una lista: sus permisos válidos.
+ * - Cualquier otra cosa: lista vacía. Ante un dato que no entendemos se
+ *   niega, igual que con una fecha de caducidad ilegible.
+ */
+export function readStaffPermissions(raw: unknown): Permission[] | null {
+  if (raw === undefined || raw === null) return null;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(isPermission);
+}
+
+/** Cómo se presenta cada capacidad en el panel. */
+export const STAFF_CAPABILITY_LABELS: Record<
+  StaffCapability,
+  { label: string; description: string }
+> = {
+  checkin: {
+    label: "Check-in",
+    description:
+      "Marca y desmarca la asistencia en la puerta. Ve la lista de inscritos (nombre, correo y DNI); no exporta ni importa.",
+  },
+  minigames: {
+    label: "Dinámicas",
+    description:
+      "Conduce las dinámicas: abre el proyector, inicia, cierra y reabre, pasa preguntas, gira la ruleta, saca bolas y oculta palabras. No las crea ni las borra.",
+  },
+  mural: {
+    label: "Mural",
+    description:
+      "Aprueba o rechaza las fotos que llegan. No cambia ajustes ni límites, ni retira fotos ya publicadas.",
+  },
+  credentials: {
+    label: "Credenciales",
+    description:
+      "Ve las credenciales (DNI, encuesta y fotos) y las gestiona: carga en Bevy, conciliación y recordatorios por correo a inscritos.",
+  },
 };
 
 export interface PermissionGrant {
@@ -244,6 +343,8 @@ function readRevocations(raw: unknown): Permission[] {
 export interface PermissionContext {
   scope?: string;
   isEventStaff?: boolean;
+  /** Ver el canónico: la lista de la asignación, o `null` = todo el paquete. */
+  staffPermissions?: readonly Permission[] | null;
   nowMs?: number;
 }
 
@@ -262,7 +363,12 @@ export function effectivePermissions(
   const granted = new Set<Permission>(bundle.global);
 
   if (scope !== GLOBAL_SCOPE && ctx.isEventStaff) {
-    for (const perm of bundle.perEvent) granted.add(perm);
+    const allowed = ctx.staffPermissions;
+    for (const perm of bundle.perEvent) {
+      if (allowed === null || allowed === undefined || allowed.includes(perm)) {
+        granted.add(perm);
+      }
+    }
   }
 
   for (const grant of readGrants(subject.grants)) {

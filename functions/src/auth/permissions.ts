@@ -170,6 +170,7 @@ export const ROLE_BUNDLES: Record<Role, RoleBundle> = {
       "roster:read",
       "checkin:operate",
       "minigames:operate",
+      "mural:moderate",
       "credentials:read",
       "credentials:operate",
     ],
@@ -210,6 +211,77 @@ export function isPermission(value: unknown): value is Permission {
     typeof value === "string" &&
     (PERMISSIONS as readonly string[]).includes(value)
   );
+}
+
+/**
+ * Lo que un admin elige al asignar a alguien a un evento.
+ *
+ * Una asignación de staff puede dar todo el paquete por evento del rol o solo
+ * una parte. La API recibe capacidades (lo que se ve en el panel) y guarda en
+ * `events/{slug}/staff/{uid}.permissions` los permisos en que se traducen,
+ * porque eso es lo que las reglas pueden comprobar con `perm in …` sin una
+ * tercera copia de este catálogo. Cada capacidad trae lo que necesita para
+ * funcionar: marcar asistencia no sirve sin leer el roster.
+ *
+ * La unión de todas es exactamente `volunteer.perEvent`; el test lo exige.
+ */
+export const STAFF_CAPABILITIES = {
+  checkin: ["roster:read", "checkin:operate"],
+  minigames: ["minigames:operate"],
+  mural: ["mural:moderate"],
+  credentials: ["credentials:read", "credentials:operate"],
+} as const satisfies Record<string, readonly Permission[]>;
+
+export type StaffCapability = keyof typeof STAFF_CAPABILITIES;
+
+export const STAFF_CAPABILITY_IDS = Object.keys(
+  STAFF_CAPABILITIES
+) as StaffCapability[];
+
+export function isStaffCapability(value: unknown): value is StaffCapability {
+  return (
+    typeof value === "string" &&
+    (STAFF_CAPABILITY_IDS as readonly string[]).includes(value)
+  );
+}
+
+/** Los permisos de unas capacidades, sin repetir y en orden estable. */
+export function permissionsForCapabilities(
+  capabilities: readonly StaffCapability[]
+): Permission[] {
+  const set = new Set<Permission>();
+  for (const cap of capabilities) {
+    for (const perm of STAFF_CAPABILITIES[cap]) set.add(perm);
+  }
+  return [...set].sort();
+}
+
+/**
+ * Las capacidades que una lista de permisos cubre por completo. `null` (una
+ * asignación sin lista, anterior a las capacidades) las cubre todas.
+ */
+export function capabilitiesFromPermissions(
+  permissions: readonly Permission[] | null
+): StaffCapability[] {
+  if (permissions === null) return [...STAFF_CAPABILITY_IDS];
+  return STAFF_CAPABILITY_IDS.filter((cap) =>
+    STAFF_CAPABILITIES[cap].every((p) => permissions.includes(p))
+  );
+}
+
+/**
+ * Lee `permissions` de un doc de staff.
+ *
+ * - Ausente o `null`: `null`, que significa "todo el paquete del rol". Es el
+ *   caso de las asignaciones hechas antes de que existieran las capacidades.
+ * - Una lista: sus permisos válidos.
+ * - Cualquier otra cosa: lista vacía. Ante un dato que no entendemos se
+ *   niega, igual que con una fecha de caducidad ilegible.
+ */
+export function readStaffPermissions(raw: unknown): Permission[] | null {
+  if (raw === undefined || raw === null) return null;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(isPermission);
 }
 
 /**
@@ -289,6 +361,12 @@ export interface PermissionContext {
    * cuando hace falta: los permisos globales se responden sin esa lectura.
    */
   isEventStaff?: boolean;
+  /**
+   * Los permisos que concede ESA asignación (`staff.permissions`), o `null`
+   * si no tiene lista y concede todo el paquete del rol. Solo acota: nunca
+   * añade nada que el rol no tenga por evento.
+   */
+  staffPermissions?: readonly Permission[] | null;
   nowMs?: number;
 }
 
@@ -314,7 +392,12 @@ export function effectivePermissions(
   // Los permisos perEvent solo aplican dentro de un evento concreto y con
   // la asignación de staff confirmada. Nunca satisfacen una consulta global.
   if (scope !== GLOBAL_SCOPE && ctx.isEventStaff) {
-    for (const perm of bundle.perEvent) granted.add(perm);
+    const allowed = ctx.staffPermissions;
+    for (const perm of bundle.perEvent) {
+      if (allowed === null || allowed === undefined || allowed.includes(perm)) {
+        granted.add(perm);
+      }
+    }
   }
 
   for (const grant of readGrants(subject.grants)) {
