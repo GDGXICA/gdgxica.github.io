@@ -1173,6 +1173,8 @@ app.post(
 app.get(
   "/api/certificates/manual",
   requirePermission("certificates:send"),
+  // Names and emails, like the per-event list.
+  auditedRead("read.certificates", "certificate_manual", { dedupe: true }),
   eventCertificates.listManualCertificates
 );
 app.post(
