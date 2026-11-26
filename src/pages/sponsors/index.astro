@@ -1,20 +1,40 @@
 ---
 import Layout from "@/layouts/Layout.astro";
+import PageHeader from "@/components/night/PageHeader.astro";
+import NButton from "@/components/night/NButton.astro";
+import StatsBar from "@/components/StatsBar.astro";
 import SponsorCard from "@/components/SponsorCard.astro";
-import { Users, Target, Zap, Heart, BriefcaseBusiness } from "@lucide/astro";
 import CallToActionSection from "@/components/CallToActionSection.astro";
-import Button from "@/components/Button.astro";
-import HeroPage from "@/components/HeroPage.astro";
 
 import { getCollection } from "astro:content";
 import { fetchStats, fetchLinks } from "@/loaders/transform-site-config";
-import StatsBar from "@/components/StatsBar.astro";
 import { buildSponsorsSchema } from "@/utils/schema";
 
 const sponsorsCollection = await getCollection("sponsors");
 const sponsors = sponsorsCollection.map((entry) => entry.data);
+const featuredSponsors = sponsors.filter((sponsor) => sponsor.featured);
+const otherSponsors = sponsors.filter((sponsor) => !sponsor.featured);
 const stats = await fetchStats();
 const links = await fetchLinks();
+
+const benefits = [
+  {
+    title: "Acceso a talento",
+    text: "Conecta directamente con desarrolladores talentosos y apasionados de la región.",
+  },
+  {
+    title: "Visibilidad de marca",
+    text: "Aumenta la visibilidad de tu marca en la comunidad tech más activa de la región.",
+  },
+  {
+    title: "Liderazgo de opinión",
+    text: "Posiciona tu empresa como líder tecnológico compartiendo conocimiento y experiencia.",
+  },
+  {
+    title: "Impacto en la comunidad",
+    text: "Contribuye al crecimiento del ecosistema tecnológico y genera impacto social positivo.",
+  },
+];
 
 const metadata = {
   title: "Patrocinadores - Google Developer Group Ica",
@@ -27,156 +47,246 @@ const metadata = {
 ---
 
 <Layout {...metadata}>
-  <HeroPage>
-    <p
-      class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-red-500 to-green-600"
+  <main>
+    <PageHeader
+      title="Nuestros patrocinadores"
+      label="Empresas y organizaciones aliadas"
+      lead="Agradecemos profundamente a las empresas y organizaciones que hacen posible nuestra misión de democratizar el acceso al conocimiento tecnológico. Su apoyo transforma vidas y construye el futuro digital."
     >
-      <BriefcaseBusiness stroke-width={1.5} size={64} color="#FFFFFF" />
-    </p>
-    <h1 class="mb-6 text-4xl font-bold md:text-5xl">
-      <span class="text-google-blue">Nuestros </span>
-      <span class="text-google-red">Patrocinadores</span>
-    </h1>
-    <p class="text-secondary mx-auto mb-12 max-w-3xl text-xl">
-      Agradecemos profundamente a las empresas y organizaciones que hacen
-      posible nuestra misión de democratizar el acceso al conocimiento
-      tecnológico. Su apoyo transforma vidas y construye el futuro digital.
-    </p>
+      <StatsBar
+        slot="strip"
+        stats={[
+          {
+            value: `${stats.totalSponsors}+`,
+            label: "patrocinadores activos",
+          },
+          {
+            value: `${stats.sponsoredEvents}+`,
+            label: "eventos patrocinados",
+          },
+          {
+            value: `${stats.developersReached}+`,
+            label: "desarrolladores alcanzados",
+          },
+        ]}
+      />
+    </PageHeader>
 
-    <StatsBar
-      stats={[
-        {
-          value: `${stats.totalSponsors}+`,
-          label: "Patrocinadores Activos",
-          color: "blue",
-        },
-        {
-          value: `${stats.sponsoredEvents}+`,
-          label: "Eventos Patrocinados",
-          color: "yellow",
-        },
-        {
-          value: `${stats.developersReached}+`,
-          label: "Desarrolladores Alcanzados",
-          color: "green",
-        },
-      ]}
-    />
-  </HeroPage>
+    {
+      featuredSponsors.length > 0 && (
+        <section class="tier" aria-labelledby="featured-title">
+          <div class="n-container">
+            <div class="tier__intro">
+              <h2 id="featured-title" class="n-head">
+                Patrocinadores principales
+              </h2>
+              <p class="n-lead">
+                Nuestros socios estratégicos que impulsan la innovación y el
+                crecimiento de la comunidad
+              </p>
+            </div>
+            <div class="tier__featured">
+              {featuredSponsors.map((sponsor) => (
+                <SponsorCard {...sponsor} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )
+    }
 
-  <section class="py-20">
-    <div class="container">
-      <div class="mx-auto max-w-2xl text-center">
-        <h2 class="mb-4 text-3xl font-bold">Patrocinadores Principales</h2>
-        <p class="text-secondary text-xl">
-          Nuestros socios estratégicos que impulsan la innovación y el
-          crecimiento de la comunidad
-        </p>
-      </div>
-      <div
-        class="mx-auto mt-12 grid max-w-4xl grid-cols-1 gap-8 md:grid-cols-2"
-      >
-        {
-          sponsors
-            .filter((sponsor) => sponsor.featured)
-            .map((sponsor) => <SponsorCard {...sponsor} />)
-        }
-      </div>
-    </div>
-  </section>
+    {
+      otherSponsors.length > 0 && (
+        <section class="tier tier--wall" aria-labelledby="all-title">
+          <div class="n-container">
+            <div class="tier__intro">
+              <h2 id="all-title" class="n-head">
+                Todos nuestros patrocinadores
+              </h2>
+              <p class="n-lead">
+                Cada empresa que nos apoya es fundamental para nuestro éxito
+              </p>
+            </div>
+            <ul class="tier__wall">
+              {otherSponsors.map((sponsor) => (
+                <li>
+                  <SponsorCard {...sponsor} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )
+    }
 
-  <section class="bg-section py-20">
-    <div class="container">
-      <div class="mx-auto max-w-2xl text-center">
-        <h2 class="mb-4 text-3xl font-bold">Todos Nuestros Patrocinadores</h2>
-        <p class="text-secondary text-xl">
-          Cada empresa que nos apoya es fundamental para nuestro éxito
-        </p>
+    <section class="why" aria-labelledby="why-title">
+      <div class="n-container why__grid">
+        <div class="why__intro">
+          <h2 id="why-title" class="n-head">¿Por qué patrocinar GDG?</h2>
+          <p class="n-lead">
+            Los beneficios tangibles de asociarse con la comunidad de
+            desarrolladores más activa de la región
+          </p>
+        </div>
+        <ol class="why__list">
+          {
+            benefits.map((benefit, index) => (
+              <li>
+                <span class="why__index n-mono" aria-hidden="true">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <h3>{benefit.title}</h3>
+                <p>{benefit.text}</p>
+              </li>
+            ))
+          }
+        </ol>
       </div>
-      <div
-        class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-      >
-        {
-          sponsors
-            .filter((sponsor) => !sponsor.featured)
-            .map((sponsor) => <SponsorCard {...sponsor} />)
-        }
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="py-20">
-    <div class="container">
-      <div class="mx-auto mb-14 max-w-[523px] text-center">
-        <h2 class="mb-6 text-4xl font-bold">¿Por Qué Patrocinar GDG?</h2>
-        <p class="text-secondary text-xl">
-          Los beneficios tangibles de asociarse con la comunidad de
-          desarrolladores más activa de la región
-        </p>
-      </div>
-      <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-        <!-- const benefitIconMap = { Users, Target, Zap, Heart }; -->
-        <article
-          class="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-200 p-6 text-center"
-        >
-          <Users stroke-width={1.5} class="h-8 w-8" color="#2563EB" />
-          <h3 class="text-primary text-2xl font-semibold">Acceso a talento</h3>
-          <p class="text-secondary text-sm">
-            Conecta directamente con desarrolladores talentosos y apasionados de
-            la región.
-          </p>
-        </article>
-        <article
-          class="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-200 p-6 text-center"
-        >
-          <Target stroke-width={1.5} class="h-8 w-8" color="#DC2626" />
-          <h3 class="text-primary text-2xl font-semibold">
-            Visibilidad de marca
-          </h3>
-          <p class="text-secondary text-sm">
-            Aumenta la visibilidad de tu marca en la comunidad tech más activa
-            de la región.
-          </p>
-        </article>
-        <article
-          class="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-200 p-6 text-center"
-        >
-          <Zap stroke-width={1.5} class="h-8 w-8" color="#F59E0B" />
-          <h3 class="text-primary text-2xl font-semibold">
-            Liderazgo de opinión
-          </h3>
-          <p class="text-secondary text-sm">
-            Posiciona tu empresa como líder tecnológico compartiendo
-            conocimiento y experiencia.
-          </p>
-        </article>
-        <article
-          class="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-200 p-6 text-center"
-        >
-          <Heart stroke-width={1.5} class="h-8 w-8" color="#16A34A" />
-          <h3 class="text-primary text-2xl font-semibold">
-            Impacto en la comunidad
-          </h3>
-          <p class="text-secondary text-sm">
-            Contribuye al crecimiento del ecosistema tecnológico y genera
-            impacto social positivo.
-          </p>
-        </article>
-      </div>
-    </div>
-  </section>
-  <CallToActionSection>
-    <h2 class="mb-6 text-3xl font-bold text-white md:text-4xl">
-      ¿Quieres Ser Nuestro Próximo Patrocinador?
-    </h2>
-    <p class="mb-8 text-xl text-white">
-      Únete a las empresas líderes que apoyan el crecimiento del ecosistema
-      tecnológico. Juntos podemos formar a los desarrolladores del futuro y
-      crear un impacto duradero en la industria.
-    </p>
-    <Button variant="white" href={links.forms.sponsor} target="_blank">
-      <BriefcaseBusiness />
-      Quiero ser patrocinador
-    </Button>
-  </CallToActionSection>
+    <CallToActionSection>
+      <h2>¿Quieres ser nuestro próximo patrocinador?</h2>
+      <p>
+        Únete a las empresas líderes que apoyan el crecimiento del ecosistema
+        tecnológico. Juntos podemos formar a los desarrolladores del futuro y
+        crear un impacto duradero en la industria.
+      </p>
+      <NButton href={links.forms.sponsor}>Quiero ser patrocinador</NButton>
+    </CallToActionSection>
+  </main>
 </Layout>
+
+<style>
+  /* ---- tiers ---- */
+  .tier {
+    padding-block: var(--section-gap);
+  }
+
+  /* The wall follows the featured tier as part of the same survey. */
+  .tier + .tier--wall {
+    padding-top: 0;
+  }
+
+  .tier__intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1rem clamp(2rem, 6vw, 6rem);
+    align-items: end;
+    margin-bottom: clamp(2rem, 1.2rem + 2.5vw, 3.5rem);
+  }
+
+  .tier__intro h2 {
+    margin: 0;
+  }
+
+  .tier__intro p {
+    max-width: 40ch;
+    margin: 0;
+    color: var(--muted);
+  }
+
+  .tier__featured {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(1rem, 2vw, 1.5rem);
+  }
+
+  .tier__wall {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(2.5rem, 2rem + 1.5vw, 3.5rem) clamp(1.25rem, 2.5vw, 2.5rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* ---- why sponsor ---- */
+  .why {
+    padding-block: var(--section-gap);
+    border-block: 1px solid var(--line);
+    background: var(--surface-1);
+  }
+
+  .why__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+    gap: 2.5rem clamp(2rem, 6vw, 6rem);
+    align-items: start;
+  }
+
+  .why__intro h2 {
+    margin: 0;
+  }
+
+  .why__intro p {
+    max-width: 34ch;
+    margin: 1.25rem 0 0;
+    color: var(--muted);
+  }
+
+  .why__list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 clamp(1.5rem, 3vw, 3rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .why__list li {
+    padding-block: 1.5rem 2rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .why__index {
+    color: var(--ochre);
+  }
+
+  .why__list h3 {
+    margin: 0.75rem 0 0;
+    font-size: var(--step-lead);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  .why__list p {
+    max-width: 38ch;
+    margin: 0.6rem 0 0;
+    color: var(--muted);
+  }
+
+  @media (max-width: 1023px) {
+    .tier__featured,
+    .why__grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tier__wall {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 767px) {
+    .tier__intro {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* On a phone the wall is a list of rows, divided by fine rules. */
+  @media (max-width: 599px) {
+    .tier__wall,
+    .why__list {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tier__wall {
+      row-gap: 0;
+    }
+
+    .tier__wall > li {
+      padding-block: 1.25rem;
+      border-top: 1px solid var(--line);
+    }
+  }
+</style>

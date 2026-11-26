@@ -1,11 +1,77 @@
 ---
-
+/**
+ * The closing call of a page: a survey panel with corner marks and the
+ * hummingbird geoglyph beside the copy. The slot holds the heading, a line
+ * and the action.
+ */
+import { COLIBRI_STROKE, colibriPath, colibriViewBox } from "@/lib/colibri";
 ---
 
-<section class="bg-gradient-to-r from-blue-600 via-red-500 to-green-600 py-20">
-  <div class="mx-auto max-w-[1400px] px-4">
-    <div class="mx-auto max-w-[768px] text-center">
-      <slot />
+<section class="cta">
+  <div class="n-container">
+    <div class="cta__panel n-panel n-marks">
+      <div class="cta__copy">
+        <slot />
+      </div>
+      <svg class="cta__figure" viewBox={colibriViewBox(4)} aria-hidden="true">
+        <path
+          d={colibriPath()}
+          fill="none"
+          stroke="currentColor"
+          stroke-width={COLIBRI_STROKE * 0.8}
+          stroke-linejoin="round"
+          stroke-linecap="round"></path>
+      </svg>
     </div>
   </div>
 </section>
+
+<style>
+  .cta {
+    padding-block: var(--section-gap);
+  }
+
+  .cta__panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 2rem clamp(2rem, 6vw, 6rem);
+    align-items: center;
+    padding: clamp(1.75rem, 1rem + 4vw, 4rem);
+  }
+
+  .cta__copy :global(h2) {
+    margin: 0 0 1rem;
+    color: var(--ink);
+    font-size: var(--step-head);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    text-wrap: balance;
+  }
+
+  .cta__copy :global(p) {
+    max-width: 48ch;
+    margin: 0 0 2rem;
+    color: var(--muted);
+    font-size: var(--step-body);
+  }
+
+  .cta__figure {
+    width: 100%;
+    max-width: 20rem;
+    justify-self: center;
+    color: var(--ochre);
+  }
+
+  @media (max-width: 899px) {
+    .cta__panel {
+      grid-template-columns: 1fr;
+    }
+
+    .cta__figure {
+      order: -1;
+      max-width: 9rem;
+      justify-self: start;
+    }
+  }
+</style>

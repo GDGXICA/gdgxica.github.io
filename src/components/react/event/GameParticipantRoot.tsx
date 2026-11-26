@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { signInAnonymouslyIfNeeded } from "@/lib/firebase";
 import { BingoCardView } from "./BingoCardView";
-import { JoinModal } from "./JoinModal";
+import { JoinModal, TYPE_DOTS } from "./JoinModal";
 import { PollOverlay } from "./PollOverlay";
 import { QuizOverlay } from "./QuizOverlay";
 import { RouletteView } from "./RouletteView";
@@ -103,120 +103,156 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
   }, [instance?.id, uid, joinedId, gameId, alias, join]);
 
   return (
-    <main className="mx-auto min-h-screen max-w-5xl px-4 py-5 sm:px-6 sm:py-8">
-      <header className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 pb-5 dark:border-gray-800">
+    <main className="mx-auto min-h-screen max-w-4xl px-4 pt-3 pb-16 sm:px-6 sm:pt-5">
+      <header className="mb-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-(--line) pb-4 sm:mb-14">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid grid-cols-2 gap-1" aria-hidden="true">
-            <span className="bg-google-blue h-2.5 w-2.5 rounded-full" />
-            <span className="bg-google-red h-2.5 w-2.5 rounded-full" />
-            <span className="bg-google-yellow h-2.5 w-2.5 rounded-full" />
-            <span className="bg-google-green h-2.5 w-2.5 rounded-full" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">
-              GDG ICA · Juegos en vivo
+          <img
+            src="/gdg-logo.png"
+            width={32}
+            height={32}
+            alt=""
+            className="h-8 w-8 shrink-0"
+          />
+          <div className="flex min-w-0 flex-col-reverse">
+            <p className="game-dim n-mono">
+              <span>GDG ICA · Juegos en vivo</span>
             </p>
-            <h1 className="truncate text-lg font-bold">{eventName}</h1>
+            <h1 className="m-0 truncate font-(family-name:--font-display) text-[1.625rem] leading-none font-bold tracking-[-0.01em] text-(--ink)">
+              {eventName}
+            </h1>
           </div>
         </div>
         <a
           href={`/events/${slug}`}
-          className="hover:text-google-blue focus-visible:outline-google-blue rounded-lg px-2 py-2 text-sm font-medium text-gray-700 underline decoration-gray-400 underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-gray-200"
+          className="n-link inline-flex min-h-11 items-center gap-2 text-[0.9375rem]"
         >
+          <ArrowLeftIcon />
           Volver al evento
         </a>
       </header>
       {!gameId && (
         <section aria-labelledby="games-heading">
-          <h2
-            id="games-heading"
-            className="mb-2 text-3xl font-bold tracking-tight sm:text-4xl"
-          >
+          <h2 id="games-heading" className="n-head m-0">
             Elige una dinámica
           </h2>
-          <p className="mb-7 text-gray-600 dark:text-gray-300">
+          <p className="n-lead mt-4 mb-10 max-w-[34ch] text-(--muted)">
             Participa desde tu teléfono mientras seguimos el juego en pantalla.
           </p>
           {loading && (
             <p
-              className="rounded-xl bg-white p-6 text-gray-700 dark:bg-gray-900 dark:text-gray-200"
+              className="flex items-center gap-3 rounded-(--radius) border border-(--line) bg-(--surface-1) px-5 py-5 text-(--muted)"
               role="status"
             >
+              <span
+                className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-(--ochre) motion-reduce:animate-none"
+                aria-hidden="true"
+              />
               Buscando dinámicas en vivo…
             </p>
           )}
           {liveInstances.length === 0 && !loading && (
-            <p className="rounded-xl bg-white p-6 text-gray-700 dark:bg-gray-900 dark:text-gray-200">
+            <p className="rounded-(--radius) border border-dashed border-(--line-strong) px-6 py-10 text-(--muted)">
               Todavía no hay dinámicas en vivo. Esta página se actualizará
               cuando comiencen.
             </p>
           )}
-          <div className="grid gap-3 sm:grid-cols-2">
-            {liveInstances.map((item) => (
-              <a
-                key={item.id}
-                href={`?game=${encodeURIComponent(item.id)}`}
-                className="group focus-visible:outline-google-blue flex min-h-32 flex-col justify-between rounded-2xl bg-white p-5 shadow-[0_8px_30px_-20px_rgba(17,24,39,.35)] transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 sm:p-6 dark:bg-gray-900"
-              >
-                <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">
-                  {TYPE_LABELS[item.type]}
-                </span>
-                <span className="mt-3 flex items-end justify-between gap-3 text-xl font-bold">
-                  <span className="min-w-0 break-words">{item.title}</span>
+          {liveInstances.length > 0 && (
+            <div className="border-t border-(--line)">
+              {liveInstances.map((item) => (
+                <a
+                  key={item.id}
+                  href={`?game=${encodeURIComponent(item.id)}`}
+                  className="group grid min-h-24 grid-cols-[minmax(0,1fr)_2.75rem] items-center gap-4 border-b border-(--line) px-1 py-4 text-(--ink) no-underline transition-colors hover:bg-(--surface-1) sm:px-4"
+                >
+                  <span className="flex min-w-0 flex-col gap-1.5">
+                    <span className="inline-flex items-center gap-2 text-[0.9375rem] text-(--muted)">
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ background: TYPE_DOTS[item.type] }}
+                        aria-hidden="true"
+                      />
+                      {TYPE_LABELS[item.type]}
+                    </span>
+                    <span className="text-[1.375rem] leading-tight font-semibold tracking-[-0.015em] break-words">
+                      {item.title}
+                    </span>
+                  </span>
                   <span
-                    className="text-google-blue shrink-0 text-2xl transition-transform group-hover:translate-x-1"
+                    className="grid h-11 w-11 place-items-center rounded-full border border-(--line-strong) text-(--ochre) transition-[transform,border-color] duration-200 group-hover:translate-x-1 group-hover:border-(--ochre) motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
                     aria-hidden="true"
                   >
-                    ↗
+                    <ArrowRightIcon />
                   </span>
-                </span>
-              </a>
-            ))}
-          </div>
+                </a>
+              ))}
+            </div>
+          )}
         </section>
       )}
       {gameId && (loading || !authReady) && (
         <p
-          className="py-20 text-center text-gray-600 dark:text-gray-300"
+          className="flex items-center justify-center gap-3 py-20 text-center text-(--muted)"
           role="status"
         >
+          <span
+            className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-(--ochre) motion-reduce:animate-none"
+            aria-hidden="true"
+          />
           Preparando el juego…
         </p>
       )}
       {gameId && !loading && !instance && (
-        <section className="py-20 text-center">
-          <h2 className="text-3xl font-bold">Esperando el juego</h2>
-          <p className="mt-3 text-gray-600 dark:text-gray-300">
+        <section className="rounded-(--radius) border border-dashed border-(--line-strong) px-6 py-14 text-center sm:py-20">
+          <h2 className="m-0 text-3xl font-semibold tracking-[-0.02em] text-(--ink)">
+            Esperando el juego
+          </h2>
+          <p className="mt-3 text-(--muted)">
             Esta dinámica aún no está en vivo o ya terminó.
           </p>
           <a
             href={`/events/${slug}/jugar`}
-            className="text-google-blue mt-6 inline-block font-semibold underline underline-offset-4"
+            className="n-link mt-4 inline-flex min-h-11 items-center"
           >
             Ver dinámicas en vivo
           </a>
         </section>
       )}
       {gameId && instance && uid && joinedId !== gameId && (
-        <section className="py-20 text-center">
-          <h2 className="text-2xl font-bold">{instance.title}</h2>
-          <p className="mt-3">Únete para participar.</p>
+        <section className="n-panel px-6 py-12 text-center sm:py-16">
+          <h2 className="m-0 text-3xl font-semibold tracking-[-0.02em] text-balance text-(--ink)">
+            {instance.title}
+          </h2>
+          <p className="mt-3 text-(--muted)">Únete para participar.</p>
           <button
             type="button"
             onClick={() => setShowJoin(true)}
-            className="bg-google-blue focus-visible:outline-google-blue mt-5 min-h-12 rounded-xl px-6 py-3 font-semibold text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2"
+            className="nb nb--primary mt-6 min-w-48"
           >
-            Entrar
+            <span className="nb__label">Entrar</span>
+            <span className="nb__icon nb__icon--arrow" aria-hidden="true">
+              <ArrowRightIcon />
+            </span>
           </button>
         </section>
       )}
       {gameId && instance && uid && joinedId === gameId && (
         <section
           aria-label="Dinámica en vivo"
-          className="rounded-2xl bg-white p-5 shadow-[0_20px_50px_-30px_rgba(17,24,39,.45)] sm:p-8 dark:bg-gray-900"
+          className="n-panel n-marks p-5 sm:p-8"
         >
-          <div className="mb-6 border-b border-gray-100 pb-4 text-right text-sm text-gray-600 dark:border-gray-800 dark:text-gray-300">
-            Jugando como <strong>{alias}</strong>
+          <div className="mb-7 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-(--line) pb-4 text-[0.9375rem] text-(--muted)">
+            <span className="inline-flex items-center gap-2">
+              <span
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ background: TYPE_DOTS[instance.type] }}
+                aria-hidden="true"
+              />
+              {TYPE_LABELS[instance.type]}
+            </span>
+            <span>
+              Jugando como{" "}
+              <strong className="font-semibold text-(--ink)">{alias}</strong>
+            </span>
           </div>
           {instance.type === "poll" && instance.config && (
             <PollOverlay
@@ -280,7 +316,10 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
         </section>
       )}
       {(error || joinError || authError) && (
-        <p role="alert" className="mt-5 text-red-600">
+        <p
+          role="alert"
+          className="mt-6 border-l-2 border-red-400 bg-(--surface-1) px-4 py-3 text-red-200"
+        >
           {error || joinError || authError}
         </p>
       )}
@@ -293,5 +332,42 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
         />
       )}
     </main>
+  );
+}
+
+function ArrowRightIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+function ArrowLeftIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-(--ochre)"
+      aria-hidden="true"
+    >
+      <path d="M19 12H5M11 18l-6-6 6-6" />
+    </svg>
   );
 }

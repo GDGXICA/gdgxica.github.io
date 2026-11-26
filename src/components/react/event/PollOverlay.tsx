@@ -97,8 +97,14 @@ export function PollOverlay({
   if (!question)
     return (
       <div className="py-12 text-center">
-        <h2 className="text-3xl font-bold">{title}</h2>
-        <p className="mt-4 text-gray-600 dark:text-gray-300">
+        <h2 className="m-0 text-3xl font-semibold tracking-[-0.02em] text-balance text-(--ink)">
+          {title}
+        </h2>
+        <p className="mt-4 inline-flex items-center gap-3 text-(--muted)">
+          <span
+            className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-(--ochre) motion-reduce:animate-none"
+            aria-hidden="true"
+          />
           Esperando la primera pregunta…
         </p>
       </div>
@@ -107,30 +113,33 @@ export function PollOverlay({
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-7">
-        <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">
+        <p className="n-mono m-0 text-(--muted)">
           Pregunta {currentQuestionIndex + 1} de {questions.length}
         </p>
-        <div className="mt-4 flex gap-1.5" aria-hidden="true">
+        <div className="mt-3 flex gap-1.5" aria-hidden="true">
           {questions.map((item, index) => (
             <span
               key={item.id}
-              className={`h-1.5 flex-1 rounded-full ${index <= currentQuestionIndex ? "bg-google-blue" : "bg-gray-200 dark:bg-gray-700"}`}
+              className={`h-1 flex-1 rounded-full ${index <= currentQuestionIndex ? "bg-(--ochre)" : "bg-(--surface-3)"}`}
             />
           ))}
         </div>
-        <h2 className="mt-8 text-sm font-semibold text-gray-600 dark:text-gray-300">
+        <h2 className="mt-8 mb-0 text-[0.9375rem] font-medium text-(--muted)">
           {title}
         </h2>
-        <p className="mt-2 text-2xl leading-tight font-bold tracking-tight text-balance sm:text-3xl">
+        <p className="mt-2 text-[clamp(1.6rem,1.3rem+1.4vw,2.25rem)] leading-tight font-semibold tracking-[-0.02em] text-balance text-(--ink)">
           {question.prompt}
         </p>
-        <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+        <p className="mt-3 text-[0.9375rem] text-(--muted)">
           {votedOptionId ? "Así va la votación" : "Elige una opción para votar"}
         </p>
       </div>
 
       {error && (
-        <p className="mb-3 text-sm text-red-600 dark:text-red-400" role="alert">
+        <p
+          className="mb-3 border-l-2 border-red-400 pl-3 text-sm text-red-200"
+          role="alert"
+        >
           {error}
         </p>
       )}
@@ -148,27 +157,25 @@ export function PollOverlay({
             return (
               <li
                 key={opt.id}
-                className={`relative min-h-16 overflow-hidden rounded-xl bg-gray-100 px-4 py-4 dark:bg-gray-800 ${isMine ? "outline-google-blue outline-2 outline-offset-2" : ""}`}
+                className={`relative min-h-16 overflow-hidden rounded-(--radius-sm) border bg-(--surface-2) px-4 py-4 ${isMine ? "border-(--ochre)" : "border-(--line)"}`}
               >
                 <div
                   aria-hidden
-                  className={`absolute inset-y-0 left-0 transition-all ${
-                    isMine
-                      ? "bg-blue-200 dark:bg-blue-900"
-                      : "bg-gray-200 dark:bg-gray-700"
+                  className={`absolute inset-y-0 left-0 transition-[width] duration-500 motion-reduce:transition-none ${
+                    isMine ? "bg-(--ochre)/25" : "bg-(--surface-3)"
                   }`}
                   style={{ width: `${pct}%` }}
                 />
                 <div className="relative flex items-center justify-between gap-3">
-                  <span className="min-w-0 font-semibold break-words text-gray-900 dark:text-white">
+                  <span className="min-w-0 font-semibold break-words text-(--ink)">
                     {opt.label}
                     {isMine && (
-                      <span className="ml-2 text-xs font-bold text-blue-800 dark:text-blue-300">
+                      <span className="ml-2 text-sm font-medium text-(--ochre)">
                         Tu voto
                       </span>
                     )}
                   </span>
-                  <span className="shrink-0 text-sm font-bold text-gray-800 tabular-nums dark:text-gray-200">
+                  <span className="shrink-0 font-mono text-[0.9375rem] text-(--ink) tabular-nums">
                     {count} · {pct}%
                   </span>
                 </div>
@@ -182,7 +189,7 @@ export function PollOverlay({
                 type="button"
                 onClick={() => vote(opt.id)}
                 disabled={submitting}
-                className="hover:border-google-blue focus-visible:outline-google-blue min-h-16 w-full rounded-xl border border-gray-300 bg-white px-5 py-4 text-left text-lg font-semibold text-gray-900 transition-[border-color,background-color,transform] hover:-translate-y-0.5 hover:bg-blue-50 hover:text-blue-950 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 motion-reduce:transition-none dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white"
+                className="min-h-16 w-full rounded-(--radius-sm) border border-(--line-strong) bg-(--surface-2) px-5 py-4 text-left text-lg font-semibold text-(--ink) transition-[border-color,background-color,transform] hover:-translate-y-0.5 hover:border-(--muted) hover:bg-(--surface-3) disabled:opacity-50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
               >
                 {opt.label}
               </button>
@@ -193,7 +200,7 @@ export function PollOverlay({
 
       {votedOptionId && (
         <p
-          className="mt-6 border-t border-gray-200 pt-5 text-center text-sm text-gray-600 tabular-nums dark:border-gray-700 dark:text-gray-300"
+          className="mt-6 border-t border-(--line) pt-5 text-center font-mono text-[0.9375rem] text-(--muted) tabular-nums"
           role="status"
         >
           {totalForQuestion} respuesta{totalForQuestion !== 1 && "s"} hasta

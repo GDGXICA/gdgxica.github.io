@@ -1,4 +1,8 @@
 ---
+// Bare layout for the participant game page (/events/[slug]/jugar): no site
+// header or footer, the phone is a controller. It sits on the same night
+// ground as the rest of the public site (`theme-night` brings the tokens,
+// `dark` turns on the islands' own dark: variants).
 import "@/styles/global.css";
 const { title } = Astro.props;
 ---
@@ -9,11 +13,42 @@ const { title } = Astro.props;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#070b16" />
     <title>{title}</title>
     <link rel="icon" type="image/png" href="/favicon.png" />
   </head>
-  <body
-    class="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-white"
-    ><slot /></body
-  >
+  <body class="theme-night dark min-h-screen"><slot /></body>
 </html>
+
+<!-- What the islands need beyond utilities: the survey dimension line under
+     the event name, and a disabled state for the chamfered button. -->
+<style is:global>
+  .game-dim {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0.5rem 0 0;
+    color: var(--ochre);
+    white-space: nowrap;
+  }
+
+  .game-dim::before,
+  .game-dim::after {
+    height: 8px;
+    min-width: 1rem;
+    flex: 1;
+    border-color: var(--ochre);
+    border-style: solid;
+    background: linear-gradient(var(--ochre), var(--ochre)) center / 100% 1.5px
+      no-repeat;
+    content: "";
+  }
+
+  .game-dim::before {
+    border-width: 0 0 0 1.5px;
+  }
+
+  .game-dim::after {
+    border-width: 0 1.5px 0 0;
+  }
+</style>

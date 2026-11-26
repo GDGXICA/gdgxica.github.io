@@ -47,11 +47,11 @@ function Field({
     : children;
 
   return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-secondary text-sm font-semibold">{label}</span>
+    <label className="flex flex-col gap-2">
+      <span className="text-[0.9375rem] font-medium text-(--ink)">{label}</span>
       {control}
       {error && (
-        <span id={errorId} className="text-xs font-medium text-red-700">
+        <span id={errorId} className="text-sm font-medium text-red-300">
           {error}
         </span>
       )}
@@ -59,8 +59,33 @@ function Field({
   );
 }
 
+// 16px text so iOS does not zoom into the field on focus. The focus ring is
+// the theme's global ochre outline; the border only confirms it.
 const inputClass =
-  "border-gray-custom focus:border-google-blue focus:ring-google-blue/15 min-h-11 rounded-xl border bg-white px-3.5 py-2.5 text-sm outline-none transition focus:ring-4 disabled:bg-gray-50 disabled:text-gray-500";
+  "min-h-12 w-full rounded-(--radius-sm) border border-(--line-strong) bg-(--surface-1) px-3.5 py-2.5 text-base text-(--ink) transition-colors placeholder:text-(--muted)/70 hover:border-(--muted) focus:border-(--ochre) aria-[invalid=true]:border-red-400 disabled:opacity-60";
+
+const titleClass =
+  "m-0 font-(family-name:--font-display) text-[clamp(2.25rem,1.7rem+2.2vw,3.5rem)] leading-[0.95] font-bold tracking-[-0.02em] text-balance text-(--ink)";
+
+const primaryButtonClass = "nb nb--primary w-full";
+
+function ArrowIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  );
+}
 
 export function CredentialForm({
   card,
@@ -117,13 +142,11 @@ export function CredentialForm({
     return (
       <div className="flex flex-col gap-6">
         <header>
-          <p className="text-google-blue text-xs font-bold tracking-[0.16em] uppercase">
-            Paso 1 de 2
+          <h1 className={titleClass}>Hazla tuya</h1>
+          <p className="cred-dim n-mono">
+            <span>Paso 1 de 2</span>
           </p>
-          <h1 className="text-primary mt-2 text-3xl font-bold tracking-tight">
-            Hazla tuya
-          </h1>
-          <p className="text-secondary mt-2 max-w-xl text-sm leading-6">
+          <p className="mt-4 max-w-xl text-(--muted)">
             Escribe tu nombre y elige un avatar. Verás los cambios al instante
             en la vista previa.
           </p>
@@ -185,19 +208,24 @@ export function CredentialForm({
           }
         />
 
-        <button
-          type="button"
-          onClick={onContinue}
-          disabled={!cardReady}
-          className="bg-google-blue min-h-12 rounded-xl px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-45"
-        >
-          Continuar con mis datos
-        </button>
-        {!cardReady && (
-          <p className="text-tertiary -mt-3 text-center text-xs">
-            Completa tu nombre y apellido para continuar.
-          </p>
-        )}
+        <div className="flex flex-col gap-2.5 border-t border-(--line) pt-6">
+          <button
+            type="button"
+            onClick={onContinue}
+            disabled={!cardReady}
+            className={primaryButtonClass}
+          >
+            <span className="nb__label">Continuar con mis datos</span>
+            <span className="nb__icon nb__icon--arrow" aria-hidden="true">
+              <ArrowIcon />
+            </span>
+          </button>
+          {!cardReady && (
+            <p className="text-sm text-(--muted)">
+              Completa tu nombre y apellido para continuar.
+            </p>
+          )}
+        </div>
       </div>
     );
   }
@@ -205,28 +233,22 @@ export function CredentialForm({
   return (
     <div ref={formRef} className="flex flex-col gap-6">
       <header>
-        <p className="text-google-blue text-xs font-bold tracking-[0.16em] uppercase">
-          Paso 2 de 2
+        <h1 className={titleClass}>Completa tus datos</h1>
+        <p className="cred-dim n-mono">
+          <span>Paso 2 de 2</span>
         </p>
-        <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-primary text-3xl font-bold tracking-tight">
-              Completa tus datos
-            </h1>
-            <p className="text-secondary mt-2 max-w-xl text-sm leading-6">
-              Los usaremos para emitir tu credencial y para que el equipo de GDG
-              ICA complete tu registro oficial al evento.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onBack}
-            disabled={submitting}
-            className="text-google-blue rounded-lg px-2 py-1 text-sm font-semibold hover:bg-blue-50 disabled:opacity-50"
-          >
-            Editar nombre y avatar
-          </button>
-        </div>
+        <p className="mt-4 max-w-xl text-(--muted)">
+          Los usaremos para emitir tu credencial y para que el equipo de GDG ICA
+          complete tu registro oficial al evento.
+        </p>
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={submitting}
+          className="n-link mt-2 inline-flex min-h-11 items-center text-[0.9375rem] disabled:opacity-50"
+        >
+          Editar nombre y avatar
+        </button>
       </header>
 
       <fieldset disabled={submitting} className="contents">
@@ -349,31 +371,29 @@ export function CredentialForm({
         </div>
 
         <div
-          className={`rounded-xl border p-4 ${
-            touched && errors.consent
-              ? "border-red-300 bg-red-50/40"
-              : "border-gray-custom bg-gray-50/70"
+          className={`rounded-(--radius) border bg-(--surface-1) p-4 sm:p-5 ${
+            touched && errors.consent ? "border-red-400/70" : "border-(--line)"
           }`}
         >
-          <label className="flex items-start gap-3 text-sm">
+          <label className="flex items-start gap-3 text-[0.9375rem]">
             <input
               type="checkbox"
               checked={consentAccepted}
               onChange={(e) => onConsentChange(e.target.checked)}
-              className="mt-1 h-4 w-4 accent-blue-600"
+              className="mt-0.5 h-5 w-5 shrink-0 accent-(--ochre)"
             />
-            <span className="text-secondary leading-5">
+            <span className="leading-6 text-(--ink)">
               Confirmo que he leído y acepto las condiciones de participación,
               privacidad, conducta y tratamiento de datos, y que cumplo la
               condición de edad para participar.
             </span>
           </label>
 
-          <details className="group mt-3 pl-7 text-sm">
-            <summary className="text-google-blue cursor-pointer font-semibold">
+          <details className="group mt-2 pl-8 text-[0.9375rem]">
+            <summary className="n-link inline-flex min-h-11 cursor-pointer items-center">
               Ver condiciones y políticas
             </summary>
-            <ul className="text-secondary mt-3 flex list-disc flex-col gap-2 pl-5 leading-5">
+            <ul className="mt-2 flex list-disc flex-col gap-3 pl-5 leading-6 text-(--muted) marker:text-(--ochre)">
               {CONSENT_ITEMS.map((item) => (
                 <li key={item.id}>
                   {item.label}
@@ -384,7 +404,7 @@ export function CredentialForm({
                         href={item.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-google-blue underline"
+                        className="n-link text-(--ink)"
                       >
                         {item.linkLabel}
                       </a>
@@ -398,7 +418,7 @@ export function CredentialForm({
           {touched && errors.consent && (
             <p
               role="alert"
-              className="mt-3 pl-7 text-xs font-medium text-red-700"
+              className="mt-3 pl-8 text-sm font-medium text-red-300"
             >
               {errors.consent}
             </p>
@@ -409,7 +429,7 @@ export function CredentialForm({
       {serverError && (
         <p
           role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+          className="border-l-2 border-red-400 bg-(--surface-1) px-4 py-3 text-[0.9375rem] text-red-200"
         >
           {serverError}
         </p>
@@ -430,13 +450,18 @@ export function CredentialForm({
           });
         }}
         disabled={submitting}
-        className="bg-google-blue min-h-12 rounded-xl px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-55"
+        className={`${primaryButtonClass} nb--busy`}
       >
-        {submitPhase === "auth"
-          ? "Verificando sesión…"
-          : submitPhase === "saving"
-            ? "Creando credencial…"
-            : "Crear mi credencial"}
+        <span className="nb__label">
+          {submitPhase === "auth"
+            ? "Verificando sesión…"
+            : submitPhase === "saving"
+              ? "Creando credencial…"
+              : "Crear mi credencial"}
+        </span>
+        <span className="nb__icon nb__icon--arrow" aria-hidden="true">
+          <ArrowIcon />
+        </span>
       </button>
     </div>
   );

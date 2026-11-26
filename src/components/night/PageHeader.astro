@@ -1,0 +1,169 @@
+---
+/**
+ * The head of every inner page: the page's name in the display face over a
+ * survey dimension line, a lead, and optional actions. An `aside` slot takes
+ * a figure or a panel on the right; a `strip` slot takes an instrument strip
+ * (StatsBar) along the foot.
+ *
+ *   <PageHeader title="Eventos" label="Charlas, talleres y DevFest" lead="…">
+ *     <Button …>…</Button>            ← actions
+ *     <Fragment slot="aside">…</Fragment>
+ *     <StatsBar slot="strip" stats={…} />
+ *   </PageHeader>
+ */
+interface Props {
+  title: string;
+  /** Short text on the dimension line under the title. */
+  label?: string;
+  lead?: string;
+}
+
+const { title, label, lead } = Astro.props;
+const hasActions = Astro.slots.has("default");
+const hasAside = Astro.slots.has("aside");
+const hasStrip = Astro.slots.has("strip");
+---
+
+<header class:list={["page-head", { "page-head--aside": hasAside }]}>
+  <div class="page-head__grid-bg" aria-hidden="true"></div>
+  <div class="n-container page-head__inner">
+    <div class="page-head__copy">
+      <div class="page-head__mark">
+        <h1 class="n-page-title">{title}</h1>
+        {
+          label && (
+            <p class="page-head__dim n-mono">
+              <span>{label}</span>
+            </p>
+          )
+        }
+      </div>
+      {lead && <p class="n-lead page-head__lead">{lead}</p>}
+      {
+        hasActions && (
+          <div class="page-head__actions">
+            <slot />
+          </div>
+        )
+      }
+    </div>
+    {
+      hasAside && (
+        <div class="page-head__aside">
+          <slot name="aside" />
+        </div>
+      )
+    }
+  </div>
+  {
+    hasStrip && (
+      <div class="page-head__strip">
+        <slot name="strip" />
+      </div>
+    )
+  }
+</header>
+
+<style>
+  .page-head {
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+    isolation: isolate;
+  }
+
+  /* A survey grid that fades out towards the copy and the foot. */
+  .page-head__grid-bg {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-position: right top;
+    background-size: 32px 32px;
+    mask-image: radial-gradient(
+      ellipse 60% 90% at 88% 20%,
+      #000 0%,
+      transparent 75%
+    );
+  }
+
+  .page-head__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2.5rem clamp(2rem, 5vw, 5rem);
+    align-items: center;
+    padding-block: clamp(3rem, 2rem + 4vw, 6rem)
+      clamp(2.5rem, 1.75rem + 3vw, 4.5rem);
+  }
+
+  .page-head--aside .page-head__inner {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  }
+
+  .page-head__mark {
+    width: max-content;
+    max-width: 100%;
+  }
+
+  .page-head__dim {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1rem 0 0;
+    color: var(--ochre);
+    white-space: nowrap;
+  }
+
+  .page-head__dim::before,
+  .page-head__dim::after {
+    height: 10px;
+    min-width: 1.5rem;
+    flex: 1;
+    border-color: var(--ochre);
+    border-style: solid;
+    background: linear-gradient(var(--ochre), var(--ochre)) center / 100% 1.5px
+      no-repeat;
+    content: "";
+  }
+
+  .page-head__dim::before {
+    border-width: 0 0 0 1.5px;
+  }
+
+  .page-head__dim::after {
+    border-width: 0 1.5px 0 0;
+  }
+
+  .page-head__lead {
+    max-width: 46ch;
+    margin: 1.5rem 0 0;
+    color: var(--muted);
+  }
+
+  .page-head__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2rem;
+  }
+
+  .page-head__strip {
+    border-top: 1px solid var(--line);
+  }
+
+  @media (max-width: 899px) {
+    .page-head--aside .page-head__inner {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .page-head__mark {
+      width: auto;
+    }
+
+    .page-head__dim {
+      white-space: normal;
+    }
+  }
+</style>

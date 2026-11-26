@@ -1,77 +1,161 @@
 ---
+/**
+ * A volunteer, as an entry in the volunteers roster: a round photo beside
+ * the name, the role, the area they support, a short bio and profiles. Same
+ * shape as a team entry on the about page.
+ */
 import GithubIcon from "./icons/GithubIcon.astro";
 import LinkedinIcon from "./icons/LinkedinIcon.astro";
 import TwitterIcon from "./icons/TwitterIcon.astro";
+import Tag from "./Tag.astro";
+
+interface Volunteer {
+  name: string;
+  role: string;
+  area: string;
+  bio: string;
+  avatar: string;
+  links: {
+    linkedin?: string;
+    github?: string;
+    twitter?: string;
+  };
+}
+
+interface Props {
+  volunteer: Volunteer;
+}
+
 const { volunteer } = Astro.props;
+
+const profiles = [
+  { href: volunteer.links.linkedin, label: "LinkedIn", Icon: LinkedinIcon },
+  { href: volunteer.links.github, label: "GitHub", Icon: GithubIcon },
+  { href: volunteer.links.twitter, label: "Twitter", Icon: TwitterIcon },
+].filter((profile) => Boolean(profile.href));
 ---
 
-<div
-  class="group flex flex-col justify-center gap-4 rounded-lg border border-gray-200 p-6 transition-all hover:shadow-md"
-  data-area={volunteer.area}
->
+<div class="volunteer" data-area={volunteer.area}>
   <img
+    class="volunteer__photo"
     src={volunteer.avatar || "/placeholder.svg"}
     alt={volunteer.name}
     width={96}
     height={96}
-    class="mx-auto h-24 w-24 rounded-full object-cover"
     loading="lazy"
+    decoding="async"
   />
-
-  <div class="text-center">
-    <h3 class="text-primary text-center text-lg font-semibold">
-      {volunteer.name}
-    </h3>
-
-    <p class="text-google-blue mx-auto text-sm font-medium">{volunteer.role}</p>
-  </div>
-
-  <p class="text-center">
-    <span
-      class="rounded-4xl bg-[#F3F4F6] px-[10px] py-[2px] text-xs font-semibold text-[#1F2937]"
-    >
-      {volunteer.area}
-    </span>
-  </p>
-
-  <p class="text-secondary line-clamp-3 text-center text-sm">{volunteer.bio}</p>
-
-  <div class="mt-auto flex justify-center gap-3 text-gray-500">
+  <div class="volunteer__text">
+    <h3 class="volunteer__name">{volunteer.name}</h3>
+    <p class="volunteer__role">{volunteer.role}</p>
     {
-      volunteer.links.linkedin && (
-        <a
-          href={volunteer.links.linkedin}
-          aria-label="LinkedIn"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <LinkedinIcon size={16} class="hover:text-google-blue" />
-        </a>
+      volunteer.area && (
+        <p class="volunteer__area">
+          <Tag label={volunteer.area} />
+        </p>
       )
     }
+    {volunteer.bio && <p class="volunteer__bio">{volunteer.bio}</p>}
     {
-      volunteer.links.github && (
-        <a
-          href={volunteer.links.github}
-          aria-label="GitHub"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <GithubIcon size={16} class="hover:text-google-blue" />
-        </a>
-      )
-    }
-    {
-      volunteer.links.twitter && (
-        <a
-          href={volunteer.links.twitter}
-          aria-label="Twitter"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <TwitterIcon size={16} class="hover:text-google-blue" />
-        </a>
+      profiles.length > 0 && (
+        <ul class="volunteer__links">
+          {profiles.map(({ href, label, Icon }) => (
+            <li>
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${label} de ${volunteer.name}`}
+                title={label}
+              >
+                <Icon size={18} />
+              </a>
+            </li>
+          ))}
+        </ul>
       )
     }
   </div>
 </div>
+
+<style>
+  .volunteer {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 1.1rem;
+    align-items: start;
+    padding-block: 1.5rem 1.25rem;
+  }
+
+  .volunteer__photo {
+    width: clamp(4.75rem, 4rem + 1.5vw, 6rem);
+    height: auto;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--surface-2);
+    object-fit: cover;
+    object-position: 50% 30%;
+    outline: 1px solid var(--line-strong);
+    outline-offset: 3px;
+  }
+
+  .volunteer__name {
+    margin: 0.2rem 0 0;
+    font-size: clamp(1.125rem, 1.05rem + 0.3vw, 1.3rem);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+
+  .volunteer__role {
+    margin: 0.3rem 0 0;
+    color: var(--ink);
+    font-size: var(--step-small);
+    font-weight: 500;
+  }
+
+  .volunteer__area {
+    margin: 0.6rem 0 0;
+  }
+
+  .volunteer__bio {
+    margin: 0.6rem 0 0;
+    color: var(--muted);
+    font-size: var(--step-small);
+    line-height: 1.5;
+  }
+
+  /* Full-size touch targets, pulled left so the first icon lines up with
+     the text above it. */
+  .volunteer__links {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0.5rem 0 0 -0.8rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .volunteer__links a {
+    display: grid;
+    width: 2.75rem;
+    height: 2.75rem;
+    place-items: center;
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    transition:
+      color 160ms ease,
+      background-color 160ms ease;
+  }
+
+  .volunteer__links a:hover {
+    background: var(--surface-2);
+    color: var(--ink);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .volunteer__links a {
+      transition: none;
+    }
+  }
+</style>
