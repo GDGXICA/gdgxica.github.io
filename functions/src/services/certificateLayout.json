@@ -1,0 +1,26 @@
+{
+  "page": { "width": 841.89, "height": 595.28 },
+  "colors": {
+    "ground": "#0D0C0A",
+    "gold": "#D2AE6D",
+    "ivory": "#F1EADB",
+    "ivoryDim": "#B9B1A1"
+  },
+  "column": { "x": 64, "width": 556 },
+  "name": {
+    "baselineY": 270,
+    "maxSize": 58,
+    "minSize": 34,
+    "twoLineBaselinesY": [248, 290],
+    "twoLineMaxSize": 36
+  },
+  "rule": { "y": 312 },
+  "paragraph": {
+    "firstBaselineY": 340,
+    "width": 520,
+    "size": 12.5,
+    "minSize": 10,
+    "lineHeightRatio": 1.55,
+    "maxLines": 4
+  }
+}

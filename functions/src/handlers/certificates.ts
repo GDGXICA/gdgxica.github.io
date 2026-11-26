@@ -25,6 +25,7 @@ async function sendOne(
 ): Promise<SendResult> {
   try {
     const pdf = await buildCertificatePdf({
+      kind: body.kind,
       recipientName: recipient.name,
       eventName: body.eventName,
       startTime: body.startTime,
@@ -34,6 +35,7 @@ async function sendOne(
       organizer: body.organizer,
     });
     await sendCertificateEmail({
+      kind: body.kind,
       to: recipient.email,
       recipientName: recipient.name,
       eventName: body.eventName,
@@ -43,6 +45,7 @@ async function sendOne(
     // Required audit trail: who received which certificate and where it
     // was sent. The PDF itself is never stored — only this metadata.
     logger.info("certificate.sent", {
+      kind: body.kind,
       recipientName: recipient.name,
       recipientEmail: recipient.email,
       eventName: body.eventName,
@@ -54,6 +57,7 @@ async function sendOne(
     // surfaces only safeError's generic string to the caller.
     const detail = err instanceof Error ? err.message : String(err);
     logger.error("certificate.failed", {
+      kind: body.kind,
       recipientName: recipient.name,
       recipientEmail: recipient.email,
       eventName: body.eventName,
@@ -97,7 +101,7 @@ export async function sendCertificates(req: Request, res: Response) {
         performedBy: user.uid,
         targetId: body.eventName,
         targetType: "certificate",
-        details: { eventName: body.eventName, sent, failed },
+        details: { eventName: body.eventName, kind: body.kind, sent, failed },
       },
       req
     );

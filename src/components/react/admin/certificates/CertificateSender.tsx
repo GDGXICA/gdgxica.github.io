@@ -6,6 +6,7 @@ import {
   ArrowIcon,
   CloseIcon,
   CornerNodes,
+  ReticleIcon,
   SectionHeading,
   buttonClass,
   inputClass,
@@ -39,6 +40,30 @@ const EMPTY_META = {
   organizer: "GDG ICA",
 };
 
+// The three templates the backend knows (certificateSendSchema.kind).
+// `what` completes "certificado …" in the confirmation and the summary.
+const CERT_KINDS = [
+  {
+    value: "attendee",
+    label: "Asistente",
+    what: "de participación",
+    description: "Para quienes participaron del evento.",
+  },
+  {
+    value: "volunteer",
+    label: "Voluntariado",
+    what: "de voluntariado",
+    description: "Para el equipo que hizo posible el evento.",
+  },
+  {
+    value: "speaker",
+    label: "Speaker",
+    what: "de reconocimiento a speaker",
+    description: "Para quienes dieron una charla o un taller.",
+  },
+] as const;
+type CertKind = (typeof CERT_KINDS)[number]["value"];
+
 type Time = { h: number; m: number };
 
 // Parsea "02:00 PM", "5:00 p.m.", "17:00" → { h: 0-23, m: 0-59 }
@@ -71,6 +96,8 @@ function computeHours(start: Time, end: Time): number {
 }
 
 export function CertificateSender() {
+  const [kind, setKind] = useState<CertKind>("attendee");
+  const kindInfo = CERT_KINDS.find((k) => k.value === kind) ?? CERT_KINDS[0];
   const [meta, setMeta] = useState({ ...EMPTY_META });
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [selectedEventId, setSelectedEventId] = useState("");
@@ -246,7 +273,7 @@ export function CertificateSender() {
     }
     if (
       !window.confirm(
-        `Se generarán y enviarán ${recipients.length} certificado(s) por correo. ` +
+        `Se generarán y enviarán ${recipients.length} certificado(s) ${kindInfo.what} por correo. ` +
           `Esta acción no se puede deshacer. ¿Continuar?`
       )
     ) {
@@ -256,6 +283,7 @@ export function CertificateSender() {
     setSending(true);
     setResults(null);
     const res = await api.sendCertificates({
+      kind,
       eventName: meta.eventName.trim(),
       startTime: meta.startTime.trim(),
       endTime: meta.endTime.trim(),
@@ -313,15 +341,70 @@ export function CertificateSender() {
       )}
 
       <p className="text-atlas-mist mb-8 max-w-[70ch] text-sm leading-relaxed">
-        Genera y envía certificados de participación por correo. Los PDF se
-        crean al momento y no se almacenan.
+        Genera y envía por correo certificados de participación, de voluntariado
+        o de reconocimiento a speakers. Los PDF se crean al momento y no se
+        almacenan.
       </p>
 
       <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-10">
+          <section aria-labelledby="cert-tipo">
+            <SectionHeading>
+              <span id="cert-tipo">1 · Certificado</span>
+            </SectionHeading>
+            <p className="text-atlas-mist mb-4 text-sm">
+              Cada tipo tiene su propio diseño y su propio texto. Si tienes
+              personas de varios tipos, haz un envío por cada uno.
+            </p>
+            <fieldset>
+              <legend className="sr-only">Tipo de certificado</legend>
+              <div className="border-atlas-line rounded-xs border">
+                {CERT_KINDS.map((k) => {
+                  const selected = kind === k.value;
+                  return (
+                    <label
+                      key={k.value}
+                      className={`border-atlas-line has-focus-visible:outline-atlas-star flex cursor-pointer gap-3 border-b px-4 py-3 transition-colors last:border-b-0 has-focus-visible:outline-2 has-focus-visible:-outline-offset-2 ${
+                        selected ? "bg-atlas-deep" : "hover:bg-atlas-deep/60"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="cert-kind"
+                        value={k.value}
+                        checked={selected}
+                        onChange={() => setKind(k.value)}
+                        className="sr-only"
+                      />
+                      <ReticleIcon
+                        className={`mt-0.5 size-4 shrink-0 ${
+                          selected ? "text-atlas-star" : "text-atlas-line"
+                        }`}
+                      />
+                      <span className="min-w-0">
+                        <span
+                          className={`block text-sm ${
+                            selected
+                              ? "text-atlas-dust font-semibold"
+                              : "text-atlas-mist"
+                          }`}
+                        >
+                          {k.label}
+                        </span>
+                        <span className="text-atlas-fog mt-0.5 block text-sm leading-snug">
+                          {k.description}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+          </section>
+
           <section aria-labelledby="cert-evento">
             <SectionHeading>
-              <span id="cert-evento">1 · Evento</span>
+              <span id="cert-evento">2 · Evento</span>
             </SectionHeading>
             <p className="text-atlas-mist mb-4 text-sm">
               Elige un evento para completar los datos solos, o escríbelos a
@@ -443,7 +526,7 @@ export function CertificateSender() {
                 </label>
               }
             >
-              <span id="cert-destinatarios">2 · Destinatarios</span>
+              <span id="cert-destinatarios">3 · Destinatarios</span>
             </SectionHeading>
             <p className="text-atlas-mist mb-4 text-sm">
               Importa un CSV con las columnas nombre y correo, o agrégalos uno
@@ -587,6 +670,10 @@ export function CertificateSender() {
             {meta.eventName.trim() || "Sin evento todavía"}
           </p>
           <dl className="mt-4 space-y-2 text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-atlas-fog">Certificado</dt>
+              <dd className="text-atlas-dust text-right">{kindInfo.label}</dd>
+            </div>
             <div className="flex justify-between gap-4">
               <dt className="text-atlas-fog">Fecha</dt>
               <dd className="text-atlas-dust text-right first-letter:uppercase">
