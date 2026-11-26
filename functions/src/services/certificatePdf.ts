@@ -21,8 +21,20 @@ export { CERTIFICATE_KINDS, type CertificateKind };
 // certificateLayout.json, whose y values are measured from the TOP of the
 // page (SVG convention); pdf-lib measures from the bottom, hence toPdfY.
 const ASSETS = join(__dirname, "..", "..", "assets");
-const TEMPLATE_PATH = (kind: CertificateKind) =>
-  join(ASSETS, "certificates", `${kind}.pdf`);
+// A fixed file per kind, never a path built from the input: `kind` is
+// validated upstream, but the path must not depend on that.
+function templatePath(kind: CertificateKind): string {
+  switch (kind) {
+    case "attendee":
+      return join(ASSETS, "certificates", "attendee.pdf");
+    case "volunteer":
+      return join(ASSETS, "certificates", "volunteer.pdf");
+    case "speaker":
+      return join(ASSETS, "certificates", "speaker.pdf");
+    default:
+      throw new Error(`Unknown certificate kind: ${String(kind)}`);
+  }
+}
 const FONT_PATH = (file: string) => join(ASSETS, "fonts", file);
 
 const FONTS = {
@@ -266,8 +278,13 @@ function fitSize(
   return Math.min(max, Math.floor((maxWidth / perPoint) * 2) / 2);
 }
 
+// Names are capped well below this by the schemas; the guard keeps the
+// loop below bounded whatever reaches it.
+const MAX_NAME_CHARS = 400;
+
 /** Splits at the space closest to the middle, for two-line names. */
 function splitInTwo(text: string): [string, string] | null {
+  if (typeof text !== "string" || text.length > MAX_NAME_CHARS) return null;
   const mid = text.length / 2;
   let best = -1;
   for (let i = 0; i < text.length; i++) {
@@ -364,7 +381,7 @@ export async function buildCertificatePdf(
 ): Promise<Uint8Array> {
   const [templateBytes, nameBytes, regularBytes, boldBytes] = await Promise.all(
     [
-      cachedRead(TEMPLATE_PATH(input.kind)),
+      cachedRead(templatePath(input.kind)),
       cachedRead(FONT_PATH(FONTS.name)),
       cachedRead(FONT_PATH(FONTS.regular)),
       cachedRead(FONT_PATH(FONTS.bold)),
