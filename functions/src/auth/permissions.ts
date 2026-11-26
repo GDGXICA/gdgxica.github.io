@@ -35,6 +35,7 @@ export const PERMISSIONS = [
   "roster:read",
   "checkin:operate",
   "checkin:import",
+  "credentials:read",
   "credentials:operate",
   "credentials:moderate",
   "email:transport",
@@ -42,7 +43,9 @@ export const PERMISSIONS = [
   "minigames:template:read",
   "minigames:template:write",
   "minigames:operate",
+  "minigames:manage",
   "mural:moderate",
+  "mural:manage",
   "proposals:create",
   "proposals:review",
   "users:read",
@@ -77,6 +80,7 @@ export type Permission = (typeof PERMISSIONS)[number];
 export const RULES_ENFORCED_PERMISSIONS = [
   "roster:read",
   "checkin:operate",
+  "credentials:read",
   "mural:moderate",
 ] as const satisfies readonly Permission[];
 
@@ -125,14 +129,21 @@ const ORGANIZER_GLOBAL: readonly Permission[] = [
   "roster:read",
   "checkin:operate",
   "checkin:import",
+  "credentials:read",
   "credentials:operate",
   "certificates:send",
-  // Operar los minijuegos de un evento es parte de llevar el evento. Las
-  // PLANTILLAS siguen siendo de admin: son configuración global, no
-  // operación.
+  // Operar los minijuegos de un evento es parte de llevar el evento, y
+  // también agregarlos y quitarlos (`manage`). Para agregarlos hay que poder
+  // elegir la plantilla, de ahí `template:read`; ESCRIBIR plantillas sigue
+  // siendo de admin: son configuración global, no operación.
   "minigames:operate",
+  "minigames:manage",
+  "minigames:template:read",
 
+  // Moderar (aprobar y rechazar) y gestionar (ajustes, retiros, bloqueos) el
+  // mural son permisos distintos: un voluntario puede tener solo lo primero.
   "mural:moderate",
+  "mural:manage",
   // Un organizador ya puede escribir eventos directamente, así que poder
   // proponerlos no le añade alcance. Está aquí para que `organizer` contenga
   // a `contributor` y a `volunteer`: si no, la regla de no escalada le
@@ -159,6 +170,7 @@ export const ROLE_BUNDLES: Record<Role, RoleBundle> = {
       "roster:read",
       "checkin:operate",
       "minigames:operate",
+      "credentials:read",
       "credentials:operate",
     ],
   },

@@ -76,7 +76,12 @@ export function queryTerms(q: string): string[] {
 }
 
 export function CheckinPanel({ initialSlug }: Props) {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
+  // Importar el CSV y exportar para Bevy es gestión del roster, no marcar en
+  // la puerta. La exportación se arma en el navegador con datos que quien
+  // marca ya puede leer, así que esto solo la oculta; la importación además
+  // la rechaza la API.
+  const canManageRoster = can("checkin:import");
   const [slug] = useState<string | null>(initialSlug ?? slugFromUrl());
   const [query, setQuery] = useState("");
   const [showImporter, setShowImporter] = useState(false);
@@ -249,25 +254,27 @@ export function CheckinPanel({ initialSlug }: Props) {
         <h1 className="text-xl font-bold text-gray-900 dark:text-white">
           Check-in · {slug}
         </h1>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={handleExportBevyCsv}
-            disabled={present === 0}
-            title="Descarga un CSV listo para el Bulk upload de Bevy"
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-          >
-            Exportar para Bevy
-          </button>
-          <button
-            onClick={() => setShowImporter((v) => !v)}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-          >
-            {showImporter ? "Ocultar importador" : "Importar CSV"}
-          </button>
-        </div>
+        {canManageRoster && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleExportBevyCsv}
+              disabled={present === 0}
+              title="Descarga un CSV listo para el Bulk upload de Bevy"
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              Exportar para Bevy
+            </button>
+            <button
+              onClick={() => setShowImporter((v) => !v)}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              {showImporter ? "Ocultar importador" : "Importar CSV"}
+            </button>
+          </div>
+        )}
       </div>
 
-      {showImporter && (
+      {canManageRoster && showImporter && (
         <RosterImporter
           slug={slug}
           onImported={(summary) =>
@@ -295,12 +302,18 @@ export function CheckinPanel({ initialSlug }: Props) {
               <p className="text-gray-600 dark:text-gray-400">
                 Todavía no hay nadie en el roster de este evento.
               </p>
-              <button
-                onClick={() => setShowImporter(true)}
-                className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                Importar el CSV de Bevy
-              </button>
+              {canManageRoster ? (
+                <button
+                  onClick={() => setShowImporter(true)}
+                  className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Importar el CSV de Bevy
+                </button>
+              ) : (
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  Un organizador tiene que importar la lista de inscritos.
+                </p>
+              )}
             </>
           ) : (
             <>

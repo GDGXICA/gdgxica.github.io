@@ -41,10 +41,27 @@ service firebase.storage {
                  || staff.data.get('expiresAt', null) > request.time);
     }
 
-    // Espejo de `canOnEvent('roster:read', …)` en firestore.rules: estas
-    // imágenes son la misma clase de dato personal que el roster, así que
-    // se rigen igual. Un voluntario solo ve las del evento que tiene
-    // asignado y mientras dure la asignación; organizadores y admins, todas.
+    // Mismas listas que `roleHasGlobal` / `roleHasPerEvent` en firestore.rules
+    // (espejo de ROLE_BUNDLES, solo con los permisos que aplican las reglas).
+    // functions/src/auth/permissions.test.ts lee los dos archivos y falla si
+    // alguna lista se desvía de los bundles.
+    function roleHasGlobal(role, perm) {
+      return role == 'admin'
+          || (role == 'organizer'
+              && perm in ['roster:read', 'checkin:operate', 'credentials:read', 'mural:moderate']);
+    }
+
+    function roleHasPerEvent(role, perm) {
+      return role == 'volunteer'
+          && perm in ['roster:read', 'checkin:operate', 'credentials:read'];
+    }
+
+    // Espejo de `canOnEvent('credentials:read', …)` en firestore.rules: estas
+    // imágenes son parte de la credencial, así que se rigen igual que el
+    // documento. Un voluntario solo ve las del evento que tiene asignado y
+    // mientras dure la asignación; organizadores y admins, todas. Es su propio
+    // permiso, no `roster:read`: quien solo marca asistencia no ve fotos ni DNI
+    // de las credenciales.
     //
     // exists() antes que get(): quien tiene sesión pero ningún doc en
     // users/{uid} hace que get() devuelva null, y leer .role de null revienta
@@ -66,7 +83,7 @@ service firebase.storage {
     //   - La suspensión es la palanca de emergencia: corta todo de golpe sin
     //     deshacer rol y permisos uno a uno.
     //   - Las revocaciones restan sobre lo que concede el rol, y la API las
-    //     aplica en cada petición. Sin mirarlas aquí, revocar `roster:read`
+    //     aplica en cada petición. Sin mirarlas aquí, revocar el permiso
     //     quitaba la mitad del panel que pasa por la API y dejaba intacta la
     //     descarga directa de las imágenes, que es el dato más sensible.
     //
@@ -75,11 +92,12 @@ service firebase.storage {
     // caducidad no es expresable. Conceder acceso a un evento concreto se hace
     // con la asignación de staff, que es justo para lo que existe.
     function callerCanRead(caller, eventSlug) {
+      let role = caller.get('role', '');
       return caller.get('status', 'active') != 'suspended'
-        && !('roster:read' in caller.get('revocations', []))
+        && !('credentials:read' in caller.get('revocations', []))
         && (
-          caller.get('role', '') in ['organizer', 'admin']
-          || (caller.get('role', '') == 'volunteer'
+          roleHasGlobal(role, 'credentials:read')
+          || (roleHasPerEvent(role, 'credentials:read')
               && staffAssignmentActive(eventSlug))
         );
     }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { useAuth } from "../AuthProvider";
 import { EventPicker } from "../ui/EventPicker";
 import { Toast } from "../ui/Toast";
 import { ApprovedGrid } from "./ApprovedGrid";
@@ -20,6 +21,11 @@ function slugFromUrl(): string | null {
 type Tab = "queue" | "approved" | "settings";
 
 export function EventMuralManager({ initialSlug }: Props) {
+  const { can } = useAuth();
+  // Aprobar y rechazar lo pendiente es `mural:moderate`; retirar fotos ya
+  // publicadas, los ajustes y los límites son `mural:manage`, que un
+  // voluntario no tiene. Esconderlo es cosmético: la API también lo exige.
+  const canManage = can("mural:manage");
   const [slug] = useState<string | null>(initialSlug ?? slugFromUrl());
   const [tab, setTab] = useState<Tab>("queue");
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -41,13 +47,14 @@ export function EventMuralManager({ initialSlug }: Props) {
 
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const waiting = pending.length + removalRequested.length;
+    // Las solicitudes de retiro solo las atiende quien puede retirar fotos.
+    const waiting = pending.length + (canManage ? removalRequested.length : 0);
     const base = "Mural · GDG Ica";
     document.title = waiting > 0 ? `(${waiting}) ${base}` : base;
     return () => {
       document.title = base;
     };
-  }, [pending.length, removalRequested.length]);
+  }, [pending.length, removalRequested.length, canManage]);
 
   const review = useCallback(
     async (id: string, decision: "approve" | "reject", note: string) => {
@@ -134,9 +141,9 @@ export function EventMuralManager({ initialSlug }: Props) {
     {
       id: "approved",
       label: "En el mural",
-      badge: removalRequested.length || undefined,
+      badge: canManage ? removalRequested.length || undefined : undefined,
     },
-    { id: "settings", label: "Ajustes" },
+    ...(canManage ? [{ id: "settings" as const, label: "Ajustes" }] : []),
   ];
 
   return (
@@ -200,9 +207,13 @@ export function EventMuralManager({ initialSlug }: Props) {
         />
       )}
       {tab === "approved" && (
-        <ApprovedGrid photos={approved} busyId={busyId} onTakedown={takedown} />
+        <ApprovedGrid
+          photos={approved}
+          busyId={busyId}
+          onTakedown={canManage ? takedown : undefined}
+        />
       )}
-      {tab === "settings" && (
+      {canManage && tab === "settings" && (
         <MuralSettingsPanel
           settings={settings}
           saving={saving}

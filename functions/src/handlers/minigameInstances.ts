@@ -227,6 +227,18 @@ export async function setState(req: Request, res: Response) {
       state: "scheduled" | "live" | "closed";
     };
 
+    // Volver a "programada" no es operar: es lo que deja una dinámica lista
+    // para borrarse, y borrar es gestionar. La ruta solo exige `operate`
+    // (iniciar, cerrar y reabrir), así que esto se comprueba aquí con los
+    // permisos efectivos que el middleware ya calculó para este evento.
+    if (state === "scheduled" && !user.permissions?.has("minigames:manage")) {
+      res.status(403).json({
+        success: false,
+        error: "Volver una dinámica a programada requiere poder gestionarlas.",
+      });
+      return;
+    }
+
     const ref = instancesCol(slug).doc(id);
     const snap = await ref.get();
     if (!snap.exists) {

@@ -12,8 +12,11 @@ service cloud.firestore {
     }
 
     // Mirrors ROLE_BUNDLES in functions/src/auth/permissions.ts. Rules have
-    // no imports, so the two must be kept in step by hand; only the
-    // permissions actually enforced here are spelled out.
+    // no imports, so the lists in roleHasGlobal/roleHasPerEvent are kept in
+    // step by hand — and checked: functions/src/auth/permissions.test.ts
+    // parses them and fails if they drift from the bundles. Only the
+    // permissions actually enforced here (RULES_ENFORCED_PERMISSIONS) are
+    // spelled out.
     //
     // Deliberately NOT a role hierarchy: `volunteer` holds roster/check-in
     // only inside events it is assigned to, which a ranking cannot express.
@@ -40,13 +43,13 @@ service cloud.firestore {
     function roleHasGlobal(role, perm) {
       return role == 'admin'
           || (role == 'organizer'
-              && perm in ['roster:read', 'checkin:operate', 'mural:moderate']);
+              && perm in ['roster:read', 'checkin:operate', 'credentials:read', 'mural:moderate']);
     }
 
     // Roles whose permission only applies inside an assigned event.
     function roleHasPerEvent(role, perm) {
       return role == 'volunteer'
-          && perm in ['roster:read', 'checkin:operate'];
+          && perm in ['roster:read', 'checkin:operate', 'credentials:read'];
     }
 
     // An assignment with no expiresAt never expires; one with a past date
@@ -388,7 +391,11 @@ service cloud.firestore {
         // arriba — "like roster" —, y trae lo mismo que el roster ganó:
         // esto queda acotado a ESTE evento, así que quien opera uno no lee
         // los DNI y las fotos de los demás.
-        allow read: if canOnEvent('roster:read', eventSlug);
+        //
+        // Su propio permiso, no `roster:read`: quien solo marca asistencia
+        // necesita el roster pero no las credenciales (DNI completo, encuesta,
+        // fotos).
+        allow read: if canOnEvent('credentials:read', eventSlug);
 
         // Unlike roster, EVERY mutation goes through a Cloud Function.
         // Roster check-in writes go direct so they can queue in the local
@@ -405,7 +412,7 @@ service cloud.firestore {
       // gapless for the "first N attendees" draw, so it is assigned inside
       // a server-side transaction and never touched by a client.
       match /credentialMeta/{docId} {
-        allow read: if canOnEvent('roster:read', eventSlug);
+        allow read: if canOnEvent('credentials:read', eventSlug);
         allow write: if false;
       }
 

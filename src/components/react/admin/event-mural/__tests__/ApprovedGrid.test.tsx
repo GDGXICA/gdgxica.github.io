@@ -185,3 +185,16 @@ describe("ApprovedGrid", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("ApprovedGrid — someone who can only approve or reject", () => {
+  it("shows what is published without the takedown button", () => {
+    render(
+      <ApprovedGrid
+        photos={[approved({ id: "ana", removalRequestedAt: { seconds: 5 } })]}
+        busyId={null}
+      />
+    );
+    expect(screen.getByAltText("Foto de ana")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retirar" })).toBeNull();
+  });
+});

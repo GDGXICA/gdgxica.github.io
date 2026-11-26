@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import { useAuth } from "../AuthProvider";
 import { Toast } from "../ui/Toast";
 import {
   TYPE_COLORS,
@@ -26,6 +27,11 @@ function formatUpdatedAt(value: Template["updatedAt"]): string {
 }
 
 export function MinigameTemplateList() {
+  const { can } = useAuth();
+  // Los organizadores ven las plantillas para poder agregarlas a un evento,
+  // pero crearlas, editarlas y borrarlas es configuración global
+  // (`minigames:template:write`), que solo tiene el admin.
+  const canWrite = can("minigames:template:write");
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -196,37 +202,39 @@ export function MinigameTemplateList() {
             {filtered.length} plantilla{filtered.length !== 1 && "s"}
           </span>
         </div>
-        <div ref={pickerRef} className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => setPickerOpen((o) => !o)}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            + Nueva plantilla ▾
-          </button>
-          {pickerOpen && (
-            <div className="absolute right-0 z-10 mt-2 w-56 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
-              {(Object.keys(TYPE_LABELS) as MinigameType[]).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => {
-                    setCreatingFor(t);
-                    setPickerOpen(false);
-                  }}
-                  className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  <span>{TYPE_LABELS[t]}</span>
-                  <span
-                    className={`rounded px-2 py-0.5 text-xs ${TYPE_COLORS[t]}`}
+        {canWrite && (
+          <div ref={pickerRef} className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setPickerOpen((o) => !o)}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              + Nueva plantilla ▾
+            </button>
+            {pickerOpen && (
+              <div className="absolute right-0 z-10 mt-2 w-56 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                {(Object.keys(TYPE_LABELS) as MinigameType[]).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => {
+                      setCreatingFor(t);
+                      setPickerOpen(false);
+                    }}
+                    className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
                   >
-                    {t}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+                    <span>{TYPE_LABELS[t]}</span>
+                    <span
+                      className={`rounded px-2 py-0.5 text-xs ${TYPE_COLORS[t]}`}
+                    >
+                      {t}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Desktop table */}
@@ -275,21 +283,23 @@ export function MinigameTemplateList() {
                   {formatUpdatedAt(t.updatedAt)}
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => setEditing(t)}
-                      className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(t.id!, t.title)}
-                      disabled={deleting === t.id}
-                      className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                    >
-                      {deleting === t.id ? "..." : "Eliminar"}
-                    </button>
-                  </div>
+                  {canWrite && (
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setEditing(t)}
+                        className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDelete(t.id!, t.title)}
+                        disabled={deleting === t.id}
+                        className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                      >
+                        {deleting === t.id ? "..." : "Eliminar"}
+                      </button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
@@ -322,21 +332,23 @@ export function MinigameTemplateList() {
             <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
               Actualizado {formatUpdatedAt(t.updatedAt)}
             </p>
-            <div className="mt-3 flex justify-end gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
-              <button
-                onClick={() => setEditing(t)}
-                className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
-              >
-                Editar
-              </button>
-              <button
-                onClick={() => handleDelete(t.id!, t.title)}
-                disabled={deleting === t.id}
-                className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
-              >
-                {deleting === t.id ? "..." : "Eliminar"}
-              </button>
-            </div>
+            {canWrite && (
+              <div className="mt-3 flex justify-end gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
+                <button
+                  onClick={() => setEditing(t)}
+                  className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => handleDelete(t.id!, t.title)}
+                  disabled={deleting === t.id}
+                  className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                >
+                  {deleting === t.id ? "..." : "Eliminar"}
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>

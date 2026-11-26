@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   PERMISSIONS,
@@ -102,6 +104,57 @@ describe("sincronía con el espejo de cliente", () => {
     for (const role of ROLES) {
       expect(client.ROLE_LABELS[role]).toBeTruthy();
       expect(client.ROLE_DESCRIPTIONS[role]).toBeTruthy();
+    }
+  });
+});
+
+// Las reglas no pueden importar el catálogo, así que `roleHasGlobal` y
+// `roleHasPerEvent` repiten a mano qué permisos aplicados por las reglas tiene
+// cada rol. Una lista desviada abre o cierra datos personales sin que ningún
+// otro test lo note: esto lee las listas de los dos archivos de reglas y las
+// compara con los bundles.
+describe("sincronía con las reglas", () => {
+  const ROOT = join(__dirname, "..", "..", "..");
+  const enforced = new Set<string>(RULES_ENFORCED_PERMISSIONS);
+
+  function ruleList(file: string, fn: string, role: string): string[] {
+    const source = readFileSync(join(ROOT, file), "utf8");
+    const body = source.match(
+      new RegExp(`function ${fn}\\(role, perm\\) \\{([\\s\\S]*?)\\n\\s*\\}`)
+    );
+    expect(body, `${fn} en ${file}`).not.toBeNull();
+    const list = body![1].match(
+      new RegExp(`role == '${role}'\\s*&&\\s*perm in \\[([^\\]]*)\\]`)
+    );
+    expect(list, `${role} en ${fn} de ${file}`).not.toBeNull();
+    return [...list![1].matchAll(/'([^']+)'/g)].map((m) => m[1]).sort();
+  }
+
+  const expected = (perms: readonly Permission[]) =>
+    perms.filter((p) => enforced.has(p)).sort();
+
+  for (const file of ["firestore.rules", "storage.rules"]) {
+    it(`${file}: el organizador tiene los mismos permisos globales`, () => {
+      expect(ruleList(file, "roleHasGlobal", "organizer")).toEqual(
+        expected(ROLE_BUNDLES.organizer.global)
+      );
+    });
+
+    it(`${file}: el voluntario tiene los mismos permisos por evento`, () => {
+      expect(ruleList(file, "roleHasPerEvent", "volunteer")).toEqual(
+        expected(ROLE_BUNDLES.volunteer.perEvent)
+      );
+    });
+  }
+
+  it("ningún otro rol concede permisos aplicados por las reglas", () => {
+    for (const role of ROLES) {
+      if (role === "organizer" || role === "volunteer" || role === "admin")
+        continue;
+      const bundle = ROLE_BUNDLES[role];
+      expect(
+        [...bundle.global, ...bundle.perEvent].filter((p) => enforced.has(p))
+      ).toEqual([]);
     }
   });
 });

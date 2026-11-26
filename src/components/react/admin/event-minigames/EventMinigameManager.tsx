@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { useAuth } from "../AuthProvider";
 import { EventPicker } from "../ui/EventPicker";
 import { Toast } from "../ui/Toast";
 import { AttachTemplateModal } from "./AttachTemplateModal";
@@ -20,6 +21,11 @@ function slugFromUrl(): string | null {
 }
 
 export function EventMinigameManager({ initialSlug }: Props) {
+  const { can } = useAuth();
+  // Operar las dinámicas (iniciar, cerrar, pasar preguntas, ruleta, bingo)
+  // no incluye agregarlas ni quitarlas: eso es `minigames:manage`, que un
+  // voluntario no tiene. Esconderlo es cosmético; la API también lo exige.
+  const canManage = can("minigames:manage");
   const [slug] = useState<string | null>(initialSlug ?? slugFromUrl());
   const [instances, setInstances] = useState<MinigameInstance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -220,13 +226,15 @@ export function EventMinigameManager({ initialSlug }: Props) {
           >
             📋 Copiar URL de unión
           </button>
-          <button
-            type="button"
-            onClick={() => setAttaching(true)}
-            className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            + Adjuntar plantilla
-          </button>
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => setAttaching(true)}
+              className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              + Adjuntar plantilla
+            </button>
+          )}
         </div>
       </div>
 
@@ -244,8 +252,9 @@ export function EventMinigameManager({ initialSlug }: Props) {
 
       {!loading && !error && instances.length === 0 && (
         <p className="py-8 text-center text-gray-500 dark:text-gray-400">
-          Aún no hay mini-juegos en este evento. Adjunta una plantilla para
-          empezar.
+          {canManage
+            ? "Aún no hay mini-juegos en este evento. Adjunta una plantilla para empezar."
+            : "Aún no hay mini-juegos en este evento. Un organizador tiene que agregarlos."}
         </p>
       )}
 
@@ -259,7 +268,7 @@ export function EventMinigameManager({ initialSlug }: Props) {
               onSetState={(state) => handleSetState(inst.id, state)}
               onAdvanceQuiz={() => handleAdvanceQuiz(inst.id)}
               onAdvancePoll={() => handleAdvancePoll(inst.id)}
-              onDelete={() => handleDelete(inst.id)}
+              onDelete={canManage ? () => handleDelete(inst.id) : undefined}
               onOpenModeration={
                 inst.type === "wordcloud" ||
                 inst.type === "bingo" ||
@@ -310,7 +319,7 @@ export function EventMinigameManager({ initialSlug }: Props) {
         />
       )}
 
-      {attaching && (
+      {canManage && attaching && (
         <AttachTemplateModal
           alreadyAttachedTemplateIds={attachedTemplateIds}
           onCancel={() => setAttaching(false)}

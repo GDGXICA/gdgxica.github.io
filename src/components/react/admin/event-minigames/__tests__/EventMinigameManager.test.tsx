@@ -193,6 +193,23 @@ describe("EventMinigameManager", () => {
     );
   });
 
+  // A volunteer with the minigames capability runs the dynamics but cannot
+  // add or remove them: that is `minigames:manage`.
+  it("lets someone who only operates start a game but not add or delete one", async () => {
+    mocks.useAuth.mockReturnValue({
+      can: (p: string) => p !== "minigames:manage" && p !== "events:read",
+    });
+    const user = userEvent.setup();
+    render(<EventMinigameManager initialSlug="devfest-2025" />);
+    await screen.findByText("First poll");
+    expect(
+      screen.queryByRole("button", { name: /Adjuntar plantilla/ })
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /Eliminar/ })).toBeNull();
+    await user.click(screen.getByRole("button", { name: /Iniciar/i }));
+    await waitFor(() => expect(mocks.setMinigameState).toHaveBeenCalled());
+  });
+
   it("opens the projector view in a new tab", async () => {
     const user = userEvent.setup();
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);

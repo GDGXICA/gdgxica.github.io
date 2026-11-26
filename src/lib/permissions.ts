@@ -35,6 +35,7 @@ export const PERMISSIONS = [
   "roster:read",
   "checkin:operate",
   "checkin:import",
+  "credentials:read",
   "credentials:operate",
   "credentials:moderate",
   "email:transport",
@@ -42,7 +43,9 @@ export const PERMISSIONS = [
   "minigames:template:read",
   "minigames:template:write",
   "minigames:operate",
+  "minigames:manage",
   "mural:moderate",
+  "mural:manage",
   "proposals:create",
   "proposals:review",
   "users:read",
@@ -68,6 +71,7 @@ export type Permission = (typeof PERMISSIONS)[number];
 export const RULES_ENFORCED_PERMISSIONS = [
   "roster:read",
   "checkin:operate",
+  "credentials:read",
   "mural:moderate",
 ] as const satisfies readonly Permission[];
 
@@ -100,7 +104,7 @@ export const ROLE_DESCRIPTIONS: Record<Role, string> = {
   contributor:
     "Propone eventos, speakers y posts del foro como borradores. Un organizador revisa y publica. No accede a datos personales.",
   volunteer:
-    "Opera el check-in y los minijuegos, solo en los eventos donde está asignado y mientras dure la asignación.",
+    "Opera el check-in, las credenciales y los minijuegos (sin crearlos ni borrarlos), solo en los eventos donde está asignado y mientras dure la asignación.",
   organizer:
     "Gestiona contenido, check-in, certificados y revisa propuestas. No administra usuarios ni borra contenido.",
   admin:
@@ -128,11 +132,15 @@ const ORGANIZER_GLOBAL: readonly Permission[] = [
   "roster:read",
   "checkin:operate",
   "checkin:import",
+  "credentials:read",
   "credentials:operate",
   "certificates:send",
   "minigames:operate",
+  "minigames:manage",
+  "minigames:template:read",
 
   "mural:moderate",
+  "mural:manage",
   "proposals:create",
   "proposals:review",
 ];
@@ -146,6 +154,7 @@ export const ROLE_BUNDLES: Record<Role, RoleBundle> = {
       "roster:read",
       "checkin:operate",
       "minigames:operate",
+      "credentials:read",
       "credentials:operate",
     ],
   },

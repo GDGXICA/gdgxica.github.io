@@ -55,7 +55,7 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         label: "Credenciales",
         href: "/admin/credentials",
-        permission: "roster:read",
+        permission: "credentials:read",
       },
       {
         label: "Mural",
@@ -120,7 +120,7 @@ export const EVENT_TOOLS: EventTool[] = [
   {
     label: "Credenciales",
     href: "/admin/credentials",
-    permission: "roster:read",
+    permission: "credentials:read",
   },
   { label: "Mural", href: "/admin/events/mural", permission: "mural:moderate" },
   {

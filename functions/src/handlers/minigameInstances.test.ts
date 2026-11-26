@@ -403,6 +403,41 @@ describe("minigameInstances handler", () => {
       );
       expect(res.__status).toBe(404);
     });
+
+    // Back to "scheduled" is what makes an instance deletable, and deleting
+    // is managing: an operator who can only run the dynamics cannot do it.
+    it("refuses scheduled to someone who can only operate", async () => {
+      const wiring = wireCollections(
+        { exists: false },
+        { exists: true, data: () => ({ state: "closed" }) }
+      );
+      const req = buildReq({ state: "scheduled" }, { slug: "x", id: "i1" });
+      (req as unknown as AuthenticatedRequest).user.permissions = new Set([
+        "minigames:operate",
+      ]);
+      const res = buildRes();
+      await handler.setState(req, res);
+      expect(res.__status).toBe(403);
+      expect(wiring.instanceRef.update).not.toHaveBeenCalled();
+    });
+
+    it("allows scheduled to someone who can manage", async () => {
+      const wiring = wireCollections(
+        { exists: false },
+        { exists: true, data: () => ({ state: "closed" }) }
+      );
+      const req = buildReq({ state: "scheduled" }, { slug: "x", id: "i1" });
+      (req as unknown as AuthenticatedRequest).user.permissions = new Set([
+        "minigames:operate",
+        "minigames:manage",
+      ]);
+      const res = buildRes();
+      await handler.setState(req, res);
+      expect(res.__status).toBeUndefined();
+      expect(wiring.instanceRef.update).toHaveBeenCalledWith({
+        state: "scheduled",
+      });
+    });
   });
 
   describe("pollAdvance", () => {
