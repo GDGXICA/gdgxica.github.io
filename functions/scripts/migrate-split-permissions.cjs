@@ -12,8 +12,12 @@
 //   GOOGLE_CLOUD_PROJECT=appgdgica node scripts/migrate-split-permissions.cjs
 //   GOOGLE_CLOUD_PROJECT=appgdgica node scripts/migrate-split-permissions.cjs --apply
 //
-// Run the dry run before merging and --apply right after the deploy: until
-// the new permissions exist on the server, the users API rejects them.
+// Run it with --apply BEFORE the deploy that splits the permissions, not
+// after: from the moment the new rules are live, a user who had roster:read
+// revoked can read credentials until credentials:read is revoked too. The
+// script writes with the Admin SDK, not through the users API, so the new
+// permission names can be stored early; the current code ignores names it
+// does not know, so writing them first changes nothing until the deploy.
 
 const admin = require("firebase-admin");
 const projectId = process.env.GOOGLE_CLOUD_PROJECT;
@@ -75,7 +79,7 @@ async function main() {
     `Inspected ${users.size} users; ${migrated} need revocations carried over; ${grantsToReview} grants to review by hand.`
   );
   if (!apply && migrated)
-    console.log("Run again with --apply after the deploy.");
+    console.log("Run again with --apply BEFORE deploying the split.");
 }
 
 main().catch((err) => {
