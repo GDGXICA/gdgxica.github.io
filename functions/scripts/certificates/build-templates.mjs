@@ -192,7 +192,7 @@ function signature() {
   const h = (w * 1137) / 1977;
   const lineY = 494;
   return `
-  <g transform="translate(${COL_X - 6} ${f(lineY - h + 4)}) scale(${f(w / 1977)})" color="${C.ivory}">${svgInner("signature-eduardo.svg").replace(/<!--[\s\S]*?-->/g, "")}</g>
+  <g transform="translate(${COL_X - 6} ${f(lineY - h + 4)}) scale(${f(w / 1977)})" color="${C.ivory}">${svgInner("signature-eduardo.svg")}</g>
   <line x1="${COL_X}" y1="${lineY}" x2="${COL_X + 186}" y2="${lineY}" stroke="${C.ivoryDim}" stroke-width="0.5"/>
   <text x="${COL_X}" y="${lineY + 16}" font-family="Geist" font-weight="500" font-size="10" fill="${C.ivory}">Eduardo Ormeño Meneses</text>
   <text x="${COL_X}" y="${lineY + 29}" font-family="Geist" font-size="8.5" fill="${C.gold}">Organizador · GDG ICA</text>`;
