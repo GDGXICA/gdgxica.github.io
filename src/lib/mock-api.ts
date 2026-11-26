@@ -15,6 +15,7 @@ import {
   MOCK_LOCATIONS,
   MOCK_POSTS,
 } from "./mock-data";
+import { mockCertificates } from "./mock-certificates";
 
 function ok<T>(data: T) {
   return Promise.resolve({ success: true as const, data });
@@ -177,20 +178,7 @@ export const mockApi = {
       alreadyWon: false,
     }),
 
-  sendCertificates: (data: unknown) => {
-    const recipients =
-      (data as { recipients?: { name: string; email: string }[] })
-        ?.recipients ?? [];
-    return ok({
-      sent: recipients.length,
-      failed: 0,
-      results: recipients.map((r) => ({
-        email: r.email,
-        name: r.name,
-        ok: true,
-      })),
-    });
-  },
+  ...mockCertificates,
 
   importCheckinRoster: (_slug: string, rows: unknown[]) =>
     ok({

@@ -108,6 +108,37 @@ export function GameIcon(props: IconProps) {
   );
 }
 
+export function CertificateIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3" y="4" width="18" height="13" rx="1.5" />
+      <path d="M7 9h10M7 12.5h6" />
+      <circle cx="17" cy="17" r="2.5" />
+      <path d="M15.5 19.2 15 22l2-1 2 1-.5-2.8" />
+    </Icon>
+  );
+}
+
+/** Small status or category label: a 1px outline in the tone's colour. */
+export function Tag({
+  children,
+  tone = "border-atlas-line text-atlas-mist",
+  title,
+}: {
+  children: ReactNode;
+  tone?: string;
+  title?: string;
+}) {
+  return (
+    <span
+      className={`rounded-xs border px-1.5 py-0.5 text-xs font-semibold ${tone}`}
+      title={title}
+    >
+      {children}
+    </span>
+  );
+}
+
 export function CornerNodes() {
   const corners = [
     "-top-[3.5px] -left-[3.5px]",

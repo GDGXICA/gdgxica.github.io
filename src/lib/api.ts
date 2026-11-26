@@ -17,6 +17,14 @@ interface ApiResponse<T> {
   message?: string;
 
   code?: string;
+  /**
+   * Validation problems from `validateBody`, with paths like
+   * `recipients.3.email`, so a form can point at the row instead of
+   * showing "Invalid request body".
+   */
+  issues?: { path: string; message: string }[];
+  /** Certificate fields still missing before a send (see eventCertificates). */
+  missing?: string[];
 }
 
 /**
@@ -76,6 +84,92 @@ export interface Post {
 
 /** Lo que devuelve el índice: un post sin su cuerpo. */
 export type PostSummary = Omit<Post, "body">;
+
+// Certificates — mirrors functions/src/handlers/eventCertificates.ts.
+
+export type CertificateKind = "attendee" | "volunteer" | "speaker";
+
+export type CertificateStatus =
+  | "pending"
+  | "queued"
+  | "sending"
+  | "sent"
+  | "failed"
+  | "cancelled"
+  | "excluded";
+
+export type CheckinSource = "panel" | "bevy" | "both";
+
+/** Event data printed on a certificate. Times are 24-hour "HH:mm". */
+export interface CertificateSettings {
+  eventName: string;
+  eventDate: string;
+  startTime: string;
+  endTime: string;
+  hours: number;
+}
+
+export interface CertificateItem {
+  id: string;
+  kind: CertificateKind;
+  source: "roster" | "registered" | "manual";
+  rosterId: string | null;
+  firstName: string;
+  lastName: string;
+  name: string;
+  email: string;
+  hours: number | null;
+  status: CertificateStatus;
+  attempts: number;
+  lastError: string | null;
+  sentAt: number | null;
+  queuedAt: number | null;
+  updatedAt: number | null;
+  resendCount: number;
+  overridden: boolean;
+  eventRef: string | null;
+  content: CertificateSettings | null;
+  /** Attendees only: how their attendance is proven, if it still is. */
+  checkin?: CheckinSource | null;
+}
+
+export interface EventCertificates {
+  serverTime: number;
+  settings: CertificateSettings | null;
+  settingsSaved: boolean;
+  attendees: CertificateItem[];
+  people: CertificateItem[];
+  roster: {
+    total: number | null;
+    lastImportAt: number | null;
+    checkedIn: number;
+  };
+  budget: { sentToday: number; cap: number; transport: "gmail" | "resend" };
+}
+
+export interface CertificatePersonInput {
+  firstName: string;
+  lastName: string;
+  email: string;
+  hours?: number | null;
+}
+
+export interface CertificatePersonPatch {
+  rosterId?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  hours?: number | null;
+  excluded?: boolean;
+}
+
+export interface ManualCertificatesInput {
+  submissionId: string;
+  kind: CertificateKind;
+  eventSlug: string | null;
+  content: CertificateSettings;
+  recipients: { firstName: string; lastName: string; email: string }[];
+}
 
 async function request<T>(
   method: string,
@@ -137,6 +231,8 @@ async function request<T>(
           error: data?.error || data?.message || fallback,
 
           ...(typeof data?.code === "string" ? { code: data.code } : {}),
+          ...(Array.isArray(data?.issues) ? { issues: data.issues } : {}),
+          ...(Array.isArray(data?.missing) ? { missing: data.missing } : {}),
         };
       }
 
@@ -484,13 +580,88 @@ const realApi = {
       `/events/${encodeURIComponent(slug)}/minigames/${id}/bingo/claim`
     ),
 
-  // Certificates (generated on the fly + emailed; nothing is stored)
-  sendCertificates: (data: unknown) =>
+  // Certificates. Sending is a queue on the server: these calls decide who
+  // gets what, and a background drain emails them within seconds.
+  getEventCertificates: (slug: string) =>
+    request<EventCertificates>(
+      "GET",
+      `/events/${encodeURIComponent(slug)}/certificates`
+    ),
+  pollEventCertificates: (slug: string, since: number) =>
+    request<{ serverTime: number; changes: CertificateItem[] }>(
+      "GET",
+      `/events/${encodeURIComponent(slug)}/certificates?since=${since}`
+    ),
+  getCertificateSettings: (slug: string) =>
+    request<{ settings: CertificateSettings | null; settingsSaved: boolean }>(
+      "GET",
+      `/events/${encodeURIComponent(slug)}/certificates/settings`
+    ),
+  saveCertificateSettings: (slug: string, settings: CertificateSettings) =>
+    request<{ settings: CertificateSettings; settingsSaved: boolean }>(
+      "PUT",
+      `/events/${encodeURIComponent(slug)}/certificates/settings`,
+      settings
+    ),
+  addCertificatePeople: (
+    slug: string,
+    kind: "volunteer" | "speaker",
+    people: CertificatePersonInput[]
+  ) =>
     request<{
-      sent: number;
-      failed: number;
-      results: { email: string; name: string; ok: boolean; error?: string }[];
-    }>("POST", "/certificates/send", data),
+      added: CertificateItem[];
+      skipped: { email: string; reason: string }[];
+    }>("POST", `/events/${encodeURIComponent(slug)}/certificates/people`, {
+      kind,
+      people,
+    }),
+  updateCertificatePerson: (
+    slug: string,
+    id: string,
+    patch: CertificatePersonPatch
+  ) =>
+    request<{ certificate: CertificateItem; previousId: string | null }>(
+      "PATCH",
+      `/events/${encodeURIComponent(slug)}/certificates/${encodeURIComponent(id)}`,
+      patch
+    ),
+  removeCertificatePerson: (slug: string, id: string) =>
+    request<{ id: string }>(
+      "DELETE",
+      `/events/${encodeURIComponent(slug)}/certificates/${encodeURIComponent(id)}`
+    ),
+  enqueueCertificates: (
+    slug: string,
+    body: { kind: CertificateKind; ids: string[]; resend?: boolean }
+  ) =>
+    request<{ queued: number; skipped: { id: string; reason: string }[] }>(
+      "POST",
+      `/events/${encodeURIComponent(slug)}/certificates/send`,
+      body
+    ),
+  cancelCertificates: (slug: string, ids: string[]) =>
+    request<{ cancelled: number; skipped: { id: string; reason: string }[] }>(
+      "POST",
+      `/events/${encodeURIComponent(slug)}/certificates/cancel`,
+      { ids }
+    ),
+  previewCertificate: (body: {
+    kind: CertificateKind;
+    name: string;
+    content: CertificateSettings;
+    hours?: number | null;
+  }) => request<{ pdfBase64: string }>("POST", "/certificates/preview", body),
+  listManualCertificates: () =>
+    request<{ serverTime: number; items: CertificateItem[] }>(
+      "GET",
+      "/certificates/manual"
+    ),
+  createManualCertificates: (body: ManualCertificatesInput) =>
+    request<{ queued: number; existing: number; duplicates: number }>(
+      "POST",
+      "/certificates/manual",
+      body
+    ),
 
   // On-site check-in. Only the roster import goes through the API —
   // volunteers toggle check-in directly against Firestore so the write

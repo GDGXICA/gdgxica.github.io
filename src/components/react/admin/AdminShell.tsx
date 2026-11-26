@@ -12,6 +12,7 @@ import { usePendingCounts, type PendingKey } from "./usePendingCounts";
 import {
   ArrowIcon,
   BadgeIcon,
+  CertificateIcon,
   ChartRule,
   CheckinIcon,
   CloseIcon,
@@ -27,6 +28,7 @@ const TOOL_ICONS: Record<string, typeof CheckinIcon> = {
   "/admin/credentials": BadgeIcon,
   "/admin/events/mural": MuralIcon,
   "/admin/events/minigames": GameIcon,
+  "/admin/certificates": CertificateIcon,
 };
 
 const PENDING_BY_HREF: Record<string, PendingKey> = {
@@ -183,7 +185,9 @@ export function AdminShell({ currentPage, children }: Props) {
       : currentPage === "/admin/events/new" ||
           currentPage === "/admin/events/staff"
         ? "/admin/events"
-        : currentPage;
+        : currentPage === "/admin/certificates/manual"
+          ? "/admin/certificates"
+          : currentPage;
 
   const sidebar = (
     <>

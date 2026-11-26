@@ -1,0 +1,12 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { AdminApp } from "@/components/react/admin/AdminApp";
+---
+
+<AdminLayout title="Certificados manuales">
+  <AdminApp
+    client:load
+    page="certificates-manual"
+    currentPath="/admin/certificates/manual"
+  />
+</AdminLayout>

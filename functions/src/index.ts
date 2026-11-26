@@ -26,7 +26,6 @@ import {
   minigameJoinSchema,
   minigameQuizAnswerSchema,
   minigameWordHiddenSchema,
-  certificateSendSchema,
   certificateSettingsSchema,
   certificatePeopleCreateSchema,
   certificatePersonUpdateSchema,
@@ -74,7 +73,6 @@ import * as minigameRoulette from "./handlers/minigameRoulette";
 import * as minigameBingo from "./handlers/minigameBingo";
 import * as minigameQuiz from "./handlers/minigameQuiz";
 import * as minigamePoll from "./handlers/minigamePoll";
-import * as certificates from "./handlers/certificates";
 import * as eventCertificates from "./handlers/eventCertificates";
 import * as checkin from "./handlers/checkin";
 import * as credentials from "./handlers/credentials";
@@ -1078,15 +1076,6 @@ app.get(
   slugP,
   vid,
   minigameWords.listWinners
-);
-
-// Certificates — generate per recipient and email; nothing is stored.
-app.post(
-  "/api/certificates/send",
-  requirePermission("certificates:send"),
-  writeLimiter,
-  validateBody(certificateSendSchema),
-  certificates.sendCertificates
 );
 
 // Certificates per event. A queue: these routes decide who receives which
