@@ -426,6 +426,12 @@ service cloud.firestore {
       match /muralUploaders/{uploaderUid} {
         allow read, write: if false;
       }
+
+      // Certificate data for the event (name, date, times, hours). Read and
+      // written only through the API, which requires certificates:send.
+      match /certificateMeta/{docId} {
+        allow read, write: if false;
+      }
     }
 
     // Which service sends credential email. Read and written only through
@@ -440,6 +446,13 @@ service cloud.firestore {
     // Nothing outside Cloud Functions has any business reading or writing
     // it, so it stays fully closed.
     match /credential_email_budget/{day} {
+      allow read, write: if false;
+    }
+
+    // Certificates per person (queue state, names, emails). Server-only:
+    // the panel reads and changes them through the API, which re-checks
+    // the attendee's check-in before anything is queued.
+    match /certificates/{certificateId} {
       allow read, write: if false;
     }
 

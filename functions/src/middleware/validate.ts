@@ -15,8 +15,11 @@ export function validateParamId(paramName: string) {
 
 export function safeError(err: unknown): string {
   if (err instanceof Error) {
-    // Strip URLs and paths from log to avoid leaking repo structure
-    const sanitized = err.message.replace(/https?:\/\/[^\s]+/g, "[URL]");
+    // Strip URLs and paths from log to avoid leaking repo structure, and
+    // line breaks so a crafted value cannot forge extra log lines.
+    const sanitized = err.message
+      .replace(/https?:\/\/[^\s]+/g, "[URL]")
+      .replace(/[\r\n]+/g, " ");
     // eslint-disable-next-line no-console
     console.error("API Error:", sanitized);
   }

@@ -4,7 +4,7 @@ import { logger } from "firebase-functions";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import { buildCertificatePdf } from "../services/certificatePdf";
-import { sendCertificateEmail } from "../services/email";
+import { sendCertificateEmail } from "../services/certificateEmail";
 import { CertificateSendBody } from "../schemas";
 
 // Bounded concurrency so a large batch doesn't open hundreds of SMTP
@@ -34,7 +34,9 @@ async function sendOne(
       eventDate: body.eventDate,
       organizer: body.organizer,
     });
-    await sendCertificateEmail({
+    // Gmail, as before: the `api` function does not hold the Resend
+    // secrets. This inline route goes away with the queue's UI.
+    await sendCertificateEmail("gmail", {
       kind: body.kind,
       to: recipient.email,
       recipientName: recipient.name,

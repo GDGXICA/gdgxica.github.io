@@ -31,6 +31,17 @@ const EXACT: Record<string, string> = {
   "read.users": "consultó el directorio de usuarios",
   "read.audit_log": "consultó la auditoría",
   "read.form_responses": "consultó respuestas de un formulario",
+  "read.certificates": "consultó los certificados de",
+  "certificate.send": "envió certificados",
+  "certificate.settings": "guardó los datos del certificado de",
+  "certificate.person.add": "registró personas para certificado en",
+  "certificate.person.update": "corrigió un certificado de",
+  "certificate.person.remove": "quitó a una persona de los certificados de",
+  "certificate.enqueue": "envió certificados de",
+  "certificate.cancel": "canceló envíos de certificados de",
+  "certificate.preview": "generó una vista previa de certificado",
+  "certificate.manual": "envió certificados manuales",
+  "certificate_email.drain": "envió los certificados en cola",
 };
 
 const RESOURCE: Record<string, string> = {

@@ -75,6 +75,16 @@ export const AUDIT_ACTIONS = [
   "site.rebuild",
   "settings.email_transport",
   "certificate.send",
+  "certificate.settings",
+  "certificate.person.add",
+  "certificate.person.update",
+  "certificate.person.remove",
+  "certificate.enqueue",
+  "certificate.cancel",
+  "certificate.preview",
+  "certificate.manual",
+  // Una fila por corrida del drenado que hizo algo, no una por correo.
+  "certificate_email.drain",
   "checkin.import",
   // Las escribe un trigger de Firestore, no un handler: el check-in va directo
   // del cliente a Firestore para poder encolarse sin wifi, así que no hay
@@ -110,6 +120,9 @@ export const AUDIT_ACTIONS = [
   "read.audit_log",
   "read.users",
   "read.form_responses",
+  // Nombres y correos de quienes hicieron check-in, vistos desde el panel de
+  // certificados del evento.
+  "read.certificates",
 
   // Minijuegos
   "minigame_template.create",
