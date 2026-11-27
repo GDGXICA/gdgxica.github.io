@@ -57,9 +57,18 @@ export function RosterImporter({ slug, onImported }: Props) {
     try {
       const res = await api.importCheckinRoster(slug, rows);
       if (res.success && res.data) {
-        const { created, updated, stale, unusableTickets } = res.data;
+        const {
+          created,
+          updated,
+          stale,
+          unusableTickets,
+          mergedManual = 0,
+        } = res.data;
         onImported(
           `${created} nuevos, ${updated} actualizados` +
+            (mergedManual > 0
+              ? `, ${mergedManual} manual(es) vinculado(s) con Bevy`
+              : "") +
             (stale > 0 ? `, ${stale} ya no figuran en el CSV` : "") +
             (unusableTickets > 0
               ? `, ${unusableTickets} sin ticket utilizable`
@@ -85,8 +94,8 @@ export function RosterImporter({ slug, onImported }: Props) {
         Importar registrados de Bevy
       </h2>
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-        En Bevy: evento → Registrations → Download. Puedes reimportar todas
-        las veces que quieras; los check-ins ya marcados se conservan.
+        En Bevy: evento → Registrations → Download. Puedes reimportar todas las
+        veces que quieras; los check-ins ya marcados se conservan.
       </p>
 
       <input

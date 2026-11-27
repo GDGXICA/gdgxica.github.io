@@ -362,3 +362,130 @@ describe("CheckinPanel — empty and error states", () => {
     expect(screen.getByText(/Sin conexión — 2 cambios en cola/)).toBeVisible();
   });
 });
+
+describe("CheckinPanel — manual walk-in attendees", () => {
+  const realCreate = URL.createObjectURL;
+  const realRevoke = URL.revokeObjectURL;
+  beforeEach(() => {
+    URL.createObjectURL = vi.fn(() => "blob:test");
+    URL.revokeObjectURL = vi.fn();
+  });
+  afterEach(() => {
+    URL.createObjectURL = realCreate;
+    URL.revokeObjectURL = realRevoke;
+  });
+
+  it("filters by Sin Bevy and never marks manual attendees as stale", async () => {
+    mocks.useRoster.mockReturnValue(
+      rosterState({
+        attendees: [
+          attendee({ id: "t_T1", source: "bevy", lastImportId: "imp_1" }),
+          attendee({
+            id: "m_1",
+            source: "manual",
+            firstName: "Lucia",
+            lastName: "Walkin",
+            email: "lucia@walkin.com",
+            lastImportId: "",
+            searchTokens: ["lucia", "walkin", "lucia@walkin.com"],
+          }),
+        ],
+      })
+    );
+
+    render(<CheckinPanel initialSlug="devfest-ica-2026" />);
+    expect(screen.getByText("Sin Bevy")).toBeVisible();
+    expect(screen.queryByText("ya no está en el CSV")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Sin Bevy (1)" }));
+    expect(screen.getByText("Lucia Walkin")).toBeVisible();
+    expect(
+      screen.queryByText("Alex Alberto Quintanilla Garcia")
+    ).not.toBeInTheDocument();
+  });
+
+  it("downloads the Sin Bevy CSV when manual attendees exist", async () => {
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => {});
+    mocks.useRoster.mockReturnValue(
+      rosterState({
+        attendees: [
+          attendee({
+            id: "m_1",
+            source: "manual",
+            firstName: "Lucia",
+            lastName: "Walkin",
+            email: "lucia@walkin.com",
+            checkedIn: true,
+          }),
+        ],
+      })
+    );
+
+    render(<CheckinPanel initialSlug="devfest-ica-2026" />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Exportar sin Bevy (1)" })
+    );
+
+    expect(click).toHaveBeenCalledTimes(1);
+    const anchor = click.mock.instances[0] as HTMLAnchorElement;
+    expect(anchor.download).toMatch(/^sin-bevy-devfest-ica-2026-/);
+    expect(await screen.findByText(/1 registro\(s\) «Sin Bevy»/)).toBeVisible();
+    click.mockRestore();
+  });
+
+  it("opens the manual registration modal from the header button", async () => {
+    render(<CheckinPanel initialSlug="devfest-ica-2026" />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "+ Registro manual" })
+    );
+    expect(screen.getByRole("dialog")).toBeVisible();
+    expect(screen.getByText("Agregar registro manual")).toBeVisible();
+  });
+
+  it("offers quick manual registration prefilled with the unmatched search query", async () => {
+    render(<CheckinPanel initialSlug="devfest-ica-2026" />);
+    await userEvent.type(screen.getByRole("textbox"), "nuevo@example.com");
+    await userEvent.click(
+      screen.getByRole("button", { name: "+ Registrar manualmente" })
+    );
+    expect(screen.getByRole("dialog")).toBeVisible();
+    expect(screen.getByLabelText(/Correo electrónico/)).toHaveValue(
+      "nuevo@example.com"
+    );
+  });
+
+  it("resets back to all attendees when the last manual walk-in is reconciled", async () => {
+    mocks.useRoster.mockReturnValue(
+      rosterState({
+        attendees: [
+          attendee({ id: "t_T1", source: "bevy" }),
+          attendee({
+            id: "m_1",
+            source: "manual",
+            firstName: "Lucia",
+            lastName: "Walkin",
+            email: "lucia@walkin.com",
+          }),
+        ],
+      })
+    );
+
+    const { rerender } = render(
+      <CheckinPanel initialSlug="devfest-ica-2026" />
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Sin Bevy (1)" }));
+    expect(
+      screen.queryByText("Alex Alberto Quintanilla Garcia")
+    ).not.toBeInTheDocument();
+
+    mocks.useRoster.mockReturnValue(
+      rosterState({
+        attendees: [attendee({ id: "t_T1", source: "bevy" })],
+      })
+    );
+    rerender(<CheckinPanel initialSlug="devfest-ica-2026" />);
+    expect(screen.getByText("Alex Alberto Quintanilla Garcia")).toBeVisible();
+  });
+});

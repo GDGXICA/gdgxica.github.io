@@ -87,6 +87,7 @@ export function useRoster(slug: string | null): State {
               const data = d.data({ serverTimestamps: "estimate" });
               return {
                 id: d.id,
+                source: data.source === "manual" ? "manual" : "bevy",
                 ticketNumber: data.ticketNumber ?? "",
                 orderNumber: data.orderNumber ?? "",
                 firstName: data.firstName ?? "",
@@ -105,6 +106,7 @@ export function useRoster(slug: string | null): State {
                 note: data.note ?? null,
                 dniVerified: data.dniVerified === true,
                 dni: (data.dni as string | undefined) ?? null,
+                heardAbout: (data.heardAbout as string | undefined) ?? null,
                 pending: d.metadata.hasPendingWrites,
               } satisfies Attendee;
             });

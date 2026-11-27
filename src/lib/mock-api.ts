@@ -196,6 +196,18 @@ export const mockApi = {
       updated: 0,
       stale: 0,
       unusableTickets: 0,
+      mergedManual: 0,
+    }),
+
+  registerManualCheckinAttendee: (
+    _slug: string,
+    body: { email: string; checkedIn: boolean }
+  ) =>
+    ok({
+      id: "m_mock",
+      source: "manual" as const,
+      email: body.email.trim().toLowerCase(),
+      checkedIn: body.checkedIn,
     }),
 
   uploadMuralPhoto: () => ok({ id: "mural_mock" }),

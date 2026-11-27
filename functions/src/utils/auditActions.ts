@@ -85,6 +85,7 @@ export const AUDIT_ACTIONS = [
   // Una fila por corrida del drenado que hizo algo, no una por correo.
   "certificate_email.drain",
   "checkin.import",
+  "checkin.manual.create",
   // Las escribe un trigger de Firestore, no un handler: el check-in va directo
   // del cliente a Firestore para poder encolarse sin wifi, así que no hay
   // petición donde engancharse. Ver `triggers/auditCheckin.ts`.

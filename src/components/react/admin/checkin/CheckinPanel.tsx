@@ -5,10 +5,25 @@ import { EventPicker } from "../ui/EventPicker";
 import { Toast } from "../ui/Toast";
 import { AttendeeRow } from "./AttendeeRow";
 import { bevyCsvFilename, buildBevyCheckinCsv } from "./buildBevyCsv";
+import { buildManualAttendeesCsv, manualCsvFilename } from "./buildManualCsv";
+import { ManualAttendeeModal } from "./ManualAttendeeModal";
 import { RosterImporter } from "./RosterImporter";
 import { SyncStatusBar } from "./SyncStatusBar";
 import { setCheckedIn, useRoster } from "./useRoster";
 import type { Attendee } from "./types";
+
+type SourceFilter = "all" | "bevy" | "manual";
+
+function downloadCsvFile(csv: string, filename: string): void {
+  const url = URL.createObjectURL(
+    new Blob([csv], { type: "text/csv;charset=utf-8" })
+  );
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
 
 interface Props {
   // Injection point so tests need not touch window.location.
@@ -85,7 +100,10 @@ export function CheckinPanel({ initialSlug }: Props) {
   const [slug] = useState<string | null>(initialSlug ?? slugFromUrl());
   const [query, setQuery] = useState("");
   const [showImporter, setShowImporter] = useState(false);
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [manualPrefillQuery, setManualPrefillQuery] = useState("");
   const [onlyPending, setOnlyPending] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
@@ -122,10 +140,30 @@ export function CheckinPanel({ initialSlug }: Props) {
     [attendees]
   );
 
+  const manualCount = useMemo(
+    () => attendees.filter((a) => a.source === "manual").length,
+    [attendees]
+  );
+
+  const bevyCount = attendees.length - manualCount;
+  const activeSourceFilter: SourceFilter =
+    manualCount === 0 ? "all" : sourceFilter;
+
+  const ticketOptions = useMemo(() => {
+    const titles = new Set<string>();
+    for (const a of attendees) {
+      if (a.ticketTitle) titles.add(a.ticketTitle);
+    }
+    return [...titles];
+  }, [attendees]);
+
   const filtered = useMemo(() => {
     const terms = queryTerms(query);
     return attendees.filter((a) => {
       if (onlyPending && a.checkedIn) return false;
+      if (activeSourceFilter === "manual" && a.source !== "manual")
+        return false;
+      if (activeSourceFilter === "bevy" && a.source === "manual") return false;
       if (terms.length === 0) return true;
       // Every term must prefix-match some token, so "qui gar" finds
       // "Quintanilla Garcia" without needing the full spelling.
@@ -133,43 +171,60 @@ export function CheckinPanel({ initialSlug }: Props) {
         a.searchTokens.some((tok) => tok.startsWith(t))
       );
     });
-  }, [attendees, query, onlyPending]);
+  }, [attendees, query, onlyPending, activeSourceFilter]);
 
   function handleExportBevyCsv() {
     if (!slug) return;
-    const { csv, rows, alreadyInBevy } = buildBevyCheckinCsv(attendees);
+    const { csv, rows, alreadyInBevy, manualSkipped } =
+      buildBevyCheckinCsv(attendees);
     if (rows === 0) {
       setToast({
         message:
           alreadyInBevy > 0
             ? "Bevy ya tiene marcados a todos los presentes."
-            : "Todavía no has marcado a nadie.",
+            : manualSkipped > 0
+              ? `Hay ${manualSkipped} asistente(s) «Sin Bevy». Usa «Exportar sin Bevy» para descargarlos.`
+              : "Todavía no has marcado a nadie.",
         type: "success",
       });
       return;
     }
 
-    // Blob + object URL rather than a data: URI — a few hundred rows of
-    // names exceeds what some browsers accept in a URL.
-    const url = URL.createObjectURL(
-      new Blob([csv], { type: "text/csv;charset=utf-8" })
-    );
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = bevyCsvFilename(slug, new Date());
-    link.click();
-    // Revoked on a later tick, not on the next line. Chromium starts the
-    // download synchronously inside click(), but Firefox and Safari read
-    // the blob afterwards — revoking immediately cancels the download
-    // there, and the success toast below would still claim it worked.
-    setTimeout(() => URL.revokeObjectURL(url), 0);
+    downloadCsvFile(csv, bevyCsvFilename(slug, new Date()));
+
+    const notes: string[] = [];
+    if (alreadyInBevy > 0) {
+      notes.push(`Se omitieron ${alreadyInBevy} que Bevy ya tenía.`);
+    }
+    if (manualSkipped > 0) {
+      notes.push(
+        `Se omitieron ${manualSkipped} «Sin Bevy» (usa «Exportar sin Bevy»).`
+      );
+    }
 
     setToast({
       message:
-        `CSV con ${rows} check-in(s) para subir a Bevy` +
-        (alreadyInBevy > 0
-          ? `. Se omitieron ${alreadyInBevy} que Bevy ya tenía.`
-          : "."),
+        `CSV con ${rows} check-in(s) para subir a Bevy.` +
+        (notes.length > 0 ? ` ${notes.join(" ")}` : ""),
+      type: "success",
+    });
+  }
+
+  function handleExportManualCsv() {
+    if (!slug) return;
+    const { csv, rows } = buildManualAttendeesCsv(attendees);
+    if (rows === 0) {
+      setToast({
+        message: "No hay asistentes registrados manualmente.",
+        type: "success",
+      });
+      return;
+    }
+
+    downloadCsvFile(csv, manualCsvFilename(slug, new Date()));
+
+    setToast({
+      message: `CSV con ${rows} registro(s) «Sin Bevy» descargado.`,
       type: "success",
     });
   }
@@ -260,24 +315,51 @@ export function CheckinPanel({ initialSlug }: Props) {
         <h1 className="text-xl font-bold text-gray-900 dark:text-white">
           Check-in · {slug}
         </h1>
-        {canManageRoster && (
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={handleExportBevyCsv}
-              disabled={present === 0}
-              title="Descarga un CSV listo para el Bulk upload de Bevy"
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-            >
-              Exportar para Bevy
-            </button>
-            <button
-              onClick={() => setShowImporter((v) => !v)}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-            >
-              {showImporter ? "Ocultar importador" : "Importar CSV"}
-            </button>
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => {
+              setManualPrefillQuery("");
+              setShowManualModal(true);
+            }}
+            disabled={offline}
+            title={
+              offline
+                ? "Necesitas conexión para registrar a alguien nuevo"
+                : "Registrar a alguien que no aparece en Bevy"
+            }
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            + Registro manual
+          </button>
+          {canManageRoster && (
+            <>
+              <button
+                onClick={handleExportManualCsv}
+                disabled={manualCount === 0}
+                title="Descarga un CSV con los asistentes registrados manualmente (Sin Bevy)"
+                className="rounded-lg border border-purple-300 px-4 py-2 text-sm font-medium text-purple-700 hover:bg-purple-50 disabled:opacity-50 dark:border-purple-700 dark:text-purple-300 dark:hover:bg-purple-900/20"
+              >
+                {manualCount > 0
+                  ? `Exportar sin Bevy (${manualCount})`
+                  : "Exportar sin Bevy"}
+              </button>
+              <button
+                onClick={handleExportBevyCsv}
+                disabled={present === 0}
+                title="Descarga un CSV listo para el Bulk upload de Bevy"
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Exportar para Bevy
+              </button>
+              <button
+                onClick={() => setShowImporter((v) => !v)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                {showImporter ? "Ocultar importador" : "Importar CSV"}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {canManageRoster && showImporter && (
@@ -309,12 +391,24 @@ export function CheckinPanel({ initialSlug }: Props) {
                 Todavía no hay nadie en el roster de este evento.
               </p>
               {canManageRoster ? (
-                <button
-                  onClick={() => setShowImporter(true)}
-                  className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                >
-                  Importar el CSV de Bevy
-                </button>
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  <button
+                    onClick={() => setShowImporter(true)}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    Importar el CSV de Bevy
+                  </button>
+                  <button
+                    onClick={() => {
+                      setManualPrefillQuery("");
+                      setShowManualModal(true);
+                    }}
+                    disabled={offline}
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    Registrar manualmente
+                  </button>
+                </div>
               ) : (
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                   Un organizador tiene que importar la lista de inscritos.
@@ -341,7 +435,7 @@ export function CheckinPanel({ initialSlug }: Props) {
               ref={searchRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Nombre, correo o número de ticket…"
+              placeholder="Nombre, correo, DNI o número de ticket…"
               // Phones at the door: no autocorrect fighting surnames.
               autoComplete="off"
               autoCorrect="off"
@@ -349,29 +443,77 @@ export function CheckinPanel({ initialSlug }: Props) {
               spellCheck={false}
               className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
             />
-            <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-              <input
-                type="checkbox"
-                checked={onlyPending}
-                onChange={(e) => setOnlyPending(e.target.checked)}
-                className="rounded border-gray-300"
-              />
-              Ocultar a los que ya marqué
-            </label>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <input
+                  type="checkbox"
+                  checked={onlyPending}
+                  onChange={(e) => setOnlyPending(e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                Ocultar a los que ya marqué
+              </label>
+
+              {manualCount > 0 && (
+                <div
+                  role="group"
+                  aria-label="Filtrar por origen"
+                  className="flex flex-wrap gap-1.5"
+                >
+                  {(
+                    [
+                      ["all", `Todos (${attendees.length})`],
+                      ["bevy", `Bevy (${bevyCount})`],
+                      ["manual", `Sin Bevy (${manualCount})`],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setSourceFilter(value)}
+                      aria-pressed={activeSourceFilter === value}
+                      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                        activeSourceFilter === value
+                          ? value === "manual"
+                            ? "bg-purple-600 text-white"
+                            : "bg-blue-600 text-white"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
             {filtered.length === 0 ? (
-              <p className="p-8 text-center text-gray-500 dark:text-gray-400">
-                {/* The filter is not always the query — with the checkbox on
-                    and an empty box, the old message rendered a bare pair of
-                    quotes at the exact moment everyone had been marked. */}
-                {query.trim()
-                  ? `Nadie coincide con “${query}”.`
-                  : present === attendees.length
-                    ? "Ya marcaste a todos los registrados. 🎉"
-                    : "Nadie coincide con el filtro activo."}
-              </p>
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                <p>
+                  {/* The filter is not always the query — with the checkbox on
+                      and an empty box, the old message rendered a bare pair of
+                      quotes at the exact moment everyone had been marked. */}
+                  {query.trim()
+                    ? `Nadie coincide con “${query}”.`
+                    : present === attendees.length
+                      ? "Ya marcaste a todos los registrados. 🎉"
+                      : "Nadie coincide con el filtro activo."}
+                </p>
+                {query.trim() && !offline && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setManualPrefillQuery(query.trim());
+                      setShowManualModal(true);
+                    }}
+                    className="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                  >
+                    + Registrar manualmente
+                  </button>
+                )}
+              </div>
             ) : (
               <ul className="divide-y divide-gray-100 dark:divide-gray-700">
                 {filtered.map((a) => (
@@ -379,6 +521,7 @@ export function CheckinPanel({ initialSlug }: Props) {
                     key={a.id}
                     attendee={a}
                     stale={
+                      a.source !== "manual" &&
                       !!meta?.lastImportId &&
                       a.lastImportId !== meta.lastImportId
                     }
@@ -393,6 +536,31 @@ export function CheckinPanel({ initialSlug }: Props) {
             Mostrando {filtered.length} de {attendees.length}
           </p>
         </>
+      )}
+
+      {showManualModal && (
+        <ManualAttendeeModal
+          slug={slug}
+          ticketOptions={ticketOptions}
+          initialQuery={manualPrefillQuery}
+          onClose={() => {
+            setShowManualModal(false);
+            setManualPrefillQuery("");
+          }}
+          onRegistered={({ fullName, checkedIn }) =>
+            setToast({
+              message: checkedIn
+                ? `${fullName} registrado (Sin Bevy) y marcado presente.`
+                : `${fullName} registrado (Sin Bevy).`,
+              type: "success",
+            })
+          }
+          onJumpToEmail={(email) => {
+            setOnlyPending(false);
+            setSourceFilter("all");
+            setQuery(email);
+          }}
+        />
       )}
 
       {toast && (

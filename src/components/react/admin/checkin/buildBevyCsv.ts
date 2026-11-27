@@ -14,6 +14,7 @@ export interface BevyCsvResult {
   rows: number;
   /** Marked here but Bevy already has them; left out to keep the upload minimal. */
   alreadyInBevy: number;
+  manualSkipped: number;
 }
 
 /** RFC 4180 quoting. Surnames with commas are common enough to matter. */
@@ -35,7 +36,9 @@ function cell(value: string): string {
  */
 export function buildBevyCheckinCsv(attendees: Attendee[]): BevyCsvResult {
   const present = attendees.filter((a) => a.checkedIn);
-  const pending = present.filter((a) => !a.bevyCheckinAt);
+  const manualSkipped = present.filter((a) => a.source === "manual").length;
+  const bevyPresent = present.filter((a) => a.source !== "manual");
+  const pending = bevyPresent.filter((a) => !a.bevyCheckinAt);
 
   const lines = [COLUMNS.join(",")];
   for (const a of pending) {
@@ -54,7 +57,8 @@ export function buildBevyCheckinCsv(attendees: Attendee[]): BevyCsvResult {
     // Trailing newline: some importers drop a final unterminated row.
     csv: `${lines.join("\n")}\n`,
     rows: pending.length,
-    alreadyInBevy: present.length - pending.length,
+    alreadyInBevy: bevyPresent.length - pending.length,
+    manualSkipped,
   };
 }
 

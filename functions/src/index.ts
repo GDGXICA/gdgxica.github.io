@@ -34,6 +34,7 @@ import {
   certificatePreviewSchema,
   certificateManualSchema,
   checkinImportSchema,
+  checkinManualAttendeeSchema,
   credentialCreateSchema,
   credentialImageSchema,
   credentialBevyStatusSchema,
@@ -1221,6 +1222,14 @@ app.post(
   writeLimiter,
   validateBody(checkinImportSchema),
   checkin.importRoster
+);
+app.post(
+  "/api/events/:slug/checkin/manual",
+  requirePermission("checkin:operate", { scopeParam: "slug" }),
+  slugP,
+  writeLimiter,
+  validateBody(checkinManualAttendeeSchema),
+  checkin.registerManualAttendee
 );
 
 // Rebuild

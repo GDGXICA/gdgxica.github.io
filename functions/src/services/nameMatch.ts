@@ -77,6 +77,7 @@ export function buildSearchTokens(a: {
   lastName: string;
   email: string;
   ticketNumber: string;
+  dni?: string | null;
 }): string[] {
   const tokens = new Set<string>(tokenize(`${a.firstName} ${a.lastName}`));
 
@@ -88,6 +89,9 @@ export function buildSearchTokens(a: {
   }
 
   for (const t of tokenize(a.ticketNumber)) tokens.add(t);
+  if (a.dni) {
+    for (const t of tokenize(a.dni)) tokens.add(t);
+  }
 
   return [...tokens];
 }

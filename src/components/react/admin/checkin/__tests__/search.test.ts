@@ -17,7 +17,9 @@ function finds(query: string, tokens: string[]): boolean {
   return terms.every((t) => tokens.some((tok) => tok.startsWith(t)));
 }
 
-const attendee = (over: Partial<Parameters<typeof buildSearchTokens>[0]> = {}) =>
+const attendee = (
+  over: Partial<Parameters<typeof buildSearchTokens>[0]> = {}
+) =>
   buildSearchTokens({
     firstName: "Alex Alberto",
     lastName: "Quintanilla Garcia",
@@ -102,6 +104,11 @@ describe("door search — the ways a volunteer actually types", () => {
 
   it("finds a ticket number containing a hyphen", () => {
     expect(finds("ABC-123", attendee({ ticketNumber: "ABC-123" }))).toBe(true);
+  });
+
+  it("finds an attendee by optional DNI", () => {
+    expect(finds("71234567", attendee({ dni: "71234567" }))).toBe(true);
+    expect(finds("7123", attendee({ dni: "71234567" }))).toBe(true);
   });
 
   it("rejects someone who does not match", () => {
