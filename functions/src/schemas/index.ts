@@ -465,6 +465,7 @@ export const minigameTemplateSchema = z.discriminatedUnion("type", [
       roulette: z
         .object({
           prize: shortText(120).optional(),
+          winnersCount: z.number().int().min(1).max(20).default(1),
         })
         .strict(),
     })

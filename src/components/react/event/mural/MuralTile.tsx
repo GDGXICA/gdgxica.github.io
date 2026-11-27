@@ -22,13 +22,13 @@ export function MuralTile({
 }: Props) {
   const [animateIn] = useState(entering);
   const alias = photo.alias?.trim();
-  const fontSize = Math.round(Math.min(28, Math.max(16, height * 0.075)));
+  const fontSize = Math.round(Math.min(26, Math.max(15, height * 0.072)));
 
   return (
     <figure
       data-photo-id={photo.id}
       aria-hidden={copy || undefined}
-      className={`relative shrink-0 overflow-hidden rounded-xl bg-white/5 ${
+      className={`relative shrink-0 overflow-hidden rounded-2xl bg-[#0b0d13] ring-1 ring-white/12 ${
         hidden ? "invisible" : ""
       } ${animateIn ? "animate-mural-tile-in" : ""}`}
       style={{ width, height }}
@@ -43,7 +43,7 @@ export function MuralTile({
       />
       {alias && (
         <figcaption
-          className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/80 to-transparent px-3 pt-8 pb-2 font-medium text-white"
+          className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/85 via-black/40 to-transparent px-3.5 pt-10 pb-2.5 font-semibold text-white/95"
           style={{ fontSize }}
         >
           {alias}

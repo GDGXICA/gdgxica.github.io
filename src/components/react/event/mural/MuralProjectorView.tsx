@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import type { MuralPhoto } from "@/lib/mural";
 import { HeroQr } from "../HeroQr";
+import { CameraIcon, FullscreenIcon } from "../icons";
 import { RibbonWall } from "./RibbonWall";
 import { Spotlight } from "./Spotlight";
 import { photoAspect } from "./ribbons";
@@ -17,7 +18,6 @@ interface Props {
   eventName: string;
   headline: string;
   uploadUrl: string;
-
   qrDataUrl: string;
 }
 
@@ -30,27 +30,6 @@ function naturalAspect(
   const width = natural?.width || photo.width;
   const height = natural?.height || photo.height;
   return width > 0 && height > 0 ? width / height : 4 / 3;
-}
-
-function FullscreenIcon({ exit }: { exit: boolean }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {exit ? (
-        <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
-      ) : (
-        <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
-      )}
-    </svg>
-  );
 }
 
 export function MuralProjectorView({
@@ -95,6 +74,11 @@ export function MuralProjectorView({
     [photos, ready, broken, spotlight.held]
   );
 
+  const visibleCount = useMemo(
+    () => photos.filter((p) => !broken.has(p.id)).length,
+    [photos, broken]
+  );
+
   const aspects = useMemo(() => {
     const map = new Map<string, number>();
     for (const photo of wallPhotos) {
@@ -116,23 +100,26 @@ export function MuralProjectorView({
     idle ? "pointer-events-none opacity-0" : "opacity-100"
   }`;
 
-  const card = "rounded-2xl bg-black/55 backdrop-blur-md";
+  const hudCard =
+    "rounded-2xl border border-white/15 bg-black/75 shadow-[0_18px_50px_-16px_rgba(0,0,0,0.9)] backdrop-blur-xl";
 
   return (
     <div
-      className={`relative h-dvh overflow-hidden bg-black text-white ${
+      className={`relative h-dvh overflow-hidden bg-black text-[#f4f4ee] ${
         idle ? "cursor-none" : ""
       }`}
       data-immersive={immersive || undefined}
     >
       {empty ? (
         invite === "open" ? (
-          <HeroQr
-            qrDataUrl={qrDataUrl}
-            url={displayUrl}
-            caption="Escanea y sube tu primera foto"
-            alt="QR para subir fotos al mural"
-          />
+          <div className="flex h-full flex-col pt-20">
+            <HeroQr
+              qrDataUrl={qrDataUrl}
+              url={displayUrl}
+              caption="Escanea y sube tu primera foto"
+              alt="QR para subir fotos al mural"
+            />
+          </div>
         ) : (
           <main className="flex h-full items-center justify-center p-8 text-center">
             <p className="text-2xl text-white/70">
@@ -145,18 +132,25 @@ export function MuralProjectorView({
       ) : (
         <main className="absolute inset-0">
           {waiting ? (
-            <p className="flex h-full items-center justify-center text-xl text-white/50">
+            <p className="flex h-full items-center justify-center text-xl text-white/55">
               Cargando fotos…
             </p>
           ) : (
-            <RibbonWall
-              photos={wallPhotos}
-              aspects={aspects}
-              reducedMotion={reducedMotion}
-              paused={Boolean(spotlight.current)}
-              inset={reducedMotion && !immersive}
-              onBroken={markBroken}
-            />
+            <>
+              <RibbonWall
+                photos={wallPhotos}
+                aspects={aspects}
+                reducedMotion={reducedMotion}
+                paused={Boolean(spotlight.current)}
+                inset={reducedMotion && !immersive}
+                onBroken={markBroken}
+              />
+              {/* Soft pure-black edge vignette so columns emerge cleanly */}
+              <div
+                aria-hidden="true"
+                className="mural-vignette pointer-events-none absolute inset-0 z-10"
+              />
+            </>
           )}
 
           {spotlight.current && (
@@ -174,20 +168,33 @@ export function MuralProjectorView({
 
       {!immersive && (
         <header className="absolute top-6 right-6 left-6 z-20 flex items-start gap-4">
-          <div className={`flex min-w-0 items-center gap-4 px-5 py-3 ${card}`}>
-            <img src="/gdg-logo.png" alt="GDG ICA" className="h-10 w-auto" />
-            <h1 className="line-clamp-2 text-3xl leading-tight font-semibold">
-              {title}
-            </h1>
+          <div
+            className={`flex min-w-0 items-center gap-4 px-5 py-3 ${hudCard}`}
+          >
+            <img src="/gdg-logo.png" alt="GDG ICA" className="h-9 w-auto" />
+            <div className="min-w-0">
+              <h1 className="m-0 line-clamp-2 font-(family-name:--font-display) text-2xl leading-tight font-bold tracking-tight text-white sm:text-3xl">
+                {title}
+              </h1>
+              {visibleCount > 0 && (
+                <p className="mt-0.5 flex items-center gap-1.5 font-mono text-xs text-white/65 tabular-nums">
+                  <CameraIcon size={13} className="text-(--ochre)" />
+                  <span>
+                    {visibleCount} foto{visibleCount !== 1 ? "s" : ""} en vivo
+                  </span>
+                </p>
+              )}
+            </div>
           </div>
+
           <button
             type="button"
             onClick={() => void toggle()}
-            className={`ml-auto hidden shrink-0 items-center gap-2 rounded-full bg-black/55 px-4 py-2 text-sm text-white/80 backdrop-blur-md hover:bg-black/75 sm:flex ${controls}`}
+            className={`ml-auto hidden shrink-0 items-center gap-2 rounded-full border border-white/15 bg-black/75 px-4 py-2.5 text-sm font-medium text-white/85 backdrop-blur-xl hover:border-white/35 hover:bg-black/90 sm:flex ${controls}`}
           >
-            <FullscreenIcon exit={false} />
+            <FullscreenIcon size={16} exit={false} />
             Pantalla completa
-            <kbd className="rounded border border-white/30 px-1.5 text-xs">
+            <kbd className="rounded border border-white/25 px-1.5 font-mono text-xs text-white/65">
               F
             </kbd>
           </button>
@@ -196,23 +203,27 @@ export function MuralProjectorView({
 
       {!empty && !immersive && invite === "open" && (
         <footer
-          className={`absolute right-6 bottom-6 z-20 flex items-center gap-5 p-3 pl-6 ${card}`}
+          className={`absolute right-6 bottom-6 z-20 flex items-center gap-5 p-3 pl-6 ${hudCard}`}
         >
           <div className="text-right">
-            <p className="text-lg font-medium">Sube tu foto</p>
-            <p className="text-white/70">{displayUrl}</p>
+            <p className="font-(family-name:--font-display) text-xl font-bold text-white">
+              Sube tu foto
+            </p>
+            <p className="mt-0.5 font-mono text-sm text-white/75">
+              {displayUrl}
+            </p>
           </div>
           <img
             src={qrDataUrl}
             alt="QR para subir fotos al mural"
-            className="h-32 w-32 rounded-lg bg-white p-1.5"
+            className="h-32 w-32 rounded-xl bg-white p-1.5"
           />
         </footer>
       )}
 
       {!empty && !immersive && invite === "paused" && (
         <footer className="absolute right-6 bottom-6 z-20">
-          <p className="rounded-full bg-black/55 px-4 py-2 text-white/80 backdrop-blur-md">
+          <p className="rounded-full border border-white/15 bg-black/75 px-4 py-2 font-mono text-sm text-white/80 backdrop-blur-xl">
             Subidas en pausa
           </p>
         </footer>
@@ -220,19 +231,21 @@ export function MuralProjectorView({
 
       {!empty && immersive && invite === "open" && (
         <aside
-          className={`absolute right-6 bottom-6 z-30 flex flex-col items-center gap-2 p-3 ${card}`}
+          className={`absolute right-6 bottom-6 z-30 flex flex-col items-center gap-2 p-3 ${hudCard}`}
         >
           <img
             src={qrDataUrl}
             alt="QR para subir fotos al mural"
-            className="h-[15vh] w-[15vh] rounded-lg bg-white p-1.5"
+            className="h-[15vh] w-[15vh] rounded-xl bg-white p-1.5"
           />
-          <p className="text-sm font-medium">Sube tu foto</p>
+          <p className="font-mono text-xs font-semibold tracking-wider text-white/85 uppercase">
+            Sube tu foto
+          </p>
         </aside>
       )}
 
       {!empty && immersive && invite === "paused" && (
-        <p className="absolute right-6 bottom-6 z-30 rounded-full bg-black/55 px-4 py-2 text-sm text-white/80 backdrop-blur-md">
+        <p className="absolute right-6 bottom-6 z-30 rounded-full border border-white/15 bg-black/75 px-4 py-2 font-mono text-sm text-white/80 backdrop-blur-xl">
           Subidas en pausa
         </p>
       )}
@@ -242,9 +255,9 @@ export function MuralProjectorView({
           type="button"
           onClick={() => void toggle()}
           aria-label="Salir de pantalla completa"
-          className={`absolute top-5 right-5 z-30 flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm text-white/80 hover:bg-black/80 ${controls}`}
+          className={`absolute top-5 right-5 z-30 flex items-center gap-2 rounded-full border border-white/20 bg-black/75 px-4 py-2 text-sm text-white/85 backdrop-blur-xl hover:bg-black/90 ${controls}`}
         >
-          <FullscreenIcon exit />
+          <FullscreenIcon size={16} exit />
           Salir
         </button>
       )}

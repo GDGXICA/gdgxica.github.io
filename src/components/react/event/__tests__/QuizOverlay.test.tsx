@@ -167,4 +167,31 @@ describe("QuizOverlay", () => {
     expect(screen.getByRole("button", { name: "Gemini" })).toBeEnabled();
     expect(mocks.getDoc).not.toHaveBeenCalled();
   });
+
+  it("renders personal placement and Top 3 podium when closed", () => {
+    mocks.useAggregates.mockReturnValue({
+      aggregates: {
+        leaderboard: [
+          { uid: "u2", alias: "Luis", score: 300 },
+          { uid: "u1", alias: "Ana", score: 250 },
+          { uid: "u3", alias: "Sofía", score: 150 },
+        ],
+      },
+    });
+    render(
+      <QuizOverlay
+        slug="evt"
+        instanceId="inst"
+        uid="u1"
+        alias="Ana"
+        title="Quiz"
+        config={config}
+        currentQuestionIndex={0}
+        closed
+      />
+    );
+    expect(screen.getByText(/Quedaste en #2/i)).toBeInTheDocument();
+    expect(screen.getByText(/250 puntos/i)).toBeInTheDocument();
+    expect(screen.getByText(/Clasificación final/i)).toBeInTheDocument();
+  });
 });

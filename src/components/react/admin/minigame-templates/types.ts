@@ -52,6 +52,7 @@ export interface BingoConfig {
 
 export interface RouletteConfig {
   prize?: string;
+  winnersCount?: number;
 }
 
 interface BaseTemplate {
@@ -171,7 +172,7 @@ export function emptyForType(type: MinigameType): Template {
         type: "roulette",
         title: "",
         description: "",
-        roulette: { prize: "" },
+        roulette: { prize: "", winnersCount: 3 },
       };
   }
 }

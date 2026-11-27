@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { getFirestore } from "@/lib/firebase";
 import { api } from "@/lib/api";
+import { getFirestore } from "@/lib/firebase";
 import type { PollConfig } from "../admin/minigame-templates/types";
-import { useAggregates } from "./useAggregates";
 import { answerErrorMessage } from "./answerError";
+import { CheckIcon } from "./icons";
+import { useAggregates } from "./useAggregates";
 
 interface Props {
   slug: string;
@@ -14,6 +15,7 @@ interface Props {
   config: PollConfig;
   currentQuestionIndex?: number;
   justJoined?: boolean;
+  closed?: boolean;
 }
 
 export function PollOverlay({
@@ -24,6 +26,7 @@ export function PollOverlay({
   config,
   currentQuestionIndex = 0,
   justJoined = false,
+  closed = false,
 }: Props) {
   const questions = config.questions ?? [
     {
@@ -33,12 +36,17 @@ export function PollOverlay({
     },
   ];
   const question =
-    currentQuestionIndex < 0 ? null : (questions[currentQuestionIndex] ?? null);
+    currentQuestionIndex < 0
+      ? closed
+        ? (questions[questions.length - 1] ?? null)
+        : null
+      : (questions[currentQuestionIndex] ?? null);
   const questionId = question?.id ?? "main";
   const [votedOptionId, setVotedOptionId] = useState<string | null>(null);
+  const showBars = Boolean(votedOptionId) || closed;
   const { aggregates } = useAggregates(
-    votedOptionId ? slug : null,
-    votedOptionId ? instanceId : null
+    showBars ? slug : null,
+    showBars ? instanceId : null
   );
   const [pendingOptionId, setPendingOptionId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -60,6 +68,7 @@ export function PollOverlay({
   useEffect(() => {
     if (
       !question ||
+      !uid ||
       restoredInitialRef.current ||
       initialQuestionIdRef.current !== questionId
     ) {
@@ -97,7 +106,8 @@ export function PollOverlay({
   );
 
   async function vote(optionId: string) {
-    if (!question || votedOptionId || submitting) return;
+    if (!question || votedOptionId || submitting || closed) return;
+    navigator.vibrate?.(10);
     const targetQuestionId = questionId;
     setSubmitting(true);
     setPendingOptionId(optionId);
@@ -130,48 +140,55 @@ export function PollOverlay({
     }
   }
 
-  if (!question)
+  if (!question) {
     return (
-      <div className="py-12 text-center">
-        <h2 className="m-0 text-3xl font-semibold tracking-[-0.02em] text-balance text-(--ink)">
+      <div className="py-10 text-center">
+        <h2 className="m-0 font-(family-name:--font-display) text-2xl font-bold text-balance text-(--ink) sm:text-3xl">
           {title}
         </h2>
         <p className="mt-4 inline-flex items-center gap-3 text-(--muted)">
           <span
-            className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-(--ochre) motion-reduce:animate-none"
+            className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-(--ochre) motion-reduce:animate-none"
             aria-hidden="true"
           />
           Esperando la primera pregunta…
         </p>
       </div>
     );
+  }
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <div className="mb-7">
-        <p className="n-mono m-0 text-(--muted)">
-          Pregunta {currentQuestionIndex + 1} de {questions.length}
+    <div className="mx-auto max-w-2xl">
+      <div className="mb-6">
+        <p className="m-0 font-mono text-xs font-semibold tracking-wider text-(--muted) uppercase">
+          Pregunta {Math.max(1, currentQuestionIndex + 1)} de {questions.length}
         </p>
-        <div className="mt-3 flex gap-1.5" aria-hidden="true">
+        <div className="mt-2.5 flex gap-1.5" aria-hidden="true">
           {questions.map((item, index) => (
             <span
               key={item.id}
-              className={`h-1 flex-1 rounded-full ${index <= currentQuestionIndex ? "bg-(--ochre)" : "bg-(--surface-3)"}`}
+              className={`h-1.5 flex-1 rounded-full ${
+                index <= Math.max(0, currentQuestionIndex)
+                  ? "bg-(--ochre)"
+                  : "bg-(--surface-3)"
+              }`}
             />
           ))}
         </div>
-        <h2 className="mt-8 mb-0 text-[0.9375rem] font-medium text-(--muted)">
+        <h2 className="mt-5 mb-0 font-mono text-xs font-medium tracking-wider text-(--muted) uppercase">
           {title}
         </h2>
-        <p className="mt-2 text-[clamp(1.6rem,1.3rem+1.4vw,2.25rem)] leading-tight font-semibold tracking-[-0.02em] text-balance text-(--ink)">
+        <p className="mt-1.5 font-(family-name:--font-display) text-[clamp(1.375rem,1.1rem+1.3vw,2rem)] leading-tight font-bold text-balance text-(--ink)">
           {question.prompt}
         </p>
-        <p className="mt-3 text-[0.9375rem] text-(--muted)">
-          {votedOptionId
-            ? "Así va la votación"
-            : submitting
-              ? "Enviando tu voto…"
-              : "Elige una opción para votar"}
+        <p className="mt-2 text-sm text-(--muted)">
+          {closed
+            ? "Resultados finales de la encuesta"
+            : votedOptionId
+              ? "Así va la votación"
+              : submitting
+                ? "Enviando tu voto…"
+                : "Elige una opción para votar"}
         </p>
       </div>
 
@@ -194,29 +211,37 @@ export function PollOverlay({
           const isMine = votedOptionId === opt.id;
           const isPending = pendingOptionId === opt.id;
 
-          if (votedOptionId) {
+          if (showBars) {
             return (
               <li
                 key={opt.id}
-                className={`relative min-h-16 overflow-hidden rounded-(--radius-sm) border bg-(--surface-2) px-4 py-4 ${isMine ? "border-(--ochre)" : "border-(--line)"}`}
+                className={`relative min-h-16 overflow-hidden rounded-xl border bg-(--surface-2) px-4 py-4 ${
+                  isMine ? "border-(--ochre)" : "border-(--line)"
+                }`}
               >
                 <div
-                  aria-hidden
+                  aria-hidden="true"
                   className={`absolute inset-y-0 left-0 transition-[width] duration-500 motion-reduce:transition-none ${
                     isMine ? "bg-(--ochre)/25" : "bg-(--surface-3)"
                   }`}
                   style={{ width: `${pct}%` }}
                 />
                 <div className="relative flex items-center justify-between gap-3">
-                  <span className="min-w-0 font-semibold break-words text-(--ink)">
-                    {opt.label}
+                  <span className="flex min-w-0 items-center gap-2 font-semibold break-words text-(--ink)">
                     {isMine && (
-                      <span className="ml-2 text-sm font-medium text-(--ochre)">
+                      <CheckIcon
+                        size={16}
+                        className="shrink-0 text-(--ochre)"
+                      />
+                    )}
+                    <span>{opt.label}</span>
+                    {isMine && (
+                      <span className="ml-1 text-xs font-medium text-(--ochre)">
                         Tu voto
                       </span>
                     )}
                   </span>
-                  <span className="shrink-0 font-mono text-[0.9375rem] text-(--ink) tabular-nums">
+                  <span className="shrink-0 font-mono text-sm font-semibold text-(--ink) tabular-nums">
                     {count} · {pct}%
                   </span>
                 </div>
@@ -231,11 +256,15 @@ export function PollOverlay({
                 onClick={() => vote(opt.id)}
                 disabled={submitting}
                 aria-busy={isPending}
-                className={`flex min-h-16 w-full items-center justify-between gap-3 rounded-(--radius-sm) border bg-(--surface-2) px-5 py-4 text-left text-lg font-semibold text-(--ink) transition-[border-color,background-color,transform] hover:-translate-y-0.5 hover:border-(--muted) hover:bg-(--surface-3) disabled:cursor-default motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${isPending ? "border-(--ochre) ring-2 ring-(--ochre)" : "border-(--line-strong) disabled:opacity-50"}`}
+                className={`flex min-h-16 w-full items-center justify-between gap-3 rounded-xl border bg-(--surface-2) px-5 py-4 text-left text-base font-semibold text-(--ink) transition-[border-color,background-color,transform] hover:border-(--ochre)/60 hover:bg-(--surface-3) active:scale-[0.99] disabled:cursor-default motion-reduce:transition-none sm:text-lg ${
+                  isPending
+                    ? "border-(--ochre) ring-2 ring-(--ochre)"
+                    : "border-(--line-strong) disabled:opacity-50"
+                }`}
               >
                 <span className="min-w-0 break-words">{opt.label}</span>
                 {isPending && (
-                  <span className="shrink-0 font-mono text-sm font-medium text-(--ochre)">
+                  <span className="shrink-0 font-mono text-xs font-semibold text-(--ochre)">
                     Enviando…
                   </span>
                 )}
@@ -245,13 +274,13 @@ export function PollOverlay({
         })}
       </ul>
 
-      {votedOptionId && (
+      {showBars && (
         <p
-          className="mt-6 border-t border-(--line) pt-5 text-center font-mono text-[0.9375rem] text-(--muted) tabular-nums"
+          className="mt-5 border-t border-(--line) pt-4 text-center font-mono text-sm text-(--muted) tabular-nums"
           role="status"
         >
-          {totalForQuestion} respuesta{totalForQuestion !== 1 && "s"} hasta
-          ahora
+          {totalForQuestion} respuesta{totalForQuestion !== 1 && "s"}
+          {closed ? " en total" : " hasta ahora"}
         </p>
       )}
     </div>

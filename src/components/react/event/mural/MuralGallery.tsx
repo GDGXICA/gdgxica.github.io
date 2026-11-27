@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CameraIcon } from "../icons";
 import { useMuralGallery } from "./useMuralGallery";
 
 interface Props {
@@ -46,7 +47,7 @@ export function MuralGallery({ slug, eventName }: Props) {
 
   if (error) {
     return (
-      <p className="rounded-(--radius) border border-dashed border-(--line-strong) px-6 py-10 text-center text-(--muted)">
+      <p className="rounded-2xl border border-dashed border-(--line-strong) px-6 py-10 text-center text-(--muted)">
         No pudimos cargar las fotos ahora mismo.
       </p>
     );
@@ -54,7 +55,7 @@ export function MuralGallery({ slug, eventName }: Props) {
 
   if (photos.length === 0) {
     return (
-      <p className="rounded-(--radius) border border-dashed border-(--line-strong) px-6 py-10 text-center text-(--muted)">
+      <p className="rounded-2xl border border-dashed border-(--line-strong) px-6 py-10 text-center text-(--muted)">
         Todavía no hay fotos publicadas de este evento.
       </p>
     );
@@ -62,20 +63,29 @@ export function MuralGallery({ slug, eventName }: Props) {
 
   return (
     <div ref={setRoot}>
-      {/* Justified rows, as on the home page: every photo keeps its own
-          shape and grows in proportion to it, so a row ends level. The
-          trailing spacer soaks up the last row's slack instead of blowing
-          its photos up. */}
-      <div className="flex flex-wrap gap-2 [--row:clamp(6.5rem,3rem+11vw,15rem)] after:flex-[999_1_0%] sm:gap-3">
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <p className="n-mono m-0 inline-flex items-center gap-2 text-sm text-(--muted)">
+          <CameraIcon size={15} className="text-(--ochre)" />
+          <span>
+            {photos.length} foto{photos.length !== 1 ? "s" : ""} publicada
+            {photos.length !== 1 ? "s" : ""}
+            {hasMore ? "+" : ""}
+          </span>
+        </p>
+      </div>
+
+      {/* Justified rows: every photo keeps its own aspect ratio. */}
+      <div className="flex flex-wrap gap-2.5 [--row:clamp(6.5rem,3rem+11vw,15rem)] after:flex-[999_1_0%] sm:gap-3.5">
         {photos.map((photo) => {
           const ratio = aspectOf(photo);
+          const alias = photo.alias?.trim();
           return (
             <a
               key={photo.id}
               data-fancybox="mural"
               href={photo.downloadUrl ?? undefined}
-              data-caption={photo.alias || undefined}
-              className="group block overflow-hidden rounded-(--radius-sm) bg-(--surface-1)"
+              data-caption={alias || undefined}
+              className="group relative block overflow-hidden rounded-xl bg-(--surface-1) ring-1 ring-white/10"
               style={{
                 flex: `${ratio} 1 calc(${ratio} * var(--row))`,
                 aspectRatio: String(ratio),
@@ -84,16 +94,21 @@ export function MuralGallery({ slug, eventName }: Props) {
               <img
                 src={photo.downloadUrl ?? ""}
                 alt={
-                  photo.alias
-                    ? `Foto de ${photo.alias} en ${eventName}`
+                  alias
+                    ? `Foto de ${alias} en ${eventName}`
                     : `Foto de ${eventName}`
                 }
                 width={photo.width || undefined}
                 height={photo.height || undefined}
                 loading="lazy"
                 decoding="async"
-                className="block h-full w-full object-cover transition-transform duration-700 ease-(--ease-out) group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                className="block h-full w-full object-cover transition-transform duration-500 ease-(--ease-out) group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
               />
+              {alias && (
+                <span className="pointer-events-none absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/80 via-black/35 to-transparent px-3 pt-6 pb-2 text-xs font-medium text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+                  {alias}
+                </span>
+              )}
             </a>
           );
         })}
@@ -131,8 +146,6 @@ export function MuralGallery({ slug, eventName }: Props) {
   );
 }
 
-/** Upload dimensions, kept within sane bounds so a panorama cannot take a
- *  whole row; 4:3 when the upload did not record them. */
 function aspectOf(photo: { width: number; height: number }): number {
   if (!(photo.width > 0 && photo.height > 0)) return 4 / 3;
   return Math.min(2.4, Math.max(0.56, photo.width / photo.height));

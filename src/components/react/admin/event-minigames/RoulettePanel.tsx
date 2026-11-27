@@ -7,6 +7,7 @@ interface Props {
   slug: string;
   instanceId: string;
   title: string;
+  winnersCount?: number;
   onClose: () => void;
 }
 
@@ -17,7 +18,13 @@ interface EligiblePreview {
 
 const ELIGIBLE_PREVIEW_LIMIT = 200;
 
-export function RoulettePanel({ slug, instanceId, title, onClose }: Props) {
+export function RoulettePanel({
+  slug,
+  instanceId,
+  title,
+  winnersCount,
+  onClose,
+}: Props) {
   const { aggregates, loading, error } = useAggregates(slug, instanceId);
   const [spinning, setSpinning] = useState(false);
   const [spinError, setSpinError] = useState<string | null>(null);
@@ -32,6 +39,10 @@ export function RoulettePanel({ slug, instanceId, title, onClose }: Props) {
 
   const winners = aggregates?.winners ?? [];
   const eligibleCount = aggregates?.eligibleCount ?? 0;
+  const goalMet =
+    typeof winnersCount === "number" &&
+    winnersCount > 0 &&
+    winners.length >= winnersCount;
 
   async function loadEligiblePreview() {
     setLoadingEligible(true);
@@ -128,10 +139,21 @@ export function RoulettePanel({ slug, instanceId, title, onClose }: Props) {
             <span className="text-gray-600 dark:text-gray-400">
               <span className="font-semibold text-gray-900 dark:text-white">
                 {loading ? "…" : winners.length}
+                {typeof winnersCount === "number" && winnersCount > 0
+                  ? ` / ${winnersCount}`
+                  : ""}
               </span>{" "}
               ganadores
             </span>
           </div>
+
+          {goalMet && (
+            <p className="rounded-lg border border-green-300 bg-green-50 px-4 py-2.5 text-sm text-green-800 dark:border-green-700 dark:bg-green-900/20 dark:text-green-300">
+              Meta de ganadores alcanzada. La tabla final ya aparece en el
+              proyector; puedes hacer un giro extra si algún ganador está
+              ausente.
+            </p>
+          )}
 
           {/* Spin button */}
           <button
@@ -140,7 +162,11 @@ export function RoulettePanel({ slug, instanceId, title, onClose }: Props) {
             disabled={spinning || loading || eligibleCount === 0}
             className="w-full rounded-xl bg-rose-600 py-3 text-base font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {spinning ? "Girando…" : "🎰 Girar ruleta"}
+            {spinning
+              ? "Girando…"
+              : goalMet
+                ? "Giro extra (suplente)"
+                : "Girar ruleta"}
           </button>
 
           {/* Last winner banner */}

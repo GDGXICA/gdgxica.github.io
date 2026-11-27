@@ -247,4 +247,42 @@ describe("MuralUploadRoot", () => {
       screen.getByRole("button", { name: /subir más fotos/i })
     ).toBeEnabled();
   });
+
+  it("usa un modal accesible (sin window.prompt) para solicitar retirada", async () => {
+    const promptSpy = vi.spyOn(window, "prompt");
+    mocks.requestMuralRemoval.mockResolvedValue({ success: true });
+    mocks.mine = [
+      {
+        id: "p1",
+        status: "approved",
+        downloadUrl: "https://example.com/p1.jpg",
+        alias: "Ana",
+        createdAt: null,
+      },
+    ];
+    render(<MuralUploadRoot slug="devfest" headline="Fotos" />);
+    await ready();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /pedir que la quiten/i })
+    );
+    expect(promptSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    await userEvent.type(
+      screen.getByPlaceholderText(/prefiero que no salga/i),
+      "Foto movida"
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /solicitar retirada/i })
+    );
+
+    await waitFor(() =>
+      expect(mocks.requestMuralRemoval).toHaveBeenCalledWith(
+        "devfest",
+        "p1",
+        "Foto movida"
+      )
+    );
+  });
 });

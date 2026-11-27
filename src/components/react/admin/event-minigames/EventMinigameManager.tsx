@@ -166,9 +166,19 @@ export function EventMinigameManager({ initialSlug }: Props) {
     const res = await api.spinRoulette(slug, id);
     if (res.success && res.data) {
       setToast({
-        message: `🎉 Ganó: ${res.data.alias} (giro #${res.data.spinNumber})`,
+        message: `Ganó: ${res.data.alias} (giro #${res.data.spinNumber})`,
         type: "success",
       });
+      setInstances((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                spinCount: res.data?.spinNumber ?? (item.spinCount ?? 0) + 1,
+              }
+            : item
+        )
+      );
     } else {
       setToast({
         message: res.error || "Error al girar la ruleta",
@@ -346,6 +356,11 @@ export function EventMinigameManager({ initialSlug }: Props) {
           slug={slug!}
           instanceId={moderationFor.id}
           title={moderationFor.title}
+          winnersCount={
+            typeof moderationFor.config?.winnersCount === "number"
+              ? (moderationFor.config.winnersCount as number)
+              : undefined
+          }
           onClose={() => setModerationFor(null)}
         />
       )}

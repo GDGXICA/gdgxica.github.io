@@ -33,7 +33,10 @@ export interface LiveInstance {
   lastDrawnTerm?: string | null;
   lastDrawAt?: { seconds: number; nanoseconds?: number } | null;
   bingoWinnerCount?: number;
+  closedAt?: { seconds: number; nanoseconds?: number } | null;
 }
+
+export const ROULETTE_SPIN_DURATION_MS = 4600;
 
 export const LOCAL_STORAGE_ALIAS_KEY = (slug: string) =>
   `gdg_minigame_alias_${slug}`;

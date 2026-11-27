@@ -145,4 +145,45 @@ describe("minigameTemplateSchema", () => {
     });
     expect(r.success).toBe(false);
   });
+
+  it("accepts a valid roulette with default winnersCount = 1 and custom count", () => {
+    const def = minigameTemplateSchema.safeParse({
+      type: "roulette",
+      title: "Sorteo",
+      description: "",
+      roulette: { prize: "Camiseta" },
+    });
+    expect(def.success).toBe(true);
+    if (def.success && def.data.type === "roulette") {
+      expect(def.data.roulette.winnersCount).toBe(1);
+    }
+
+    const multi = minigameTemplateSchema.safeParse({
+      type: "roulette",
+      title: "Sorteo Top 3",
+      description: "",
+      roulette: { prize: "Swag", winnersCount: 3 },
+    });
+    expect(multi.success).toBe(true);
+    if (multi.success && multi.data.type === "roulette") {
+      expect(multi.data.roulette.winnersCount).toBe(3);
+    }
+  });
+
+  it("rejects roulette winnersCount outside 1..20", () => {
+    const zero = minigameTemplateSchema.safeParse({
+      type: "roulette",
+      title: "Sorteo",
+      description: "",
+      roulette: { winnersCount: 0 },
+    });
+    const tooMany = minigameTemplateSchema.safeParse({
+      type: "roulette",
+      title: "Sorteo",
+      description: "",
+      roulette: { winnersCount: 25 },
+    });
+    expect(zero.success).toBe(false);
+    expect(tooMany.success).toBe(false);
+  });
 });

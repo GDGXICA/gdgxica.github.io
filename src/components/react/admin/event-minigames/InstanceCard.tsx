@@ -84,10 +84,18 @@ export function InstanceCard({
 
   const isQuiz = instance.type === "quiz";
   const isPoll = instance.type === "poll";
+  const isRoulette = instance.type === "roulette";
   const classic = isClassicBingo(instance);
   const totalBalls = bankSize(instance);
   const calledBalls = instance.drawCount ?? 0;
   const allBallsCalled = totalBalls > 0 && calledBalls >= totalBalls;
+  const rouletteTarget =
+    isRoulette && typeof instance.config?.winnersCount === "number"
+      ? (instance.config.winnersCount as number)
+      : null;
+  const rouletteSpins = instance.spinCount ?? 0;
+  const rouletteGoalMet =
+    rouletteTarget !== null && rouletteSpins >= rouletteTarget;
   const totalQuestions = questionCount(instance);
   const pollQuestions = isPoll
     ? ((instance.config?.questions as unknown[] | undefined)?.length ??
@@ -177,6 +185,16 @@ export function InstanceCard({
                     {instance.lastDrawnTerm}
                   </span>
                 </>
+              )}
+            </p>
+          )}
+          {isRoulette && rouletteTarget !== null && (
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Ganadores: {rouletteSpins} de {rouletteTarget}
+              {rouletteGoalMet && (
+                <span className="ml-2 font-medium text-green-600 dark:text-green-400">
+                  · Meta alcanzada
+                </span>
               )}
             </p>
           )}
@@ -276,6 +294,18 @@ export function InstanceCard({
                 ⏭ Avanzar pregunta
               </button>
             )}
+            {isQuiz && isOnLastQuestion && (
+              <button
+                type="button"
+                onClick={() => onSetState("closed")}
+                disabled={
+                  busy || (quizRemainingSec !== null && quizRemainingSec > 0)
+                }
+                className="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-semibold text-gray-950 hover:bg-amber-400 disabled:opacity-50"
+              >
+                Mostrar podio final
+              </button>
+            )}
             {isPoll && onAdvancePoll && (
               <button
                 type="button"
@@ -303,7 +333,7 @@ export function InstanceCard({
                 disabled={busy}
                 className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
               >
-                🎰 Girar ruleta
+                {rouletteGoalMet ? "Giro extra (suplente)" : "Girar ruleta"}
               </button>
             )}
           </>
