@@ -113,22 +113,29 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
     );
   });
 }
-let _authEmulatorConnected = false;
+let _authPromise: Promise<import("firebase/auth").Auth> | null = null;
 let _dbPromise: Promise<import("firebase/firestore").Firestore> | null = null;
 
 export async function getAuth() {
-  const app = await getApp();
-  const { getAuth: firebaseGetAuth, connectAuthEmulator } =
-    await import("firebase/auth");
-  const auth = firebaseGetAuth(app);
-  if (USE_EMULATOR && !_authEmulatorConnected) {
-    connectAuthEmulator(auth, "http://127.0.0.1:9099", {
-      disableWarnings: true,
+  if (!_authPromise) {
+    _authPromise = (async () => {
+      const app = await getApp();
+      const { getAuth: firebaseGetAuth, connectAuthEmulator } =
+        await import("firebase/auth");
+      const auth = firebaseGetAuth(app);
+      if (USE_EMULATOR) {
+        connectAuthEmulator(auth, "http://127.0.0.1:9099", {
+          disableWarnings: true,
+        });
+      }
+      await auth.authStateReady();
+      return auth;
+    })();
+    _authPromise.catch(() => {
+      _authPromise = null;
     });
-    _authEmulatorConnected = true;
   }
-  await auth.authStateReady();
-  return auth;
+  return _authPromise;
 }
 
 // Memoized: initializeFirestore() must be the first Firestore call on the

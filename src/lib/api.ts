@@ -1,6 +1,7 @@
 import { getIdToken } from "./auth";
 import { getAppCheckToken } from "./firebase";
 import { mockApi } from "./mock-api";
+import { recordServerClockSample } from "./serverClock";
 
 const USE_EMULATOR = import.meta.env.PUBLIC_USE_FIREBASE_EMULATOR === "true";
 const API_BASE = "/api";
@@ -238,6 +239,7 @@ async function singleRequest<T>(
 
       const appCheckToken = options.appCheck ? await getAppCheckToken() : null;
 
+      const requestStartedAt = Date.now();
       const res = await fetch(`${API_BASE}${path}`, {
         method,
         signal: controller.signal,
@@ -248,6 +250,17 @@ async function singleRequest<T>(
         },
         body: body ? JSON.stringify(body) : undefined,
       });
+
+      const serverTimeHeader = res.headers?.get("X-Server-Time-Ms");
+      if (serverTimeHeader) {
+        const parsedServerMs = Number(serverTimeHeader);
+        if (Number.isFinite(parsedServerMs)) {
+          recordServerClockSample(
+            parsedServerMs,
+            Math.round((requestStartedAt + Date.now()) / 2)
+          );
+        }
+      }
 
       if (!res.ok) {
         const fallback =

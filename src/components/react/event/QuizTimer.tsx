@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { getServerNowMs } from "@/lib/serverClock";
 
 interface Props {
   questionId: string;
@@ -29,14 +30,14 @@ export function QuizTimer({
   stopped,
   onExpire,
 }: Props) {
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(() => getServerNowMs());
   const expiredNotifiedRef = useRef<string | null>(null);
 
   const remainingMs = computeRemainingMs(timeLimitSec, startedMs, now);
   const expired = startedMs !== null && remainingMs <= 0;
 
   useEffect(() => {
-    setNow(Date.now());
+    setNow(getServerNowMs());
     expiredNotifiedRef.current = null;
   }, [questionId, startedMs]);
 
@@ -50,7 +51,7 @@ export function QuizTimer({
   useEffect(() => {
     if (stopped || expired || startedMs === null) return;
     const stepMs = remainingMs <= 5000 ? 250 : 1000;
-    const timer = window.setTimeout(() => setNow(Date.now()), stepMs);
+    const timer = window.setTimeout(() => setNow(getServerNowMs()), stepMs);
     return () => window.clearTimeout(timer);
   }, [stopped, expired, startedMs, remainingMs]);
 

@@ -38,6 +38,11 @@ export function ProjectorView({ slug, eventName, joinUrl, qrDataUrl }: Props) {
   const selectedQr = qr.url === selectedJoinUrl ? qr.data : null;
 
   useEffect(() => {
+    if (selectedJoinUrl === joinUrl && qrDataUrl) {
+      setQr({ url: joinUrl, data: qrDataUrl });
+      setQrError(false);
+      return;
+    }
     let cancelled = false;
     setQrError(false);
     QRCode.toDataURL(selectedJoinUrl, {
@@ -54,7 +59,7 @@ export function ProjectorView({ slug, eventName, joinUrl, qrDataUrl }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [selectedJoinUrl]);
+  }, [selectedJoinUrl, joinUrl, qrDataUrl]);
 
   const visible = useMemo(() => {
     if (!gameId || !singleInstance) return [];

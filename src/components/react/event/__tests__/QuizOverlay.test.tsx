@@ -22,6 +22,10 @@ vi.mock("../useParticipantDoc", () => ({
 }));
 
 import { QuizOverlay } from "../QuizOverlay";
+import {
+  recordServerClockSample,
+  resetServerClockOffset,
+} from "@/lib/serverClock";
 
 const config = {
   questions: [
@@ -52,6 +56,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  resetServerClockOffset();
 });
 
 function renderQuiz(index = 0) {
@@ -141,5 +146,25 @@ describe("QuizOverlay", () => {
       .click(screen.getByRole("button", { name: "Gemini" }));
     expect(await screen.findByText(/Respuesta registrada/)).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("uses server clock offset so a fast device clock does not prematurely lock options", () => {
+    const serverNow = Date.now() - 45_000;
+    recordServerClockSample(serverNow, Date.now());
+    render(
+      <QuizOverlay
+        slug="evt"
+        instanceId="inst"
+        uid="u1"
+        alias="Ana"
+        title="Quiz"
+        config={config}
+        currentQuestionIndex={0}
+        currentQuestionStartedAt={{ seconds: serverNow / 1000 }}
+        justJoined
+      />
+    );
+    expect(screen.getByRole("button", { name: "Gemini" })).toBeEnabled();
+    expect(mocks.getDoc).not.toHaveBeenCalled();
   });
 });
