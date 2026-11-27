@@ -274,7 +274,24 @@ describe("recomputeAggregatesFromEvent", () => {
     expect(payload.eligibleCount).toBe(2);
   });
 
-  it("ignores participant joins for non-roulette instances", async () => {
+  it("aggregates quiz participant joins into totalParticipants for the waiting lobby", async () => {
+    configureAggregateCoalescers(20);
+    const wiring = wire({ instanceType: "quiz" });
+    await Promise.all([
+      recomputeRouletteAggregateFromJoin({
+        params: { slug: "devfest-2025", id: "instance-A", uid: "u1" },
+      }),
+      recomputeRouletteAggregateFromJoin({
+        params: { slug: "devfest-2025", id: "instance-A", uid: "u2" },
+      }),
+    ]);
+    expect(wiring.aggregateSet).toHaveBeenCalledTimes(1);
+    const [payload] = wiring.aggregateSet.mock.calls[0];
+    expect(payload.totalParticipants).toBe(2);
+    expect(payload.eligibleCount).toBeUndefined();
+  });
+
+  it("ignores participant joins for poll instances", async () => {
     const wiring = wire({ instanceType: "poll" });
     await recomputeRouletteAggregateFromJoin({
       params: { slug: "devfest-2025", id: "instance-A", uid: "u1" },

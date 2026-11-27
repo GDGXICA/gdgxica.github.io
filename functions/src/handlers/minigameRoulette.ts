@@ -1,7 +1,9 @@
+import { randomInt } from "node:crypto";
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { writeAuditLog } from "../utils/audit";
+import { isTransientFirestoreError } from "../utils/firestoreErrors";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 
@@ -13,7 +15,7 @@ interface RouletteWinnerEntry {
 
 function shuffleInPlace<T>(items: T[]): T[] {
   for (let i = items.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = randomInt(i + 1);
     [items[i], items[j]] = [items[j], items[i]];
   }
   return items;
@@ -170,6 +172,7 @@ export async function spin(req: Request, res: Response) {
 
     res.json({ success: true, data: outcome });
   } catch (err) {
-    res.status(500).json({ success: false, error: safeError(err) });
+    const status = isTransientFirestoreError(err) ? 503 : 500;
+    res.status(status).json({ success: false, error: safeError(err) });
   }
 }

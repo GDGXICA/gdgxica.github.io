@@ -10,8 +10,7 @@ import { getOrLoadInstance } from "../services/minigameCache";
 const LEADERBOARD_LIMIT = 10;
 const SHARD_COUNT = 20;
 
-const DEFAULT_COALESCE_MS =
-  process.env.FUNCTIONS_EMULATOR === "true" ? 0 : 250;
+const DEFAULT_COALESCE_MS = process.env.FUNCTIONS_EMULATOR === "true" ? 0 : 250;
 
 export let pollCoalescer = new AggregateCoalescer(DEFAULT_COALESCE_MS);
 export let rouletteCoalescer = new AggregateCoalescer(DEFAULT_COALESCE_MS);
@@ -147,24 +146,36 @@ export async function recomputeAggregatesFromEvent(
   );
 }
 
-async function flushRouletteAggregate(slug: string, id: string): Promise<void> {
+async function flushParticipantAggregate(
+  slug: string,
+  id: string,
+  type: "roulette" | "quiz"
+): Promise<void> {
   const db = admin.firestore();
   const instanceRef = db.doc(`events/${slug}/minigames/${id}`);
   const aggregateRef = db.doc(
     `events/${slug}/minigames/${id}/aggregates/current`
   );
 
-  const [shardsSnap, aggSnap] = await Promise.all([
-    instanceRef.collection("roulette_shards").get(),
-    aggregateRef.get(),
-  ]);
-
+  const shardsSnap = await instanceRef.collection("roulette_shards").get();
   let totalParticipants = 0;
   for (const shardDoc of shardsSnap.docs) {
     const shard = shardDoc.data() as { count?: number };
     totalParticipants += shard.count ?? 0;
   }
 
+  if (type === "quiz") {
+    await aggregateRef.set(
+      {
+        totalParticipants,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+    return;
+  }
+
+  const aggSnap = await aggregateRef.get();
   const winners =
     (aggSnap.data()?.winners as unknown[] | undefined)?.length ?? 0;
   const eligibleCount = Math.max(0, totalParticipants - winners);
@@ -190,7 +201,8 @@ export async function recomputeRouletteAggregateFromJoin(
     const snap = await instanceRef.get();
     return snap.exists ? (snap.data() ?? null) : null;
   });
-  if (instanceData?.type !== "roulette") return;
+  const type = instanceData?.type;
+  if (type !== "roulette" && type !== "quiz") return;
 
   const shardId = String(shardIndexFor(uid));
   const shardRef = db.doc(
@@ -205,7 +217,7 @@ export async function recomputeRouletteAggregateFromJoin(
   );
 
   await rouletteCoalescer.schedule(`${slug}/${id}`, () =>
-    flushRouletteAggregate(slug, id)
+    flushParticipantAggregate(slug, id, type)
   );
 }
 

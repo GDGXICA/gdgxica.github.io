@@ -287,15 +287,22 @@ export async function setState(req: Request, res: Response) {
           typeof startedAtMillis === "number" &&
           Date.now() >= startedAtMillis + limitMs
         ) {
-          try {
-            await finishQuestion({
-              slug,
-              id,
-              questionId: currentQ.id,
-              startedAtMillis,
+          await finishQuestion({
+            slug,
+            id,
+            questionId: currentQ.id,
+            startedAtMillis,
+          });
+          const verifiedRound = await ref
+            .collection("quiz_rounds")
+            .doc(currentQ.id)
+            .get();
+          if (!verifiedRound.data()?.finishedAt) {
+            res.status(409).json({
+              success: false,
+              error: "Calculando puntajes finales, intenta en un segundo",
             });
-          } catch {
-            void 0;
+            return;
           }
         }
       }
@@ -443,7 +450,7 @@ export async function quizAdvance(req: Request, res: Response) {
           },
           {
             scheduleTime: new Date(
-              startedAtMillis + (question.timeLimitSec ?? 30) * 1000 + 2000
+              startedAtMillis + (question.timeLimitSec ?? 30) * 1000 + 800
             ),
           }
         ),

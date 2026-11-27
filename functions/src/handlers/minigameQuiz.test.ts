@@ -166,4 +166,18 @@ describe("quiz answer API", () => {
     expect(res.statusCode).toBe(400);
     expect(mocks.data.has(`${base}/quiz_answers/u1_q1`)).toBe(false);
   });
+
+  it("returns 503 on transient Firestore errors so clients can retry", async () => {
+    const original = mocks.data.get(base);
+    mocks.data.set(base, original!);
+    const err = new Error("UNAVAILABLE") as Error & { code: number };
+    err.code = 14;
+    const setSpy = vi.spyOn(mocks.data, "set").mockImplementationOnce(() => {
+      throw err;
+    });
+    const res = response();
+    await answer(request("a"), res);
+    setSpy.mockRestore();
+    expect(res.statusCode).toBe(503);
+  });
 });

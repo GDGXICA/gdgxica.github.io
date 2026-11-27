@@ -142,7 +142,10 @@ app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000,
     max: (req) =>
-      /^\/api\/events\/[^/]+\/minigames\//.test(req.path) ? 10000 : 300,
+      req.path === "/api/time" ||
+      /^\/api\/events\/[^/]+\/minigames\//.test(req.path)
+        ? 10000
+        : 300,
     standardHeaders: true,
     legacyHeaders: false,
     // Skip rather than fall back to a shared key. Keying every caller
@@ -360,6 +363,11 @@ const muralReviewLimiter = rateLimit({
 const vid = validateParamId("id");
 const vuid = validateParamId("uid");
 const slugP = validateParamId("slug");
+
+app.get("/api/time", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ success: true, data: { serverTimeMs: Date.now() } });
+});
 
 // Auth
 app.post("/api/auth/register", requireAuth(), register);
