@@ -43,7 +43,8 @@ export function useMinigameInstance(
             const data = { id: snap.id, ...snap.data() } as LiveInstance;
             setState({
               loading: false,
-              instance: data.state === "live" ? data : null,
+              instance:
+                data.state === "live" || data.state === "closed" ? data : null,
               error: null,
             });
           },

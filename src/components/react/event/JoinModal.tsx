@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TYPE_LABELS } from "../admin/minigame-templates/types";
+import { ArrowRightIcon } from "./icons";
 import type { LiveInstance, MinigameType } from "./types";
 
 /** Each game type as a category code: a coloured dot, never a filled chip. */
@@ -44,6 +45,14 @@ export function JoinModal({
   const trimmed = alias.trim();
   const aliasOk = trimmed.length > 0 && trimmed.length <= ALIAS_MAX;
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !submitting) onDismiss();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onDismiss, submitting]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (submitting) return;
@@ -74,41 +83,39 @@ export function JoinModal({
       <button
         type="button"
         aria-label="Cerrar haciendo clic fuera"
-        className="fixed inset-0 cursor-default bg-(--night)/85"
+        className="fixed inset-0 cursor-default bg-(--night)/85 backdrop-blur-xs"
         onClick={onDismiss}
       />
-      <div className="n-panel n-marks relative z-10 w-full max-w-md shadow-[0_30px_80px_-24px_rgb(0_0_0/0.7)]">
-        <div className="px-6 pt-7">
+      <div className="n-panel n-marks animate-stage-pop-in relative z-10 w-full max-w-md shadow-[0_30px_80px_-24px_rgb(0_0_0/0.8)]">
+        <div className="px-6 pt-6">
           <h2
             id="join-modal-title"
-            className="m-0 font-(family-name:--font-display) text-[2rem] leading-none font-bold tracking-[-0.01em] text-(--ink)"
+            className="m-0 font-(family-name:--font-display) text-[1.875rem] leading-none font-bold tracking-[-0.01em] text-(--ink)"
           >
             Únete con un alias
           </h2>
-          <p className="mt-3 text-[0.9375rem] leading-6 text-(--muted)">
+          <p className="mt-2.5 text-[0.9375rem] leading-6 text-(--muted)">
             Así te verán en la clasificación y en la pantalla del evento.
           </p>
         </div>
 
-        <div className="space-y-5 px-6 pt-5 pb-6">
+        <div className="space-y-4 px-6 pt-4 pb-6">
           {liveInstances.length > 0 && (
-            <div>
-              <ul className="flex flex-wrap gap-2">
-                {liveInstances.map((inst) => (
-                  <li
-                    key={inst.id}
-                    className="inline-flex min-h-7 items-center gap-2 rounded-(--radius-sm) border border-(--line-strong) px-2.5 py-1 text-sm text-(--ink)"
-                  >
-                    <span
-                      className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ background: TYPE_DOTS[inst.type] }}
-                      aria-hidden="true"
-                    />
-                    {TYPE_LABELS[inst.type]} · {inst.title}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <ul className="flex flex-wrap gap-2">
+              {liveInstances.map((inst) => (
+                <li
+                  key={inst.id}
+                  className="inline-flex min-h-7 items-center gap-2 rounded-(--radius-sm) border border-(--line-strong) bg-(--surface-2) px-2.5 py-1 text-sm text-(--ink)"
+                >
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ background: TYPE_DOTS[inst.type] }}
+                    aria-hidden="true"
+                  />
+                  {TYPE_LABELS[inst.type]} · {inst.title}
+                </li>
+              ))}
+            </ul>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-3" noValidate>
@@ -126,10 +133,11 @@ export function JoinModal({
                 }}
                 placeholder="ej. Ana"
                 autoFocus
+                autoComplete="nickname"
                 className="min-h-12 w-full rounded-(--radius-sm) border border-(--line-strong) bg-(--surface-2) px-4 py-3 text-base text-(--ink) transition-colors placeholder:text-(--muted)/70 hover:border-(--muted) focus:border-(--ochre)"
               />
-              <span className="mt-2 block text-sm text-(--muted)">
-                {trimmed.length}/{ALIAS_MAX} caracteres. No se puede cambiar
+              <span className="mt-2 block font-mono text-xs text-(--muted)">
+                {trimmed.length}/{ALIAS_MAX} caracteres · No se puede cambiar
                 después.
               </span>
             </label>
@@ -143,7 +151,7 @@ export function JoinModal({
               </p>
             )}
 
-            <div className="flex flex-wrap items-center justify-end gap-3 pt-3">
+            <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
               <button
                 type="button"
                 onClick={onDismiss}
@@ -161,18 +169,7 @@ export function JoinModal({
                   {submitting ? "Conectando..." : "Conectarme"}
                 </span>
                 <span className="nb__icon nb__icon--arrow" aria-hidden="true">
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="18"
-                    height="18"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M5 12h14M13 6l6 6-6 6" />
-                  </svg>
+                  <ArrowRightIcon size={18} />
                 </span>
               </button>
             </div>

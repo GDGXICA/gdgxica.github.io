@@ -27,6 +27,8 @@ export interface MinigameInstance {
   drawnTerms?: string[];
   lastDrawnTerm?: string | null;
   bingoWinnerCount?: number;
+  // Roulette runtime state
+  spinCount?: number;
 }
 
 export const STATE_LABELS: Record<InstanceState, string> = {

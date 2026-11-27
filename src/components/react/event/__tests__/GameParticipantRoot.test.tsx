@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 
 const mocks = vi.hoisted(() => ({
   useLiveMinigames: vi.fn(),
@@ -117,5 +123,46 @@ describe("GameParticipantRoot", () => {
     await waitFor(() =>
       expect(screen.getByText("Encuesta: Encuesta uno")).toBeInTheDocument()
     );
+  });
+
+  it("navigates between lobby and a game via SPA pushState without reload", async () => {
+    localStorage.setItem("gdg_minigame_alias_devfest", "Ana");
+    render(<GameParticipantRoot slug="devfest" eventName="DevFest" />);
+    const link = screen.getByRole("link", { name: /Encuesta uno/ });
+    fireEvent.click(link);
+    expect(window.location.search).toBe("?game=poll-1");
+    await waitFor(() =>
+      expect(screen.getByText("Encuesta: Encuesta uno")).toBeInTheDocument()
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Dinámicas/i }));
+    expect(window.location.search).toBe("");
+    expect(screen.getByText("Elige una dinámica")).toBeInTheDocument();
+  });
+
+  it("renders closed game final view directly without prompting to join", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/events/devfest/jugar?game=quiz-closed"
+    );
+    mocks.useMinigameInstance.mockReturnValue({
+      instance: {
+        id: "quiz-closed",
+        type: "quiz",
+        mode: "realtime",
+        state: "closed",
+        title: "Quiz terminado",
+        config: { questions: [] },
+        currentQuestionIndex: 0,
+      },
+      loading: false,
+      error: null,
+    });
+    render(<GameParticipantRoot slug="devfest" eventName="DevFest" />);
+    await waitFor(() =>
+      expect(screen.getByText("Quiz: Quiz terminado")).toBeInTheDocument()
+    );
+    expect(screen.getByText("Finalizado")).toBeInTheDocument();
+    expect(mocks.join).not.toHaveBeenCalled();
   });
 });

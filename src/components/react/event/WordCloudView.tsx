@@ -10,10 +10,11 @@ interface Props {
   title: string;
   prompt: string;
   maxWordsPerUser: number;
+  closed?: boolean;
 }
 
-const MIN_FONT_REM = 0.85;
-const SCALE_PER_LOG = 0.6;
+const MIN_FONT_REM = 0.9;
+const SCALE_PER_LOG = 0.65;
 
 function localStorageKey(slug: string, instanceId: string): string {
   return `gdg_wordcloud_count_${slug}_${instanceId}`;
@@ -44,6 +45,7 @@ export function WordCloudView({
   title,
   prompt,
   maxWordsPerUser,
+  closed = false,
 }: Props) {
   const { words, loading } = useWordCloud(slug, instanceId);
   const [input, setInput] = useState("");
@@ -63,7 +65,7 @@ export function WordCloudView({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (submitting) return;
+    if (submitting || closed) return;
     if (remaining <= 0) {
       setError(`Ya enviaste tus ${maxWordsPerUser} palabras para este juego.`);
       return;
@@ -117,45 +119,56 @@ export function WordCloudView({
   return (
     <div>
       <div className="mb-5">
-        <h2 className="m-0 text-[clamp(1.6rem,1.3rem+1.4vw,2.25rem)] leading-tight font-semibold tracking-[-0.02em] text-(--ink)">
+        <h2 className="m-0 font-(family-name:--font-display) text-[clamp(1.5rem,1.25rem+1.2vw,2.1rem)] leading-tight font-bold text-(--ink)">
           {title}
         </h2>
-        <p className="mt-2 text-(--muted)">{prompt}</p>
+        <p className="mt-1.5 text-(--muted)">{prompt}</p>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="mb-3 flex flex-col gap-3 sm:flex-row"
-      >
-        <input
-          type="text"
-          value={input}
-          maxLength={WORD_MAX_LENGTH}
-          onChange={(e) => {
-            setInput(e.target.value);
-            setError(null);
-          }}
-          placeholder="Tu palabra..."
-          className="min-h-12 flex-1 rounded-(--radius-sm) border border-(--line-strong) bg-(--surface-2) px-4 py-2.5 text-base text-(--ink) transition-colors placeholder:text-(--muted)/70 hover:border-(--muted) focus:border-(--ochre) disabled:opacity-50"
-          disabled={remaining === 0}
-        />
-        <button
-          type="submit"
-          disabled={submitting || remaining === 0 || trimmed.length === 0}
-          className="nb nb--primary disabled:opacity-45 sm:min-w-40"
-        >
-          <span className="nb__label">
-            {submitting ? "Enviando..." : "Enviar"}
-          </span>
-        </button>
-      </form>
-      <p className="mb-5 text-sm text-(--muted)">
-        Te quedan{" "}
-        <strong className="font-mono font-semibold text-(--ochre)">
-          {remaining}
-        </strong>{" "}
-        de {maxWordsPerUser} palabras.
-      </p>
+      {!closed && (
+        <>
+          <form
+            onSubmit={handleSubmit}
+            className="mb-3 flex flex-col gap-3 sm:flex-row"
+          >
+            <input
+              type="text"
+              value={input}
+              maxLength={WORD_MAX_LENGTH}
+              onChange={(e) => {
+                setInput(e.target.value);
+                setError(null);
+              }}
+              placeholder="Tu palabra..."
+              className="min-h-12 flex-1 rounded-xl border border-(--line-strong) bg-(--surface-2) px-4 py-2.5 text-base text-(--ink) transition-colors placeholder:text-(--muted)/70 hover:border-(--muted) focus:border-(--ochre) disabled:opacity-50"
+              disabled={remaining === 0}
+            />
+            <button
+              type="submit"
+              disabled={submitting || remaining === 0 || trimmed.length === 0}
+              className="nb nb--primary disabled:opacity-45 sm:min-w-40"
+            >
+              <span className="nb__label">
+                {submitting ? "Enviando..." : "Enviar"}
+              </span>
+            </button>
+          </form>
+          <p className="mb-5 text-sm text-(--muted)">
+            Te quedan{" "}
+            <strong className="font-mono font-semibold text-(--ochre)">
+              {remaining}
+            </strong>{" "}
+            de {maxWordsPerUser} palabras.
+          </p>
+        </>
+      )}
+
+      {closed && (
+        <p className="mb-4 font-mono text-xs font-semibold tracking-wider text-(--ochre) uppercase">
+          Nube cerrada · Resumen final
+        </p>
+      )}
+
       {error && (
         <p
           className="mb-3 border-l-2 border-red-400 pl-3 text-sm text-red-200"
@@ -165,7 +178,7 @@ export function WordCloudView({
         </p>
       )}
 
-      <div className="rounded-(--radius) border border-(--line) bg-(--night) px-4 py-6 sm:px-6 sm:py-8">
+      <div className="rounded-2xl border border-(--line) bg-(--night) px-4 py-6 sm:px-6 sm:py-8">
         {loading && (
           <p className="text-center text-sm text-(--muted)">Cargando nube...</p>
         )}
@@ -175,25 +188,23 @@ export function WordCloudView({
           </p>
         )}
         {!loading && words.length > 0 && (
-          <ul className="flex flex-wrap items-baseline justify-center gap-x-5 gap-y-2">
+          <ul className="flex flex-wrap items-baseline justify-center gap-x-5 gap-y-2.5">
             {words.map((w) => {
               const ratio = Math.log(w.count + 1) / Math.log(maxCount + 1);
               const fontSize = Math.max(
                 MIN_FONT_REM,
                 MIN_FONT_REM + ratio * SCALE_PER_LOG * 2
               );
-              // The most repeated words carry the survey ochre; the tail
-              // steps back to muted ink.
               const tone =
                 ratio > 0.75
-                  ? "text-(--ochre)"
+                  ? "text-(--ochre) font-bold"
                   : ratio > 0.4
-                    ? "text-(--ink)"
-                    : "text-(--muted)";
+                    ? "text-(--ink) font-semibold"
+                    : "text-(--muted) font-medium";
               return (
                 <li
                   key={w.id}
-                  className={`font-semibold tracking-[-0.015em] ${tone}`}
+                  className={`animate-stage-pop-in tracking-[-0.015em] ${tone}`}
                   style={{ fontSize: `${fontSize}rem`, lineHeight: 1.2 }}
                 >
                   {w.text}

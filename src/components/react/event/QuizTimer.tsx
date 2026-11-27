@@ -58,24 +58,29 @@ export function QuizTimer({
   const remainingSec = Math.ceil(remainingMs / 1000);
   const pct =
     timeLimitSec > 0
-      ? Math.round((100 * remainingMs) / (timeLimitSec * 1000))
+      ? Math.max(0, Math.min(100, (100 * remainingMs) / (timeLimitSec * 1000)))
       : 0;
+  const urgent = !stopped && remainingMs > 0 && remainingMs <= 5000;
 
   return (
     <>
       <div className="flex items-center justify-between gap-3">
-        <span className="n-mono text-(--muted)">
+        <span className="font-mono text-xs font-semibold tracking-wider text-(--muted) uppercase sm:text-sm">
           Pregunta {questionIndex + 1} de {totalQuestions}
         </span>
         <span
           aria-label="Tiempo restante"
-          className={`rounded-(--radius-sm) border px-3 py-1 font-mono text-2xl font-semibold tabular-nums ${remainingMs <= 5000 ? "border-red-400/60 text-red-300" : "border-(--line-strong) text-(--ink)"}`}
+          className={`rounded-xl border px-3.5 py-1 font-mono text-xl font-bold tabular-nums sm:text-2xl ${
+            urgent
+              ? "animate-stage-urgent border-red-400/70 bg-red-500/15 text-red-200"
+              : "border-(--line-strong) bg-(--surface-2) text-(--ink)"
+          }`}
         >
           {remainingSec}s
         </span>
       </div>
       <div
-        className="mt-4 h-1.5 overflow-hidden rounded-full bg-(--surface-3)"
+        className="mt-3 h-2 overflow-hidden rounded-full bg-(--surface-3)"
         role="progressbar"
         aria-label="Tiempo de la pregunta"
         aria-valuenow={remainingSec}
@@ -83,8 +88,16 @@ export function QuizTimer({
         aria-valuemax={timeLimitSec}
       >
         <div
-          className={`h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none ${remainingMs <= 5000 ? "bg-(--g-red)" : "bg-(--ochre)"}`}
-          style={{ width: `${pct}%` }}
+          className={`h-full rounded-full transition-[width] ease-linear motion-reduce:transition-none ${
+            urgent ? "duration-250" : "duration-1000"
+          } ${
+            urgent
+              ? "bg-(--g-red)"
+              : stopped
+                ? "bg-(--muted)/40"
+                : "bg-(--ochre)"
+          }`}
+          style={{ width: `${stopped ? 0 : pct}%` }}
         />
       </div>
     </>

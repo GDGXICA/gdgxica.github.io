@@ -255,6 +255,52 @@ export async function setState(req: Request, res: Response) {
       return;
     }
 
+    const existing = snap.data() as
+      | {
+          type?: string;
+          currentQuestionIndex?: number;
+          config?: { questions?: { id?: string; timeLimitSec?: number }[] };
+        }
+      | undefined;
+
+    if (
+      state === "closed" &&
+      existing?.type === "quiz" &&
+      typeof existing.currentQuestionIndex === "number" &&
+      existing.currentQuestionIndex >= 0
+    ) {
+      const currentQ = (existing.config?.questions ?? [])[
+        existing.currentQuestionIndex
+      ];
+      if (currentQ?.id) {
+        const roundSnap = await ref
+          .collection("quiz_rounds")
+          .doc(currentQ.id)
+          .get();
+        const roundData = roundSnap.data();
+        const startedAtMillis = roundData?.startedAtMillis as
+          number | undefined;
+        const limitMs = (currentQ.timeLimitSec ?? 30) * 1000;
+        if (
+          roundSnap.exists &&
+          !roundData?.finishedAt &&
+          typeof startedAtMillis === "number" &&
+          Date.now() >= startedAtMillis + limitMs
+        ) {
+          try {
+            await finishQuestion({
+              slug,
+              id,
+              questionId: currentQ.id,
+              startedAtMillis,
+            });
+          } catch {
+            void 0;
+          }
+        }
+      }
+    }
+
     const update: Record<string, unknown> = { state };
     if (state === "live") {
       update.activatedAt = FieldValue.serverTimestamp();

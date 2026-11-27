@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 
 const mocks = vi.hoisted(() => ({
   useLiveMinigames: vi.fn(),
@@ -339,16 +346,16 @@ describe("ProjectorView", () => {
       expect(screen.getAllByText("Mención")).toHaveLength(1);
     });
 
-    it("stays read-only — the presenter's QR toggle is the only button", () => {
+    it("stays read-only — game stage contains no interactive buttons", () => {
       liveClassic({
         drawnTerms: ["Firebase", "Flutter"],
         drawCount: 2,
         lastDrawnTerm: "Flutter",
       });
       renderProjector();
-      const buttons = screen.queryAllByRole("button");
-      expect(buttons).toHaveLength(1);
-      expect(buttons[0]).toHaveAttribute("aria-label", "Agrandar QR");
+      const stage = screen.getByRole("main");
+      expect(within(stage).queryAllByRole("button")).toHaveLength(0);
+      expect(screen.getByLabelText("Agrandar QR")).toBeInTheDocument();
     });
   });
 
@@ -391,8 +398,159 @@ describe("ProjectorView", () => {
       error: null,
     });
     renderProjector();
-    const buttons = screen.queryAllByRole("button");
-    expect(buttons).toHaveLength(1);
-    expect(buttons[0]).toHaveAttribute("aria-label", "Agrandar QR");
+    const stage = screen.getByRole("main");
+    expect(within(stage).queryAllByRole("button")).toHaveLength(0);
+    expect(screen.getByLabelText("Activar sonido")).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+  });
+
+  it("does not spoil the roulette winner while spinning and shows final table when goal is met", () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const baseInstance = {
+        id: "i-roulette",
+        type: "roulette",
+        mode: "global",
+        state: "live",
+        title: "Sorteo DevFest",
+        order: 0,
+        spinCount: 0,
+        config: { prize: "Camiseta", winnersCount: 1 },
+      };
+      mocks.useLiveMinigames.mockReturnValue({
+        loading: false,
+        liveInstances: [baseInstance],
+        error: null,
+      });
+      mocks.useAggregates.mockReturnValue({
+        aggregates: { eligibleCount: 5, winners: [] },
+        loading: false,
+        error: null,
+      });
+
+      const { rerender } = renderProjector();
+      expect(screen.getByText(/5 participantes/)).toBeInTheDocument();
+
+      // Admin triggers spin #1 -> backend writes winner immediately
+      const spunInstance = {
+        ...baseInstance,
+        spinCount: 1,
+        lastSpinWinnerId: "u1",
+        lastSpinWinnerAlias: "Carlos",
+        lastSpinAt: { seconds: 1700000010 },
+      };
+      mocks.useLiveMinigames.mockReturnValue({
+        loading: false,
+        liveInstances: [spunInstance],
+        error: null,
+      });
+      mocks.useAggregates.mockReturnValue({
+        aggregates: {
+          eligibleCount: 4,
+          winners: [{ uid: "u1", alias: "Carlos", spinNumber: 1 }],
+        },
+        loading: false,
+        error: null,
+      });
+
+      rerender(
+        <ProjectorView
+          slug="x"
+          eventName="DevFest ICA 2026"
+          joinUrl={JOIN_URL}
+          qrDataUrl={QR_DATA_URL}
+        />
+      );
+
+      // During spin: winner MUST NOT appear anywhere on screen
+      expect(screen.queryByText("Carlos")).toBeNull();
+      expect(screen.getByText(/Girando ruleta/i)).toBeInTheDocument();
+
+      // After spin finishes (4.6s): winner is revealed
+      act(() => {
+        vi.advanceTimersByTime(4700);
+      });
+      expect(screen.getAllByText("Carlos").length).toBeGreaterThan(0);
+
+      // After celebration delay (4.5s) with winnersCount === 1: final table appears
+      act(() => {
+        vi.advanceTimersByTime(4600);
+      });
+      expect(screen.getByText(/Ganadores completos/i)).toBeInTheDocument();
+      expect(screen.getByText("Carlos")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("renders the final Top 3 podium when a quiz is closed", () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      mocks.useLiveMinigames.mockReturnValue({
+        loading: false,
+        liveInstances: [
+          {
+            id: "i-quiz",
+            type: "quiz",
+            mode: "realtime",
+            state: "closed",
+            title: "Trivia Cloud",
+            order: 0,
+            currentQuestionIndex: 0,
+            config: {
+              questions: [
+                {
+                  id: "q1",
+                  prompt: "¿?",
+                  options: [{ id: "a", label: "A" }],
+                  timeLimitSec: 30,
+                  points: 100,
+                },
+              ],
+            },
+          },
+        ],
+        error: null,
+      });
+      mocks.useAggregates.mockReturnValue({
+        aggregates: {
+          leaderboard: [
+            { uid: "u1", alias: "Ana", score: 500 },
+            { uid: "u2", alias: "Luis", score: 400 },
+            { uid: "u3", alias: "Sofía", score: 300 },
+            { uid: "u4", alias: "Diego", score: 200 },
+          ],
+        },
+        loading: false,
+        error: null,
+      });
+
+      renderProjector();
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+      expect(screen.getByText(/Podio final/i)).toBeInTheDocument();
+      expect(screen.getByText("Ana")).toBeInTheDocument();
+      expect(screen.getByText("Luis")).toBeInTheDocument();
+      expect(screen.getByText("Sofía")).toBeInTheDocument();
+      expect(screen.getByText("Diego")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("toggles optional stage audio on click", () => {
+    mocks.useLiveMinigames.mockReturnValue({
+      loading: false,
+      liveInstances: [],
+      error: null,
+    });
+    renderProjector();
+    const audioBtn = screen.getByLabelText("Activar sonido");
+    expect(audioBtn).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(audioBtn);
+    expect(audioBtn).toBeInTheDocument();
   });
 });

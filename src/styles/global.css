@@ -202,6 +202,106 @@ body {
   mix-blend-mode: soft-light;
 }
 
+.stage-black {
+  --stage-bg: #000000;
+  --stage-surface: #0b0d13;
+  --stage-surface-2: #121622;
+  --stage-line: rgb(255 255 255 / 0.12);
+  --stage-line-strong: rgb(255 255 255 / 0.24);
+  --stage-ink: #f4f4ee;
+  --stage-muted: #9ca3b5;
+  --ochre: #d4ad62;
+  --ochre-ink: #070b16;
+  --g-blue: #2463eb;
+  --g-red: #ef4444;
+  --g-yellow: #ebb308;
+  --g-green: #16a34a;
+  --font-sans: "Bricolage Grotesque Variable", system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+  --font-display: "Chakra Petch", var(--font-sans);
+
+  background: var(--stage-bg);
+  color: var(--stage-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  color-scheme: dark;
+}
+
+.stage-black :focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 3px;
+}
+
+@keyframes stage-winner-in {
+  0% {
+    transform: translateY(1.5rem) scale(0.92);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-stage-winner-in {
+  animation: stage-winner-in 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes stage-podium-rise {
+  0% {
+    transform: translateY(3.5rem) scaleY(0.72);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scaleY(1);
+    opacity: 1;
+  }
+}
+
+.animate-stage-podium-rise {
+  transform-origin: bottom center;
+  animation: stage-podium-rise 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes stage-pop-in {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-stage-pop-in {
+  animation: stage-pop-in 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes stage-urgent-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(239 68 68 / 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 0.75rem rgb(239 68 68 / 0);
+  }
+}
+
+.animate-stage-urgent {
+  animation: stage-urgent-pulse 1s ease-out infinite;
+}
+
+.mural-vignette {
+  background: linear-gradient(
+    to bottom,
+    rgb(0 0 0 / 0.72) 0%,
+    rgb(0 0 0 / 0) 14%,
+    rgb(0 0 0 / 0) 84%,
+    rgb(0 0 0 / 0.78) 100%
+  );
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-bingo-ball-drop,
   .animate-bingo-ball-pulse,
@@ -210,7 +310,11 @@ body {
   .animate-credential-modal-card,
   .animate-mural-fade-in,
   .animate-mural-tile-in,
-  .animate-mural-spotlight-in {
+  .animate-mural-spotlight-in,
+  .animate-stage-winner-in,
+  .animate-stage-podium-rise,
+  .animate-stage-pop-in,
+  .animate-stage-urgent {
     animation: none;
   }
 
