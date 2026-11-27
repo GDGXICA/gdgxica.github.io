@@ -10,8 +10,11 @@ import { getOrLoadInstance } from "../services/minigameCache";
 const LEADERBOARD_LIMIT = 10;
 const SHARD_COUNT = 10;
 
-export let pollCoalescer = new AggregateCoalescer(800);
-export let rouletteCoalescer = new AggregateCoalescer(800);
+const DEFAULT_COALESCE_MS =
+  process.env.FUNCTIONS_EMULATOR === "true" ? 0 : 250;
+
+export let pollCoalescer = new AggregateCoalescer(DEFAULT_COALESCE_MS);
+export let rouletteCoalescer = new AggregateCoalescer(DEFAULT_COALESCE_MS);
 
 export function configureAggregateCoalescers(delayMs: number): void {
   pollCoalescer.clear();
@@ -207,13 +210,21 @@ export async function recomputeRouletteAggregateFromJoin(
 }
 
 export const onMinigameResponseWritten = onDocumentWritten(
-  "events/{slug}/minigames/{id}/responses/{respId}",
+  {
+    document: "events/{slug}/minigames/{id}/responses/{respId}",
+    concurrency: 80,
+    cpu: 1,
+  },
   (event) =>
     recomputeAggregatesFromEvent(event as unknown as ResponseWriteEvent)
 );
 
 export const onMinigameParticipantCreated = onDocumentCreated(
-  "events/{slug}/minigames/{id}/participants/{uid}",
+  {
+    document: "events/{slug}/minigames/{id}/participants/{uid}",
+    concurrency: 80,
+    cpu: 1,
+  },
   (event) =>
     recomputeRouletteAggregateFromJoin(
       event as unknown as ParticipantCreateEvent

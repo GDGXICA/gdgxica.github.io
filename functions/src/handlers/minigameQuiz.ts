@@ -8,6 +8,8 @@ import {
   getOrLoadInstance,
   getOrLoadParticipantMembership,
   getOrLoadQuizAnswers,
+  reloadInstanceIfStale,
+  type CachedInstanceData,
 } from "../services/minigameCache";
 import { logParticipantAudit } from "../utils/audit";
 
@@ -16,6 +18,20 @@ interface QuizQuestion {
   options: { id: string }[];
   timeLimitSec: number;
   points: number;
+}
+
+function resolveQuizQuestionState(instance: CachedInstanceData) {
+  if (instance?.type !== "quiz" || instance.state !== "live") {
+    return { live: false as const, questions: [] as QuizQuestion[], currentIndex: -1 };
+  }
+  const config = instance.config as
+    { questions?: QuizQuestion[] } | undefined;
+  const questions = config?.questions ?? [];
+  const currentIndex =
+    typeof instance.currentQuestionIndex === "number"
+      ? instance.currentQuestionIndex
+      : -1;
+  return { live: true as const, questions, currentIndex };
 }
 
 const SCORING_LOCK_TTL_MS = 30_000;
@@ -60,11 +76,13 @@ export async function answer(req: Request, res: Response) {
     const participantRef = instanceRef.collection("participants").doc(uid);
     const secretRef = instanceRef.collection("secret").doc("quiz");
 
-    const [instance, secretAnswers, isJoined] = await Promise.all([
-      getOrLoadInstance(slug, id, async () => {
-        const snap = await instanceRef.get();
-        return snap.exists ? (snap.data() ?? null) : null;
-      }),
+    const loadInstance = async () => {
+      const snap = await instanceRef.get();
+      return snap.exists ? (snap.data() ?? null) : null;
+    };
+
+    const [cachedInstance, secretAnswers, isJoined] = await Promise.all([
+      getOrLoadInstance(slug, id, loadInstance),
       getOrLoadQuizAnswers(slug, id, async () => {
         const snap = await secretRef.get();
         const data = snap.data()?.answers as Record<string, string> | undefined;
@@ -81,18 +99,25 @@ export async function answer(req: Request, res: Response) {
       return;
     }
 
-    if (instance?.type !== "quiz" || instance.state !== "live") {
+    let instance = cachedInstance;
+    let quizState = resolveQuizQuestionState(instance);
+    const shouldRefresh =
+      !quizState.live ||
+      (quizState.questions[quizState.currentIndex]?.id !== questionId &&
+        quizState.questions.findIndex((q) => q.id === questionId) >
+          quizState.currentIndex);
+
+    if (shouldRefresh) {
+      instance = await reloadInstanceIfStale(slug, id, instance, loadInstance);
+      quizState = resolveQuizQuestionState(instance);
+    }
+
+    if (!quizState.live || !instance) {
       res.status(400).json({ success: false, error: "not_live" });
       return;
     }
 
-    const config = instance.config as
-      { questions?: QuizQuestion[] } | undefined;
-    const currentIndex = instance.currentQuestionIndex as number | undefined;
-    const question =
-      typeof currentIndex === "number"
-        ? (config?.questions ?? [])[currentIndex]
-        : undefined;
+    const question = quizState.questions[quizState.currentIndex];
     if (
       !question ||
       question.id !== questionId ||
@@ -280,7 +305,7 @@ export async function finishQuestion({
   finalizeBatch.set(
     instanceRef.collection("aggregates").doc("current"),
     {
-      optionCounts: counts,
+      ...(Object.keys(counts).length > 0 ? { optionCounts: counts } : {}),
       leaderboard,
       revealedAnswers: { [questionId]: correctId },
       updatedAt: FieldValue.serverTimestamp(),

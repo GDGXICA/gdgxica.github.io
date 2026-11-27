@@ -1,6 +1,5 @@
 import { logger } from "firebase-functions";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { google } from "googleapis";
 
 /**
  * Copia mensual de `audit_log` fuera de Firestore.
@@ -54,6 +53,7 @@ export const exportAudit = onSchedule(
     const name = `projects/${project}/databases/(default)`;
 
     try {
+      const { google } = await import("googleapis");
       // La autenticación sale del entorno: la cuenta de servicio de la función.
       const auth = new google.auth.GoogleAuth({
         scopes: ["https://www.googleapis.com/auth/datastore"],

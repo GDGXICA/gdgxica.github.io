@@ -6,12 +6,34 @@ import { safeError } from "../middleware/validate";
 import {
   getOrLoadInstance,
   getOrLoadParticipantMembership,
+  reloadInstanceIfStale,
+  type CachedInstanceData,
 } from "../services/minigameCache";
 import { logParticipantAudit } from "../utils/audit";
 
 interface PollQuestion {
   id: string;
   options: { id: string }[];
+}
+
+function resolvePollQuestionState(instance: CachedInstanceData) {
+  if (instance?.type !== "poll" || instance.state !== "live") {
+    return { live: false as const, questions: [] as PollQuestion[], currentIndex: -1 };
+  }
+  const config = instance.config as
+    | {
+        questions?: PollQuestion[];
+        question?: string;
+        options?: { id: string }[];
+      }
+    | undefined;
+  const questions: PollQuestion[] =
+    config?.questions ??
+    (config?.question ? [{ id: "main", options: config.options ?? [] }] : []);
+  const currentIndex =
+    (instance.currentQuestionIndex as number | undefined) ??
+    (config?.question ? 0 : -1);
+  return { live: true as const, questions, currentIndex };
 }
 
 function isAlreadyExistsError(err: unknown): boolean {
@@ -38,11 +60,13 @@ export async function answer(req: Request, res: Response) {
       .collection("responses")
       .doc(`${uid}_${questionId}`);
 
-    const [instance, isJoined] = await Promise.all([
-      getOrLoadInstance(slug, id, async () => {
-        const snap = await instanceRef.get();
-        return snap.exists ? (snap.data() ?? null) : null;
-      }),
+    const loadInstance = async () => {
+      const snap = await instanceRef.get();
+      return snap.exists ? (snap.data() ?? null) : null;
+    };
+
+    const [cachedInstance, isJoined] = await Promise.all([
+      getOrLoadInstance(slug, id, loadInstance),
       getOrLoadParticipantMembership(slug, id, uid, async () => {
         const snap = await participantRef.get();
         return snap.exists;
@@ -54,25 +78,25 @@ export async function answer(req: Request, res: Response) {
       return;
     }
 
-    if (instance?.type !== "poll" || instance.state !== "live") {
+    let instance = cachedInstance;
+    let pollState = resolvePollQuestionState(instance);
+    const shouldRefresh =
+      !pollState.live ||
+      (pollState.questions[pollState.currentIndex]?.id !== questionId &&
+        pollState.questions.findIndex((q) => q.id === questionId) >
+          pollState.currentIndex);
+
+    if (shouldRefresh) {
+      instance = await reloadInstanceIfStale(slug, id, instance, loadInstance);
+      pollState = resolvePollQuestionState(instance);
+    }
+
+    if (!pollState.live) {
       res.status(400).json({ success: false, error: "not_live" });
       return;
     }
 
-    const config = instance.config as
-      | {
-          questions?: PollQuestion[];
-          question?: string;
-          options?: { id: string }[];
-        }
-      | undefined;
-    const questions: PollQuestion[] =
-      config?.questions ??
-      (config?.question ? [{ id: "main", options: config.options ?? [] }] : []);
-    const currentIndex =
-      (instance.currentQuestionIndex as number | undefined) ??
-      (config?.question ? 0 : -1);
-    const question = questions[currentIndex];
+    const question = pollState.questions[pollState.currentIndex];
     if (
       !question ||
       question.id !== questionId ||

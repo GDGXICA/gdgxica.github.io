@@ -1,9 +1,8 @@
-import { google } from "googleapis";
-
 export async function readSheet(
   spreadsheetId: string,
   sheetName: string
 ): Promise<{ headers: string[]; rows: string[][] }> {
+  const { google } = await import("googleapis");
   const auth = new google.auth.GoogleAuth({
     scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
   });

@@ -1265,6 +1265,7 @@ export const api = onRequest(
     invoker: "public",
     timeoutSeconds: 300,
     memory: "512MiB",
+    concurrency: 80,
     minInstances: apiMinInstances,
     // Techo de instancias concurrentes. Gen2 usa 100 por defecto, y sin límite
     // tres cosas escalan a la vez sin freno: el coste de un ataque, las
