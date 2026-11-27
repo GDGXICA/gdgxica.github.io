@@ -9,11 +9,11 @@ export interface CachedLiveInstanceEntry {
 
 const instanceCache = new TtlCache<CachedInstanceData>(1500);
 const liveInstancesCache = new TtlCache<CachedLiveInstanceEntry[]>(1500);
-const quizSecretCache = new TtlCache<CachedQuizAnswers>(60_000);
+const quizSecretCache = new TtlCache<CachedQuizAnswers>(15 * 60_000);
 const participantMembershipCache = new TtlCache<boolean>(
-  60_000,
+  15 * 60_000,
   () => Date.now(),
-  2000
+  5000
 );
 
 function instanceKey(slug: string, id: string): string {

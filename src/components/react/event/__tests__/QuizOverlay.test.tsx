@@ -194,4 +194,47 @@ describe("QuizOverlay", () => {
     expect(screen.getByText(/250 puntos/i)).toBeInTheDocument();
     expect(screen.getByText(/Clasificación final/i)).toBeInTheDocument();
   });
+
+  it("keeps the submitted answer locked when a Firestore snapshot delivers a cloned config", async () => {
+    const startedAt = { seconds: Math.floor(Date.now() / 1000) };
+    const { rerender } = render(
+      <QuizOverlay
+        slug="evt"
+        instanceId="inst"
+        uid="u1"
+        alias="Ana"
+        title="Quiz"
+        config={config}
+        currentQuestionIndex={0}
+        currentQuestionStartedAt={startedAt}
+        justJoined
+      />
+    );
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Gemini" }));
+    expect(await screen.findByText(/Respuesta registrada/)).toBeInTheDocument();
+
+    const clonedConfig = {
+      questions: config.questions.map((q) => ({
+        ...q,
+        options: [...q.options],
+      })),
+    };
+    rerender(
+      <QuizOverlay
+        slug="evt"
+        instanceId="inst"
+        uid="u1"
+        alias="Ana"
+        title="Quiz"
+        config={clonedConfig}
+        currentQuestionIndex={0}
+        currentQuestionStartedAt={startedAt}
+        justJoined
+      />
+    );
+    expect(screen.getByText(/Respuesta registrada/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Gemini" })).toBeDisabled();
+  });
 });

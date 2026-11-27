@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { getFirestore } from "@/lib/firebase";
-import { getServerNowMs } from "@/lib/serverClock";
+import {
+  getServerNowMs,
+  hasServerClockSample,
+  syncServerClock,
+} from "@/lib/serverClock";
 import type { QuizConfig } from "../admin/minigame-templates/types";
 import { StageConfetti } from "./StageConfetti";
 import { QuizTimer } from "./QuizTimer";
@@ -65,6 +69,7 @@ export function QuizOverlay({
     [config.questions, currentQuestionIndex]
   );
   const questionId = question?.id ?? null;
+  const questionTimeLimitSec = question?.timeLimitSec ?? null;
   const activeQuestionIdRef = useRef<string | null>(questionId);
   activeQuestionIdRef.current = questionId;
   const initialQuestionIdRef = useRef<string | null>(questionId);
@@ -76,18 +81,25 @@ export function QuizOverlay({
     : null;
 
   useEffect(() => {
+    if (!hasServerClockSample()) {
+      void syncServerClock();
+    }
+  }, []);
+
+  useEffect(() => {
     setReceipt(null);
     setPendingOptionId(null);
     setSubmitting(false);
     setError(null);
     setTimerExpired(
       Boolean(
-        question &&
+        questionId &&
+        questionTimeLimitSec !== null &&
         startedMs !== null &&
-        getServerNowMs() - startedMs >= question.timeLimitSec * 1000
+        getServerNowMs() - startedMs >= questionTimeLimitSec * 1000
       )
     );
-  }, [questionId, startedMs, question]);
+  }, [questionId, startedMs, questionTimeLimitSec]);
 
   useEffect(() => {
     if (

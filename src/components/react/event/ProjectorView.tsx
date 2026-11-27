@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
+import { syncServerClock } from "@/lib/serverClock";
 import { TYPE_LABELS } from "../admin/minigame-templates/types";
 import { HeroQr } from "./HeroQr";
 import { TYPE_DOTS } from "./JoinModal";
@@ -79,6 +80,10 @@ export function ProjectorView({ slug, eventName, joinUrl, qrDataUrl }: Props) {
   }, [selectedJoinUrl, joinUrl, qrDataUrl]);
 
   const closeQr = useCallback(() => setQrExpanded(false), []);
+
+  useEffect(() => {
+    void syncServerClock();
+  }, []);
 
   useEffect(() => {
     setFocusMode(false);

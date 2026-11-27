@@ -65,9 +65,10 @@ export function PollOverlay({
     setError(null);
   }, [questionId]);
 
+  const hasQuestion = Boolean(question);
   useEffect(() => {
     if (
-      !question ||
+      !hasQuestion ||
       !uid ||
       restoredInitialRef.current ||
       initialQuestionIdRef.current !== questionId
@@ -97,7 +98,7 @@ export function PollOverlay({
     return () => {
       cancelled = true;
     };
-  }, [slug, instanceId, uid, question, questionId]);
+  }, [slug, instanceId, uid, hasQuestion, questionId]);
 
   const counts = aggregates?.optionCounts ?? {};
   const totalForQuestion = (question?.options ?? []).reduce(

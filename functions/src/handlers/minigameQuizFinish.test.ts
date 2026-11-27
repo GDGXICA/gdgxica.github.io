@@ -81,12 +81,11 @@ vi.mock("firebase-admin", () => ({
           options?: { merge?: boolean }
         ) => {
           ops.push(() => {
-            mocks.data.set(
-              document.path,
-              options?.merge
-                ? { ...mocks.data.get(document.path), ...data }
-                : data
-            );
+            if (options?.merge) {
+              update(document.path, data);
+            } else {
+              mocks.data.set(document.path, data);
+            }
           });
         },
         commit: async () => {
@@ -167,6 +166,21 @@ describe("finishQuestion", () => {
     await finishQuestion(payload);
     expect(mocks.data.get(`${base}/participants/u1`)).toMatchObject({
       quizScore: 60,
+    });
+  });
+
+  it("scores cleanly even when a participant document is missing", async () => {
+    mocks.data.delete(`${base}/participants/u1`);
+    vi.setSystemTime(new Date(32000));
+    await finishQuestion(payload);
+    expect(mocks.data.get(`${base}/participants/u1`)).toMatchObject({
+      quizScore: 60,
+      lastQuizPoints: 60,
+      lastQuizQuestionId: "q1",
+    });
+    expect(mocks.data.get(`${base}/aggregates/current`)).toMatchObject({
+      revealedAnswers: { q1: "a" },
+      optionCounts: { "q1:a": 1 },
     });
   });
 });

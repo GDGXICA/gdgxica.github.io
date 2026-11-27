@@ -10,6 +10,10 @@ import {
   type CachedInstanceData,
 } from "../services/minigameCache";
 import { logParticipantAudit } from "../utils/audit";
+import {
+  isAlreadyExistsError,
+  isTransientFirestoreError,
+} from "../utils/firestoreErrors";
 
 interface PollQuestion {
   id: string;
@@ -18,7 +22,11 @@ interface PollQuestion {
 
 function resolvePollQuestionState(instance: CachedInstanceData) {
   if (instance?.type !== "poll" || instance.state !== "live") {
-    return { live: false as const, questions: [] as PollQuestion[], currentIndex: -1 };
+    return {
+      live: false as const,
+      questions: [] as PollQuestion[],
+      currentIndex: -1,
+    };
   }
   const config = instance.config as
     | {
@@ -34,15 +42,6 @@ function resolvePollQuestionState(instance: CachedInstanceData) {
     (instance.currentQuestionIndex as number | undefined) ??
     (config?.question ? 0 : -1);
   return { live: true as const, questions, currentIndex };
-}
-
-function isAlreadyExistsError(err: unknown): boolean {
-  const code = (err as { code?: unknown } | null)?.code;
-  return (
-    code === 6 ||
-    code === "already-exists" ||
-    (err instanceof Error && /already exists/i.test(err.message))
-  );
 }
 
 export async function answer(req: Request, res: Response) {
@@ -133,6 +132,7 @@ export async function answer(req: Request, res: Response) {
     );
     res.json({ success: true, data: { questionId, optionId } });
   } catch (err) {
-    res.status(500).json({ success: false, error: safeError(err) });
+    const status = isTransientFirestoreError(err) ? 503 : 500;
+    res.status(status).json({ success: false, error: safeError(err) });
   }
 }

@@ -3,6 +3,10 @@ import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import type { DocumentReference } from "firebase-admin/firestore";
 import { logParticipantAudit } from "../utils/audit";
+import {
+  isAlreadyExistsError,
+  isTransientFirestoreError,
+} from "../utils/firestoreErrors";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import { isCleanAlias } from "../services/profanity";
@@ -44,15 +48,6 @@ interface ClassicDealPlan {
   candidates: CardCandidate[];
   winIndices: number[];
   maxWinnersPerDraw: number;
-}
-
-function isAlreadyExistsError(err: unknown): boolean {
-  const code = (err as { code?: unknown } | null)?.code;
-  return (
-    code === 6 ||
-    code === "already-exists" ||
-    (err instanceof Error && /already exists/i.test(err.message))
-  );
 }
 
 async function prepareClassicDeal(
@@ -300,6 +295,7 @@ export async function join(req: Request, res: Response) {
       },
     });
   } catch (err) {
-    res.status(500).json({ success: false, error: safeError(err) });
+    const status = isTransientFirestoreError(err) ? 503 : 500;
+    res.status(status).json({ success: false, error: safeError(err) });
   }
 }

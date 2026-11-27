@@ -12,6 +12,10 @@ import {
   type CachedInstanceData,
 } from "../services/minigameCache";
 import { logParticipantAudit } from "../utils/audit";
+import {
+  isAlreadyExistsError,
+  isTransientFirestoreError,
+} from "../utils/firestoreErrors";
 
 interface QuizQuestion {
   id: string;
@@ -22,10 +26,13 @@ interface QuizQuestion {
 
 function resolveQuizQuestionState(instance: CachedInstanceData) {
   if (instance?.type !== "quiz" || instance.state !== "live") {
-    return { live: false as const, questions: [] as QuizQuestion[], currentIndex: -1 };
+    return {
+      live: false as const,
+      questions: [] as QuizQuestion[],
+      currentIndex: -1,
+    };
   }
-  const config = instance.config as
-    { questions?: QuizQuestion[] } | undefined;
+  const config = instance.config as { questions?: QuizQuestion[] } | undefined;
   const questions = config?.questions ?? [];
   const currentIndex =
     typeof instance.currentQuestionIndex === "number"
@@ -36,14 +43,11 @@ function resolveQuizQuestionState(instance: CachedInstanceData) {
 
 const SCORING_LOCK_TTL_MS = 30_000;
 const SCORE_BATCH_SIZE = 200;
+const LOCK_WAIT_TIMEOUT_MS = 4_000;
+const LOCK_WAIT_POLL_MS = 200;
 
-function isAlreadyExistsError(err: unknown): boolean {
-  const code = (err as { code?: unknown } | null)?.code;
-  return (
-    code === 6 ||
-    code === "already-exists" ||
-    (err instanceof Error && /already exists/i.test(err.message))
-  );
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function scoreQuizAnswer(
@@ -186,7 +190,8 @@ export async function answer(req: Request, res: Response) {
     );
     res.json({ success: true, data: { questionId, optionId } });
   } catch (err) {
-    res.status(500).json({ success: false, error: safeError(err) });
+    const status = isTransientFirestoreError(err) ? 503 : 500;
+    res.status(status).json({ success: false, error: safeError(err) });
   }
 }
 
@@ -234,22 +239,31 @@ export async function finishQuestion({
     throw new Error("Question deadline not reached");
   }
 
-  const acquired = await db.runTransaction(async (tx) => {
+  const lockResult = await db.runTransaction(async (tx) => {
     const freshRound = await tx.get(roundRef);
     const data = freshRound.data();
     if (!freshRound.exists || data?.startedAtMillis !== startedAtMillis) {
-      return false;
+      return "skip" as const;
     }
-    if (data?.finishedAt) return false;
+    if (data?.finishedAt) return "done" as const;
     const lockedAt = data?.scoringLockedAt as number | undefined;
     const now = Date.now();
     if (typeof lockedAt === "number" && now - lockedAt < SCORING_LOCK_TTL_MS) {
-      return false;
+      return "locked" as const;
     }
     tx.update(roundRef, { scoringLockedAt: now });
-    return true;
+    return "acquired" as const;
   });
-  if (!acquired) return;
+  if (lockResult === "skip" || lockResult === "done") return;
+  if (lockResult === "locked") {
+    const waitDeadline = Date.now() + LOCK_WAIT_TIMEOUT_MS;
+    while (Date.now() < waitDeadline) {
+      await sleep(LOCK_WAIT_POLL_MS);
+      const polled = await roundRef.get();
+      if (polled.data()?.finishedAt) return;
+    }
+    return;
+  }
 
   const answersSnap = await instanceRef
     .collection("quiz_answers")
@@ -258,22 +272,30 @@ export async function finishQuestion({
   const answers = answersSnap.docs;
   const unscored = answers.filter((doc) => !doc.data().scoredAt);
 
+  const batchCommits: Promise<unknown>[] = [];
   for (let offset = 0; offset < unscored.length; offset += SCORE_BATCH_SIZE) {
     const batch = db.batch();
     for (const answerDoc of unscored.slice(offset, offset + SCORE_BATCH_SIZE)) {
       const data = answerDoc.data();
-      batch.update(instanceRef.collection("participants").doc(data.uid), {
-        quizScore: FieldValue.increment(data.pointsEarned),
-        quizElapsedMs: FieldValue.increment(
-          data.isCorrect ? data.elapsedMs : 0
-        ),
-        quizAnsweredQuestions: FieldValue.arrayUnion(questionId),
-        lastQuizPoints: data.pointsEarned,
-        lastQuizQuestionId: questionId,
-      });
+      batch.set(
+        instanceRef.collection("participants").doc(data.uid),
+        {
+          quizScore: FieldValue.increment(data.pointsEarned),
+          quizElapsedMs: FieldValue.increment(
+            data.isCorrect ? data.elapsedMs : 0
+          ),
+          quizAnsweredQuestions: FieldValue.arrayUnion(questionId),
+          lastQuizPoints: data.pointsEarned,
+          lastQuizQuestionId: questionId,
+        },
+        { merge: true }
+      );
       batch.update(answerDoc.ref, { scoredAt: FieldValue.serverTimestamp() });
     }
-    await batch.commit();
+    batchCommits.push(batch.commit());
+  }
+  if (batchCommits.length > 0) {
+    await Promise.all(batchCommits);
   }
 
   const counts: Record<string, number> = {};
@@ -342,7 +364,9 @@ export async function finishQuestion({
 export const finishQuizQuestion = onTaskDispatched<FinishPayload>(
   {
     region: "us-central1",
-    retryConfig: { maxAttempts: 5, minBackoffSeconds: 5 },
+    memory: "512MiB",
+    cpu: 1,
+    retryConfig: { maxAttempts: 5, minBackoffSeconds: 2 },
   },
   async (request) => finishQuestion(request.data)
 );

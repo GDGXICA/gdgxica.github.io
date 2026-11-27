@@ -491,7 +491,7 @@ const realApi = {
       "PATCH",
       `/events/${encodeURIComponent(slug)}/minigames/${id}/state`,
       { state },
-      { timeoutMs: 12_000 }
+      { timeoutMs: 25_000 }
     ),
   advanceQuizQuestion: (slug: string, id: string) =>
     request<{
@@ -502,14 +502,14 @@ const realApi = {
       "POST",
       `/events/${encodeURIComponent(slug)}/minigames/${id}/quiz/advance`,
       undefined,
-      { timeoutMs: 12_000 }
+      { timeoutMs: 25_000 }
     ),
   advancePollQuestion: (slug: string, id: string) =>
     request<{ id: string; currentQuestionIndex: number }>(
       "POST",
       `/events/${encodeURIComponent(slug)}/minigames/${id}/poll/advance`,
       undefined,
-      { timeoutMs: 12_000 }
+      { timeoutMs: 25_000 }
     ),
   answerQuizQuestion: (
     slug: string,
@@ -671,7 +671,7 @@ const realApi = {
       "POST",
       `/events/${encodeURIComponent(slug)}/minigames/${id}/roulette/spin`,
       undefined,
-      { timeoutMs: 12_000 }
+      { timeoutMs: 25_000 }
     ),
 
   // Classic bingo: the admin calls a ball (admin-only)...
