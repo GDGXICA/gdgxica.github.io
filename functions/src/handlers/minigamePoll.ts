@@ -3,7 +3,25 @@ import * as admin from "firebase-admin";
 import { Timestamp } from "firebase-admin/firestore";
 import type { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
-import { writeAuditLog } from "../utils/audit";
+import {
+  getOrLoadInstance,
+  getOrLoadParticipantMembership,
+} from "../services/minigameCache";
+import { logParticipantAudit } from "../utils/audit";
+
+interface PollQuestion {
+  id: string;
+  options: { id: string }[];
+}
+
+function isAlreadyExistsError(err: unknown): boolean {
+  const code = (err as { code?: unknown } | null)?.code;
+  return (
+    code === 6 ||
+    code === "already-exists" ||
+    (err instanceof Error && /already exists/i.test(err.message))
+  );
+}
 
 export async function answer(req: Request, res: Response) {
   try {
@@ -19,59 +37,67 @@ export async function answer(req: Request, res: Response) {
     const responseRef = instanceRef
       .collection("responses")
       .doc(`${uid}_${questionId}`);
-    const outcome = await db.runTransaction(async (tx) => {
-      const [instanceSnap, participantSnap, existing] = await Promise.all([
-        tx.get(instanceRef),
-        tx.get(participantRef),
-        tx.get(responseRef),
-      ]);
-      if (!participantSnap.exists) return "not_joined";
-      if (existing.exists) return "already_answered";
-      const instance = instanceSnap.data();
-      if (instance?.type !== "poll" || instance.state !== "live")
-        return "not_live";
-      const questions =
-        instance.config?.questions ??
-        (instance.config?.question
-          ? [
-              {
-                id: "main",
-                prompt: instance.config.question,
-                options: instance.config.options,
-              },
-            ]
-          : []);
-      const currentIndex =
-        instance.currentQuestionIndex ?? (instance.config?.question ? 0 : -1);
-      const question = questions[currentIndex] as
-        { id: string; options: { id: string }[] } | undefined;
-      if (
-        !question ||
-        question.id !== questionId ||
-        !question.options.some((option) => option.id === optionId)
-      )
-        return "invalid_question";
-      tx.create(responseRef, {
+
+    const [instance, isJoined] = await Promise.all([
+      getOrLoadInstance(slug, id, async () => {
+        const snap = await instanceRef.get();
+        return snap.exists ? (snap.data() ?? null) : null;
+      }),
+      getOrLoadParticipantMembership(slug, id, uid, async () => {
+        const snap = await participantRef.get();
+        return snap.exists;
+      }),
+    ]);
+
+    if (!isJoined) {
+      res.status(403).json({ success: false, error: "not_joined" });
+      return;
+    }
+
+    if (instance?.type !== "poll" || instance.state !== "live") {
+      res.status(400).json({ success: false, error: "not_live" });
+      return;
+    }
+
+    const config = instance.config as
+      | {
+          questions?: PollQuestion[];
+          question?: string;
+          options?: { id: string }[];
+        }
+      | undefined;
+    const questions: PollQuestion[] =
+      config?.questions ??
+      (config?.question ? [{ id: "main", options: config.options ?? [] }] : []);
+    const currentIndex =
+      (instance.currentQuestionIndex as number | undefined) ??
+      (config?.question ? 0 : -1);
+    const question = questions[currentIndex];
+    if (
+      !question ||
+      question.id !== questionId ||
+      !question.options.some((option) => option.id === optionId)
+    ) {
+      res.status(400).json({ success: false, error: "invalid_question" });
+      return;
+    }
+
+    try {
+      await responseRef.create({
         uid,
         questionId,
         optionId,
         answeredAt: Timestamp.now(),
       });
-      return "ok";
-    });
-    if (outcome !== "ok") {
-      res
-        .status(
-          outcome === "not_joined"
-            ? 403
-            : outcome === "already_answered"
-              ? 409
-              : 400
-        )
-        .json({ success: false, error: outcome });
-      return;
+    } catch (err) {
+      if (isAlreadyExistsError(err)) {
+        res.status(409).json({ success: false, error: "already_answered" });
+        return;
+      }
+      throw err;
     }
-    await writeAuditLog(
+
+    logParticipantAudit(
       {
         action: "minigame_participant.poll.answer",
         performedBy: uid,

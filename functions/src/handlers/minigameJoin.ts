@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import type { DocumentReference } from "firebase-admin/firestore";
-import { writeAuditLog } from "../utils/audit";
+import { logParticipantAudit } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import { isCleanAlias } from "../services/profanity";
@@ -15,6 +15,7 @@ import {
   type CardCandidate,
 } from "../services/bingoClassic";
 import { ensureDrawOrder, winSlotsCol } from "../services/bingoDrawStore";
+import { markParticipantJoined } from "../services/minigameCache";
 
 interface BingoConfig {
   terms?: string[];
@@ -35,14 +36,19 @@ interface JoinedInstanceSummary {
   bingoCard?: string[];
 }
 
-// Everything the classic-mode dealer needs that can be computed before
-// the transaction opens: a handful of scored candidate cards and the
-// balls they would win on. The sealed sequence never changes, so this is
-// safe to do outside.
 interface ClassicDealPlan {
   candidates: CardCandidate[];
   winIndices: number[];
   maxWinnersPerDraw: number;
+}
+
+function isAlreadyExistsError(err: unknown): boolean {
+  const code = (err as { code?: unknown } | null)?.code;
+  return (
+    code === 6 ||
+    code === "already-exists" ||
+    (err instanceof Error && /already exists/i.test(err.message))
+  );
 }
 
 async function prepareClassicDeal(
@@ -71,23 +77,17 @@ async function prepareClassicDeal(
       maxWinnersPerDraw: Math.max(1, config.maxWinnersPerDraw ?? 1),
     };
   } catch {
-    // Malformed bank (fewer than 16 usable terms). Same tolerance as
-    // conference mode: hand out no card rather than fail the whole join.
     return null;
   }
 }
 
-// POST /api/events/:slug/minigames/join
-//
-// Public participant entry point. Auth uses any Firebase ID token
-// (anonymous OK). Idempotent: subsequent calls return the alias that
-// was stored on the first successful join, even if the request body
-// carries a different alias — alias is fixed per (event, uid).
 export async function join(req: Request, res: Response) {
   try {
     const slug = req.params.slug as string;
     const user = (req as AuthenticatedRequest).user;
-    const requestedAlias = (req.body as { alias: string }).alias.trim();
+    const body = req.body as { alias: string; instanceId?: string };
+    const requestedAlias = body.alias.trim();
+    const targetInstanceId = body.instanceId;
 
     if (!isCleanAlias(requestedAlias)) {
       res.status(400).json({ success: false, error: "Alias no permitido" });
@@ -95,15 +95,43 @@ export async function join(req: Request, res: Response) {
     }
 
     const db = admin.firestore();
-    const instancesSnap = await db
+    const minigamesCol = db
       .collection("events")
       .doc(slug)
-      .collection("minigames")
-      .where("state", "==", "live")
-      .limit(50)
-      .get();
+      .collection("minigames");
 
-    if (instancesSnap.empty) {
+    let targetDocs: Array<{
+      id: string;
+      ref: DocumentReference;
+      data: () => InstanceData;
+    }>;
+
+    if (targetInstanceId) {
+      const singleSnap = await minigamesCol.doc(targetInstanceId).get();
+      const singleData = singleSnap.data() as InstanceData | undefined;
+      targetDocs =
+        singleSnap.exists && singleData?.state === "live"
+          ? [
+              {
+                id: singleSnap.id,
+                ref: singleSnap.ref,
+                data: () => singleData,
+              },
+            ]
+          : [];
+    } else {
+      const instancesSnap = await minigamesCol
+        .where("state", "==", "live")
+        .limit(50)
+        .get();
+      targetDocs = instancesSnap.docs.map((doc) => ({
+        id: doc.id,
+        ref: doc.ref,
+        data: () => doc.data() as InstanceData,
+      }));
+    }
+
+    if (targetDocs.length === 0) {
       res.json({
         success: true,
         data: { alias: requestedAlias, instances: [] },
@@ -111,15 +139,11 @@ export async function join(req: Request, res: Response) {
       return;
     }
 
-    // Run one transaction per instance. Parallel is safe because each
-    // transaction touches a different participant doc, so there is no
-    // contention. Bingo cards are deterministic per (uid, instanceId)
-    // so retries land on the same card.
     let canonicalAlias = requestedAlias;
     const summaries = await Promise.all(
-      instancesSnap.docs.map(async (instanceDoc) => {
+      targetDocs.map(async (instanceDoc) => {
         const instanceId = instanceDoc.id;
-        const instanceData = instanceDoc.data() as InstanceData;
+        const instanceData = instanceDoc.data();
         const participantRef = instanceDoc.ref
           .collection("participants")
           .doc(user.uid);
@@ -134,107 +158,110 @@ export async function join(req: Request, res: Response) {
           instanceData.type === "bingo" &&
           instanceData.config?.classic === true;
 
-        // Scoring candidate cards needs the sealed calling sequence, so
-        // it happens before the transaction opens — a transaction may
-        // not read anything after its first write.
-        const deal = isClassicBingo
-          ? await prepareClassicDeal(
-              instanceDoc.ref,
-              instanceId,
-              instanceData.config ?? {},
-              user.uid
-            )
-          : null;
+        if (isClassicBingo) {
+          const deal = await prepareClassicDeal(
+            instanceDoc.ref,
+            instanceId,
+            instanceData.config ?? {},
+            user.uid
+          );
 
-        await db.runTransaction(async (tx) => {
-          const existing = await tx.get(participantRef);
-          if (existing.exists) {
-            const data = existing.data() as
-              { alias?: string; bingoCard?: string[] } | undefined;
-            // Lock alias to whatever was stored first.
-            if (data?.alias) {
-              canonicalAlias = data.alias;
+          await db.runTransaction(async (tx) => {
+            const existing = await tx.get(participantRef);
+            if (existing.exists) {
+              const data = existing.data() as
+                { alias?: string; bingoCard?: string[] } | undefined;
+              if (data?.alias) canonicalAlias = data.alias;
+              if (data?.bingoCard) summary.bingoCard = data.bingoCard;
+              summary.joined = false;
+              return;
             }
-            if (data?.bingoCard) {
-              summary.bingoCard = data.bingoCard;
-            }
-            summary.joined = false;
-            return;
-          }
 
-          const participantDoc: Record<string, unknown> = {
-            uid: user.uid,
-            alias: requestedAlias,
-            joinedAt: FieldValue.serverTimestamp(),
-          };
+            const participantDoc: Record<string, unknown> = {
+              uid: user.uid,
+              alias: requestedAlias,
+              joinedAt: FieldValue.serverTimestamp(),
+            };
 
-          if (deal) {
-            // Classic mode. Which ball each card wins on is already
-            // decided by the sealed sequence, so we look at what is
-            // taken and deal a card that wins on a free ball. That is
-            // what stops five people from claiming at once when there
-            // are three prizes.
-            const slots = winSlotsCol(instanceDoc.ref);
-            const takenSnap = await tx.get(
-              slots.where("winIndex", "in", deal.winIndices)
-            );
-            const occupancy: Record<number, number> = {};
-            for (const doc of takenSnap.docs) {
-              const idx = (doc.data() as { winIndex?: number }).winIndex;
-              if (typeof idx === "number") {
-                occupancy[idx] = (occupancy[idx] ?? 0) + 1;
+            if (deal) {
+              const slots = winSlotsCol(instanceDoc.ref);
+              const takenSnap = await tx.get(
+                slots.where("winIndex", "in", deal.winIndices)
+              );
+              const occupancy: Record<number, number> = {};
+              for (const doc of takenSnap.docs) {
+                const idx = (doc.data() as { winIndex?: number }).winIndex;
+                if (typeof idx === "number") {
+                  occupancy[idx] = (occupancy[idx] ?? 0) + 1;
+                }
               }
-            }
 
-            const pick = pickStaggeredCard(
-              deal.candidates,
-              occupancy,
-              deal.maxWinnersPerDraw
-            );
-            if (pick) {
-              participantDoc.bingoCard = pick.card;
-              summary.bingoCard = pick.card;
-              // The reservation lives in a private collection: the
-              // participant doc is world-readable, and "you win on ball
-              // 31" would spoil the game for everyone who looked.
-              tx.set(slots.doc(user.uid), {
-                uid: user.uid,
-                winIndex: pick.winIndex,
-                deal: pick.attempt,
-                relaxed: pick.relaxed,
-                createdAt: FieldValue.serverTimestamp(),
-              });
+              const pick = pickStaggeredCard(
+                deal.candidates,
+                occupancy,
+                deal.maxWinnersPerDraw
+              );
+              if (pick) {
+                participantDoc.bingoCard = pick.card;
+                summary.bingoCard = pick.card;
+                tx.set(slots.doc(user.uid), {
+                  uid: user.uid,
+                  winIndex: pick.winIndex,
+                  deal: pick.attempt,
+                  relaxed: pick.relaxed,
+                  createdAt: FieldValue.serverTimestamp(),
+                });
+              } else {
+                participantDoc.bingoCard = [];
+              }
             } else {
               participantDoc.bingoCard = [];
             }
-          } else if (instanceData.type === "bingo") {
-            const terms = instanceData.config?.terms ?? [];
-            // generateBingoCard validates length and dedupes; if the
-            // template is somehow short we surface a clean error
-            // instead of crashing the whole join.
-            try {
-              const card = generateBingoCard(
-                terms,
-                `${user.uid}:${instanceId}`
-              );
-              participantDoc.bingoCard = card;
-              summary.bingoCard = card;
-            } catch {
-              // Skip card seeding for malformed bingo templates; the
-              // participant doc is still useful (alias, joinedAt).
-              participantDoc.bingoCard = [];
-            }
+
+            tx.set(participantRef, participantDoc);
+            summary.joined = true;
+          });
+
+          markParticipantJoined(slug, instanceId, user.uid);
+          return summary;
+        }
+
+        const participantDoc: Record<string, unknown> = {
+          uid: user.uid,
+          alias: requestedAlias,
+          joinedAt: FieldValue.serverTimestamp(),
+        };
+
+        if (instanceData.type === "bingo") {
+          const terms = instanceData.config?.terms ?? [];
+          try {
+            const card = generateBingoCard(terms, `${user.uid}:${instanceId}`);
+            participantDoc.bingoCard = card;
+            summary.bingoCard = card;
+          } catch {
+            participantDoc.bingoCard = [];
           }
+        }
 
-          tx.set(participantRef, participantDoc);
+        try {
+          await participantRef.create(participantDoc);
           summary.joined = true;
-        });
+        } catch (err) {
+          if (!isAlreadyExistsError(err)) throw err;
+          const existing = await participantRef.get();
+          const data = existing.data() as
+            { alias?: string; bingoCard?: string[] } | undefined;
+          if (data?.alias) canonicalAlias = data.alias;
+          if (data?.bingoCard) summary.bingoCard = data.bingoCard;
+          summary.joined = false;
+        }
 
+        markParticipantJoined(slug, instanceId, user.uid);
         return summary;
       })
     );
 
-    await writeAuditLog(
+    logParticipantAudit(
       {
         action: "minigame_participant.join",
         performedBy: user.uid,

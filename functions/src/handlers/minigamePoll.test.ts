@@ -3,34 +3,42 @@ import type { Request, Response } from "express";
 
 const mocks = vi.hoisted(() => ({
   data: new Map<string, Record<string, unknown>>(),
-  audit: vi.fn(async () => undefined),
+  logParticipantAudit: vi.fn(),
 }));
+
 const ref = (path: string) => ({
   path,
+  get: async () => ({
+    exists: mocks.data.has(path),
+    data: () => mocks.data.get(path),
+  }),
+  create: async (data: Record<string, unknown>) => {
+    if (mocks.data.has(path)) {
+      const err = new Error("ALREADY_EXISTS") as Error & { code: number };
+      err.code = 6;
+      throw err;
+    }
+    mocks.data.set(path, data);
+  },
   collection: (name: string) => ({
     doc: (id: string) => ref(`${path}/${name}/${id}`),
   }),
 });
+
 vi.mock("firebase-admin", () => ({
   firestore: () => ({
     doc: (path: string) => ref(path),
-    runTransaction: async (callback: (tx: unknown) => Promise<unknown>) =>
-      callback({
-        get: async (document: { path: string }) => ({
-          exists: mocks.data.has(document.path),
-          data: () => mocks.data.get(document.path),
-        }),
-        create: (document: { path: string }, data: Record<string, unknown>) =>
-          mocks.data.set(document.path, data),
-      }),
   }),
 }));
 vi.mock("firebase-admin/firestore", () => ({
   Timestamp: { now: () => "SERVER_TIME" },
 }));
-vi.mock("../utils/audit", () => ({ writeAuditLog: mocks.audit }));
+vi.mock("../utils/audit", () => ({
+  logParticipantAudit: mocks.logParticipantAudit,
+}));
 
 import { answer } from "./minigamePoll";
+import { clearMinigameCaches } from "../services/minigameCache";
 
 const base = "events/devfest/minigames/poll-1";
 const request = (questionId: string, optionId: string) =>
@@ -57,7 +65,8 @@ function response() {
 
 beforeEach(() => {
   mocks.data.clear();
-  mocks.audit.mockClear();
+  mocks.logParticipantAudit.mockClear();
+  clearMinigameCaches();
   mocks.data.set(base, {
     type: "poll",
     state: "live",
@@ -77,6 +86,7 @@ describe("poll answer API", () => {
     const res = response();
     await answer(request("q2", "b"), res);
     expect(res.statusCode).toBe(200);
+    expect(mocks.logParticipantAudit).toHaveBeenCalledTimes(1);
     expect(mocks.data.get(`${base}/responses/u1_q2`)).toEqual({
       uid: "u1",
       questionId: "q2",

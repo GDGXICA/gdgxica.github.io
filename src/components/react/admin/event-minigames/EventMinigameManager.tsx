@@ -92,7 +92,9 @@ export function EventMinigameManager({ initialSlug }: Props) {
     const res = await api.setMinigameState(slug, id, state);
     if (res.success) {
       setToast({ message: `Estado: ${state}`, type: "success" });
-      await reload();
+      setInstances((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, state } : item))
+      );
     } else {
       setToast({
         message: res.error || "Error al cambiar estado",
@@ -108,7 +110,21 @@ export function EventMinigameManager({ initialSlug }: Props) {
     const res = await api.advanceQuizQuestion(slug, id);
     if (res.success) {
       setToast({ message: "Pregunta avanzada", type: "success" });
-      await reload();
+      setInstances((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                currentQuestionIndex:
+                  res.data?.currentQuestionIndex ??
+                  (item.currentQuestionIndex ?? -1) + 1,
+                currentQuestionStartedAt:
+                  res.data?.currentQuestionStartedAt ??
+                  item.currentQuestionStartedAt,
+              }
+            : item
+        )
+      );
     } else {
       setToast({
         message: res.error || "Error al avanzar pregunta",
@@ -124,7 +140,18 @@ export function EventMinigameManager({ initialSlug }: Props) {
     const res = await api.advancePollQuestion(slug, id);
     if (res.success) {
       setToast({ message: "Pregunta avanzada", type: "success" });
-      await reload();
+      setInstances((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                currentQuestionIndex:
+                  res.data?.currentQuestionIndex ??
+                  (item.currentQuestionIndex ?? -1) + 1,
+              }
+            : item
+        )
+      );
     } else
       setToast({
         message: res.error || "Error al avanzar pregunta",

@@ -122,6 +122,7 @@ describe("firebase.ts Firestore cache", () => {
     expect(mocks.persistentLocalCache).not.toHaveBeenCalled();
     expect(mocks.initializeFirestore).toHaveBeenCalledWith(expect.anything(), {
       localCache: { kind: "memory" },
+      experimentalAutoDetectLongPolling: true,
     });
   });
 
@@ -137,6 +138,7 @@ describe("firebase.ts Firestore cache", () => {
     });
     expect(mocks.initializeFirestore).toHaveBeenCalledWith(expect.anything(), {
       localCache: { kind: "persistent" },
+      experimentalAutoDetectLongPolling: true,
     });
   });
 });

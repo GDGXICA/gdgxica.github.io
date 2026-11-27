@@ -250,6 +250,12 @@ export async function writeAuditLog(
   }
 }
 
+export function logParticipantAudit(entry: AuditEntry, req?: Request): void {
+  const stored = buildAuditEntry(entry, req);
+  if (req) req.auditClaimed = true;
+  mirrorToCloudLogging(stored, req);
+}
+
 /**
  * Triggers a site rebuild without blocking the response, logging a warning if
  * the dispatch fails instead of swallowing the error.

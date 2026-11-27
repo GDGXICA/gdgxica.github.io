@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TYPE_COLORS, TYPE_LABELS } from "../minigame-templates/types";
 import {
   MODE_LABELS,
@@ -36,6 +36,27 @@ function questionCount(instance: MinigameInstance): number {
   if (instance.type !== "quiz") return 0;
   const questions = (instance.config?.questions as unknown[] | undefined) ?? [];
   return questions.length;
+}
+
+function activeQuizQuestionLimitSec(instance: MinigameInstance): number | null {
+  if (instance.type !== "quiz") return null;
+  const idx = instance.currentQuestionIndex;
+  if (idx === undefined || idx < 0) return null;
+  const questions =
+    (instance.config?.questions as { timeLimitSec?: number }[] | undefined) ??
+    [];
+  const q = questions[idx];
+  return typeof q?.timeLimitSec === "number" ? q.timeLimitSec : null;
+}
+
+function startedAtMillis(
+  ts: MinigameInstance["currentQuestionStartedAt"]
+): number | null {
+  if (!ts) return null;
+  const secs = ts.seconds ?? ts._seconds;
+  if (typeof secs !== "number") return null;
+  const nanos = ts.nanoseconds ?? ts._nanoseconds ?? 0;
+  return secs * 1000 + Math.floor(nanos / 1_000_000);
 }
 
 export function InstanceCard({
@@ -80,6 +101,31 @@ export function InstanceCard({
         ? 1
         : 0;
   const isOnLastQuestion = isQuiz && currentQ >= totalQuestions;
+  const quizLimitSec = activeQuizQuestionLimitSec(instance);
+  const quizStartedMs = startedAtMillis(instance.currentQuestionStartedAt);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const quizRemainingSec =
+    isQuiz &&
+    instance.state === "live" &&
+    quizLimitSec !== null &&
+    quizStartedMs !== null
+      ? Math.max(
+          0,
+          Math.ceil(
+            (quizLimitSec * 1000 - Math.max(0, nowMs - quizStartedMs)) / 1000
+          )
+        )
+      : null;
+
+  useEffect(() => {
+    setNowMs(Date.now());
+  }, [quizStartedMs, currentQ]);
+
+  useEffect(() => {
+    if (quizRemainingSec === null || quizRemainingSec <= 0) return;
+    const timer = window.setTimeout(() => setNowMs(Date.now()), 1000);
+    return () => window.clearTimeout(timer);
+  }, [quizRemainingSec, nowMs]);
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
@@ -107,6 +153,13 @@ export function InstanceCard({
           {isQuiz && (
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               Pregunta {currentQ} de {totalQuestions}
+              {quizRemainingSec !== null && (
+                <span className="ml-2 font-mono">
+                  {quizRemainingSec > 0
+                    ? `· ${quizRemainingSec}s`
+                    : "· Tiempo terminado"}
+                </span>
+              )}
             </p>
           )}
           {isPoll && (

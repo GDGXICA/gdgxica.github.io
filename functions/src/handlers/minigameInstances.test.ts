@@ -503,7 +503,14 @@ describe("minigameInstances handler", () => {
       expect(mocks.batchSet).toHaveBeenCalled();
       expect(res.__body).toEqual({
         success: true,
-        data: { id: "i1", currentQuestionIndex: 1 },
+        data: {
+          id: "i1",
+          currentQuestionIndex: 1,
+          currentQuestionStartedAt: {
+            seconds: 1700000000,
+            nanoseconds: 0,
+          },
+        },
       });
     });
 

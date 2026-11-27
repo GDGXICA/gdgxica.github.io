@@ -4,13 +4,30 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { onTaskDispatched } from "firebase-functions/v2/tasks";
 import type { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
-import { writeAuditLog } from "../utils/audit";
+import {
+  getOrLoadInstance,
+  getOrLoadParticipantMembership,
+  getOrLoadQuizAnswers,
+} from "../services/minigameCache";
+import { logParticipantAudit } from "../utils/audit";
 
 interface QuizQuestion {
   id: string;
   options: { id: string }[];
   timeLimitSec: number;
   points: number;
+}
+
+const SCORING_LOCK_TTL_MS = 30_000;
+const SCORE_BATCH_SIZE = 200;
+
+function isAlreadyExistsError(err: unknown): boolean {
+  const code = (err as { code?: unknown } | null)?.code;
+  return (
+    code === 6 ||
+    code === "already-exists" ||
+    (err instanceof Error && /already exists/i.test(err.message))
+  );
 }
 
 export function scoreQuizAnswer(
@@ -42,44 +59,78 @@ export async function answer(req: Request, res: Response) {
       .doc(`${uid}_${questionId}`);
     const participantRef = instanceRef.collection("participants").doc(uid);
     const secretRef = instanceRef.collection("secret").doc("quiz");
-    const outcome = await db.runTransaction(async (tx) => {
-      const [instanceSnap, participantSnap, existing, secretSnap] =
-        await Promise.all([
-          tx.get(instanceRef),
-          tx.get(participantRef),
-          tx.get(answerRef),
-          tx.get(secretRef),
-        ]);
-      if (!participantSnap.exists) return "not_joined";
-      if (existing.exists) return "already_answered";
-      const instance = instanceSnap.data();
-      if (instance?.type !== "quiz" || instance.state !== "live")
-        return "not_live";
-      const question = (instance.config?.questions ?? [])[
-        instance.currentQuestionIndex
-      ] as QuizQuestion | undefined;
-      if (
-        !question ||
-        question.id !== questionId ||
-        !question.options.some((o) => o.id === optionId)
-      )
-        return "invalid_question";
-      const startedAt = instance.currentQuestionStartedAt as
-        Timestamp | undefined;
-      if (!startedAt?.toMillis) return "not_live";
-      const answeredAt = Timestamp.now();
-      const elapsedMs = answeredAt.toMillis() - startedAt.toMillis();
-      const limitMs = question.timeLimitSec * 1000;
-      if (elapsedMs < 0 || elapsedMs >= limitMs) return "expired";
-      const correctId = (
-        secretSnap.data()?.answers as Record<string, string> | undefined
-      )?.[questionId];
-      if (!correctId) return "invalid_question";
-      const isCorrect = optionId === correctId;
-      const pointsEarned = isCorrect
-        ? scoreQuizAnswer(question.points, elapsedMs, limitMs)
-        : 0;
-      tx.create(answerRef, {
+
+    const [instance, secretAnswers, isJoined] = await Promise.all([
+      getOrLoadInstance(slug, id, async () => {
+        const snap = await instanceRef.get();
+        return snap.exists ? (snap.data() ?? null) : null;
+      }),
+      getOrLoadQuizAnswers(slug, id, async () => {
+        const snap = await secretRef.get();
+        const data = snap.data()?.answers as Record<string, string> | undefined;
+        return data ?? null;
+      }),
+      getOrLoadParticipantMembership(slug, id, uid, async () => {
+        const snap = await participantRef.get();
+        return snap.exists;
+      }),
+    ]);
+
+    if (!isJoined) {
+      res.status(403).json({ success: false, error: "not_joined" });
+      return;
+    }
+
+    if (instance?.type !== "quiz" || instance.state !== "live") {
+      res.status(400).json({ success: false, error: "not_live" });
+      return;
+    }
+
+    const config = instance.config as
+      { questions?: QuizQuestion[] } | undefined;
+    const currentIndex = instance.currentQuestionIndex as number | undefined;
+    const question =
+      typeof currentIndex === "number"
+        ? (config?.questions ?? [])[currentIndex]
+        : undefined;
+    if (
+      !question ||
+      question.id !== questionId ||
+      !question.options.some((o) => o.id === optionId)
+    ) {
+      res.status(400).json({ success: false, error: "invalid_question" });
+      return;
+    }
+
+    const startedAt = instance.currentQuestionStartedAt as
+      Timestamp | undefined;
+    if (!startedAt?.toMillis) {
+      res.status(400).json({ success: false, error: "not_live" });
+      return;
+    }
+
+    const answeredAt = Timestamp.now();
+    const elapsedMs = answeredAt.toMillis() - startedAt.toMillis();
+    const limitMs = question.timeLimitSec * 1000;
+    if (elapsedMs < 0 || elapsedMs >= limitMs) {
+      res.status(400).json({ success: false, error: "expired" });
+      return;
+    }
+
+    const correctId = secretAnswers?.[questionId];
+    if (!correctId) {
+      res.status(400).json({ success: false, error: "invalid_question" });
+      return;
+    }
+
+    const isCorrect = optionId === correctId;
+    const pointsEarned = isCorrect
+      ? scoreQuizAnswer(question.points, elapsedMs, limitMs)
+      : 0;
+
+    try {
+      const batch = db.batch();
+      batch.create(answerRef, {
         uid,
         questionId,
         optionId,
@@ -88,20 +139,17 @@ export async function answer(req: Request, res: Response) {
         elapsedMs,
         answeredAt,
       });
-      tx.create(receiptRef, { uid, questionId, optionId, answeredAt });
-      return "ok";
-    });
-    if (outcome !== "ok") {
-      const status =
-        outcome === "not_joined"
-          ? 403
-          : outcome === "already_answered"
-            ? 409
-            : 400;
-      res.status(status).json({ success: false, error: outcome });
-      return;
+      batch.create(receiptRef, { uid, questionId, optionId, answeredAt });
+      await batch.commit();
+    } catch (err) {
+      if (isAlreadyExistsError(err)) {
+        res.status(409).json({ success: false, error: "already_answered" });
+        return;
+      }
+      throw err;
     }
-    await writeAuditLog(
+
+    logParticipantAudit(
       {
         action: "minigame_participant.quiz.answer",
         performedBy: uid,
@@ -138,11 +186,14 @@ export async function finishQuestion({
     instanceRef.collection("secret").doc("quiz").get(),
     instanceRef.get(),
   ]);
-  if (
-    !roundSnap.exists ||
-    roundSnap.data()?.startedAtMillis !== startedAtMillis
-  )
+  const roundData = roundSnap.data();
+  if (!roundSnap.exists || roundData?.startedAtMillis !== startedAtMillis) {
     return;
+  }
+  if (roundData?.finishedAt) {
+    return;
+  }
+
   const instance = instanceSnap.data();
   const question = (instance?.config?.questions ?? []).find(
     (q: QuizQuestion) => q.id === questionId
@@ -150,36 +201,54 @@ export async function finishQuestion({
   const correctId = (
     secretSnap.data()?.answers as Record<string, string> | undefined
   )?.[questionId];
-  if (!question || !correctId)
+  if (!question || !correctId) {
     throw new Error("Quiz configuration unavailable");
+  }
   const deadline = startedAtMillis + question.timeLimitSec * 1000;
-  if (Date.now() < deadline) throw new Error("Question deadline not reached");
+  if (Date.now() < deadline) {
+    throw new Error("Question deadline not reached");
+  }
+
+  const acquired = await db.runTransaction(async (tx) => {
+    const freshRound = await tx.get(roundRef);
+    const data = freshRound.data();
+    if (!freshRound.exists || data?.startedAtMillis !== startedAtMillis) {
+      return false;
+    }
+    if (data?.finishedAt) return false;
+    const lockedAt = data?.scoringLockedAt as number | undefined;
+    const now = Date.now();
+    if (typeof lockedAt === "number" && now - lockedAt < SCORING_LOCK_TTL_MS) {
+      return false;
+    }
+    tx.update(roundRef, { scoringLockedAt: now });
+    return true;
+  });
+  if (!acquired) return;
 
   const answersSnap = await instanceRef
     .collection("quiz_answers")
     .where("questionId", "==", questionId)
     .get();
   const answers = answersSnap.docs;
-  for (let offset = 0; offset < answers.length; offset += 20) {
-    await Promise.all(
-      answers.slice(offset, offset + 20).map((answerDoc) =>
-        db.runTransaction(async (tx) => {
-          const fresh = await tx.get(answerDoc.ref);
-          const data = fresh.data();
-          if (!data || data.scoredAt) return;
-          tx.update(instanceRef.collection("participants").doc(data.uid), {
-            quizScore: FieldValue.increment(data.pointsEarned),
-            quizElapsedMs: FieldValue.increment(
-              data.isCorrect ? data.elapsedMs : 0
-            ),
-            quizAnsweredQuestions: FieldValue.arrayUnion(questionId),
-            lastQuizPoints: data.pointsEarned,
-            lastQuizQuestionId: questionId,
-          });
-          tx.update(answerDoc.ref, { scoredAt: FieldValue.serverTimestamp() });
-        })
-      )
-    );
+  const unscored = answers.filter((doc) => !doc.data().scoredAt);
+
+  for (let offset = 0; offset < unscored.length; offset += SCORE_BATCH_SIZE) {
+    const batch = db.batch();
+    for (const answerDoc of unscored.slice(offset, offset + SCORE_BATCH_SIZE)) {
+      const data = answerDoc.data();
+      batch.update(instanceRef.collection("participants").doc(data.uid), {
+        quizScore: FieldValue.increment(data.pointsEarned),
+        quizElapsedMs: FieldValue.increment(
+          data.isCorrect ? data.elapsedMs : 0
+        ),
+        quizAnsweredQuestions: FieldValue.arrayUnion(questionId),
+        lastQuizPoints: data.pointsEarned,
+        lastQuizQuestionId: questionId,
+      });
+      batch.update(answerDoc.ref, { scoredAt: FieldValue.serverTimestamp() });
+    }
+    await batch.commit();
   }
 
   const counts: Record<string, number> = {};
@@ -206,22 +275,24 @@ export async function finishQuestion({
         a.uid.localeCompare(b.uid)
     )
     .slice(0, 10);
-  await instanceRef
-    .collection("aggregates")
-    .doc("current")
-    .set(
-      {
-        optionCounts: counts,
-        leaderboard,
-        revealedAnswers: { [questionId]: correctId },
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-  await roundRef.set(
+
+  const finalizeBatch = db.batch();
+  finalizeBatch.set(
+    instanceRef.collection("aggregates").doc("current"),
+    {
+      optionCounts: counts,
+      leaderboard,
+      revealedAnswers: { [questionId]: correctId },
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+  finalizeBatch.set(
+    roundRef,
     { finishedAt: FieldValue.serverTimestamp() },
     { merge: true }
   );
+  await finalizeBatch.commit();
 }
 
 export const finishQuizQuestion = onTaskDispatched<FinishPayload>(

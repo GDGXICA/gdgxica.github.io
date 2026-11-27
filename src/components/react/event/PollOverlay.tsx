@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getFirestore } from "@/lib/firebase";
 import { api } from "@/lib/api";
 import type { PollConfig } from "../admin/minigame-templates/types";
@@ -35,16 +35,33 @@ export function PollOverlay({
   const questionId = question?.id ?? "main";
   const { aggregates } = useAggregates(slug, instanceId);
   const [votedOptionId, setVotedOptionId] = useState<string | null>(null);
+  const [pendingOptionId, setPendingOptionId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const activeQuestionIdRef = useRef(questionId);
+  activeQuestionIdRef.current = questionId;
+  const initialQuestionIdRef = useRef<string | null>(
+    question ? question.id : null
+  );
+  const restoredInitialRef = useRef(false);
 
   useEffect(() => {
     setVotedOptionId(null);
+    setPendingOptionId(null);
+    setSubmitting(false);
+    setError(null);
   }, [questionId]);
 
   useEffect(() => {
+    if (
+      !question ||
+      restoredInitialRef.current ||
+      initialQuestionIdRef.current !== questionId
+    ) {
+      return;
+    }
+    restoredInitialRef.current = true;
     let cancelled = false;
-    if (!question) return;
     (async () => {
       try {
         const db = await getFirestore();
@@ -54,7 +71,7 @@ export function PollOverlay({
           `events/${slug}/minigames/${instanceId}/responses/${uid}_${questionId}`
         );
         const snap = await getDoc(ref);
-        if (cancelled) return;
+        if (cancelled || activeQuestionIdRef.current !== questionId) return;
         if (snap.exists()) {
           const data = snap.data() as { optionId?: string } | undefined;
           if (data?.optionId) setVotedOptionId(data.optionId);
@@ -66,7 +83,7 @@ export function PollOverlay({
     return () => {
       cancelled = true;
     };
-  }, [slug, instanceId, uid, questionId]);
+  }, [slug, instanceId, uid, question, questionId]);
 
   const counts = aggregates?.optionCounts ?? {};
   const totalForQuestion = (question?.options ?? []).reduce(
@@ -76,21 +93,35 @@ export function PollOverlay({
 
   async function vote(optionId: string) {
     if (!question || votedOptionId || submitting) return;
+    const targetQuestionId = questionId;
     setSubmitting(true);
+    setPendingOptionId(optionId);
     setError(null);
     try {
       const result = await api.answerPollQuestion(
         slug,
         instanceId,
-        questionId,
+        targetQuestionId,
         optionId
       );
-      if (!result.success) throw new Error(answerErrorMessage(result.error));
-      setVotedOptionId(optionId);
+      if (activeQuestionIdRef.current !== targetQuestionId) return;
+      if (
+        result.success ||
+        result.status === 409 ||
+        result.error === "already_answered"
+      ) {
+        setVotedOptionId(optionId);
+        return;
+      }
+      setError(answerErrorMessage(result.error));
     } catch (err) {
+      if (activeQuestionIdRef.current !== targetQuestionId) return;
       setError(err instanceof Error ? err.message : "No pudimos enviar");
     } finally {
-      setSubmitting(false);
+      if (activeQuestionIdRef.current === targetQuestionId) {
+        setPendingOptionId(null);
+        setSubmitting(false);
+      }
     }
   }
 
@@ -131,7 +162,11 @@ export function PollOverlay({
           {question.prompt}
         </p>
         <p className="mt-3 text-[0.9375rem] text-(--muted)">
-          {votedOptionId ? "Así va la votación" : "Elige una opción para votar"}
+          {votedOptionId
+            ? "Así va la votación"
+            : submitting
+              ? "Enviando tu voto…"
+              : "Elige una opción para votar"}
         </p>
       </div>
 
@@ -152,6 +187,7 @@ export function PollOverlay({
               ? Math.round((count / totalForQuestion) * 100)
               : 0;
           const isMine = votedOptionId === opt.id;
+          const isPending = pendingOptionId === opt.id;
 
           if (votedOptionId) {
             return (
@@ -189,9 +225,15 @@ export function PollOverlay({
                 type="button"
                 onClick={() => vote(opt.id)}
                 disabled={submitting}
-                className="min-h-16 w-full rounded-(--radius-sm) border border-(--line-strong) bg-(--surface-2) px-5 py-4 text-left text-lg font-semibold text-(--ink) transition-[border-color,background-color,transform] hover:-translate-y-0.5 hover:border-(--muted) hover:bg-(--surface-3) disabled:opacity-50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                aria-busy={isPending}
+                className={`flex min-h-16 w-full items-center justify-between gap-3 rounded-(--radius-sm) border bg-(--surface-2) px-5 py-4 text-left text-lg font-semibold text-(--ink) transition-[border-color,background-color,transform] hover:-translate-y-0.5 hover:border-(--muted) hover:bg-(--surface-3) disabled:cursor-default motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${isPending ? "border-(--ochre) ring-2 ring-(--ochre)" : "border-(--line-strong) disabled:opacity-50"}`}
               >
-                {opt.label}
+                <span className="min-w-0 break-words">{opt.label}</span>
+                {isPending && (
+                  <span className="shrink-0 font-mono text-sm font-medium text-(--ochre)">
+                    Enviando…
+                  </span>
+                )}
               </button>
             </li>
           );

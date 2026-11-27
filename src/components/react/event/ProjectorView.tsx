@@ -9,8 +9,8 @@ import { HeroQr } from "./HeroQr";
 import { useAggregates } from "./useAggregates";
 import { useBingoWinners, type BingoWinner } from "./useBingoWinners";
 import { useLiveMinigames } from "./useLiveMinigames";
+import { useMinigameInstance } from "./useMinigameInstance";
 import { useGameId } from "./useGameId";
-import { useRouletteParticipants } from "./useRouletteParticipants";
 import { useWordCloud } from "./useWordCloud";
 import type { LiveInstance } from "./types";
 
@@ -23,9 +23,13 @@ interface Props {
 }
 
 export function ProjectorView({ slug, eventName, joinUrl, qrDataUrl }: Props) {
-  const { liveInstances } = useLiveMinigames(slug);
-  const [qrExpanded, setQrExpanded] = useState(false);
   const gameId = useGameId();
+  const { liveInstances } = useLiveMinigames(!gameId ? slug : null);
+  const { instance: singleInstance } = useMinigameInstance(
+    gameId ? slug : null,
+    gameId
+  );
+  const [qrExpanded, setQrExpanded] = useState(false);
   const selectedJoinUrl = gameId
     ? `${joinUrl}?game=${encodeURIComponent(gameId)}`
     : joinUrl;
@@ -52,15 +56,13 @@ export function ProjectorView({ slug, eventName, joinUrl, qrDataUrl }: Props) {
     };
   }, [selectedJoinUrl]);
 
-  const visible = useMemo(
-    () =>
-      liveInstances.filter(
-        (inst) =>
-          inst.id === gameId &&
-          (inst.mode === "global" || (inst.mode === "realtime" && inst.config))
-      ),
-    [liveInstances, gameId]
-  );
+  const visible = useMemo(() => {
+    if (!gameId || !singleInstance) return [];
+    const isRenderable =
+      singleInstance.mode === "global" ||
+      (singleInstance.mode === "realtime" && singleInstance.config);
+    return isRenderable ? [singleInstance] : [];
+  }, [gameId, singleInstance]);
 
   const hasLive = visible.length > 0;
 
@@ -293,22 +295,15 @@ function ProjectorQuiz({
 }) {
   const config = instance.config as unknown as QuizConfig;
   const { aggregates } = useAggregates(slug, instance.id);
-  const startedAt = (
-    instance as unknown as {
-      currentQuestionStartedAt?: { seconds: number } | null;
-    }
-  ).currentQuestionStartedAt;
+  const startedAt = instance.currentQuestionStartedAt;
   const idx = instance.currentQuestionIndex ?? -1;
   const question = idx >= 0 ? config.questions[idx] : null;
 
   const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!question) return;
-    const id = window.setInterval(() => setNow(Date.now()), 250);
-    return () => window.clearInterval(id);
-  }, [question]);
-
-  const startedMs = startedAt?.seconds ? startedAt.seconds * 1000 : null;
+  const startedMs = startedAt?.seconds
+    ? startedAt.seconds * 1000 +
+      Math.floor((startedAt.nanoseconds ?? 0) / 1_000_000)
+    : null;
   const elapsedMs = startedMs ? Math.max(0, now - startedMs) : 0;
   const limitMs = (question?.timeLimitSec ?? 0) * 1000;
   const remainingSec = startedMs
@@ -317,6 +312,18 @@ function ProjectorQuiz({
   const revealedAnswer = question
     ? aggregates?.revealedAnswers?.[question.id]
     : undefined;
+
+  useEffect(() => {
+    setNow(Date.now());
+  }, [question?.id, startedMs]);
+
+  useEffect(() => {
+    if (!question || revealedAnswer || remainingSec <= 0 || startedMs === null)
+      return;
+    const stepMs = remainingSec <= 5 ? 250 : 1000;
+    const id = window.setTimeout(() => setNow(Date.now()), stepMs);
+    return () => window.clearTimeout(id);
+  }, [question, revealedAnswer, remainingSec, startedMs, now]);
 
   const counts = aggregates?.optionCounts ?? {};
   const totalForQuestion = question
@@ -676,6 +683,16 @@ function BingoWinnerList({
 }
 
 const SPIN_DURATION_MS = 4000;
+const MAX_WHEEL_SEGMENTS = 24;
+
+function slotIndexForId(id: string, count: number): number {
+  if (count <= 1) return 0;
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  return hash % count;
+}
 
 function ProjectorRoulette({
   slug,
@@ -684,19 +701,19 @@ function ProjectorRoulette({
   slug: string;
   instance: LiveInstance;
 }) {
-  const { eligible, winners, loading } = useRouletteParticipants(
-    slug,
-    instance.id
-  );
+  const { aggregates, loading } = useAggregates(slug, instance.id);
   const prize = instance.config?.prize as string | undefined;
-  const eligiblePool = useMemo(
-    () => [...eligible].sort((a, b) => a.uid.localeCompare(b.uid)),
-    [eligible]
-  );
-  const winnerEntry = [...eligible, ...winners].find(
-    (entry) => entry.uid === instance.lastSpinWinnerId
-  );
-  const [wheelEntries, setWheelEntries] = useState(eligiblePool);
+  const eligibleCount = aggregates?.eligibleCount ?? 0;
+  const winners = aggregates?.winners ?? [];
+  const displayedWinner =
+    instance.lastSpinWinnerAlias ??
+    winners.find((w) => w.uid === instance.lastSpinWinnerId)?.alias ??
+    null;
+
+  const visualPoolCount = eligibleCount + (displayedWinner ? 1 : 0);
+  const segmentCount =
+    visualPoolCount > 0 ? Math.min(visualPoolCount, MAX_WHEEL_SEGMENTS) : 0;
+
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -706,7 +723,6 @@ function ProjectorRoulette({
     ? `${lastSpinAt.seconds}:${lastSpinAt.nanoseconds ?? 0}`
     : null;
   const lastSpinRef = useRef(spinKey);
-  const initialWheelAlignedRef = useRef(false);
   const spinFrameRef = useRef<number | null>(null);
   const spinTimeoutRef = useRef<number | null>(null);
 
@@ -730,55 +746,19 @@ function ProjectorRoulette({
   }, []);
 
   useEffect(() => {
-    if (!spinning && !lastSpinWinnerId) setWheelEntries(eligiblePool);
-  }, [eligiblePool, spinning, lastSpinWinnerId]);
-
-  useEffect(() => {
-    if (
-      initialWheelAlignedRef.current ||
-      !spinKey ||
-      spinKey !== lastSpinRef.current ||
-      !lastSpinWinnerId ||
-      !winnerEntry
-    )
-      return;
-    const entries = [
-      ...eligiblePool.filter((entry) => entry.uid !== lastSpinWinnerId),
-      winnerEntry,
-    ].sort((a, b) => a.uid.localeCompare(b.uid));
-    const index = entries.findIndex((entry) => entry.uid === lastSpinWinnerId);
-    if (index < 0) return;
-    setWheelEntries(entries);
-    setRotation(-((index + 0.5) * (360 / entries.length)));
-    initialWheelAlignedRef.current = true;
-  }, [spinKey, lastSpinWinnerId, eligiblePool, winnerEntry]);
-
-  useEffect(() => {
-    if (
-      !spinKey ||
-      spinKey === lastSpinRef.current ||
-      !lastSpinWinnerId ||
-      !winnerEntry
-    )
+    if (!spinKey || spinKey === lastSpinRef.current || !lastSpinWinnerId)
       return;
     lastSpinRef.current = spinKey;
-    initialWheelAlignedRef.current = true;
-    const nextEntries = [
-      ...eligiblePool.filter((entry) => entry.uid !== lastSpinWinnerId),
-      winnerEntry,
-    ].sort((a, b) => a.uid.localeCompare(b.uid));
-    const index = nextEntries.findIndex(
-      (entry) => entry.uid === lastSpinWinnerId
-    );
-    if (index < 0) return;
     if (spinFrameRef.current !== null)
       cancelAnimationFrame(spinFrameRef.current);
     if (spinTimeoutRef.current !== null)
       window.clearTimeout(spinTimeoutRef.current);
-    setWheelEntries(nextEntries);
-    setSpinning(!reducedMotion);
-    const step = 360 / nextEntries.length;
+
+    const slots = Math.max(segmentCount, 1);
+    const step = 360 / slots;
+    const index = slotIndexForId(lastSpinWinnerId, slots);
     const target = -((index + 0.5) * step);
+    setSpinning(!reducedMotion);
     spinFrameRef.current = requestAnimationFrame(() =>
       setRotation(
         (current) =>
@@ -790,21 +770,18 @@ function ProjectorRoulette({
     spinTimeoutRef.current = reducedMotion
       ? null
       : window.setTimeout(() => setSpinning(false), SPIN_DURATION_MS);
-  }, [spinKey, lastSpinWinnerId, eligiblePool, winnerEntry, reducedMotion]);
+  }, [spinKey, lastSpinWinnerId, segmentCount, reducedMotion]);
 
-  const wheel = wheelEntries.length > 0 ? wheelEntries : eligiblePool;
-  const step = wheel.length > 0 ? 360 / wheel.length : 360;
-  const palette = ["#4285F4", "#EA4335", "#FBBC05", "#34A853"];
-  const segments =
-    wheel.length > 0
-      ? wheel
-          .map(
-            (_, index) =>
-              `${palette[index % 4]} ${index * step}deg ${(index + 1) * step}deg`
-          )
-          .join(", ")
-      : "#374151 0deg 360deg";
-  const displayedWinner = winnerEntry?.alias ?? null;
+  const segments = useMemo(() => {
+    if (segmentCount === 0) return "#374151 0deg 360deg";
+    const step = 360 / segmentCount;
+    const palette = ["#4285F4", "#EA4335", "#FBBC05", "#34A853"];
+    return Array.from(
+      { length: segmentCount },
+      (_, index) =>
+        `${palette[index % 4]} ${index * step}deg ${(index + 1) * step}deg`
+    ).join(", ");
+  }, [segmentCount]);
 
   return (
     <div>
@@ -816,7 +793,7 @@ function ProjectorRoulette({
       <div className="mt-7 flex flex-col items-center gap-8 lg:flex-row lg:justify-center lg:gap-12">
         <div
           className="relative aspect-square w-full max-w-[min(64vh,520px)]"
-          aria-label={`Ruleta con ${wheel.length} participantes`}
+          aria-label={`Ruleta con ${visualPoolCount} participantes`}
         >
           <svg
             className="absolute top-0 left-1/2 z-20 w-10 -translate-x-1/2 -translate-y-1/4 drop-shadow-lg"
@@ -830,24 +807,12 @@ function ProjectorRoulette({
             style={{
               background: `conic-gradient(${segments})`,
               transform: `rotate(${rotation}deg)`,
+              willChange: spinning ? "transform" : "auto",
               transition: spinning
                 ? `transform ${SPIN_DURATION_MS}ms cubic-bezier(.12,.75,.1,1)`
                 : "none",
             }}
-          >
-            {wheel.length <= 20 &&
-              wheel.map((entry, index) => (
-                <span
-                  key={entry.uid}
-                  className="absolute top-1/2 left-1/2 max-w-[35%] truncate text-sm font-bold text-white drop-shadow-[0_1px_2px_black]"
-                  style={{
-                    transform: `rotate(${(index + 0.5) * step}deg) translateY(calc(-1 * clamp(90px, 16vw, 180px))) rotate(-${(index + 0.5) * step}deg)`,
-                  }}
-                >
-                  {entry.alias}
-                </span>
-              ))}
-          </div>
+          />
           <div className="absolute top-1/2 left-1/2 z-10 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white bg-white shadow-[0_8px_20px_-8px_rgba(0,0,0,.65)] sm:h-24 sm:w-24">
             <span className="grid grid-cols-2 gap-1.5" aria-hidden="true">
               <span className="bg-google-blue h-3 w-3 rounded-full" />
@@ -878,12 +843,12 @@ function ProjectorRoulette({
             </>
           ) : (
             <p className="text-2xl font-semibold tabular-nums">
-              {eligible.length} participantes en la ruleta
+              {eligibleCount} participantes en la ruleta
             </p>
           )}
-          {wheel.length > 20 && (
+          {visualPoolCount > MAX_WHEEL_SEGMENTS && (
             <p className="mt-4 text-base text-white/70">
-              {wheel.length} segmentos · ganador destacado al terminar
+              {visualPoolCount} participantes · ganador destacado al terminar
             </p>
           )}
         </div>
@@ -903,9 +868,7 @@ function ProjectorRoulette({
                   </span>
                   {w.alias}
                 </span>
-                <span className="text-sm text-white/60">
-                  #{w.rouletteSpinNumber}
-                </span>
+                <span className="text-sm text-white/60">#{w.spinNumber}</span>
               </li>
             ))}
           </ol>

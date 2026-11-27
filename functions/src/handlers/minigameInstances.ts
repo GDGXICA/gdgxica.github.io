@@ -6,6 +6,8 @@ import { auditEntryFor, writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import { ensureDrawOrder } from "../services/bingoDrawStore";
+import { invalidateInstanceCache } from "../services/minigameCache";
+import { finishQuestion } from "./minigameQuiz";
 import type { MinigameTemplate, MinigameTemplateType } from "../schemas";
 
 interface AuditDetails {
@@ -201,6 +203,7 @@ export async function pollAdvance(req: Request, res: Response) {
       });
       return;
     }
+    invalidateInstanceCache(slug, id);
     await writeAuditLog(
       {
         action: "minigame_instance.poll.advance",
@@ -256,6 +259,7 @@ export async function setState(req: Request, res: Response) {
     }
 
     await ref.update(update);
+    invalidateInstanceCache(slug, id);
 
     await writeAuditLog(
       auditEntry(`minigame_instance.state.${state}`, user.uid, id, {
@@ -324,11 +328,27 @@ export async function quizAdvance(req: Request, res: Response) {
         .doc(previous.id)
         .get();
       if (!previousRound.data()?.finishedAt) {
-        res.status(409).json({
-          success: false,
-          error: "Esperando los resultados de la pregunta actual",
-        });
-        return;
+        const prevStartedAt = previousRound.data()?.startedAtMillis as
+          number | undefined;
+        if (typeof prevStartedAt === "number") {
+          await finishQuestion({
+            slug,
+            id,
+            questionId: previous.id,
+            startedAtMillis: prevStartedAt,
+          });
+        }
+        const verifiedRound = await ref
+          .collection("quiz_rounds")
+          .doc(previous.id)
+          .get();
+        if (!verifiedRound.data()?.finishedAt) {
+          res.status(409).json({
+            success: false,
+            error: "Esperando los resultados de la pregunta actual",
+          });
+          return;
+        }
       }
     }
     const toIndex = fromIndex + 1;
@@ -339,7 +359,6 @@ export async function quizAdvance(req: Request, res: Response) {
       return;
     }
 
-    const startedAt = Timestamp.now();
     const question = questions[toIndex] as {
       timeLimitSec?: number;
       id?: string;
@@ -348,30 +367,39 @@ export async function quizAdvance(req: Request, res: Response) {
       res.status(400).json({ success: false, error: "Pregunta inválida" });
       return;
     }
-    await getFunctions()
-      .taskQueue("finishQuizQuestion")
-      .enqueue(
-        {
-          slug,
-          id,
-          questionId: question.id,
-          startedAtMillis: startedAt.toMillis(),
-        },
-        {
-          scheduleTime: new Date(
-            startedAt.toMillis() + (question.timeLimitSec ?? 30) * 1000 + 2000
-          ),
-        }
-      );
+
+    const startedAt = Timestamp.now();
+    const startedAtMillis = startedAt.toMillis();
     const batch = admin.firestore().batch();
     batch.update(ref, {
       currentQuestionIndex: toIndex,
       currentQuestionStartedAt: startedAt,
     });
     batch.set(ref.collection("quiz_rounds").doc(question.id), {
-      startedAtMillis: startedAt.toMillis(),
+      startedAtMillis,
     });
     await batch.commit();
+    invalidateInstanceCache(slug, id);
+
+    try {
+      await getFunctions()
+        .taskQueue("finishQuizQuestion")
+        .enqueue(
+          {
+            slug,
+            id,
+            questionId: question.id,
+            startedAtMillis,
+          },
+          {
+            scheduleTime: new Date(
+              startedAtMillis + (question.timeLimitSec ?? 30) * 1000 + 2000
+            ),
+          }
+        );
+    } catch {
+      void 0;
+    }
 
     await writeAuditLog(
       auditEntry("minigame_instance.quiz.advance", user.uid, id, {
@@ -382,7 +410,17 @@ export async function quizAdvance(req: Request, res: Response) {
       req
     );
 
-    res.json({ success: true, data: { id, currentQuestionIndex: toIndex } });
+    res.json({
+      success: true,
+      data: {
+        id,
+        currentQuestionIndex: toIndex,
+        currentQuestionStartedAt: {
+          seconds: Math.floor(startedAtMillis / 1000),
+          nanoseconds: (startedAtMillis % 1000) * 1_000_000,
+        },
+      },
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: safeError(err) });
   }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { signInAnonymouslyIfNeeded } from "@/lib/firebase";
 import { BingoCardView } from "./BingoCardView";
@@ -9,6 +9,7 @@ import { RouletteView } from "./RouletteView";
 import { WordCloudView } from "./WordCloudView";
 import { LOCAL_STORAGE_ALIAS_KEY } from "./types";
 import { useLiveMinigames } from "./useLiveMinigames";
+import { useMinigameInstance } from "./useMinigameInstance";
 import { useGameId } from "./useGameId";
 import type { PollConfig, QuizConfig } from "../admin/minigame-templates/types";
 import { TYPE_LABELS } from "../admin/minigame-templates/types";
@@ -31,12 +32,25 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
     }
   });
   const [joinedId, setJoinedId] = useState<string | null>(null);
+  const [joining, setJoining] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
-  const { liveInstances, loading, error } = useLiveMinigames(
-    authReady ? slug : null
-  );
-  const instance = liveInstances.find((item) => item.id === gameId);
+  const joiningRef = useRef(false);
+
+  const {
+    liveInstances,
+    loading: listLoading,
+    error: listError,
+  } = useLiveMinigames(!gameId ? slug : null);
+  const {
+    instance: singleInstance,
+    loading: singleLoading,
+    error: singleError,
+  } = useMinigameInstance(gameId ? slug : null, gameId);
+
+  const instance = gameId ? (singleInstance ?? undefined) : undefined;
+  const loading = gameId ? singleLoading : listLoading;
+  const error = gameId ? singleError : listError;
 
   useEffect(() => {
     let cancelled = false;
@@ -66,35 +80,48 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
 
   const join = useCallback(
     async (name: string) => {
-      const result = await api.joinEventMinigames(slug, { alias: name });
-      if (!result.success || !result.data)
-        return { success: false, error: result.error };
-      const canonical = result.data.alias;
-      setAlias(canonical);
-      if (gameId && result.data.instances.some((item) => item.id === gameId))
-        setJoinedId(gameId);
-      setShowJoin(false);
+      if (joiningRef.current) return { success: false };
+      joiningRef.current = true;
+      setJoining(true);
+      setJoinError(null);
       try {
-        localStorage.setItem(LOCAL_STORAGE_ALIAS_KEY(slug), canonical);
-      } catch {
+        const result = await api.joinEventMinigames(slug, {
+          alias: name,
+          ...(gameId ? { instanceId: gameId } : {}),
+        });
+        if (!result.success || !result.data) {
+          return { success: false, error: result.error };
+        }
+        const canonical = result.data.alias;
+        setAlias(canonical);
+        if (gameId && result.data.instances.some((item) => item.id === gameId))
+          setJoinedId(gameId);
+        setShowJoin(false);
+        try {
+          localStorage.setItem(LOCAL_STORAGE_ALIAS_KEY(slug), canonical);
+        } catch {
+          return { success: true };
+        }
         return { success: true };
+      } finally {
+        joiningRef.current = false;
+        setJoining(false);
       }
-      return { success: true };
     },
     [slug, gameId]
   );
 
   useEffect(() => {
-    if (!instance || !uid || joinedId === gameId) return;
+    if (!instance || !uid || joinedId === gameId || joiningRef.current) return;
     if (!alias) {
       setShowJoin(true);
       return;
     }
     let cancelled = false;
     join(alias).then((result) => {
-      if (!cancelled && !result.success) {
+      if (!cancelled && !result.success && result.error) {
         setShowJoin(true);
-        setJoinError(result.error ?? "No pudimos conectarte");
+        setJoinError(result.error);
       }
     });
     return () => {
@@ -222,17 +249,32 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
           <h2 className="m-0 text-3xl font-semibold tracking-[-0.02em] text-balance text-(--ink)">
             {instance.title}
           </h2>
-          <p className="mt-3 text-(--muted)">Únete para participar.</p>
-          <button
-            type="button"
-            onClick={() => setShowJoin(true)}
-            className="nb nb--primary mt-6 min-w-48"
-          >
-            <span className="nb__label">Entrar</span>
-            <span className="nb__icon nb__icon--arrow" aria-hidden="true">
-              <ArrowRightIcon />
-            </span>
-          </button>
+          {joining ? (
+            <p
+              className="mt-5 inline-flex items-center justify-center gap-3 text-(--muted)"
+              role="status"
+            >
+              <span
+                className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-(--ochre) motion-reduce:animate-none"
+                aria-hidden="true"
+              />
+              Conectando al juego…
+            </p>
+          ) : (
+            <>
+              <p className="mt-3 text-(--muted)">Únete para participar.</p>
+              <button
+                type="button"
+                onClick={() => setShowJoin(true)}
+                className="nb nb--primary mt-6 min-w-48"
+              >
+                <span className="nb__label">Entrar</span>
+                <span className="nb__icon nb__icon--arrow" aria-hidden="true">
+                  <ArrowRightIcon />
+                </span>
+              </button>
+            </>
+          )}
         </section>
       )}
       {gameId && instance && uid && joinedId === gameId && (

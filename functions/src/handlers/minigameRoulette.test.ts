@@ -70,6 +70,7 @@ interface Scene {
 interface Wiring {
   instanceUpdates: Array<Record<string, unknown>>;
   participantUpdates: Array<{ id: string; data: Record<string, unknown> }>;
+  aggregateSets: Array<Record<string, unknown>>;
   audit: ReturnType<typeof vi.fn>;
 }
 
@@ -81,6 +82,7 @@ function wire(scene: Scene): Wiring {
     id: string;
     data: Record<string, unknown>;
   }> = [];
+  const aggregateSets: Array<Record<string, unknown>> = [];
   const audit = vi.fn(async () => undefined);
 
   const instanceSnap = () => ({
@@ -99,19 +101,25 @@ function wire(scene: Scene): Wiring {
   });
 
   const participantsCol = {
-    // El handler lee participantes DENTRO de la transaccion; este `get` suelto
-    // queda a proposito para que el mismo cableado sirva tambien contra una
-    // version que lea fuera, y se pueda comprobar que el test de la carrera
-    // distingue entre ambas.
     get: vi.fn(async () => participantsSnapshot()),
     doc: vi.fn((id: string) => ({ __kind: "participant", id })),
   };
 
+  const aggregateRef = { __kind: "aggregate" };
+
   const runTransaction = vi.fn(async (cb: (tx: unknown) => unknown) => {
     const tx = {
-      get: vi.fn(async (ref: unknown) =>
-        ref === participantsCol ? participantsSnapshot() : instanceSnap()
-      ),
+      get: vi.fn(async (ref: { __kind?: string; id?: string }) => {
+        if (ref === participantsCol) return participantsSnapshot();
+        if (ref.__kind === "aggregate") {
+          return { exists: false, data: () => undefined };
+        }
+        if (ref.__kind === "participant") {
+          const found = (scene.participants ?? []).find((p) => p.id === ref.id);
+          return { exists: Boolean(found), data: () => found?.data };
+        }
+        return instanceSnap();
+      }),
       update: vi.fn(
         (
           ref: { __kind?: string; id?: string },
@@ -124,6 +132,11 @@ function wire(scene: Scene): Wiring {
           }
         }
       ),
+      set: vi.fn((ref: { __kind?: string }, data: Record<string, unknown>) => {
+        if (ref.__kind === "aggregate") {
+          aggregateSets.push(data);
+        }
+      }),
     };
 
     const first = await cb(tx);
@@ -134,6 +147,7 @@ function wire(scene: Scene): Wiring {
     scene.onRetry();
     instanceUpdates.length = 0;
     participantUpdates.length = 0;
+    aggregateSets.length = 0;
     return cb(tx);
   });
 
@@ -142,6 +156,7 @@ function wire(scene: Scene): Wiring {
     get: vi.fn(async () => instanceSnap()),
     collection: vi.fn((name: string) => {
       if (name === "participants") return participantsCol;
+      if (name === "aggregates") return { doc: vi.fn(() => aggregateRef) };
       throw new Error("unexpected collection " + name);
     }),
   };
@@ -153,7 +168,7 @@ function wire(scene: Scene): Wiring {
   });
   runTransactionMock.mockImplementation(runTransaction);
 
-  return { instanceUpdates, participantUpdates, audit };
+  return { instanceUpdates, participantUpdates, aggregateSets, audit };
 }
 
 const LIVE = { type: "roulette", state: "live", spinCount: 0 };
@@ -227,7 +242,16 @@ describe("minigameRoulette.spin", () => {
         {
           spinCount: 1,
           lastSpinWinnerId: "uid-eduardo",
+          lastSpinWinnerAlias: "eduardo",
           lastSpinAt: SERVER_TS,
+        },
+      ]);
+      expect(w.aggregateSets).toEqual([
+        {
+          winners: [{ uid: "uid-eduardo", alias: "eduardo", spinNumber: 1 }],
+          totalParticipants: 1,
+          eligibleCount: 0,
+          updatedAt: SERVER_TS,
         },
       ]);
     });
@@ -286,7 +310,7 @@ describe("minigameRoulette.spin", () => {
     // repetia ese mismo ganador y solo le pisaba el spinNumber — misma
     // persona premiada dos veces y otro elegible saltado.
     it("vuelve a sortear cuando la transaccion reintenta", async () => {
-      vi.spyOn(Math, "random").mockReturnValue(0);
+      vi.spyOn(Math, "random").mockReturnValue(0.99);
       const participants = [
         { id: "uid-a", data: JOINED("a") },
         { id: "uid-b", data: JOINED("b") },
@@ -295,7 +319,6 @@ describe("minigameRoulette.spin", () => {
         instance: LIVE,
         participants,
         onRetry: () => {
-          // El giro que gano la carrera ya se llevo a "a".
           participants[0].data = {
             ...participants[0].data,
             rouletteWonAt: SERVER_TS,
@@ -306,8 +329,6 @@ describe("minigameRoulette.spin", () => {
       const res = buildRes();
       await handler.spin(buildReq(), res);
 
-      // Math.random() === 0 elige siempre el primer elegible. En el reintento
-      // "a" ya no lo es, asi que el premio tiene que irse a "b".
       expect((res.__body as { data: { winnerId: string } }).data.winnerId).toBe(
         "uid-b"
       );

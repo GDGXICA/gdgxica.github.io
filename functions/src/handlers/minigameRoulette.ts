@@ -5,12 +5,20 @@ import { writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 
-// POST /api/events/:slug/minigames/:id/roulette/spin
-//
-// Picks a random participant who hasn't won yet, records their win on the
-// participant doc and updates the instance doc so all real-time listeners
-// (projector, participant views) can react to the new spin immediately.
-// Uses a transaction to keep spinCount and rouletteWonAt consistent.
+interface RouletteWinnerEntry {
+  uid: string;
+  alias: string;
+  spinNumber: number;
+}
+
+function shuffleInPlace<T>(items: T[]): T[] {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  return items;
+}
+
 export async function spin(req: Request, res: Response) {
   try {
     const slug = req.params.slug as string;
@@ -42,61 +50,94 @@ export async function spin(req: Request, res: Response) {
       return;
     }
 
-    // Participantes que aún no han ganado.
-    //
-    // El filtro va en memoria, y no en un where("rouletteWonAt", "==", null),
-    // porque los docs de participante los crea /join (minigameJoin.ts) con
-    // solo {uid, alias, joinedAt}: el campo NO existe hasta que esta misma
-    // función lo escribe sobre el ganador. Firestore iguala a null únicamente
-    // el campo que existe y vale null, nunca el ausente, así que aquella
-    // consulta no veía a nadie y la ruleta no giraba jamás — devolvía "No hay
-    // participantes elegibles" con la sala llena.
-    //
-    // Filtrar en memoria, además de tratar ambas formas por igual, arregla a
-    // los participantes ya apuntados sin rellenarles el campo. Es la
-    // misma regla que ya aplicaba el cliente en useRouletteParticipants.ts,
-    // que por eso pintaba elegibles y habilitaba el botón mientras el
-    // servidor rechazaba el giro.
     const participantsCol = instanceRef.collection("participants");
-    const now = FieldValue.serverTimestamp();
-
-    // Leer participantes y sortear van DENTRO de la transacción. Elegir fuera
-    // y escribir dentro parece equivalente y no lo es: dos giros simultáneos
-    // —dos organizadores con el panel abierto, o el proyector y el panel; el
-    // `disabled` del botón solo frena a un cliente— leían la misma lista y
-    // podían sacar a la misma persona. Las dos transacciones chocan en
-    // `instanceRef` y una reintenta, pero el ganador estaba calculado FUERA
-    // del callback, así que el reintento repetía el mismo y solo le pisaba
-    // `rouletteSpinNumber`: la misma persona premiada dos veces, otro
-    // elegible saltado en silencio y `spinCount` llegando a 2. Sorteando
-    // aquí, el reintento vuelve a leer y vuelve a sortear.
-    const outcome = await db.runTransaction(async (tx) => {
-      const freshSnap = await tx.get(instanceRef);
-      const participantsSnap = await tx.get(participantsCol);
-
-      const eligible = participantsSnap.docs.filter((doc) => {
+    const aggregateRef = instanceRef.collection("aggregates").doc("current");
+    const participantsSnap = await participantsCol.get();
+    const totalParticipants = participantsSnap.docs.length;
+    const eligibleCandidates = shuffleInPlace(
+      participantsSnap.docs.filter((doc) => {
         const wonAt = (doc.data() as { rouletteWonAt?: unknown }).rouletteWonAt;
         return wonAt === null || wonAt === undefined;
-      });
-      if (eligible.length === 0) return null;
+      })
+    );
 
-      const winner = eligible[Math.floor(Math.random() * eligible.length)];
-      const spinCount =
-        ((freshSnap.data() as { spinCount?: number })?.spinCount ?? 0) + 1;
+    if (eligibleCandidates.length === 0) {
+      res
+        .status(400)
+        .json({ success: false, error: "No hay participantes elegibles" });
+      return;
+    }
+
+    const now = FieldValue.serverTimestamp();
+    const outcome = await db.runTransaction(async (tx) => {
+      const [freshSnap, aggSnap] = await Promise.all([
+        tx.get(instanceRef),
+        tx.get(aggregateRef),
+      ]);
+      const freshInstance = freshSnap.data() as
+        { state?: string; spinCount?: number } | undefined;
+      if (freshInstance?.state !== "live") return null;
+
+      let chosen: { id: string; alias: string } | null = null;
+      for (const candidate of eligibleCandidates) {
+        const candidateRef = participantsCol.doc(candidate.id);
+        const freshCandidate = await tx.get(candidateRef);
+        const data = freshCandidate.data() as
+          { alias?: string; rouletteWonAt?: unknown } | undefined;
+        if (
+          freshCandidate.exists &&
+          (data?.rouletteWonAt === null || data?.rouletteWonAt === undefined)
+        ) {
+          chosen = {
+            id: candidate.id,
+            alias: data?.alias ?? "Anónimo",
+          };
+          break;
+        }
+      }
+      if (!chosen) return null;
+
+      const spinCount = (freshInstance.spinCount ?? 0) + 1;
+      const existingAgg = aggSnap.data() as
+        | { winners?: RouletteWinnerEntry[]; totalParticipants?: number }
+        | undefined;
+      const existingWinners = Array.isArray(existingAgg?.winners)
+        ? existingAgg.winners.filter((w) => w.uid !== chosen.id)
+        : [];
+      const winners: RouletteWinnerEntry[] = [
+        ...existingWinners,
+        { uid: chosen.id, alias: chosen.alias, spinNumber: spinCount },
+      ];
+      const knownTotal = Math.max(
+        existingAgg?.totalParticipants ?? 0,
+        totalParticipants
+      );
+      const eligibleCount = Math.max(0, knownTotal - winners.length);
 
       tx.update(instanceRef, {
         spinCount,
-        lastSpinWinnerId: winner.id,
+        lastSpinWinnerId: chosen.id,
+        lastSpinWinnerAlias: chosen.alias,
         lastSpinAt: now,
       });
-      tx.update(participantsCol.doc(winner.id), {
+      tx.update(participantsCol.doc(chosen.id), {
         rouletteWonAt: now,
         rouletteSpinNumber: spinCount,
       });
+      tx.set(
+        aggregateRef,
+        {
+          winners,
+          totalParticipants: knownTotal,
+          eligibleCount,
+          updatedAt: now,
+        },
+        { merge: true }
+      );
 
       return {
-        winnerId: winner.id,
-        alias: (winner.data() as { alias?: string }).alias ?? "Anónimo",
+        winnerId: chosen.id,
+        alias: chosen.alias,
         spinNumber: spinCount,
       };
     });

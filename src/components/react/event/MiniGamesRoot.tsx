@@ -291,6 +291,10 @@ export function MiniGamesRoot({ slug }: Props) {
                     alias={alias ?? "Anónimo"}
                     title={inst.title}
                     config={inst.config as unknown as PollConfig}
+                    currentQuestionIndex={
+                      inst.currentQuestionIndex ??
+                      (inst.config.question ? 0 : -1)
+                    }
                   />
                 )}
                 {inst.type === "quiz" && inst.config && (
