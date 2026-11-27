@@ -6,7 +6,10 @@ import { auditEntryFor, writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
 import { ensureDrawOrder } from "../services/bingoDrawStore";
-import { invalidateInstanceCache } from "../services/minigameCache";
+import {
+  invalidateInstanceCache,
+  invalidateLiveInstancesCache,
+} from "../services/minigameCache";
 import { finishQuestion } from "./minigameQuiz";
 import type { MinigameTemplate, MinigameTemplateType } from "../schemas";
 
@@ -159,6 +162,7 @@ export async function attach(req: Request, res: Response) {
       await ensureDrawOrder(ref, classicTerms);
     }
 
+    invalidateLiveInstancesCache(slug);
     await writeAuditLog(
       auditEntry("minigame_instance.attach", user.uid, ref.id, {
         slug,
@@ -381,8 +385,8 @@ export async function quizAdvance(req: Request, res: Response) {
     await batch.commit();
     invalidateInstanceCache(slug, id);
 
-    try {
-      await getFunctions()
+    await Promise.allSettled([
+      getFunctions()
         .taskQueue("finishQuizQuestion")
         .enqueue(
           {
@@ -396,19 +400,16 @@ export async function quizAdvance(req: Request, res: Response) {
               startedAtMillis + (question.timeLimitSec ?? 30) * 1000 + 2000
             ),
           }
-        );
-    } catch {
-      void 0;
-    }
-
-    await writeAuditLog(
-      auditEntry("minigame_instance.quiz.advance", user.uid, id, {
-        slug,
-        fromIndex,
-        toIndex,
-      }),
-      req
-    );
+        ),
+      writeAuditLog(
+        auditEntry("minigame_instance.quiz.advance", user.uid, id, {
+          slug,
+          fromIndex,
+          toIndex,
+        }),
+        req
+      ),
+    ]);
 
     res.json({
       success: true,
@@ -451,6 +452,7 @@ export async function remove(req: Request, res: Response) {
       return;
     }
     await ref.delete();
+    invalidateInstanceCache(slug, id);
 
     await writeAuditLog(
       auditEntry("minigame_instance.delete", user.uid, id, {

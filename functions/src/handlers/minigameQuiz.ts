@@ -282,8 +282,27 @@ export async function finishQuestion({
     const key = `${questionId}:${optionId}`;
     counts[key] = (counts[key] ?? 0) + 1;
   }
-  const participantsSnap = await instanceRef.collection("participants").get();
-  const leaderboard = participantsSnap.docs
+  const participantsCol = instanceRef.collection("participants");
+  let leaderboardDocs: admin.firestore.QueryDocumentSnapshot[];
+  if (typeof participantsCol.orderBy === "function") {
+    try {
+      const topSnap = await participantsCol
+        .orderBy("quizScore", "desc")
+        .orderBy("quizElapsedMs", "asc")
+        .limit(10)
+        .get();
+      leaderboardDocs = topSnap.docs;
+    } catch {
+      const fallbackSnap = await (typeof participantsCol.select === "function"
+        ? participantsCol.select("alias", "quizScore", "quizElapsedMs").get()
+        : participantsCol.get());
+      leaderboardDocs = fallbackSnap.docs;
+    }
+  } else {
+    const participantsSnap = await participantsCol.get();
+    leaderboardDocs = participantsSnap.docs;
+  }
+  const leaderboard = leaderboardDocs
     .map((doc) => {
       const data = doc.data();
       return {

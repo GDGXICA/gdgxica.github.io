@@ -191,6 +191,7 @@ export function auditContext() {
     // Útil para que quien reporte un fallo pueda pegar el id, y para cruzar la
     // respuesta con su línea de Cloud Logging.
     res.setHeader("X-Request-Id", context.requestId);
+    res.setHeader("X-Server-Time-Ms", String(Date.now()));
 
     res.on("finish", () => {
       context.route = routePattern(req);

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { getFirestore } from "@/lib/firebase";
+import { getServerNowMs } from "@/lib/serverClock";
 import type { QuizConfig } from "../admin/minigame-templates/types";
 import { useAggregates } from "./useAggregates";
 import { useParticipantDoc } from "./useParticipantDoc";
@@ -16,6 +17,7 @@ interface Props {
   config: QuizConfig;
   currentQuestionIndex: number;
   currentQuestionStartedAt?: { seconds: number; nanoseconds?: number } | null;
+  justJoined?: boolean;
 }
 
 export function QuizOverlay({
@@ -26,6 +28,7 @@ export function QuizOverlay({
   config,
   currentQuestionIndex,
   currentQuestionStartedAt,
+  justJoined = false,
 }: Props) {
   const { doc: participant } = useParticipantDoc(slug, instanceId, uid);
   const { aggregates } = useAggregates(slug, instanceId);
@@ -47,7 +50,7 @@ export function QuizOverlay({
   const activeQuestionIdRef = useRef<string | null>(questionId);
   activeQuestionIdRef.current = questionId;
   const initialQuestionIdRef = useRef<string | null>(questionId);
-  const restoredInitialRef = useRef(false);
+  const restoredInitialRef = useRef(justJoined);
 
   const startedMs = currentQuestionStartedAt
     ? currentQuestionStartedAt.seconds * 1000 +
@@ -63,7 +66,7 @@ export function QuizOverlay({
       Boolean(
         question &&
         startedMs !== null &&
-        Date.now() - startedMs >= question.timeLimitSec * 1000
+        getServerNowMs() - startedMs >= question.timeLimitSec * 1000
       )
     );
   }, [questionId, startedMs, question]);

@@ -1,18 +1,36 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { api } from "@/lib/api";
 import { signInAnonymouslyIfNeeded } from "@/lib/firebase";
-import { BingoCardView } from "./BingoCardView";
 import { JoinModal, TYPE_DOTS } from "./JoinModal";
-import { PollOverlay } from "./PollOverlay";
-import { QuizOverlay } from "./QuizOverlay";
-import { RouletteView } from "./RouletteView";
-import { WordCloudView } from "./WordCloudView";
 import { LOCAL_STORAGE_ALIAS_KEY } from "./types";
 import { useLiveMinigames } from "./useLiveMinigames";
 import { useMinigameInstance } from "./useMinigameInstance";
 import { useGameId } from "./useGameId";
 import type { PollConfig, QuizConfig } from "../admin/minigame-templates/types";
 import { TYPE_LABELS } from "../admin/minigame-templates/types";
+
+const BingoCardView = lazy(() =>
+  import("./BingoCardView").then((m) => ({ default: m.BingoCardView }))
+);
+const PollOverlay = lazy(() =>
+  import("./PollOverlay").then((m) => ({ default: m.PollOverlay }))
+);
+const QuizOverlay = lazy(() =>
+  import("./QuizOverlay").then((m) => ({ default: m.QuizOverlay }))
+);
+const RouletteView = lazy(() =>
+  import("./RouletteView").then((m) => ({ default: m.RouletteView }))
+);
+const WordCloudView = lazy(() =>
+  import("./WordCloudView").then((m) => ({ default: m.WordCloudView }))
+);
 
 interface Props {
   slug: string;
@@ -32,6 +50,7 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
     }
   });
   const [joinedId, setJoinedId] = useState<string | null>(null);
+  const [justJoinedId, setJustJoinedId] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
@@ -94,8 +113,13 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
         }
         const canonical = result.data.alias;
         setAlias(canonical);
-        if (gameId && result.data.instances.some((item) => item.id === gameId))
+        const joinedEntry = gameId
+          ? result.data.instances.find((item) => item.id === gameId)
+          : undefined;
+        if (gameId && joinedEntry) {
           setJoinedId(gameId);
+          setJustJoinedId(joinedEntry.joined ? gameId : null);
+        }
         setShowJoin(false);
         try {
           localStorage.setItem(LOCAL_STORAGE_ALIAS_KEY(slug), canonical);
@@ -296,65 +320,82 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
               <strong className="font-semibold text-(--ink)">{alias}</strong>
             </span>
           </div>
-          {instance.type === "poll" && instance.config && (
-            <PollOverlay
-              slug={slug}
-              instanceId={instance.id}
-              uid={uid}
-              alias={alias ?? ""}
-              title={instance.title}
-              config={instance.config as unknown as PollConfig}
-              currentQuestionIndex={
-                instance.currentQuestionIndex ??
-                (instance.config.question ? 0 : -1)
-              }
-            />
-          )}
-          {instance.type === "quiz" && instance.config && (
-            <QuizOverlay
-              slug={slug}
-              instanceId={instance.id}
-              uid={uid}
-              alias={alias ?? ""}
-              title={instance.title}
-              config={instance.config as unknown as QuizConfig}
-              currentQuestionIndex={instance.currentQuestionIndex ?? -1}
-              currentQuestionStartedAt={instance.currentQuestionStartedAt}
-            />
-          )}
-          {instance.type === "roulette" && (
-            <RouletteView
-              slug={slug}
-              instanceId={instance.id}
-              uid={uid}
-              title={instance.title}
-              instance={instance}
-            />
-          )}
-          {instance.type === "bingo" && (
-            <BingoCardView
-              slug={slug}
-              instanceId={instance.id}
-              uid={uid}
-              title={instance.title}
-              instance={instance}
-            />
-          )}
-          {instance.type === "wordcloud" && (
-            <WordCloudView
-              slug={slug}
-              instanceId={instance.id}
-              uid={uid}
-              title={instance.title}
-              prompt={
-                (instance.config?.prompt as string | undefined) ??
-                "Comparte tu palabra"
-              }
-              maxWordsPerUser={
-                (instance.config?.maxWordsPerUser as number | undefined) ?? 3
-              }
-            />
-          )}
+          <Suspense
+            fallback={
+              <p
+                className="flex items-center justify-center gap-3 py-12 text-center text-(--muted)"
+                role="status"
+              >
+                <span
+                  className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-(--ochre) motion-reduce:animate-none"
+                  aria-hidden="true"
+                />
+                Cargando dinámica…
+              </p>
+            }
+          >
+            {instance.type === "poll" && instance.config && (
+              <PollOverlay
+                slug={slug}
+                instanceId={instance.id}
+                uid={uid}
+                alias={alias ?? ""}
+                title={instance.title}
+                config={instance.config as unknown as PollConfig}
+                currentQuestionIndex={
+                  instance.currentQuestionIndex ??
+                  (instance.config.question ? 0 : -1)
+                }
+                justJoined={justJoinedId === instance.id}
+              />
+            )}
+            {instance.type === "quiz" && instance.config && (
+              <QuizOverlay
+                slug={slug}
+                instanceId={instance.id}
+                uid={uid}
+                alias={alias ?? ""}
+                title={instance.title}
+                config={instance.config as unknown as QuizConfig}
+                currentQuestionIndex={instance.currentQuestionIndex ?? -1}
+                currentQuestionStartedAt={instance.currentQuestionStartedAt}
+                justJoined={justJoinedId === instance.id}
+              />
+            )}
+            {instance.type === "roulette" && (
+              <RouletteView
+                slug={slug}
+                instanceId={instance.id}
+                uid={uid}
+                title={instance.title}
+                instance={instance}
+              />
+            )}
+            {instance.type === "bingo" && (
+              <BingoCardView
+                slug={slug}
+                instanceId={instance.id}
+                uid={uid}
+                title={instance.title}
+                instance={instance}
+              />
+            )}
+            {instance.type === "wordcloud" && (
+              <WordCloudView
+                slug={slug}
+                instanceId={instance.id}
+                uid={uid}
+                title={instance.title}
+                prompt={
+                  (instance.config?.prompt as string | undefined) ??
+                  "Comparte tu palabra"
+                }
+                maxWordsPerUser={
+                  (instance.config?.maxWordsPerUser as number | undefined) ?? 3
+                }
+              />
+            )}
+          </Suspense>
         </section>
       )}
       {(error || joinError || authError) && (

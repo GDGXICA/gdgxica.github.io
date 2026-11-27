@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
-import { useRouletteParticipants } from "@/components/react/event/useRouletteParticipants";
+import { getFirestore } from "@/lib/firebase";
+import { useAggregates } from "@/components/react/event/useAggregates";
 
 interface Props {
   slug: string;
@@ -9,17 +10,58 @@ interface Props {
   onClose: () => void;
 }
 
+interface EligiblePreview {
+  uid: string;
+  alias: string;
+}
+
+const ELIGIBLE_PREVIEW_LIMIT = 200;
+
 export function RoulettePanel({ slug, instanceId, title, onClose }: Props) {
-  const { eligible, winners, loading, error } = useRouletteParticipants(
-    slug,
-    instanceId
-  );
+  const { aggregates, loading, error } = useAggregates(slug, instanceId);
   const [spinning, setSpinning] = useState(false);
   const [spinError, setSpinError] = useState<string | null>(null);
   const [lastWinner, setLastWinner] = useState<{
     alias: string;
     spinNumber: number;
   } | null>(null);
+  const [eligibleList, setEligibleList] = useState<EligiblePreview[] | null>(
+    null
+  );
+  const [loadingEligible, setLoadingEligible] = useState(false);
+
+  const winners = aggregates?.winners ?? [];
+  const eligibleCount = aggregates?.eligibleCount ?? 0;
+
+  async function loadEligiblePreview() {
+    setLoadingEligible(true);
+    try {
+      const db = await getFirestore();
+      const { collection, getDocs, limit, query } =
+        await import("firebase/firestore");
+      const snap = await getDocs(
+        query(
+          collection(db, `events/${slug}/minigames/${instanceId}/participants`),
+          limit(ELIGIBLE_PREVIEW_LIMIT)
+        )
+      );
+      const list: EligiblePreview[] = [];
+      for (const docSnap of snap.docs) {
+        const data = docSnap.data() as {
+          alias?: string;
+          rouletteWonAt?: unknown;
+        };
+        if (data.rouletteWonAt === null || data.rouletteWonAt === undefined) {
+          list.push({ uid: docSnap.id, alias: data.alias ?? "Anónimo" });
+        }
+      }
+      setEligibleList(list);
+    } catch {
+      setEligibleList([]);
+    } finally {
+      setLoadingEligible(false);
+    }
+  }
 
   async function handleSpin() {
     setSpinning(true);
@@ -28,6 +70,11 @@ export function RoulettePanel({ slug, instanceId, title, onClose }: Props) {
     const res = await api.spinRoulette(slug, instanceId);
     if (res.success && res.data) {
       setLastWinner({ alias: res.data.alias, spinNumber: res.data.spinNumber });
+      if (eligibleList !== null) {
+        setEligibleList((prev) =>
+          prev ? prev.filter((p) => p.uid !== res.data?.winnerId) : prev
+        );
+      }
     } else {
       setSpinError(res.error ?? "Error al girar la ruleta");
     }
@@ -73,7 +120,7 @@ export function RoulettePanel({ slug, instanceId, title, onClose }: Props) {
           <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900/40">
             <span className="text-gray-600 dark:text-gray-400">
               <span className="font-semibold text-gray-900 dark:text-white">
-                {loading ? "…" : eligible.length}
+                {loading ? "…" : eligibleCount}
               </span>{" "}
               elegibles
             </span>
@@ -90,7 +137,7 @@ export function RoulettePanel({ slug, instanceId, title, onClose }: Props) {
           <button
             type="button"
             onClick={handleSpin}
-            disabled={spinning || loading || eligible.length === 0}
+            disabled={spinning || loading || eligibleCount === 0}
             className="w-full rounded-xl bg-rose-600 py-3 text-base font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {spinning ? "Girando…" : "🎰 Girar ruleta"}
@@ -139,7 +186,7 @@ export function RoulettePanel({ slug, instanceId, title, onClose }: Props) {
                       {w.alias}
                     </p>
                     <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">
-                      Giro #{w.rouletteSpinNumber}
+                      Giro #{w.spinNumber}
                     </span>
                   </li>
                 ))}
@@ -148,25 +195,42 @@ export function RoulettePanel({ slug, instanceId, title, onClose }: Props) {
           )}
 
           {/* Eligible participants list */}
-          {eligible.length > 0 && (
-            <details className="group">
+          {eligibleCount > 0 && (
+            <details
+              className="group"
+              onToggle={(e) => {
+                if (
+                  (e.currentTarget as HTMLDetailsElement).open &&
+                  eligibleList === null &&
+                  !loadingEligible
+                ) {
+                  void loadEligiblePreview();
+                }
+              }}
+            >
               <summary className="cursor-pointer text-xs font-semibold tracking-wider text-gray-500 uppercase hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
-                Elegibles ({eligible.length})
+                Elegibles ({eligibleCount})
               </summary>
-              <ul className="mt-2 space-y-1">
-                {eligible.map((p) => (
-                  <li
-                    key={p.uid}
-                    className="text-sm text-gray-700 dark:text-gray-300"
-                  >
-                    {p.alias}
-                  </li>
-                ))}
-              </ul>
+              {loadingEligible ? (
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  Cargando participantes…
+                </p>
+              ) : (
+                <ul className="mt-2 space-y-1">
+                  {(eligibleList ?? []).map((p) => (
+                    <li
+                      key={p.uid}
+                      className="text-sm text-gray-700 dark:text-gray-300"
+                    >
+                      {p.alias}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </details>
           )}
 
-          {!loading && eligible.length === 0 && winners.length === 0 && (
+          {!loading && eligibleCount === 0 && winners.length === 0 && (
             <p className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
               Aún no hay participantes en la ruleta.
             </p>

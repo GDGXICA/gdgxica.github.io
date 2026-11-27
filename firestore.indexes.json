@@ -73,6 +73,14 @@
       ]
     },
     {
+      "collectionGroup": "participants",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "quizScore", "order": "DESCENDING" },
+        { "fieldPath": "quizElapsedMs", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "credentials",
       "queryScope": "COLLECTION",
       "fields": [

@@ -158,4 +158,26 @@ describe("PollOverlay", () => {
     );
     expect(screen.queryByText("Tu voto")).toBeNull();
   });
+
+  it("defers aggregates subscription until after voting and skips restore when justJoined", async () => {
+    render(
+      <PollOverlay
+        slug="evt"
+        instanceId="poll"
+        uid="u1"
+        alias="Ana"
+        title="Varias"
+        config={config}
+        currentQuestionIndex={0}
+        justJoined
+      />
+    );
+    expect(mocks.useAggregates).toHaveBeenLastCalledWith(null, null);
+    expect(mocks.getDoc).not.toHaveBeenCalled();
+
+    await userEvent.setup().click(screen.getByRole("button", { name: "Sí" }));
+    await waitFor(() =>
+      expect(mocks.useAggregates).toHaveBeenLastCalledWith("evt", "poll")
+    );
+  });
 });

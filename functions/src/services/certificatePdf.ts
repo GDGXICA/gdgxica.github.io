@@ -1,13 +1,6 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
-import fontkit from "@pdf-lib/fontkit";
-import {
-  PDFDocument,
-  rgb,
-  type PDFFont,
-  type PDFPage,
-  type RGB,
-} from "pdf-lib";
+import type { PDFFont, PDFPage, RGB } from "pdf-lib";
 import layout from "./certificateLayout.json";
 
 import { CERTIFICATE_KINDS, type CertificateKind } from "./certificateKinds";
@@ -71,16 +64,26 @@ export interface CertificateInput {
   organizer?: string;
 }
 
-function hexToRgb(hex: string): RGB {
-  const n = parseInt(hex.replace("#", ""), 16);
-  return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
+interface Palette {
+  name: RGB;
+  text: RGB;
+  emphasis: RGB;
 }
 
-const COLORS = {
-  name: hexToRgb(layout.colors.gold),
-  text: hexToRgb(layout.colors.ivoryDim),
-  emphasis: hexToRgb(layout.colors.ivory),
-};
+function parseHexChannels(hex: string): [number, number, number] {
+  const n = parseInt(hex.replace("#", ""), 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+}
+
+function buildPalette(
+  rgbFn: (red: number, green: number, blue: number) => RGB
+): Palette {
+  return {
+    name: rgbFn(...parseHexChannels(layout.colors.gold)),
+    text: rgbFn(...parseHexChannels(layout.colors.ivoryDim)),
+    emphasis: rgbFn(...parseHexChannels(layout.colors.ivory)),
+  };
+}
 
 const toPdfY = (topY: number) => layout.page.height - topY;
 
@@ -334,7 +337,8 @@ function drawParagraph(
   lines: Token[][],
   size: number,
   regular: PDFFont,
-  bold: PDFFont
+  bold: PDFFont,
+  colors: Palette
 ) {
   const p = layout.paragraph;
   const lineHeight = size * p.lineHeightRatio;
@@ -351,7 +355,7 @@ function drawParagraph(
         y,
         size,
         font,
-        color: tok.bold ? COLORS.emphasis : COLORS.text,
+        color: tok.bold ? colors.emphasis : colors.text,
       });
       x += font.widthOfTextAtSize(text, size);
     });
@@ -379,15 +383,26 @@ function cachedRead(path: string): Promise<Buffer> {
 export async function buildCertificatePdf(
   input: CertificateInput
 ): Promise<Uint8Array> {
-  const [templateBytes, nameBytes, regularBytes, boldBytes] = await Promise.all(
-    [
-      cachedRead(templatePath(input.kind)),
-      cachedRead(FONT_PATH(FONTS.name)),
-      cachedRead(FONT_PATH(FONTS.regular)),
-      cachedRead(FONT_PATH(FONTS.bold)),
-    ]
-  );
-  const doc = await PDFDocument.load(templateBytes);
+  const [
+    pdfLib,
+    fontkitMod,
+    templateBytes,
+    nameBytes,
+    regularBytes,
+    boldBytes,
+  ] = await Promise.all([
+    import("pdf-lib"),
+    import("@pdf-lib/fontkit"),
+    cachedRead(templatePath(input.kind)),
+    cachedRead(FONT_PATH(FONTS.name)),
+    cachedRead(FONT_PATH(FONTS.regular)),
+    cachedRead(FONT_PATH(FONTS.bold)),
+  ]);
+  const colors = buildPalette(pdfLib.rgb);
+  const fontkit =
+    (fontkitMod as unknown as { default?: typeof fontkitMod }).default ??
+    fontkitMod;
+  const doc = await pdfLib.PDFDocument.load(templateBytes);
   doc.registerFontkit(fontkit);
   const [nameFont, regular, bold] = await Promise.all([
     doc.embedFont(nameBytes, { subset: true }),
@@ -410,7 +425,7 @@ export async function buildCertificatePdf(
       y: toPdfY(line.baselineY),
       size: nameLayout.size,
       font: nameFont,
-      color: COLORS.name,
+      color: colors.name,
     });
   }
 
@@ -429,7 +444,7 @@ export async function buildCertificatePdf(
     size -= 0.5;
     lines = layoutRuns(runs, regular, bold, size, p.width);
   }
-  drawParagraph(page, lines, size, regular, bold);
+  drawParagraph(page, lines, size, regular, bold, colors);
 
   doc.setTitle(`Certificado · ${name}`);
   doc.setAuthor("GDG ICA");

@@ -50,7 +50,7 @@ export function MiniGamesRoot({ slug }: Props) {
   );
   const [forcePlay] = useState<boolean>(() => readForcePlay());
 
-  const { loading, liveInstances } = useLiveMinigames(authReady ? slug : null);
+  const { loading, liveInstances } = useLiveMinigames(slug);
 
   // Sign in anonymously (or reuse current user) on mount. We capture the
   // resulting uid so the gameplay components (bingo card, word cloud)

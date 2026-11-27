@@ -15,7 +15,11 @@ import {
   type CardCandidate,
 } from "../services/bingoClassic";
 import { ensureDrawOrder, winSlotsCol } from "../services/bingoDrawStore";
-import { markParticipantJoined } from "../services/minigameCache";
+import {
+  getOrLoadInstance,
+  getOrLoadLiveInstances,
+  markParticipantJoined,
+} from "../services/minigameCache";
 
 interface BingoConfig {
   terms?: string[];
@@ -107,27 +111,39 @@ export async function join(req: Request, res: Response) {
     }>;
 
     if (targetInstanceId) {
-      const singleSnap = await minigamesCol.doc(targetInstanceId).get();
-      const singleData = singleSnap.data() as InstanceData | undefined;
+      const singleData = (await getOrLoadInstance(
+        slug,
+        targetInstanceId,
+        async () => {
+          const singleSnap = await minigamesCol.doc(targetInstanceId).get();
+          return singleSnap.exists ? (singleSnap.data() ?? null) : null;
+        }
+      )) as InstanceData | null;
       targetDocs =
-        singleSnap.exists && singleData?.state === "live"
+        singleData?.state === "live"
           ? [
               {
-                id: singleSnap.id,
-                ref: singleSnap.ref,
+                id: targetInstanceId,
+                ref: minigamesCol.doc(targetInstanceId),
                 data: () => singleData,
               },
             ]
           : [];
     } else {
-      const instancesSnap = await minigamesCol
-        .where("state", "==", "live")
-        .limit(50)
-        .get();
-      targetDocs = instancesSnap.docs.map((doc) => ({
-        id: doc.id,
-        ref: doc.ref,
-        data: () => doc.data() as InstanceData,
+      const cachedLive = await getOrLoadLiveInstances(slug, async () => {
+        const instancesSnap = await minigamesCol
+          .where("state", "==", "live")
+          .limit(50)
+          .get();
+        return instancesSnap.docs.map((doc) => ({
+          id: doc.id,
+          data: doc.data() as Record<string, unknown>,
+        }));
+      });
+      targetDocs = cachedLive.map((entry) => ({
+        id: entry.id,
+        ref: minigamesCol.doc(entry.id),
+        data: () => entry.data as InstanceData,
       }));
     }
 

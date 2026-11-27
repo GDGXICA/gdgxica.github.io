@@ -13,6 +13,7 @@ interface Props {
   title: string;
   config: PollConfig;
   currentQuestionIndex?: number;
+  justJoined?: boolean;
 }
 
 export function PollOverlay({
@@ -22,6 +23,7 @@ export function PollOverlay({
   title,
   config,
   currentQuestionIndex = 0,
+  justJoined = false,
 }: Props) {
   const questions = config.questions ?? [
     {
@@ -33,8 +35,11 @@ export function PollOverlay({
   const question =
     currentQuestionIndex < 0 ? null : (questions[currentQuestionIndex] ?? null);
   const questionId = question?.id ?? "main";
-  const { aggregates } = useAggregates(slug, instanceId);
   const [votedOptionId, setVotedOptionId] = useState<string | null>(null);
+  const { aggregates } = useAggregates(
+    votedOptionId ? slug : null,
+    votedOptionId ? instanceId : null
+  );
   const [pendingOptionId, setPendingOptionId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +48,7 @@ export function PollOverlay({
   const initialQuestionIdRef = useRef<string | null>(
     question ? question.id : null
   );
-  const restoredInitialRef = useRef(false);
+  const restoredInitialRef = useRef(justJoined);
 
   useEffect(() => {
     setVotedOptionId(null);

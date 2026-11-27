@@ -52,7 +52,9 @@ export async function spin(req: Request, res: Response) {
 
     const participantsCol = instanceRef.collection("participants");
     const aggregateRef = instanceRef.collection("aggregates").doc("current");
-    const participantsSnap = await participantsCol.get();
+    const participantsSnap = await (typeof participantsCol.select === "function"
+      ? participantsCol.select("alias", "rouletteWonAt").get()
+      : participantsCol.get());
     const totalParticipants = participantsSnap.docs.length;
     const eligibleCandidates = shuffleInPlace(
       participantsSnap.docs.filter((doc) => {

@@ -75,7 +75,8 @@ export async function sendEmail(
     return;
   }
 
-  await getTransporter().sendMail({
+  const transporter = await getTransporter();
+  await transporter.sendMail({
     from: senderFor("gmail"),
     to: mail.to,
     subject: mail.subject,

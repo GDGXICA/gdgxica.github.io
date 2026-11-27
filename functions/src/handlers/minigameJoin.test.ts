@@ -189,12 +189,15 @@ function wireFirestore(liveInstances: InstanceFixture[]): WiringResult {
   const whereMock = vi.fn(() => ({ limit: limitMock }));
   const minigamesCol = {
     where: whereMock,
-    doc: vi.fn((id: string) => ({
-      get: vi.fn(async () => {
-        const found = instanceDocs.find((d) => d.id === id);
-        return found ?? { exists: false, id, ref: null, data: () => undefined };
-      }),
-    })),
+    doc: vi.fn((id: string) => {
+      const found = instanceDocs.find((d) => d.id === id);
+      return {
+        ...(found ? found.ref : {}),
+        get: vi.fn(async () => {
+          return found ?? { exists: false, id, ref: null, data: () => undefined };
+        }),
+      };
+    }),
   };
   const eventDocFn = vi.fn(() => ({
     collection: vi.fn(() => minigamesCol),
@@ -476,6 +479,7 @@ describe("minigameJoin handler", () => {
       const natural = first.slotCalls[0].data.winIndex as number;
       const naturalCard = first.setCalls[0].data.bingoCard;
 
+      clearMinigameCaches();
       const second = wireFirestore([
         classicInstance({ takenWinIndices: [natural] }),
       ]);
