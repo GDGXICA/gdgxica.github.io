@@ -131,4 +131,21 @@ describe("AttendeeRow", () => {
     expect(screen.queryByText("ya no está en el CSV")).not.toBeInTheDocument();
     expect(screen.queryByText("ya marcado en Bevy")).not.toBeInTheDocument();
   });
+
+  it("shows Sin Bevy badge and suppresses stale warning for manual attendees", () => {
+    render(
+      <AttendeeRow
+        attendee={attendee({
+          id: "m_1",
+          source: "manual",
+          heardAbout: "Redes sociales",
+        })}
+        stale={true}
+        onToggle={vi.fn()}
+      />
+    );
+    expect(screen.getByText("Sin Bevy")).toBeVisible();
+    expect(screen.getByText("Redes sociales")).toBeVisible();
+    expect(screen.queryByText("ya no está en el CSV")).not.toBeInTheDocument();
+  });
 });

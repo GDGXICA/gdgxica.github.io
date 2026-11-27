@@ -1190,4 +1190,26 @@ describe("reconcileCredentials", () => {
     // Well under the cap: nothing to warn about.
     expect(loggerWarnMock).not.toHaveBeenCalled();
   });
+
+  it("ignores manual walk-in roster rows so credentials are not falsely marked loaded in Bevy", async () => {
+    const res = buildRes();
+    const b = setupReconcile(
+      [CRED],
+      [
+        {
+          id: "m_walkin",
+          source: "manual",
+          email: "alvaro@example.com",
+          ticketNumber: "",
+        },
+      ]
+    );
+    await reconcileCredentials(opReq({}, { id: "" }), res);
+
+    expect(res.__body).toMatchObject({
+      success: true,
+      data: { matched: 0, unmatchedCredentials: 1, unmatchedRoster: 0 },
+    });
+    expect(b.committed).toHaveLength(0);
+  });
 });

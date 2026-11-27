@@ -791,7 +791,28 @@ const realApi = {
       updated: number;
       stale: number;
       unusableTickets: number;
+      mergedManual?: number;
     }>("POST", `/events/${encodeURIComponent(slug)}/checkin/import`, { rows }),
+
+  registerManualCheckinAttendee: (
+    slug: string,
+    body: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      ticketTitle: string;
+      dni?: string;
+      heardAbout?: string;
+      checkedIn: boolean;
+    }
+  ) =>
+    request<{
+      id: string;
+      source: "manual";
+      email: string;
+      checkedIn: boolean;
+      existingId?: string;
+    }>("POST", `/events/${encodeURIComponent(slug)}/checkin/manual`, body),
 
   uploadMuralPhoto: (
     slug: string,

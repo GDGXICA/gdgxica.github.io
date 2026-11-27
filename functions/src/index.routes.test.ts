@@ -131,6 +131,7 @@ const AUDITED_ROUTES = [
   "POST /api/certificates/preview",
   "POST /api/certificates/manual",
   "POST /api/events/:slug/checkin/import",
+  "POST /api/events/:slug/checkin/manual",
   "POST /api/rebuild",
 ];
 

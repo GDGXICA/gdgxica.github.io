@@ -562,6 +562,50 @@ export const checkinImportSchema = z
 
 export type CheckinImportBody = z.infer<typeof checkinImportSchema>;
 
+export const HEARD_ABOUT_OPTIONS = [
+  "Redes sociales",
+  "Me notificó la comunidad",
+  "Meetup.com",
+  "Me lo recomendó un amigo o colega",
+  "Otro",
+] as const;
+
+const OPTIONAL_DOC_ID_RE = /^[A-Za-z0-9-]{4,20}$/;
+
+export const checkinManualAttendeeSchema = z
+  .object({
+    firstName: z.string().trim().min(1).max(200),
+    lastName: z.string().trim().min(1).max(200),
+    email: z.string().trim().toLowerCase().email().max(254),
+    ticketTitle: z
+      .string()
+      .trim()
+      .min(1)
+      .max(200)
+      .optional()
+      .default("General Admission"),
+    dni: z
+      .string()
+      .trim()
+      .max(20)
+      .refine(
+        (v) => v === "" || OPTIONAL_DOC_ID_RE.test(v),
+        "DNI o documento inválido"
+      )
+      .optional()
+      .default(""),
+    heardAbout: z
+      .union([z.literal(""), z.enum(HEARD_ABOUT_OPTIONS)])
+      .optional()
+      .default(""),
+    checkedIn: z.boolean().optional().default(true),
+  })
+  .strict();
+
+export type CheckinManualAttendeeBody = z.infer<
+  typeof checkinManualAttendeeSchema
+>;
+
 // Attendee credentials live in their own file — this one is already long,
 // and minigameTemplate.test.ts established per-topic modules here.
 export * from "./credentials";

@@ -1,6 +1,17 @@
+export type AttendeeSource = "bevy" | "manual";
+
+export const HEARD_ABOUT_OPTIONS = [
+  "Redes sociales",
+  "Me notificó la comunidad",
+  "Meetup.com",
+  "Me lo recomendó un amigo o colega",
+  "Otro",
+] as const;
+
 export interface Attendee {
-  /** Firestore document ID: `t_${ticketNumber}`. */
+  /** Firestore document ID: `t_${ticketNumber}` or `m_${randomId}`. */
   id: string;
+  source?: AttendeeSource;
   ticketNumber: string;
   orderNumber: string;
   firstName: string;
@@ -28,6 +39,8 @@ export interface Attendee {
    * which is most of them right up until the roster is imported.
    */
   dni: string | null;
+
+  heardAbout?: string | null;
 
   /** True while this row's write is still queued in the local cache. */
   pending: boolean;

@@ -104,6 +104,21 @@ describe("buildBevyCheckinCsv — what it deliberately leaves out", () => {
     expect(rows).toBe(0);
     expect(alreadyInBevy).toBe(2);
   });
+
+  it("excludes manual walk-in attendees and reports manualSkipped", () => {
+    const { csv, rows, manualSkipped } = buildBevyCheckinCsv([
+      attendee({ checkedIn: true }),
+      attendee({
+        id: "m_1",
+        source: "manual",
+        email: "walkin@x.com",
+        checkedIn: true,
+      }),
+    ]);
+    expect(rows).toBe(1);
+    expect(manualSkipped).toBe(1);
+    expect(csv).not.toContain("walkin@x.com");
+  });
 });
 
 describe("buildBevyCheckinCsv — escaping", () => {

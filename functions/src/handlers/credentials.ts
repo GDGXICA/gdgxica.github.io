@@ -772,14 +772,16 @@ export async function reconcileCredentials(req: Request, res: Response) {
       };
     });
 
-    const attendees: ReconcileAttendee[] = rosterSnap.docs.map((d) => {
-      const data = d.data();
-      return {
-        id: d.id,
-        email: (data.email as string) ?? "",
-        ticketNumber: (data.ticketNumber as string) ?? "",
-      };
-    });
+    const attendees: ReconcileAttendee[] = rosterSnap.docs
+      .filter((d) => d.data().source !== "manual")
+      .map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          email: (data.email as string) ?? "",
+          ticketNumber: (data.ticketNumber as string) ?? "",
+        };
+      });
 
     const result = reconcile(credentials, attendees);
 

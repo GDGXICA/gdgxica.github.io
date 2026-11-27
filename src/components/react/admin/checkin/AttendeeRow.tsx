@@ -14,6 +14,7 @@ const time = (d: Date | null) =>
 
 export function AttendeeRow({ attendee, stale, onToggle }: Props) {
   const { checkedIn, pending } = attendee;
+  const isManual = attendee.source === "manual";
 
   return (
     <li
@@ -33,12 +34,17 @@ export function AttendeeRow({ attendee, stale, onToggle }: Props) {
           {attendee.email}
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-2">
+          {isManual && (
+            <span className="rounded bg-purple-100 px-1.5 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900/40 dark:text-purple-300">
+              Sin Bevy
+            </span>
+          )}
           {attendee.ticketTitle && (
             <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300">
               {attendee.ticketTitle}
             </span>
           )}
-          {stale && (
+          {stale && !isManual && (
             <span className="rounded bg-orange-100 px-1.5 py-0.5 text-xs text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
               ya no está en el CSV
             </span>
@@ -50,6 +56,11 @@ export function AttendeeRow({ attendee, stale, onToggle }: Props) {
           {attendee.dni && (
             <span className="rounded bg-gray-900 px-1.5 py-0.5 font-mono text-xs text-white dark:bg-gray-100 dark:text-gray-900">
               DNI {attendee.dni}
+            </span>
+          )}
+          {isManual && attendee.heardAbout && (
+            <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+              {attendee.heardAbout}
             </span>
           )}
           {attendee.bevyCheckinAt && (
