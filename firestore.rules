@@ -276,8 +276,16 @@ service cloud.firestore {
           allow read, write: if false;
         }
         match /quiz_receipts/{answerId} {
-          allow get: if request.auth != null && resource.data.uid == request.auth.uid;
+          allow get: if request.auth != null
+                     && (answerId.matches('^' + request.auth.uid + '_.*')
+                         || (resource != null && resource.data.uid == request.auth.uid));
           allow list, write: if false;
+        }
+        match /poll_shards/{shardId} {
+          allow read, write: if false;
+        }
+        match /roulette_shards/{shardId} {
+          allow read, write: if false;
         }
         match /quiz_rounds/{roundId} {
           allow read, write: if false;

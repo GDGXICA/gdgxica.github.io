@@ -1,4 +1,5 @@
-import { useRouletteParticipants } from "./useRouletteParticipants";
+import { useAggregates } from "./useAggregates";
+import { useParticipantDoc } from "./useParticipantDoc";
 import type { LiveInstance } from "./types";
 
 interface Props {
@@ -16,12 +17,23 @@ export function RouletteView({
   title,
   instance,
 }: Props) {
-  const { eligible, winners, loading } = useRouletteParticipants(
+  const { doc: participant, loading: participantLoading } = useParticipantDoc(
+    slug,
+    instanceId,
+    uid
+  );
+  const { aggregates, loading: aggregatesLoading } = useAggregates(
     slug,
     instanceId
   );
 
-  const myWin = winners.find((w) => w.uid === uid);
+  const winners = aggregates?.winners ?? [];
+  const eligibleCount = aggregates?.eligibleCount ?? 0;
+  const myWin =
+    Boolean(participant?.rouletteWonAt) ||
+    instance.lastSpinWinnerId === uid ||
+    winners.some((w) => w.uid === uid);
+  const loading = participantLoading && aggregatesLoading;
   const prize = instance.config?.prize as string | undefined;
 
   return (
@@ -70,8 +82,8 @@ export function RouletteView({
             <p className="mt-2 text-(--muted)">Cargando participantes…</p>
           ) : (
             <p className="mt-3 font-mono text-[0.9375rem] text-(--ochre) tabular-nums">
-              {eligible.length} participante{eligible.length !== 1 && "s"}{" "}
-              elegibles · {winners.length} ganador{winners.length !== 1 && "es"}
+              {eligibleCount} participante{eligibleCount !== 1 && "s"} elegibles
+              · {winners.length} ganador{winners.length !== 1 && "es"}
             </p>
           )}
           <p className="mt-4 text-[0.9375rem] text-(--muted)">

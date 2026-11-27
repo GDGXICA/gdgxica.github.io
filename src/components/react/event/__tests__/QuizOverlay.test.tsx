@@ -128,4 +128,18 @@ describe("QuizOverlay", () => {
     expect(screen.getByText("+100 puntos")).toBeInTheDocument();
     expect(screen.getByText("Clasificación")).toBeInTheDocument();
   });
+
+  it("marks the tapped option optimistically and recovers cleanly on 409", async () => {
+    mocks.answerQuizQuestion.mockResolvedValue({
+      success: false,
+      status: 409,
+      error: "already_answered",
+    });
+    renderQuiz();
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Gemini" }));
+    expect(await screen.findByText(/Respuesta registrada/)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
 });

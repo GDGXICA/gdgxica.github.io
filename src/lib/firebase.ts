@@ -176,6 +176,7 @@ export async function getFirestore() {
                 tabManager: persistentMultipleTabManager(),
               })
             : memoryLocalCache(),
+          experimentalAutoDetectLongPolling: true,
         });
       } catch {
         // Throws in Safari private mode (no IndexedDB) and if something

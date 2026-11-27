@@ -15,6 +15,12 @@ export interface MinigameInstance {
   order: number;
   config?: Record<string, unknown>;
   currentQuestionIndex?: number;
+  currentQuestionStartedAt?: {
+    seconds?: number;
+    _seconds?: number;
+    nanoseconds?: number;
+    _nanoseconds?: number;
+  } | null;
   // Classic-bingo runtime state, written by the Cloud Function on every
   // called ball.
   drawCount?: number;

@@ -23,6 +23,7 @@ export interface LiveInstance {
   // Roulette-specific runtime fields (written by Cloud Function on spin)
   spinCount?: number;
   lastSpinWinnerId?: string | null;
+  lastSpinWinnerAlias?: string | null;
   lastSpinAt?: { seconds: number; nanoseconds?: number } | null;
   // Classic-bingo runtime fields (written by Cloud Function on each ball).
   // `drawnTerms` is only what has already been called out loud — the rest

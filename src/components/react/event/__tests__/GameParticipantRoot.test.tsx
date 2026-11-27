@@ -3,12 +3,16 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 
 const mocks = vi.hoisted(() => ({
   useLiveMinigames: vi.fn(),
+  useMinigameInstance: vi.fn(),
   signIn: vi.fn(),
   join: vi.fn(),
 }));
 
 vi.mock("../useLiveMinigames", () => ({
   useLiveMinigames: mocks.useLiveMinigames,
+}));
+vi.mock("../useMinigameInstance", () => ({
+  useMinigameInstance: mocks.useMinigameInstance,
 }));
 vi.mock("@/lib/firebase", () => ({ signInAnonymouslyIfNeeded: mocks.signIn }));
 vi.mock("@/lib/api", () => ({ api: { joinEventMinigames: mocks.join } }));
@@ -52,6 +56,13 @@ beforeEach(() => {
     loading: false,
     error: null,
   });
+  mocks.useMinigameInstance.mockImplementation(
+    (_slug: string | null, gameId: string | null) => ({
+      instance: liveInstances.find((item) => item.id === gameId) ?? null,
+      loading: false,
+      error: null,
+    })
+  );
   mocks.join.mockResolvedValue({
     success: true,
     data: { alias: "Ana", instances: [{ id: "poll-1" }, { id: "quiz-1" }] },
@@ -81,6 +92,30 @@ describe("GameParticipantRoot", () => {
       expect(screen.getByText("Encuesta: Encuesta uno")).toBeInTheDocument()
     );
     expect(screen.queryByText("Quiz: Quiz dos")).not.toBeInTheDocument();
-    expect(mocks.join).toHaveBeenCalledWith("devfest", { alias: "Ana" });
+    expect(mocks.join).toHaveBeenCalledWith("devfest", {
+      alias: "Ana",
+      instanceId: "poll-1",
+    });
+  });
+
+  it("shows connecting status instead of Entrar while auto-joining", async () => {
+    window.history.replaceState({}, "", "/events/devfest/jugar?game=poll-1");
+    localStorage.setItem("gdg_minigame_alias_devfest", "Ana");
+    let resolveJoin!: (value: unknown) => void;
+    mocks.join.mockReturnValue(
+      new Promise((resolve) => {
+        resolveJoin = resolve;
+      })
+    );
+    render(<GameParticipantRoot slug="devfest" eventName="DevFest" />);
+    expect(await screen.findByText(/Conectando al juego/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Entrar/ })).toBeNull();
+    resolveJoin({
+      success: true,
+      data: { alias: "Ana", instances: [{ id: "poll-1" }] },
+    });
+    await waitFor(() =>
+      expect(screen.getByText("Encuesta: Encuesta uno")).toBeInTheDocument()
+    );
   });
 });

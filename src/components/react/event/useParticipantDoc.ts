@@ -15,6 +15,8 @@ export interface ParticipantDoc {
   lastQuizPoints?: number;
   lastQuizQuestionId?: string;
   quizAnsweredQuestions?: string[];
+  rouletteWonAt?: { seconds: number; nanoseconds?: number } | null;
+  rouletteSpinNumber?: number | null;
 }
 
 interface State {

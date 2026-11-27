@@ -565,11 +565,27 @@ describe("firestore.rules — PR6 response writes", () => {
     const owner = env.authenticatedContext("user-1").firestore();
     const stranger = env.authenticatedContext("user-2").firestore();
     const receipt = `events/${SLUG}/minigames/${QUIZ_INSTANCE_ID}/quiz_receipts/user-1_q1`;
+    const missingOwnReceipt = `events/${SLUG}/minigames/${QUIZ_INSTANCE_ID}/quiz_receipts/user-1_q2`;
     await assertSucceeds(getDoc(doc(owner, receipt)));
+    await assertSucceeds(getDoc(doc(owner, missingOwnReceipt)));
     await assertFails(getDoc(doc(stranger, receipt)));
+    await assertFails(getDoc(doc(stranger, missingOwnReceipt)));
     await assertFails(
       getDoc(
         doc(owner, `events/${SLUG}/minigames/${QUIZ_INSTANCE_ID}/secret/quiz`)
+      )
+    );
+    await assertFails(
+      getDoc(
+        doc(owner, `events/${SLUG}/minigames/${QUIZ_INSTANCE_ID}/poll_shards/0`)
+      )
+    );
+    await assertFails(
+      getDoc(
+        doc(
+          owner,
+          `events/${SLUG}/minigames/${QUIZ_INSTANCE_ID}/roulette_shards/0`
+        )
       )
     );
   });

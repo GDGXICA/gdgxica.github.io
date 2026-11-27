@@ -12,6 +12,7 @@ export const isDevPreview =
 
 interface ApiResponse<T> {
   success: boolean;
+  status?: number;
   data?: T;
   error?: string;
   message?: string;
@@ -25,6 +26,13 @@ interface ApiResponse<T> {
   issues?: { path: string; message: string }[];
   /** Certificate fields still missing before a send (see eventCertificates). */
   missing?: string[];
+}
+
+interface RequestOptions {
+  timeoutMs?: number;
+  appCheck?: boolean;
+  retries?: number;
+  retryDelayMs?: number;
 }
 
 /**
@@ -171,42 +179,64 @@ export interface ManualCertificatesInput {
   recipients: { firstName: string; lastName: string; email: string }[];
 }
 
-async function request<T>(
+function resolveOptions(
+  optionsOrTimeout?: number | RequestOptions
+): RequestOptions {
+  if (typeof optionsOrTimeout === "number") {
+    return { timeoutMs: optionsOrTimeout };
+  }
+  return optionsOrTimeout ?? {};
+}
+
+function isRetryableStatus(status: number): boolean {
+  return status === 408 || status === 502 || status === 503 || status === 504;
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function singleRequest<T>(
   method: string,
   path: string,
-  body?: unknown,
-  timeoutMs?: number
-): Promise<ApiResponse<T>> {
+  body: unknown,
+  options: RequestOptions
+): Promise<{ response: ApiResponse<T>; retryable: boolean }> {
   const controller = new AbortController();
   let timeout: ReturnType<typeof setTimeout> | undefined;
-  const timedOut = new Promise<ApiResponse<T>>((resolve) => {
-    if (timeoutMs !== undefined) {
+  const timedOut = new Promise<{
+    response: ApiResponse<T>;
+    retryable: boolean;
+  }>((resolve) => {
+    if (options.timeoutMs !== undefined) {
       timeout = setTimeout(() => {
         controller.abort();
         resolve({
-          success: false,
-          error:
-            "El servidor tardó demasiado en responder. Inténtalo de nuevo.",
+          response: {
+            success: false,
+            error:
+              "El servidor tardó demasiado en responder. Inténtalo de nuevo.",
+          },
+          retryable: true,
         });
-      }, timeoutMs);
+      }, options.timeoutMs);
     }
   });
 
-  const operation = (async (): Promise<ApiResponse<T>> => {
+  const operation = (async (): Promise<{
+    response: ApiResponse<T>;
+    retryable: boolean;
+  }> => {
     try {
-      // Inside the try: getIdToken() reaches the network to refresh an expired
-      // token, so it throws when identitytoolkit is blocked or offline. Left
-      // outside, that throw escaped request() entirely and every caller had to
-      // guard it — which none of them did.
       const token = await getIdToken();
       if (!token) {
-        return { success: false, error: "Not authenticated" };
+        return {
+          response: { success: false, error: "Not authenticated" },
+          retryable: false,
+        };
       }
 
-      // Proves the call came from this web app rather than a script that
-      // minted an anonymous token elsewhere. Omitted when unavailable; the
-      // server decides what that means.
-      const appCheckToken = await getAppCheckToken();
+      const appCheckToken = options.appCheck ? await getAppCheckToken() : null;
 
       const res = await fetch(`${API_BASE}${path}`, {
         method,
@@ -224,26 +254,34 @@ async function request<T>(
           res.status === 401 || res.status === 403
             ? "Sesión expirada o sin permisos. Vuelve a iniciar sesión."
             : `Error ${res.status}`;
-        // El cuerpo puede no ser JSON (p. ej. una página de error HTML).
         const data = await res.json().catch(() => null);
         return {
-          success: false,
-          error: data?.error || data?.message || fallback,
-
-          ...(typeof data?.code === "string" ? { code: data.code } : {}),
-          ...(Array.isArray(data?.issues) ? { issues: data.issues } : {}),
-          ...(Array.isArray(data?.missing) ? { missing: data.missing } : {}),
+          response: {
+            success: false,
+            status: res.status,
+            error: data?.error || data?.message || fallback,
+            ...(typeof data?.code === "string" ? { code: data.code } : {}),
+            ...(Array.isArray(data?.issues) ? { issues: data.issues } : {}),
+            ...(Array.isArray(data?.missing) ? { missing: data.missing } : {}),
+          },
+          retryable: isRetryableStatus(res.status),
         };
       }
 
-      return (await res.json()) as ApiResponse<T>;
+      return {
+        response: (await res.json()) as ApiResponse<T>,
+        retryable: false,
+      };
     } catch (err) {
       return {
-        success: false,
-        error:
-          err instanceof DOMException && err.name === "AbortError"
-            ? "El servidor tardó demasiado en responder. Inténtalo de nuevo."
-            : "No se pudo conectar con el servidor.",
+        response: {
+          success: false,
+          error:
+            err instanceof DOMException && err.name === "AbortError"
+              ? "El servidor tardó demasiado en responder. Inténtalo de nuevo."
+              : "No se pudo conectar con el servidor.",
+        },
+        retryable: true,
       };
     }
   })();
@@ -253,6 +291,39 @@ async function request<T>(
   } finally {
     if (timeout !== undefined) clearTimeout(timeout);
   }
+}
+
+async function request<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  optionsOrTimeout?: number | RequestOptions
+): Promise<ApiResponse<T>> {
+  const options = resolveOptions(optionsOrTimeout);
+  const maxRetries = options.retries ?? 0;
+  const baseDelay = options.retryDelayMs ?? 300;
+
+  let lastResult: ApiResponse<T> = {
+    success: false,
+    error: "No se pudo conectar con el servidor.",
+  };
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const { response, retryable } = await singleRequest<T>(
+      method,
+      path,
+      body,
+      options
+    );
+    lastResult = response;
+    if (response.success || !retryable || attempt === maxRetries) {
+      return response;
+    }
+    const jitter = Math.floor(Math.random() * 150);
+    await wait(baseDelay * 2 ** attempt + jitter);
+  }
+
+  return lastResult;
 }
 
 const realApi = {
@@ -406,17 +477,26 @@ const realApi = {
     request(
       "PATCH",
       `/events/${encodeURIComponent(slug)}/minigames/${id}/state`,
-      { state }
+      { state },
+      { timeoutMs: 12_000 }
     ),
   advanceQuizQuestion: (slug: string, id: string) =>
-    request(
+    request<{
+      id: string;
+      currentQuestionIndex: number;
+      currentQuestionStartedAt?: { seconds: number; nanoseconds: number };
+    }>(
       "POST",
-      `/events/${encodeURIComponent(slug)}/minigames/${id}/quiz/advance`
+      `/events/${encodeURIComponent(slug)}/minigames/${id}/quiz/advance`,
+      undefined,
+      { timeoutMs: 12_000 }
     ),
   advancePollQuestion: (slug: string, id: string) =>
-    request(
+    request<{ id: string; currentQuestionIndex: number }>(
       "POST",
-      `/events/${encodeURIComponent(slug)}/minigames/${id}/poll/advance`
+      `/events/${encodeURIComponent(slug)}/minigames/${id}/poll/advance`,
+      undefined,
+      { timeoutMs: 12_000 }
     ),
   answerQuizQuestion: (
     slug: string,
@@ -427,7 +507,8 @@ const realApi = {
     request(
       "POST",
       `/events/${encodeURIComponent(slug)}/minigames/${id}/quiz/answer`,
-      { questionId, optionId }
+      { questionId, optionId },
+      { timeoutMs: 10_000, retries: 2, retryDelayMs: 350 }
     ),
   answerPollQuestion: (
     slug: string,
@@ -438,13 +519,17 @@ const realApi = {
     request(
       "POST",
       `/events/${encodeURIComponent(slug)}/minigames/${id}/poll/answer`,
-      { questionId, optionId }
+      { questionId, optionId },
+      { timeoutMs: 10_000, retries: 2, retryDelayMs: 350 }
     ),
   removeMinigameFromEvent: (slug: string, id: string) =>
     request("DELETE", `/events/${encodeURIComponent(slug)}/minigames/${id}`),
 
   // Public participant join (anon-friendly)
-  joinEventMinigames: (slug: string, data: { alias: string }) =>
+  joinEventMinigames: (
+    slug: string,
+    data: { alias: string; instanceId?: string }
+  ) =>
     request<{
       alias: string;
       instances: {
@@ -453,7 +538,11 @@ const realApi = {
         joined: boolean;
         bingoCard?: string[];
       }[];
-    }>("POST", `/events/${encodeURIComponent(slug)}/minigames/join`, data),
+    }>("POST", `/events/${encodeURIComponent(slug)}/minigames/join`, data, {
+      timeoutMs: 10_000,
+      retries: 2,
+      retryDelayMs: 350,
+    }),
 
   // Public credential submission (anon-friendly).
   //
@@ -465,7 +554,10 @@ const realApi = {
       credentialId: string;
       sequenceNumber: number;
       groupLetter: string;
-    }>("POST", `/events/${encodeURIComponent(slug)}/credentials`, data, 30_000),
+    }>("POST", `/events/${encodeURIComponent(slug)}/credentials`, data, {
+      timeoutMs: 30_000,
+      appCheck: true,
+    }),
 
   // Attaches the composed card after creation. A separate call because the
   // group letter comes from a server-assigned sequence number, so the
@@ -479,7 +571,7 @@ const realApi = {
       "PATCH",
       `/events/${encodeURIComponent(slug)}/credentials/${id}/image`,
       data,
-      30_000
+      { timeoutMs: 30_000, appCheck: true }
     ),
 
   // Credential administration (organizer-level).
@@ -564,14 +656,18 @@ const realApi = {
   spinRoulette: (slug: string, id: string) =>
     request<{ winnerId: string; alias: string; spinNumber: number }>(
       "POST",
-      `/events/${encodeURIComponent(slug)}/minigames/${id}/roulette/spin`
+      `/events/${encodeURIComponent(slug)}/minigames/${id}/roulette/spin`,
+      undefined,
+      { timeoutMs: 12_000 }
     ),
 
   // Classic bingo: the admin calls a ball (admin-only)...
   drawBingoBall: (slug: string, id: string) =>
     request<{ term: string; drawCount: number; remaining: number }>(
       "POST",
-      `/events/${encodeURIComponent(slug)}/minigames/${id}/bingo/draw`
+      `/events/${encodeURIComponent(slug)}/minigames/${id}/bingo/draw`,
+      undefined,
+      { timeoutMs: 12_000 }
     ),
   // ...and the participant claims the line. Verified server-side against
   // the balls actually called, so nothing here is taken on trust.
@@ -698,7 +794,8 @@ const realApi = {
     request<{ id: string; duplicate?: boolean }>(
       "POST",
       `/events/${encodeURIComponent(slug)}/mural/photos`,
-      body
+      body,
+      { appCheck: true }
     ),
 
   requestMuralRemoval: (slug: string, id: string, note: string) =>

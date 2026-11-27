@@ -115,4 +115,47 @@ describe("PollOverlay", () => {
       "Pregunta cerrada"
     );
   });
+
+  it("treats already_answered (409) as confirmed vote", async () => {
+    mocks.answerPollQuestion.mockResolvedValue({
+      success: false,
+      status: 409,
+      error: "already_answered",
+    });
+    renderPoll();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Sí" }));
+    expect(await screen.findByText("Tu voto")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("ignores stale responses when the question advances mid-flight", async () => {
+    let resolveFirst!: (value: { success: boolean }) => void;
+    mocks.answerPollQuestion.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveFirst = resolve;
+      })
+    );
+    const { rerender } = renderPoll(0);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Sí" }));
+    expect(screen.getByText("Enviando…")).toBeInTheDocument();
+
+    rerender(
+      <PollOverlay
+        slug="evt"
+        instanceId="poll"
+        uid="u1"
+        alias="Ana"
+        title="Varias"
+        config={config}
+        currentQuestionIndex={1}
+      />
+    );
+    expect(screen.getByRole("button", { name: "Rojo" })).toBeEnabled();
+
+    resolveFirst({ success: true });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Rojo" })).toBeEnabled()
+    );
+    expect(screen.queryByText("Tu voto")).toBeNull();
+  });
 });

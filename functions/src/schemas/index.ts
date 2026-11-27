@@ -499,6 +499,7 @@ export const minigameStateSchema = z
 export const minigameJoinSchema = z
   .object({
     alias: z.string().trim().min(1).max(24),
+    instanceId: safeId.optional(),
   })
   .strict();
 

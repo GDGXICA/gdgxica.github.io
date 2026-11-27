@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { getFirestore } from "@/lib/firebase";
 import type { QuizConfig } from "../admin/minigame-templates/types";
 import { useAggregates } from "./useAggregates";
 import { useParticipantDoc } from "./useParticipantDoc";
 import { answerErrorMessage } from "./answerError";
+import { QuizTimer } from "./QuizTimer";
 
 interface Props {
   slug: string;
@@ -28,11 +29,13 @@ export function QuizOverlay({
 }: Props) {
   const { doc: participant } = useParticipantDoc(slug, instanceId, uid);
   const { aggregates } = useAggregates(slug, instanceId);
-  const [now, setNow] = useState(() => Date.now());
   const [receipt, setReceipt] = useState<string | null>(null);
+  const [pendingOptionId, setPendingOptionId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [timerExpired, setTimerExpired] = useState(false);
   const [animatedScore, setAnimatedScore] = useState(0);
+
   const question = useMemo(
     () =>
       currentQuestionIndex < 0
@@ -40,16 +43,40 @@ export function QuizOverlay({
         : (config.questions[currentQuestionIndex] ?? null),
     [config.questions, currentQuestionIndex]
   );
+  const questionId = question?.id ?? null;
+  const activeQuestionIdRef = useRef<string | null>(questionId);
+  activeQuestionIdRef.current = questionId;
+  const initialQuestionIdRef = useRef<string | null>(questionId);
+  const restoredInitialRef = useRef(false);
 
-  useEffect(() => {
-    if (!question) return;
-    const interval = window.setInterval(() => setNow(Date.now()), 100);
-    return () => window.clearInterval(interval);
-  }, [question]);
+  const startedMs = currentQuestionStartedAt
+    ? currentQuestionStartedAt.seconds * 1000 +
+      Math.floor((currentQuestionStartedAt.nanoseconds ?? 0) / 1_000_000)
+    : null;
 
   useEffect(() => {
     setReceipt(null);
-    if (!question) return;
+    setPendingOptionId(null);
+    setSubmitting(false);
+    setError(null);
+    setTimerExpired(
+      Boolean(
+        question &&
+        startedMs !== null &&
+        Date.now() - startedMs >= question.timeLimitSec * 1000
+      )
+    );
+  }, [questionId, startedMs, question]);
+
+  useEffect(() => {
+    if (
+      !questionId ||
+      restoredInitialRef.current ||
+      initialQuestionIdRef.current !== questionId
+    ) {
+      return;
+    }
+    restoredInitialRef.current = true;
     let cancelled = false;
     (async () => {
       try {
@@ -58,11 +85,16 @@ export function QuizOverlay({
         const snap = await getDoc(
           doc(
             db,
-            `events/${slug}/minigames/${instanceId}/quiz_receipts/${uid}_${question.id}`
+            `events/${slug}/minigames/${instanceId}/quiz_receipts/${uid}_${questionId}`
           )
         );
-        if (!cancelled && snap.exists())
+        if (
+          !cancelled &&
+          activeQuestionIdRef.current === questionId &&
+          snap.exists()
+        ) {
           setReceipt((snap.data() as { optionId: string }).optionId);
+        }
       } catch {
         return;
       }
@@ -70,7 +102,7 @@ export function QuizOverlay({
     return () => {
       cancelled = true;
     };
-  }, [slug, instanceId, uid, question?.id]);
+  }, [slug, instanceId, uid, questionId]);
 
   useEffect(() => {
     const target = participant?.quizScore ?? 0;
@@ -93,15 +125,10 @@ export function QuizOverlay({
     return () => cancelAnimationFrame(frame);
   }, [participant?.quizScore]);
 
-  const startedMs = currentQuestionStartedAt
-    ? currentQuestionStartedAt.seconds * 1000 +
-      Math.floor((currentQuestionStartedAt.nanoseconds ?? 0) / 1_000_000)
-    : null;
-  const remainingMs =
-    question && startedMs !== null
-      ? Math.max(0, question.timeLimitSec * 1000 - Math.max(0, now - startedMs))
-      : (question?.timeLimitSec ?? 0) * 1000;
-  const timerExpired = startedMs !== null && remainingMs <= 0;
+  const handleExpire = useCallback(() => {
+    setTimerExpired(true);
+  }, []);
+
   const revealedAnswer = question
     ? aggregates?.revealedAnswers?.[question.id]
     : undefined;
@@ -118,17 +145,40 @@ export function QuizOverlay({
 
   async function answer(optionId: string) {
     if (!question || answered || submitting || timerExpired) return;
+    const targetQuestionId = question.id;
     setSubmitting(true);
+    setPendingOptionId(optionId);
     setError(null);
-    const result = await api.answerQuizQuestion(
-      slug,
-      instanceId,
-      question.id,
-      optionId
-    );
-    if (result.success) setReceipt(optionId);
-    else setError(answerErrorMessage(result.error));
-    setSubmitting(false);
+    try {
+      const result = await api.answerQuizQuestion(
+        slug,
+        instanceId,
+        targetQuestionId,
+        optionId
+      );
+      if (activeQuestionIdRef.current !== targetQuestionId) return;
+      if (
+        result.success ||
+        result.status === 409 ||
+        result.error === "already_answered"
+      ) {
+        setReceipt(optionId);
+      } else {
+        setError(answerErrorMessage(result.error));
+      }
+    } catch (err) {
+      if (activeQuestionIdRef.current !== targetQuestionId) return;
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No pudimos enviar tu respuesta. Intenta de nuevo."
+      );
+    } finally {
+      if (activeQuestionIdRef.current === targetQuestionId) {
+        setPendingOptionId(null);
+        setSubmitting(false);
+      }
+    }
   }
 
   if (!question)
@@ -148,32 +198,15 @@ export function QuizOverlay({
 
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="flex items-center justify-between gap-3">
-        <span className="n-mono text-(--muted)">
-          Pregunta {currentQuestionIndex + 1} de {config.questions.length}
-        </span>
-        <span
-          aria-label="Tiempo restante"
-          className={`rounded-(--radius-sm) border px-3 py-1 font-mono text-2xl font-semibold tabular-nums ${remainingMs <= 5000 ? "border-red-400/60 text-red-300" : "border-(--line-strong) text-(--ink)"}`}
-        >
-          {Math.ceil(remainingMs / 1000)}s
-        </span>
-      </div>
-      <div
-        className="mt-4 h-1.5 overflow-hidden rounded-full bg-(--surface-3)"
-        role="progressbar"
-        aria-label="Tiempo de la pregunta"
-        aria-valuenow={Math.ceil(remainingMs / 1000)}
-        aria-valuemin={0}
-        aria-valuemax={question.timeLimitSec}
-      >
-        <div
-          className={`h-full rounded-full transition-[width] duration-100 motion-reduce:transition-none ${remainingMs <= 5000 ? "bg-(--g-red)" : "bg-(--ochre)"}`}
-          style={{
-            width: `${Math.round((100 * remainingMs) / (question.timeLimitSec * 1000))}%`,
-          }}
-        />
-      </div>
+      <QuizTimer
+        questionId={question.id}
+        questionIndex={currentQuestionIndex}
+        totalQuestions={config.questions.length}
+        timeLimitSec={question.timeLimitSec}
+        startedMs={startedMs}
+        stopped={Boolean(revealedAnswer)}
+        onExpire={handleExpire}
+      />
       <h2 className="mt-8 mb-0 text-[0.9375rem] font-medium text-(--muted)">
         {title}
       </h2>
@@ -193,9 +226,8 @@ export function QuizOverlay({
           const count = counts[`${question.id}:${opt.id}`] ?? 0;
           const pct = total ? Math.round((100 * count) / total) : 0;
           const correct = revealedAnswer === opt.id;
-          const selected = receipt === opt.id;
-          // The same colour per letter as the big screen, so the room can
-          // match an answer at a glance: a coded edge and key, not a fill.
+          const selected = receipt === opt.id || pendingOptionId === opt.id;
+          const isPending = pendingOptionId === opt.id;
           const colors = [
             "var(--g-blue)",
             "var(--g-red)",
@@ -208,13 +240,14 @@ export function QuizOverlay({
               key={opt.id}
               type="button"
               onClick={() => answer(opt.id)}
+              aria-busy={isPending}
               disabled={
                 Boolean(revealedAnswer) ||
                 answered ||
                 timerExpired ||
                 submitting
               }
-              className={`relative min-h-20 overflow-hidden rounded-(--radius-sm) border border-l-4 bg-(--surface-2) p-4 text-left text-lg font-semibold text-(--ink) transition-[transform,background-color] enabled:hover:-translate-y-0.5 enabled:hover:bg-(--surface-3) enabled:active:translate-y-0 disabled:cursor-default motion-reduce:transition-none motion-reduce:enabled:hover:translate-y-0 ${selected ? "border-(--ochre) ring-2 ring-(--ochre)" : revealedAnswer && correct ? "border-(--g-green)" : "border-(--line)"} ${revealedAnswer && !correct ? "opacity-55" : ""}`}
+              className={`relative min-h-20 overflow-hidden rounded-(--radius-sm) border border-l-4 bg-(--surface-2) p-4 text-left text-lg font-semibold text-(--ink) transition-[transform,background-color] enabled:hover:-translate-y-0.5 enabled:hover:bg-(--surface-3) enabled:active:translate-y-0 disabled:cursor-default motion-reduce:transition-none motion-reduce:enabled:hover:translate-y-0 ${selected ? "border-(--ochre) ring-2 ring-(--ochre)" : revealedAnswer && correct ? "border-(--g-green)" : "border-(--line)"} ${(revealedAnswer && !correct) || (submitting && !isPending) ? "opacity-55" : ""}`}
               style={{ borderLeftColor: color }}
             >
               {revealedAnswer && (
@@ -234,6 +267,11 @@ export function QuizOverlay({
                 <span className="min-w-[7rem] flex-1 break-words">
                   {opt.label}
                 </span>
+                {isPending && (
+                  <span className="font-mono text-sm font-medium text-(--ochre)">
+                    Enviando…
+                  </span>
+                )}
                 {revealedAnswer && correct && (
                   <span className="text-sm font-medium text-green-300">
                     ✓ Correcto
@@ -256,12 +294,13 @@ export function QuizOverlay({
       </div>
       <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-(--line) pt-5">
         <div className="text-[0.9375rem] text-(--muted)" role="status">
-          {!revealedAnswer && answered && (
+          {submitting && !answered && <p>Enviando tu respuesta…</p>}
+          {!submitting && !revealedAnswer && answered && (
             <p>
               Respuesta registrada. Verás la solución al terminar el tiempo.
             </p>
           )}
-          {timerExpired && !revealedAnswer && (
+          {timerExpired && !revealedAnswer && !submitting && (
             <p>Tiempo terminado. Calculando resultados…</p>
           )}
           {revealedAnswer &&
@@ -273,7 +312,7 @@ export function QuizOverlay({
                 +{participant.lastQuizPoints ?? 0} puntos
               </p>
             )}
-          {!answered && !timerExpired && (
+          {!answered && !timerExpired && !submitting && (
             <p>Responde antes de que termine el tiempo.</p>
           )}
         </div>

@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 
 const mocks = vi.hoisted(() => ({
   useLiveMinigames: vi.fn(),
+  useMinigameInstance: vi.fn(),
   useAggregates: vi.fn(),
   useWordCloud: vi.fn(),
   useBingoWinners: vi.fn(),
@@ -10,6 +11,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("../useLiveMinigames", () => ({
   useLiveMinigames: mocks.useLiveMinigames,
+}));
+vi.mock("../useMinigameInstance", () => ({
+  useMinigameInstance: mocks.useMinigameInstance,
 }));
 vi.mock("../useAggregates", () => ({
   useAggregates: mocks.useAggregates,
@@ -36,6 +40,17 @@ beforeEach(() => {
     liveInstances: [],
     error: null,
   });
+  mocks.useMinigameInstance.mockImplementation(
+    (_slug: string | null, gameId: string | null) => ({
+      loading: false,
+      instance:
+        mocks
+          .useLiveMinigames()
+          .liveInstances.find((item: { id: string }) => item.id === gameId) ??
+        null,
+      error: null,
+    })
+  );
   mocks.useAggregates.mockReturnValue({
     aggregates: null,
     loading: false,

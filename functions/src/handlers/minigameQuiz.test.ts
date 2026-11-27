@@ -4,12 +4,16 @@ import type { Request, Response } from "express";
 const mocks = vi.hoisted(() => ({
   data: new Map<string, Record<string, unknown>>(),
   nowMs: 15000,
-  audit: vi.fn(async () => undefined),
+  logParticipantAudit: vi.fn(),
 }));
 
 function ref(path: string) {
   return {
     path,
+    get: async () => ({
+      exists: mocks.data.has(path),
+      data: () => mocks.data.get(path),
+    }),
     collection: (name: string) => ({
       doc: (id: string) => ref(`${path}/${name}/${id}`),
     }),
@@ -19,15 +23,28 @@ function ref(path: string) {
 vi.mock("firebase-admin", () => ({
   firestore: () => ({
     doc: (path: string) => ref(path),
-    runTransaction: async (callback: (tx: unknown) => Promise<unknown>) =>
-      callback({
-        get: async (document: { path: string }) => ({
-          exists: mocks.data.has(document.path),
-          data: () => mocks.data.get(document.path),
-        }),
-        create: (document: { path: string }, data: Record<string, unknown>) =>
-          mocks.data.set(document.path, data),
-      }),
+    batch: () => {
+      const ops: Array<{ path: string; data: Record<string, unknown> }> = [];
+      return {
+        create: (document: { path: string }, data: Record<string, unknown>) => {
+          ops.push({ path: document.path, data });
+        },
+        commit: async () => {
+          for (const op of ops) {
+            if (mocks.data.has(op.path)) {
+              const err = new Error("ALREADY_EXISTS") as Error & {
+                code: number;
+              };
+              err.code = 6;
+              throw err;
+            }
+          }
+          for (const op of ops) {
+            mocks.data.set(op.path, op.data);
+          }
+        },
+      };
+    },
   }),
 }));
 vi.mock("firebase-admin/firestore", () => ({
@@ -36,9 +53,12 @@ vi.mock("firebase-admin/firestore", () => ({
 vi.mock("firebase-functions/v2/tasks", () => ({
   onTaskDispatched: (_options: unknown, handler: unknown) => handler,
 }));
-vi.mock("../utils/audit", () => ({ writeAuditLog: mocks.audit }));
+vi.mock("../utils/audit", () => ({
+  logParticipantAudit: mocks.logParticipantAudit,
+}));
 
 import { answer, scoreQuizAnswer } from "./minigameQuiz";
+import { clearMinigameCaches } from "../services/minigameCache";
 
 const base = "events/devfest/minigames/quiz-1";
 function seed() {
@@ -87,7 +107,8 @@ function response() {
 beforeEach(() => {
   mocks.data.clear();
   mocks.nowMs = 15000;
-  mocks.audit.mockClear();
+  mocks.logParticipantAudit.mockClear();
+  clearMinigameCaches();
   seed();
 });
 
@@ -107,6 +128,7 @@ describe("quiz answer API", () => {
     const res = response();
     await answer(request("a"), res);
     expect(res.statusCode).toBe(200);
+    expect(mocks.logParticipantAudit).toHaveBeenCalledTimes(1);
     expect(mocks.data.get(`${base}/quiz_answers/u1_q1`)).toMatchObject({
       isCorrect: true,
       pointsEarned: 60,

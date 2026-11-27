@@ -66,6 +66,34 @@ function update(path: string, changes: Record<string, unknown>) {
 vi.mock("firebase-admin", () => ({
   firestore: () => ({
     doc: ref,
+    batch: () => {
+      const ops: Array<() => void> = [];
+      return {
+        update: (
+          document: { path: string },
+          changes: Record<string, unknown>
+        ) => {
+          ops.push(() => update(document.path, changes));
+        },
+        set: (
+          document: { path: string },
+          data: Record<string, unknown>,
+          options?: { merge?: boolean }
+        ) => {
+          ops.push(() => {
+            mocks.data.set(
+              document.path,
+              options?.merge
+                ? { ...mocks.data.get(document.path), ...data }
+                : data
+            );
+          });
+        },
+        commit: async () => {
+          for (const op of ops) op();
+        },
+      };
+    },
     runTransaction: async (callback: (tx: unknown) => Promise<unknown>) =>
       callback({
         get: async (document: { path: string }) => snapshot(document.path),

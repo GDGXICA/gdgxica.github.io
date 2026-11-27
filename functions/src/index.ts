@@ -247,6 +247,22 @@ const ballLimiter = rateLimit({
   },
 });
 
+const minigameOperateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const uid = (req as { user?: { uid?: string } }).user?.uid;
+    return uid ? `u:${uid}` : `ip:${ipKeyGenerator(req.ip ?? "unknown")}`;
+  },
+  handler: limitExceeded("minigame_operate"),
+  message: {
+    success: false,
+    error: "Demasiadas acciones seguidas, espera un momento",
+  },
+});
+
 // Classic-bingo claims are public and anon-token-backed like /join, so
 // they are keyed by IP too — but on their own counter. A whole venue
 // usually shares one NAT address, and sharing joinLimiter would let the
@@ -808,7 +824,7 @@ app.patch(
   minigamesOfEvent(),
   slugP,
   vid,
-  writeLimiter,
+  minigameOperateLimiter,
   validateBody(minigameStateSchema),
   minigameInstances.setState
 );
@@ -817,7 +833,7 @@ app.post(
   minigamesOfEvent(),
   slugP,
   vid,
-  writeLimiter,
+  minigameOperateLimiter,
   minigameInstances.quizAdvance
 );
 app.post(
@@ -825,7 +841,7 @@ app.post(
   minigamesOfEvent(),
   slugP,
   vid,
-  writeLimiter,
+  minigameOperateLimiter,
   minigameInstances.pollAdvance
 );
 app.post(
@@ -1032,7 +1048,7 @@ app.post(
   minigamesOfEvent(),
   slugP,
   vid,
-  writeLimiter,
+  minigameOperateLimiter,
   minigameRoulette.spin
 );
 
@@ -1234,12 +1250,22 @@ app.use(
   }
 );
 
+const parsedMinInstances = Number.parseInt(
+  process.env.API_MIN_INSTANCES ?? "0",
+  10
+);
+const apiMinInstances =
+  Number.isFinite(parsedMinInstances) && parsedMinInstances > 0
+    ? Math.min(parsedMinInstances, 10)
+    : 0;
+
 export const api = onRequest(
   {
     secrets: [GITHUB_TOKEN, GMAIL_USER, GMAIL_APP_PASSWORD],
     invoker: "public",
     timeoutSeconds: 300,
     memory: "512MiB",
+    minInstances: apiMinInstances,
     // Techo de instancias concurrentes. Gen2 usa 100 por defecto, y sin límite
     // tres cosas escalan a la vez sin freno: el coste de un ataque, las
     // escrituras de auditoría que ese ataque genera, y la deriva de los seis
@@ -1254,7 +1280,10 @@ export const api = onRequest(
 
 // Firestore trigger: incrementally maintains aggregates/current per
 // minigame instance whenever a participant response is created.
-export { onMinigameResponseWritten } from "./triggers/recomputeAggregates";
+export {
+  onMinigameResponseWritten,
+  onMinigameParticipantCreated,
+} from "./triggers/recomputeAggregates";
 export { finishQuizQuestion } from "./handlers/minigameQuiz";
 // Audita el check-in. Es la única mutación del panel que no pasa por esta API
 // —va directa a Firestore para poder encolarse sin wifi—, así que un trigger es

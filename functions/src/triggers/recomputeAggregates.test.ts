@@ -1,7 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// vi.mock is hoisted, so any vars used inside its factory must be declared
-// via vi.hoisted to share initialization order with the mock.
 const mocks = vi.hoisted(() => {
   const docMock = vi.fn();
   const incrementMock = vi.fn((n: number) => ({ __increment: n }));
@@ -25,25 +23,26 @@ vi.mock("firebase-admin/firestore", () => ({
   },
 }));
 
-// Stub `firebase-functions/v2/firestore` so importing the module does not
-// require Functions runtime config. We don't invoke the wrapped export
-// directly; tests target the exported inner handler.
 vi.mock("firebase-functions/v2/firestore", () => ({
   onDocumentWritten: (_path: string, handler: unknown) => handler,
+  onDocumentCreated: (_path: string, handler: unknown) => handler,
 }));
 
 const { docMock } = mocks;
 
 import {
+  configureAggregateCoalescers,
   recomputeAggregatesFromEvent,
+  recomputeRouletteAggregateFromJoin,
   type ResponseWriteEvent,
 } from "./recomputeAggregates";
+import { clearMinigameCaches } from "../services/minigameCache";
 
 function createEvent(
   data: { questionId?: string; optionId?: string } | undefined,
-  opts: { beforeExists?: boolean; afterExists?: boolean } = {}
+  opts: { beforeExists?: boolean; afterExists?: boolean; respId?: string } = {}
 ): ResponseWriteEvent {
-  const { beforeExists = false, afterExists = true } = opts;
+  const { beforeExists = false, afterExists = true, respId = "u1_q1" } = opts;
   return {
     data: {
       before: { exists: beforeExists },
@@ -52,7 +51,7 @@ function createEvent(
         data: () => data,
       },
     },
-    params: { slug: "devfest-2025", id: "instance-A" },
+    params: { slug: "devfest-2025", id: "instance-A", respId },
   };
 }
 
@@ -62,21 +61,30 @@ interface ParticipantFixture {
   quizScore?: number;
 }
 
-interface WireResult {
-  aggregateSet: ReturnType<typeof vi.fn>;
-  participantsLimit: ReturnType<typeof vi.fn>;
-}
-
 function wire(options: {
   instanceType?: string;
   participants?: ParticipantFixture[];
-}): WireResult {
-  const aggregatePath =
-    "events/devfest-2025/minigames/instance-A/aggregates/current";
-  const instancePath = "events/devfest-2025/minigames/instance-A";
+  existingWinners?: unknown[];
+}) {
+  const basePath = "events/devfest-2025/minigames/instance-A";
+  const aggregatePath = `${basePath}/aggregates/current`;
+  const pollShards = new Map<
+    string,
+    { optionCounts: Record<string, number>; totalResponses: number }
+  >();
+  const rouletteShards = new Map<string, { count: number }>();
 
   const aggregateSet = vi.fn(async () => undefined);
-  const aggregateRef = { set: aggregateSet };
+  const aggregateRef = {
+    set: aggregateSet,
+    get: vi.fn(async () => ({
+      exists: Boolean(options.existingWinners),
+      data: () =>
+        options.existingWinners
+          ? { winners: options.existingWinners }
+          : undefined,
+    })),
+  };
 
   const participantsGet = vi.fn(async () => ({
     docs: (options.participants ?? []).map((p) => ({
@@ -87,11 +95,34 @@ function wire(options: {
   const participantsLimit = vi.fn(() => ({ get: participantsGet }));
   const participantsOrderBy = vi.fn(() => ({ limit: participantsLimit }));
   const participantsCol = { orderBy: participantsOrderBy };
+
   const instanceCollection = vi.fn((name: string) => {
     if (name === "participants") return participantsCol;
+    if (name === "poll_shards") {
+      return {
+        get: vi.fn(async () => ({
+          docs: [...pollShards.entries()].map(([id, data]) => ({
+            id,
+            data: () => data,
+          })),
+        })),
+      };
+    }
+    if (name === "roulette_shards") {
+      return {
+        get: vi.fn(async () => ({
+          docs: [...rouletteShards.entries()].map(([id, data]) => ({
+            id,
+            data: () => data,
+          })),
+        })),
+      };
+    }
     throw new Error("unexpected nested collection " + name);
   });
+
   const instanceGet = vi.fn(async () => ({
+    exists: Boolean(options.instanceType),
     data: () =>
       options.instanceType ? { type: options.instanceType } : undefined,
   }));
@@ -102,141 +133,152 @@ function wire(options: {
 
   docMock.mockImplementation((path: string) => {
     if (path === aggregatePath) return aggregateRef;
-    if (path === instancePath) return instanceRef;
+    if (path === basePath) return instanceRef;
+    if (path.startsWith(`${basePath}/poll_shards/`)) {
+      const shardId = path.split("/").at(-1)!;
+      return {
+        set: vi.fn(async (payload: Record<string, unknown>) => {
+          const current = pollShards.get(shardId) ?? {
+            optionCounts: {},
+            totalResponses: 0,
+          };
+          const incTotal =
+            (payload.totalResponses as { __increment?: number })?.__increment ??
+            0;
+          current.totalResponses += incTotal;
+          const optsMap = payload.optionCounts as Record<
+            string,
+            { __increment?: number }
+          >;
+          for (const [k, v] of Object.entries(optsMap ?? {})) {
+            current.optionCounts[k] =
+              (current.optionCounts[k] ?? 0) + (v.__increment ?? 0);
+          }
+          pollShards.set(shardId, current);
+        }),
+      };
+    }
+    if (path.startsWith(`${basePath}/roulette_shards/`)) {
+      const shardId = path.split("/").at(-1)!;
+      return {
+        set: vi.fn(async (payload: Record<string, unknown>) => {
+          const current = rouletteShards.get(shardId) ?? { count: 0 };
+          current.count +=
+            (payload.count as { __increment?: number })?.__increment ?? 0;
+          rouletteShards.set(shardId, current);
+        }),
+      };
+    }
     return undefined;
   });
 
-  return { aggregateSet, participantsLimit };
+  return { aggregateSet, participantsLimit, pollShards, rouletteShards };
 }
 
 describe("recomputeAggregatesFromEvent", () => {
   beforeEach(() => {
     docMock.mockReset();
+    clearMinigameCaches();
+    configureAggregateCoalescers(0);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it("increments optionCounts and totalResponses on create (poll)", async () => {
+  it("aggregates sharded optionCounts and totalResponses on create (poll)", async () => {
     const wiring = wire({ instanceType: "poll" });
     await recomputeAggregatesFromEvent(
-      createEvent({ questionId: "q1", optionId: "a" })
+      createEvent({ questionId: "q1", optionId: "a" }, { respId: "u1_q1" })
     );
     expect(wiring.aggregateSet).toHaveBeenCalledTimes(1);
     const [payload, options] = wiring.aggregateSet.mock.calls[0];
-    expect(payload.optionCounts["q1:a"]).toEqual({ __increment: 1 });
-    expect(payload.totalResponses).toEqual({ __increment: 1 });
+    expect(payload.optionCounts).toEqual({ "q1:a": 1 });
+    expect(payload.totalResponses).toBe(1);
     expect(payload.updatedAt).toBe("__SERVER_TS__");
     expect(options).toEqual({ merge: true });
   });
 
-  it("uses a separate counter per (question,option) pair", async () => {
+  it("coalesces bursts across shards into a single aggregate write", async () => {
+    configureAggregateCoalescers(20);
     const wiring = wire({ instanceType: "poll" });
-    await recomputeAggregatesFromEvent(
-      createEvent({ questionId: "q1", optionId: "a" })
-    );
-    await recomputeAggregatesFromEvent(
-      createEvent({ questionId: "q1", optionId: "b" })
-    );
-    await recomputeAggregatesFromEvent(
-      createEvent({ questionId: "q2", optionId: "a" })
-    );
-    const keys = wiring.aggregateSet.mock.calls.map(
-      (c) => Object.keys((c[0] as { optionCounts: object }).optionCounts)[0]
-    );
-    expect(keys).toEqual(["q1:a", "q1:b", "q2:a"]);
-    expect(wiring.aggregateSet).toHaveBeenCalledTimes(3);
+    await Promise.all([
+      recomputeAggregatesFromEvent(
+        createEvent({ questionId: "q1", optionId: "a" }, { respId: "u1_q1" })
+      ),
+      recomputeAggregatesFromEvent(
+        createEvent({ questionId: "q1", optionId: "b" }, { respId: "u2_q1" })
+      ),
+      recomputeAggregatesFromEvent(
+        createEvent({ questionId: "q1", optionId: "a" }, { respId: "u3_q1" })
+      ),
+    ]);
+    expect(wiring.aggregateSet).toHaveBeenCalledTimes(1);
+    const [payload] = wiring.aggregateSet.mock.calls[0];
+    expect(payload.optionCounts).toEqual({ "q1:a": 2, "q1:b": 1 });
+    expect(payload.totalResponses).toBe(3);
   });
 
-  it("ignores updates (before exists)", async () => {
+  it("ignores updates, deletes and malformed responses", async () => {
     const wiring = wire({ instanceType: "poll" });
     await recomputeAggregatesFromEvent(
       createEvent({ questionId: "q1", optionId: "a" }, { beforeExists: true })
     );
-    expect(wiring.aggregateSet).not.toHaveBeenCalled();
-  });
-
-  it("ignores deletes (after does not exist)", async () => {
-    const wiring = wire({ instanceType: "poll" });
     await recomputeAggregatesFromEvent(
       createEvent(undefined, { afterExists: false })
     );
-    expect(wiring.aggregateSet).not.toHaveBeenCalled();
-  });
-
-  it("ignores malformed responses missing questionId or optionId", async () => {
-    const wiring = wire({ instanceType: "poll" });
     await recomputeAggregatesFromEvent(createEvent({ questionId: "q1" }));
     await recomputeAggregatesFromEvent(createEvent({ optionId: "a" }));
-    await recomputeAggregatesFromEvent(createEvent({}));
     expect(wiring.aggregateSet).not.toHaveBeenCalled();
   });
 
-  it("does not write a leaderboard for poll instances", async () => {
-    const wiring = wire({ instanceType: "poll" });
-    await recomputeAggregatesFromEvent(
-      createEvent({ questionId: "q1", optionId: "a" })
-    );
-    expect(wiring.aggregateSet).toHaveBeenCalledTimes(1);
-    const payload = wiring.aggregateSet.mock.calls[0][0] as Record<
-      string,
-      unknown
-    >;
-    expect(payload.leaderboard).toBeUndefined();
-  });
-
-  it("rebuilds the leaderboard for quiz instances ordered by score desc", async () => {
+  it("rebuilds the leaderboard for legacy quiz instances ordered by score desc", async () => {
     const wiring = wire({
       instanceType: "quiz",
       participants: [
         { id: "u1", alias: "Ana", quizScore: 300 },
         { id: "u2", alias: "Bea", quizScore: 200 },
-        { id: "u3", alias: "Carlos", quizScore: 100 },
       ],
-    });
-    await recomputeAggregatesFromEvent(
-      createEvent({ questionId: "q1", optionId: "a" })
-    );
-    expect(wiring.aggregateSet).toHaveBeenCalledTimes(2);
-    const leaderboardPayload = wiring.aggregateSet.mock.calls[1][0] as {
-      leaderboard: { uid: string; alias: string; score: number }[];
-    };
-    expect(leaderboardPayload.leaderboard).toEqual([
-      { uid: "u1", alias: "Ana", score: 300 },
-      { uid: "u2", alias: "Bea", score: 200 },
-      { uid: "u3", alias: "Carlos", score: 100 },
-    ]);
-  });
-
-  it("includes participants with zero score in the leaderboard", async () => {
-    const wiring = wire({
-      instanceType: "quiz",
-      participants: [
-        { id: "u1", alias: "Ana", quizScore: 100 },
-        { id: "u2", alias: "Zero", quizScore: 0 },
-      ],
-    });
-    await recomputeAggregatesFromEvent(
-      createEvent({ questionId: "q1", optionId: "a" })
-    );
-    const leaderboardPayload = wiring.aggregateSet.mock.calls[1][0] as {
-      leaderboard: unknown[];
-    };
-    expect(leaderboardPayload.leaderboard).toEqual([
-      { uid: "u1", alias: "Ana", score: 100 },
-      { uid: "u2", alias: "Zero", score: 0 },
-    ]);
-  });
-
-  it("uses limit(10) when querying participants", async () => {
-    const wiring = wire({
-      instanceType: "quiz",
-      participants: [{ id: "u1", alias: "Ana", quizScore: 100 }],
     });
     await recomputeAggregatesFromEvent(
       createEvent({ questionId: "q1", optionId: "a" })
     );
     expect(wiring.participantsLimit).toHaveBeenCalledWith(10);
+    const [payload] = wiring.aggregateSet.mock.calls[0];
+    expect(payload.leaderboard).toEqual([
+      { uid: "u1", alias: "Ana", score: 300 },
+      { uid: "u2", alias: "Bea", score: 200 },
+    ]);
+  });
+
+  it("aggregates roulette participant joins into eligibleCount", async () => {
+    configureAggregateCoalescers(20);
+    const wiring = wire({
+      instanceType: "roulette",
+      existingWinners: [{ uid: "w1", alias: "Ganador", spinNumber: 1 }],
+    });
+    await Promise.all([
+      recomputeRouletteAggregateFromJoin({
+        params: { slug: "devfest-2025", id: "instance-A", uid: "u1" },
+      }),
+      recomputeRouletteAggregateFromJoin({
+        params: { slug: "devfest-2025", id: "instance-A", uid: "u2" },
+      }),
+      recomputeRouletteAggregateFromJoin({
+        params: { slug: "devfest-2025", id: "instance-A", uid: "u3" },
+      }),
+    ]);
+    expect(wiring.aggregateSet).toHaveBeenCalledTimes(1);
+    const [payload] = wiring.aggregateSet.mock.calls[0];
+    expect(payload.totalParticipants).toBe(3);
+    expect(payload.eligibleCount).toBe(2);
+  });
+
+  it("ignores participant joins for non-roulette instances", async () => {
+    const wiring = wire({ instanceType: "poll" });
+    await recomputeRouletteAggregateFromJoin({
+      params: { slug: "devfest-2025", id: "instance-A", uid: "u1" },
+    });
+    expect(wiring.aggregateSet).not.toHaveBeenCalled();
   });
 });

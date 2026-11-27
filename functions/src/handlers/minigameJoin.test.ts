@@ -6,6 +6,7 @@ const SERVER_TS = "__SERVER_TS__";
 const mocks = vi.hoisted(() => ({
   collectionMock: vi.fn(),
   runTransactionMock: vi.fn(),
+  logParticipantAudit: vi.fn(),
 }));
 
 vi.mock("firebase-admin", () => ({
@@ -28,8 +29,13 @@ vi.mock("firebase-admin/firestore", () => ({
   },
 }));
 
+vi.mock("../utils/audit", () => ({
+  logParticipantAudit: mocks.logParticipantAudit,
+}));
+
 import * as handler from "./minigameJoin";
 import type { AuthenticatedRequest } from "../middleware/auth";
+import { clearMinigameCaches } from "../services/minigameCache";
 
 const { collectionMock, runTransactionMock } = mocks;
 
@@ -77,18 +83,14 @@ interface InstanceFixture {
     alias: string;
     bingoCard?: string[];
   };
-  // Classic mode only: the calling sequence already sealed for this
-  // instance, and the winning balls other participants have reserved.
   sealedOrder?: string[];
   takenWinIndices?: number[];
 }
 
 interface WiringResult {
-  txCalls: Array<Record<string, unknown>>;
   setCalls: Array<{ ref: object; data: Record<string, unknown> }>;
   slotCalls: Array<{ instanceId: string; data: Record<string, unknown> }>;
   sealCalls: Array<{ instanceId: string; data: Record<string, unknown> }>;
-  auditAdd: ReturnType<typeof vi.fn>;
 }
 
 function wireFirestore(liveInstances: InstanceFixture[]): WiringResult {
@@ -101,14 +103,26 @@ function wireFirestore(liveInstances: InstanceFixture[]): WiringResult {
     instanceId: string;
     data: Record<string, unknown>;
   }> = [];
-  const auditAdd = vi.fn(async () => undefined);
 
   const instanceDocs = liveInstances.map((i) => {
-    const participantRef = { __participantFor: i.id };
+    const participantRef = {
+      __participantFor: i.id,
+      create: vi.fn(async (data: Record<string, unknown>) => {
+        if (i.existingParticipant) {
+          const err = new Error("ALREADY_EXISTS") as Error & { code: number };
+          err.code = 6;
+          throw err;
+        }
+        setCalls.push({ ref: participantRef, data });
+      }),
+      get: vi.fn(async () =>
+        i.existingParticipant
+          ? { exists: true, data: () => i.existingParticipant }
+          : { exists: false, data: () => undefined }
+      ),
+    };
     const drawRef = { __drawFor: i.id };
     const slotDocRef = { __slotFor: i.id };
-    // The occupancy query the dealer runs inside the transaction. It
-    // carries the fixture's reserved balls so tx.get can answer it.
     const slotQuery = {
       __slotQueryFor: i.id,
       __taken: i.takenWinIndices ?? [],
@@ -121,7 +135,6 @@ function wireFirestore(liveInstances: InstanceFixture[]): WiringResult {
         })),
         set: vi.fn((_ref: object, data: Record<string, unknown>) => {
           sealCalls.push({ instanceId: i.id, data });
-          // Later reads in the same test see the sealed sequence.
           i.sealedOrder = data.order as string[];
         }),
       };
@@ -160,6 +173,7 @@ function wireFirestore(liveInstances: InstanceFixture[]): WiringResult {
     };
     return {
       id: i.id,
+      exists: true,
       data: () => ({ type: i.type, state: i.state, config: i.config }),
       ref,
       __existing: i.existingParticipant,
@@ -173,21 +187,25 @@ function wireFirestore(liveInstances: InstanceFixture[]): WiringResult {
     })),
   }));
   const whereMock = vi.fn(() => ({ limit: limitMock }));
-  const minigamesCol = { where: whereMock };
+  const minigamesCol = {
+    where: whereMock,
+    doc: vi.fn((id: string) => ({
+      get: vi.fn(async () => {
+        const found = instanceDocs.find((d) => d.id === id);
+        return found ?? { exists: false, id, ref: null, data: () => undefined };
+      }),
+    })),
+  };
   const eventDocFn = vi.fn(() => ({
     collection: vi.fn(() => minigamesCol),
   }));
 
   collectionMock.mockImplementation((name: string) => {
     if (name === "events") return { doc: eventDocFn };
-    if (name === "audit_log") return { add: auditAdd };
     throw new Error("unexpected collection " + name);
   });
 
   runTransactionMock.mockImplementation(async (callback) => {
-    // Find which instance ref the upcoming tx.set/get refers to. We
-    // expose `tx.get(participantRef)`, `tx.get(slotQuery)` and
-    // `tx.set(ref, data)`.
     const tx = {
       get: vi.fn(async (ref: object) => {
         const query = ref as { __slotQueryFor?: string; __taken?: number[] };
@@ -217,7 +235,7 @@ function wireFirestore(liveInstances: InstanceFixture[]): WiringResult {
     await callback(tx);
   });
 
-  return { txCalls: [], setCalls, slotCalls, sealCalls, auditAdd };
+  return { setCalls, slotCalls, sealCalls };
 }
 
 const POLL_INSTANCE: InstanceFixture = {
@@ -243,6 +261,8 @@ describe("minigameJoin handler", () => {
   beforeEach(() => {
     collectionMock.mockReset();
     runTransactionMock.mockReset();
+    mocks.logParticipantAudit.mockReset();
+    clearMinigameCaches();
   });
 
   afterEach(() => {
@@ -289,6 +309,22 @@ describe("minigameJoin handler", () => {
     expect(stored.joinedAt).toBe(SERVER_TS);
     const body = res.__body as { data: { instances: { joined: boolean }[] } };
     expect(body.data.instances[0].joined).toBe(true);
+  });
+
+  it("joins only the requested instanceId when provided", async () => {
+    const wiring = wireFirestore([POLL_INSTANCE, QUIZ_INSTANCE]);
+    const res = buildRes();
+    await handler.join(
+      buildReq({ alias: "Ana", instanceId: "i-poll" }, { slug: "x" }),
+      res
+    );
+    expect(wiring.setCalls).toHaveLength(1);
+    const body = res.__body as {
+      data: { instances: { id: string; joined: boolean }[] };
+    };
+    expect(body.data.instances).toEqual([
+      { id: "i-poll", type: "poll", joined: true },
+    ]);
   });
 
   it("seeds a deterministic bingo card for bingo instances", async () => {
@@ -338,7 +374,7 @@ describe("minigameJoin handler", () => {
       buildReq({ alias: "DifferentAlias" }, { slug: "x" }),
       res
     );
-    expect(wiring.setCalls).toHaveLength(0); // No new write
+    expect(wiring.setCalls).toHaveLength(0);
     const body = res.__body as {
       data: { alias: string; instances: { joined: boolean }[] };
     };
@@ -362,27 +398,25 @@ describe("minigameJoin handler", () => {
     expect(body.data.instances[0].bingoCard).toEqual(existingCard);
   });
 
-  it("logs an audit entry per /join call (not per instance)", async () => {
-    const wiring = wireFirestore([POLL_INSTANCE, QUIZ_INSTANCE]);
+  it("logs a participant audit event per /join call", async () => {
+    wireFirestore([POLL_INSTANCE, QUIZ_INSTANCE]);
     const res = buildRes();
     await handler.join(buildReq({ alias: "Ana" }, { slug: "x" }), res);
-    expect(wiring.auditAdd).toHaveBeenCalledTimes(1);
-    const audit = wiring.auditAdd.mock.calls[0][0] as Record<string, unknown>;
+    expect(mocks.logParticipantAudit).toHaveBeenCalledTimes(1);
+    const audit = mocks.logParticipantAudit.mock.calls[0][0] as Record<
+      string,
+      unknown
+    >;
     expect(audit).toMatchObject({
       action: "minigame_participant.join",
       performedBy: "anon-uid-1",
       targetId: "x",
       targetType: "event",
-    });
-    const details = audit.details as {
-      alias: string;
-      instanceCount: number;
-      newJoins: number;
-    };
-    expect(details).toMatchObject({
-      alias: "Ana",
-      instanceCount: 2,
-      newJoins: 2,
+      details: {
+        alias: "Ana",
+        instanceCount: 2,
+        newJoins: 2,
+      },
     });
   });
 
@@ -395,7 +429,6 @@ describe("minigameJoin handler", () => {
     ]);
     const res = buildRes();
     await handler.join(buildReq({ alias: "Test" }, { slug: "x" }), res);
-    // Should not throw / not 500. Card empty in summary.
     expect(res.__status).toBeUndefined();
   });
 
@@ -434,18 +467,15 @@ describe("minigameJoin handler", () => {
       const stored = wiring.setCalls[0].data;
       expect(stored.winIndex).toBeUndefined();
       expect(stored.bingoWinIndex).toBeUndefined();
-      // And nothing in the API response leaks it either.
       expect(JSON.stringify(res.__body)).not.toContain("winIndex");
     });
 
     it("re-deals when the ball it would win on is already taken", async () => {
-      // Deal once with nothing reserved to learn the natural ball...
       const first = wireFirestore([classicInstance()]);
       await handler.join(buildReq({ alias: "Ana" }, { slug: "x" }), buildRes());
       const natural = first.slotCalls[0].data.winIndex as number;
       const naturalCard = first.setCalls[0].data.bingoCard;
 
-      // ...then reserve exactly that ball and join again as the same uid.
       const second = wireFirestore([
         classicInstance({ takenWinIndices: [natural] }),
       ]);
@@ -467,7 +497,6 @@ describe("minigameJoin handler", () => {
     });
 
     it("still deals when every candidate ball is taken, flagging the squeeze", async () => {
-      // Reserve a wide swathe of balls so no candidate can be free.
       const wiring = wireFirestore([
         classicInstance({
           takenWinIndices: Array.from({ length: 50 }, (_, i) => i + 1),

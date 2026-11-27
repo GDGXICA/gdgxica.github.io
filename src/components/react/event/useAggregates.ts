@@ -7,11 +7,20 @@ export interface LeaderboardEntry {
   score: number;
 }
 
+export interface RouletteWinnerSummary {
+  uid: string;
+  alias: string;
+  spinNumber: number;
+}
+
 export interface AggregatesDoc {
   optionCounts?: Record<string, number>;
   totalResponses?: number;
   leaderboard?: LeaderboardEntry[];
   revealedAnswers?: Record<string, string>;
+  eligibleCount?: number;
+  totalParticipants?: number;
+  winners?: RouletteWinnerSummary[];
   updatedAt?: { seconds: number } | null;
 }
 
