@@ -168,16 +168,19 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
     gameId && instance && (isClosed || (uid && joinedId === gameId))
   );
 
+  useEffect(() => {
+    window.scrollTo?.(0, 0);
+  }, [gameId]);
+
   return (
     <div className="flex min-h-dvh flex-col">
-      {/* Compact Sticky Mobile Controller Header */}
-      <header className="sticky top-0 z-30 border-b border-(--line) bg-(--night)/96">
+      <header className="sticky top-0 z-30 border-b border-(--line) bg-(--night)/96 pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between gap-3 px-4 sm:px-6">
           {gameId ? (
             <button
               type="button"
               onClick={() => navigateToGame(null)}
-              className="inline-flex min-h-11 items-center gap-2 rounded-(--radius-sm) pr-2 text-sm font-medium text-(--ink) transition-colors hover:text-(--ochre)"
+              className="inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-(--radius-sm) pr-2 text-sm font-medium text-(--ink) transition-colors hover:text-(--ochre)"
             >
               <ArrowLeftIcon size={18} className="text-(--ochre)" />
               <span>Dinámicas</span>
@@ -210,7 +213,7 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
             {!gameId && (
               <a
                 href={`/events/${slug}`}
-                className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-(--muted) no-underline transition-colors hover:text-(--ink)"
+                className="inline-flex min-h-11 touch-manipulation items-center gap-1.5 text-sm font-medium text-(--muted) no-underline transition-colors hover:text-(--ink)"
               >
                 <ArrowLeftIcon size={15} className="text-(--ochre)" />
                 <span>Evento</span>
@@ -220,7 +223,11 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 pt-5 pb-12 sm:px-6 sm:pt-7">
+      <main
+        className={`mx-auto w-full max-w-3xl flex-1 px-3.5 pb-[max(2.5rem,calc(1.5rem+env(safe-area-inset-bottom)))] sm:px-6 sm:pt-7 ${
+          gameId ? "pt-3.5" : "pt-5"
+        }`}
+      >
         {/* Game Lobby */}
         {!gameId && (
           <section aria-labelledby="games-heading">
@@ -281,7 +288,7 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
                       e.preventDefault();
                       navigateToGame(item.id);
                     }}
-                    className="group relative grid min-h-22 grid-cols-[auto_minmax(0,1fr)_2.75rem] items-center gap-4 overflow-hidden rounded-2xl border border-(--line-strong) bg-(--surface-1) px-4 py-4 text-(--ink) no-underline transition-[background-color,border-color,transform] duration-150 hover:border-(--ochre)/60 hover:bg-(--surface-2) active:scale-[0.99] motion-reduce:transition-none"
+                    className="group relative grid min-h-20 touch-manipulation grid-cols-[auto_minmax(0,1fr)_2.25rem] items-center gap-3 overflow-hidden rounded-2xl border border-(--line-strong) bg-(--surface-1) px-3.5 py-3.5 text-(--ink) no-underline transition-[background-color,border-color,transform] duration-150 select-none hover:border-(--ochre)/60 hover:bg-(--surface-2) active:scale-[0.99] motion-reduce:transition-none sm:min-h-22 sm:grid-cols-[auto_minmax(0,1fr)_2.75rem] sm:gap-4 sm:px-4 sm:py-4"
                   >
                     <span
                       aria-hidden="true"
@@ -289,10 +296,10 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
                       style={{ backgroundColor: TYPE_DOTS[item.type] }}
                     />
                     <span
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-(--line) bg-(--surface-2)"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-(--line) bg-(--surface-2) sm:h-12 sm:w-12"
                       style={{ color: TYPE_DOTS[item.type] }}
                     >
-                      <GameTypeIcon type={item.type} size={22} />
+                      <GameTypeIcon type={item.type} size={20} />
                     </span>
                     <span className="flex min-w-0 flex-col gap-1">
                       <span className="inline-flex items-center gap-2 font-mono text-xs font-semibold tracking-wider text-(--muted) uppercase">
@@ -303,15 +310,15 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
                         />
                         {TYPE_LABELS[item.type]}
                       </span>
-                      <span className="text-lg leading-snug font-semibold break-words text-(--ink) sm:text-xl">
+                      <span className="text-base leading-snug font-semibold break-words text-(--ink) sm:text-xl">
                         {item.title}
                       </span>
                     </span>
                     <span
-                      className="grid h-11 w-11 place-items-center rounded-full border border-(--line-strong) text-(--ochre) transition-[transform,border-color] duration-150 group-hover:translate-x-0.5 group-hover:border-(--ochre) motion-reduce:transition-none"
+                      className="grid h-9 w-9 place-items-center rounded-full border border-(--line-strong) text-(--ochre) transition-[transform,border-color] duration-150 group-hover:translate-x-0.5 group-hover:border-(--ochre) motion-reduce:transition-none sm:h-11 sm:w-11"
                       aria-hidden="true"
                     >
-                      <ArrowRightIcon size={18} />
+                      <ArrowRightIcon size={17} />
                     </span>
                   </a>
                 ))}
@@ -395,13 +402,12 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
           </section>
         )}
 
-        {/* Active or Closed Game Container */}
         {canRenderGame && instance && (
           <section
             aria-label={isClosed ? "Resultados finales" : "Dinámica en vivo"}
-            className="rounded-2xl border border-(--line-strong) bg-(--surface-1) p-4 sm:p-6"
+            className="rounded-2xl border border-(--line-strong) bg-(--surface-1) p-3.5 sm:p-6"
           >
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-2 border-b border-(--line) pb-3.5 text-sm text-(--muted)">
+            <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2 border-b border-(--line) pb-2.5 text-sm text-(--muted) sm:mb-5 sm:pb-3.5">
               <span className="inline-flex items-center gap-2 font-mono text-xs font-semibold tracking-wider uppercase">
                 <span
                   className="h-2 w-2 shrink-0 rounded-full"
@@ -416,7 +422,7 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
                 )}
               </span>
               {alias && (
-                <span className="text-xs sm:text-sm">
+                <span className="hidden text-xs sm:inline sm:text-sm">
                   Jugando como{" "}
                   <strong className="font-semibold text-(--ink)">
                     {alias}
@@ -441,6 +447,7 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
             >
               {instance.type === "poll" && instance.config && (
                 <PollOverlay
+                  key={instance.id}
                   slug={slug}
                   instanceId={instance.id}
                   uid={uid ?? ""}
@@ -457,6 +464,7 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
               )}
               {instance.type === "quiz" && instance.config && (
                 <QuizOverlay
+                  key={instance.id}
                   slug={slug}
                   instanceId={instance.id}
                   uid={uid ?? ""}
@@ -471,6 +479,7 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
               )}
               {instance.type === "roulette" && (
                 <RouletteView
+                  key={instance.id}
                   slug={slug}
                   instanceId={instance.id}
                   uid={uid ?? ""}
@@ -480,6 +489,7 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
               )}
               {instance.type === "bingo" && (
                 <BingoCardView
+                  key={instance.id}
                   slug={slug}
                   instanceId={instance.id}
                   uid={uid ?? ""}
@@ -489,6 +499,7 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
               )}
               {instance.type === "wordcloud" && (
                 <WordCloudView
+                  key={instance.id}
                   slug={slug}
                   instanceId={instance.id}
                   uid={uid ?? ""}

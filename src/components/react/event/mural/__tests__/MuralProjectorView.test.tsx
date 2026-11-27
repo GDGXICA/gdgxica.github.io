@@ -512,3 +512,59 @@ describe("MuralProjectorView: pantalla completa", () => {
     expect(root).not.toHaveClass("cursor-none");
   });
 });
+
+describe("MuralProjectorView: ampliar QR", () => {
+  it("amplía el QR al hacer clic en la esquina y se cierra con Escape", async () => {
+    setPhotos([photo("a")]);
+    render(view());
+    await waitFor(() => expect(tile("a")).not.toBeNull());
+
+    fireEvent.click(screen.getByLabelText("Ampliar QR del mural"));
+    expect(
+      screen.getByRole("dialog", { name: "QR ampliado" })
+    ).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "QR ampliado" })).toBeNull();
+  });
+
+  it("la tecla Q abre y cierra el QR ampliado solo cuando las subidas están abiertas", async () => {
+    setPhotos([photo("a")]);
+    render(view());
+    await waitFor(() => expect(tile("a")).not.toBeNull());
+
+    fireEvent.keyDown(window, { key: "q" });
+    expect(
+      screen.getByRole("dialog", { name: "QR ampliado" })
+    ).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "q" });
+    expect(screen.queryByRole("dialog", { name: "QR ampliado" })).toBeNull();
+  });
+
+  it("en pantalla completa, Escape cierra primero el QR sin salir de pantalla completa", async () => {
+    document.documentElement.requestFullscreen = vi.fn(() =>
+      Promise.reject(new Error("denied"))
+    );
+    setPhotos([photo("a")]);
+    render(view());
+    await waitFor(() => expect(tile("a")).not.toBeNull());
+
+    fireEvent.keyDown(window, { key: "f" });
+    await waitFor(() => expect(screen.queryByRole("heading")).toBeNull());
+
+    fireEvent.click(screen.getByLabelText("Ampliar QR del mural"));
+    expect(
+      screen.getByRole("dialog", { name: "QR ampliado" })
+    ).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "QR ampliado" })).toBeNull();
+    expect(screen.queryByRole("heading")).toBeNull();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() =>
+      expect(screen.getByRole("heading")).toBeInTheDocument()
+    );
+  });
+});

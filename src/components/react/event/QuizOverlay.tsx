@@ -201,21 +201,20 @@ export function QuizOverlay({
           )}
         </div>
 
-        {/* Compact Top 3 Podium */}
         {leaderboard.length > 0 && (
-          <div className="mt-6 grid grid-cols-3 items-end gap-2.5 text-center">
-            <div className="flex flex-col items-center">
+          <div className="mt-6 grid grid-cols-3 items-end gap-2 text-center sm:gap-2.5">
+            <div className="flex min-w-0 flex-col items-center">
               {second && (
                 <>
-                  <p className="mb-1.5 max-w-full truncate text-sm font-semibold text-(--ink)">
+                  <p className="mb-1.5 w-full truncate text-xs font-semibold text-(--ink) sm:text-sm">
                     {second.alias}
                   </p>
-                  <div className="flex min-h-24 w-full flex-col items-center justify-center rounded-t-xl border border-b-0 border-slate-300/35 bg-slate-200/10 p-2.5">
+                  <div className="flex min-h-24 w-full flex-col items-center justify-center rounded-t-xl border border-b-0 border-slate-300/35 bg-slate-200/10 p-2 sm:p-2.5">
                     <MedalIcon size={18} className="text-slate-200" />
                     <span className="mt-1 font-mono text-xs text-(--muted)">
                       2.°
                     </span>
-                    <span className="font-mono text-base font-bold text-(--ink) tabular-nums">
+                    <span className="font-mono text-sm font-bold text-(--ink) tabular-nums sm:text-base">
                       {second.score}
                     </span>
                   </div>
@@ -223,19 +222,19 @@ export function QuizOverlay({
               )}
             </div>
 
-            <div className="flex flex-col items-center">
+            <div className="flex min-w-0 flex-col items-center">
               {first && (
                 <>
                   <CrownIcon size={20} className="mb-1 text-(--ochre)" />
-                  <p className="mb-1.5 max-w-full truncate text-base font-bold text-(--ochre)">
+                  <p className="mb-1.5 w-full truncate text-sm font-bold text-(--ochre) sm:text-base">
                     {first.alias}
                   </p>
-                  <div className="flex min-h-32 w-full flex-col items-center justify-center rounded-t-xl border border-b-0 border-(--ochre)/70 bg-(--ochre)/20 p-3">
+                  <div className="flex min-h-32 w-full flex-col items-center justify-center rounded-t-xl border border-b-0 border-(--ochre)/70 bg-(--ochre)/20 p-2 sm:p-3">
                     <TrophyIcon size={20} className="text-(--ochre)" />
                     <span className="mt-1 font-mono text-xs font-semibold text-(--ochre)">
                       1.°
                     </span>
-                    <span className="font-mono text-lg font-bold text-(--ink) tabular-nums">
+                    <span className="font-mono text-base font-bold text-(--ink) tabular-nums sm:text-lg">
                       {first.score}
                     </span>
                   </div>
@@ -243,18 +242,18 @@ export function QuizOverlay({
               )}
             </div>
 
-            <div className="flex flex-col items-center">
+            <div className="flex min-w-0 flex-col items-center">
               {third && (
                 <>
-                  <p className="mb-1.5 max-w-full truncate text-sm font-semibold text-(--ink)">
+                  <p className="mb-1.5 w-full truncate text-xs font-semibold text-(--ink) sm:text-sm">
                     {third.alias}
                   </p>
-                  <div className="flex min-h-20 w-full flex-col items-center justify-center rounded-t-xl border border-b-0 border-amber-500/40 bg-amber-500/12 p-2.5">
+                  <div className="flex min-h-20 w-full flex-col items-center justify-center rounded-t-xl border border-b-0 border-amber-500/40 bg-amber-500/12 p-2 sm:p-2.5">
                     <MedalIcon size={18} className="text-amber-400" />
                     <span className="mt-1 font-mono text-xs text-(--muted)">
                       3.°
                     </span>
-                    <span className="font-mono text-base font-bold text-(--ink) tabular-nums">
+                    <span className="font-mono text-sm font-bold text-(--ink) tabular-nums sm:text-base">
                       {third.score}
                     </span>
                   </div>
@@ -399,17 +398,16 @@ export function QuizOverlay({
         onExpire={handleExpire}
       />
 
-      <h2 className="mt-5 mb-0 font-mono text-xs font-medium tracking-wider text-(--muted) uppercase">
+      <h2 className="mt-3.5 mb-0 font-mono text-xs font-medium tracking-wider text-(--muted) uppercase sm:mt-5">
         {title}
       </h2>
-      <p className="mt-1.5 font-(family-name:--font-display) text-[clamp(1.375rem,1.1rem+1.3vw,2rem)] leading-tight font-bold text-balance text-(--ink)">
+      <p className="mt-1 font-(family-name:--font-display) text-[clamp(1.25rem,1.05rem+1.3vw,2rem)] leading-tight font-bold text-balance text-(--ink) sm:mt-1.5">
         {question.prompt}
       </p>
 
-      {/* Revealed Verdict Banner */}
       {revealedAnswer && (
         <div
-          className={`animate-stage-pop-in mt-4 flex items-center justify-between gap-3 rounded-xl border px-4 py-3 ${
+          className={`animate-stage-pop-in mt-3.5 flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3.5 py-2.5 text-sm sm:mt-4 sm:px-4 sm:py-3 sm:text-base ${
             userGotItRight
               ? "border-(--g-green)/60 bg-(--g-green)/15 text-green-200"
               : "border-red-400/40 bg-red-500/10 text-red-200"
@@ -436,14 +434,13 @@ export function QuizOverlay({
       {error && (
         <p
           role="alert"
-          className="mt-4 border-l-2 border-red-400 pl-3 text-sm text-red-200"
+          className="mt-3.5 border-l-2 border-red-400 pl-3 text-sm text-red-200 sm:mt-4"
         >
           {error}
         </p>
       )}
 
-      {/* Answer Options */}
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      <div className="mt-4 grid gap-2.5 sm:mt-5 sm:grid-cols-2 sm:gap-3">
         {question.options.map((opt, index) => {
           const count = counts[`${question.id}:${opt.id}`] ?? 0;
           const pct = total ? Math.round((100 * count) / total) : 0;
@@ -464,7 +461,7 @@ export function QuizOverlay({
                 timerExpired ||
                 submitting
               }
-              className={`relative min-h-18 overflow-hidden rounded-xl border border-l-4 bg-(--surface-2) p-4 text-left text-base font-semibold text-(--ink) transition-[transform,background-color,opacity] enabled:hover:bg-(--surface-3) enabled:active:scale-[0.98] disabled:cursor-default motion-reduce:transition-none sm:min-h-20 sm:text-lg ${
+              className={`relative min-h-15 touch-manipulation overflow-hidden rounded-xl border border-l-4 bg-(--surface-2) p-3.5 text-left text-[0.9375rem] font-semibold text-(--ink) transition-[transform,background-color,opacity] select-none enabled:hover:bg-(--surface-3) enabled:active:scale-[0.98] disabled:cursor-default motion-reduce:transition-none sm:min-h-20 sm:p-4 sm:text-lg ${
                 selected
                   ? "border-(--ochre) ring-2 ring-(--ochre)"
                   : revealedAnswer && correct
@@ -479,7 +476,7 @@ export function QuizOverlay({
                   style={{ width: `${pct}%` }}
                 />
               )}
-              <span className="relative flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="relative flex items-center gap-3">
                 <span
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
                     index % OPTION_COLORS.length === 2
@@ -491,30 +488,34 @@ export function QuizOverlay({
                 >
                   <OptionShapeIcon index={index} size={15} />
                 </span>
-                <span className="min-w-[7rem] flex-1 break-words">
-                  {opt.label}
+                <span className="min-w-0 flex-1">
+                  <span className="block break-words">{opt.label}</span>
+                  {(revealedAnswer || isPending) && (
+                    <span className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs">
+                      {isPending && (
+                        <span className="font-mono font-semibold text-(--ochre)">
+                          Enviando…
+                        </span>
+                      )}
+                      {revealedAnswer && correct && (
+                        <span className="inline-flex items-center gap-1 font-semibold text-green-300">
+                          <CheckIcon size={14} />
+                          Correcto
+                        </span>
+                      )}
+                      {revealedAnswer && selected && !correct && (
+                        <span className="font-medium text-(--ochre)">
+                          Tu respuesta
+                        </span>
+                      )}
+                      {revealedAnswer && (
+                        <span className="font-mono font-normal text-(--muted) tabular-nums">
+                          {count} · {pct}%
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </span>
-                {isPending && (
-                  <span className="font-mono text-xs font-semibold text-(--ochre)">
-                    Enviando…
-                  </span>
-                )}
-                {revealedAnswer && correct && (
-                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-green-300">
-                    <CheckIcon size={15} />
-                    Correcto
-                  </span>
-                )}
-                {revealedAnswer && selected && !correct && (
-                  <span className="text-xs font-medium text-(--ochre)">
-                    Tu respuesta
-                  </span>
-                )}
-                {revealedAnswer && (
-                  <span className="ml-auto font-mono text-xs font-normal text-(--muted) tabular-nums">
-                    {count} · {pct}%
-                  </span>
-                )}
               </span>
             </button>
           );

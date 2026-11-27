@@ -156,13 +156,11 @@ export function ProjectorQuiz({ slug, instance, onFocusModeChange }: Props) {
             </p>
           ) : (
             <>
-              {/* Top 3 Podium */}
               <div className="mx-auto mt-10 grid max-w-4xl grid-cols-3 items-end gap-4 sm:gap-6">
-                {/* 2nd place (left) */}
-                <div className="flex flex-col items-center">
+                <div className="flex min-w-0 flex-col items-center">
                   {second && podiumStep >= 2 ? (
                     <div className="animate-stage-podium-rise flex w-full flex-col items-center">
-                      <p className="mb-3 max-w-full truncate font-(family-name:--font-display) text-2xl font-bold text-white sm:text-3xl">
+                      <p className="mb-3 w-full truncate font-(family-name:--font-display) text-2xl font-bold text-white sm:text-3xl">
                         {second.alias}
                       </p>
                       <div className="flex min-h-40 w-full flex-col items-center justify-between rounded-t-3xl border border-b-0 border-slate-300/35 bg-gradient-to-b from-slate-200/20 to-[#0c101a] p-5 sm:min-h-48">
@@ -184,14 +182,13 @@ export function ProjectorQuiz({ slug, instance, onFocusModeChange }: Props) {
                   )}
                 </div>
 
-                {/* 1st place (center, tallest) */}
-                <div className="flex flex-col items-center">
+                <div className="flex min-w-0 flex-col items-center">
                   {first && podiumStep >= 3 ? (
                     <div className="animate-stage-podium-rise flex w-full flex-col items-center">
                       <span className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-(--ochre)/20 text-(--ochre)">
                         <CrownIcon size={30} />
                       </span>
-                      <p className="mb-3 max-w-full truncate font-(family-name:--font-display) text-3xl font-bold text-(--ochre) sm:text-5xl">
+                      <p className="mb-3 w-full truncate font-(family-name:--font-display) text-3xl font-bold text-(--ochre) sm:text-5xl">
                         {first.alias}
                       </p>
                       <div className="flex min-h-56 w-full flex-col items-center justify-between rounded-t-3xl border border-b-0 border-(--ochre)/70 bg-gradient-to-b from-(--ochre)/30 to-[#0e1018] p-6 shadow-[0_-18px_60px_-20px_rgba(212,173,98,0.4)] sm:min-h-64">
@@ -213,11 +210,10 @@ export function ProjectorQuiz({ slug, instance, onFocusModeChange }: Props) {
                   )}
                 </div>
 
-                {/* 3rd place (right) */}
-                <div className="flex flex-col items-center">
+                <div className="flex min-w-0 flex-col items-center">
                   {third && podiumStep >= 1 ? (
                     <div className="animate-stage-podium-rise flex w-full flex-col items-center">
-                      <p className="mb-3 max-w-full truncate font-(family-name:--font-display) text-2xl font-bold text-white sm:text-3xl">
+                      <p className="mb-3 w-full truncate font-(family-name:--font-display) text-2xl font-bold text-white sm:text-3xl">
                         {third.alias}
                       </p>
                       <div className="flex min-h-32 w-full flex-col items-center justify-between rounded-t-3xl border border-b-0 border-amber-500/40 bg-gradient-to-b from-amber-500/20 to-[#0c101a] p-5 sm:min-h-36">
@@ -357,7 +353,9 @@ export function ProjectorQuiz({ slug, instance, onFocusModeChange }: Props) {
           aria-hidden="true"
         >
           <div
-            className={`h-full rounded-full transition-[width] duration-150 ease-linear motion-reduce:transition-none ${
+            className={`h-full rounded-full transition-[width] ease-linear motion-reduce:transition-none ${
+              urgent ? "duration-250" : "duration-1000"
+            } ${
               urgent
                 ? "bg-google-red"
                 : revealedAnswer

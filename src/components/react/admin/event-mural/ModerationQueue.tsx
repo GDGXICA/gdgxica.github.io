@@ -116,7 +116,7 @@ export function ModerationQueue({
 
   return (
     <div>
-      <p className="mb-3 text-sm text-gray-600 dark:text-gray-400">
+      <p className="mb-3 hidden text-sm text-gray-600 sm:block dark:text-gray-400">
         <kbd className="rounded border px-1">A</kbd> aprueba,{" "}
         <kbd className="rounded border px-1">R</kbd> rechaza,{" "}
         <kbd className="rounded border px-1">←</kbd>{" "}
@@ -177,7 +177,7 @@ export function ModerationQueue({
                     type="button"
                     disabled={busyId === photo.id}
                     onClick={() => approve(photo)}
-                    className="flex-1 rounded bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                    className="min-h-11 flex-1 touch-manipulation rounded bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
                   >
                     Aprobar
                   </button>
@@ -185,7 +185,7 @@ export function ModerationQueue({
                     type="button"
                     disabled={busyId === photo.id}
                     onClick={() => reject(photo)}
-                    className="flex-1 rounded bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                    className="min-h-11 flex-1 touch-manipulation rounded bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
                   >
                     Rechazar
                   </button>

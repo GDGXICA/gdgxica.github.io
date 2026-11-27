@@ -125,8 +125,8 @@ export function RouletteView({
       {justWonBurst > 0 && <StageConfetti burstKey={justWonBurst} />}
 
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="m-0 font-(family-name:--font-display) text-[clamp(1.5rem,1.25rem+1.2vw,2.1rem)] leading-tight font-bold text-(--ink)">
+        <div className="min-w-0">
+          <h2 className="m-0 font-(family-name:--font-display) text-[clamp(1.375rem,1.15rem+1.2vw,2.1rem)] leading-tight font-bold break-words text-(--ink)">
             {title}
           </h2>
           {prize && (
@@ -150,7 +150,7 @@ export function RouletteView({
       {/* Main Status Card */}
       {isSpinning ? (
         <div
-          className="mt-6 rounded-2xl border border-(--ochre)/55 bg-(--surface-2) px-6 py-10 text-center"
+          className="mt-5 rounded-2xl border border-(--ochre)/55 bg-(--surface-2) px-4 py-8 text-center sm:mt-6 sm:px-6 sm:py-10"
           role="status"
         >
           <div
@@ -166,7 +166,7 @@ export function RouletteView({
         </div>
       ) : myWin ? (
         <div
-          className="animate-stage-winner-in mt-6 rounded-2xl border-2 border-(--ochre) bg-gradient-to-b from-(--ochre)/20 to-(--surface-2) px-6 py-9 text-center"
+          className="animate-stage-winner-in mt-5 rounded-2xl border-2 border-(--ochre) bg-gradient-to-b from-(--ochre)/20 to-(--surface-2) px-4 py-7 text-center sm:mt-6 sm:px-6 sm:py-9"
           role="status"
         >
           <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-(--ochre) text-(--ochre-ink)">

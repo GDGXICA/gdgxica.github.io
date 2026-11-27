@@ -71,4 +71,23 @@ describe("EventMuralManager", () => {
     await userEvent.click(screen.getByRole("button", { name: /En el mural/ }));
     expect(screen.queryByRole("button", { name: "Retirar" })).toBeNull();
   });
+
+  it("exposes quick actions to open the mural projector and copy the upload link", async () => {
+    mocks.useAuth.mockReturnValue({ can: () => true });
+    const user = userEvent.setup();
+    render(<EventMuralManager initialSlug="devfest" />);
+    expect(screen.getByRole("link", { name: /Abrir mural/i })).toHaveAttribute(
+      "href",
+      "/events/devfest/mural"
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Copiar enlace de subida/i })
+    );
+    expect(
+      await screen.findByText(/Enlace de subida copiado/i)
+    ).toBeInTheDocument();
+    expect(await navigator.clipboard.readText()).toBe(
+      "https://gdgica.com/events/devfest/subir"
+    );
+  });
 });

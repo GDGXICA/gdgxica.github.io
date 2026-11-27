@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { getFirestore } from "@/lib/firebase";
 import { useAggregates } from "@/components/react/event/useAggregates";
@@ -92,8 +92,16 @@ export function RoulettePanel({
     setSpinning(false);
   }
 
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !spinning) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, spinning]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:p-4">
       <button
         type="button"
         aria-label="Cerrar fondo"
@@ -104,7 +112,7 @@ export function RoulettePanel({
         role="dialog"
         aria-modal="true"
         aria-label={`Ruleta: ${title}`}
-        className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-gray-800"
+        className="relative z-10 max-h-[90dvh] w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-gray-800"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">

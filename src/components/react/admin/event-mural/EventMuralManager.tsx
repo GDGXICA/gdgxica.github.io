@@ -160,27 +160,61 @@ export function EventMuralManager({ initialSlug }: Props) {
         />
       )}
 
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-          Mural de fotos
-        </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          {slug} ·{" "}
-          {settings.state === "open"
-            ? "abierto a subidas"
-            : settings.state === "paused"
-              ? "en pausa"
-              : "cerrado"}
-        </p>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            Mural de fotos
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {slug} ·{" "}
+            {settings.state === "open"
+              ? "abierto a subidas"
+              : settings.state === "paused"
+                ? "en pausa"
+                : "cerrado"}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href={`/events/${encodeURIComponent(slug)}/mural`}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-lg border border-purple-500 px-3 py-2 text-sm font-medium text-purple-700 hover:bg-purple-50 dark:border-purple-400 dark:text-purple-300 dark:hover:bg-purple-900/20"
+          >
+            Abrir mural
+          </a>
+          <button
+            type="button"
+            onClick={async () => {
+              const url = `https://gdgica.com/events/${encodeURIComponent(slug)}/subir`;
+              try {
+                await navigator.clipboard.writeText(url);
+                setToast({
+                  message: "Enlace de subida copiado",
+                  type: "success",
+                });
+              } catch {
+                setToast({
+                  message: "No se pudo copiar el enlace",
+                  type: "error",
+                });
+              }
+            }}
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            Copiar enlace de subida
+          </button>
+        </div>
       </div>
 
-      <div className="mb-6 flex gap-2 border-b border-gray-200 dark:border-gray-700">
+      <div className="mb-6 flex gap-2 overflow-x-auto border-b border-gray-200 dark:border-gray-700">
         {tabs.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium ${
+            className={`-mb-px shrink-0 border-b-2 px-4 py-2 text-sm font-medium ${
               tab === t.id
                 ? "border-blue-600 text-blue-600"
                 : "border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"

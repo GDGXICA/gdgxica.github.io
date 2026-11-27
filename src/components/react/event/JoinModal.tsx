@@ -75,7 +75,7 @@ export function JoinModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="join-modal-title"
@@ -86,33 +86,35 @@ export function JoinModal({
         className="fixed inset-0 cursor-default bg-(--night)/85 backdrop-blur-xs"
         onClick={onDismiss}
       />
-      <div className="n-panel n-marks animate-stage-pop-in relative z-10 w-full max-w-md shadow-[0_30px_80px_-24px_rgb(0_0_0/0.8)]">
-        <div className="px-6 pt-6">
+      <div className="n-panel n-marks animate-stage-pop-in relative z-10 max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto shadow-[0_30px_80px_-24px_rgb(0_0_0/0.8)]">
+        <div className="px-5 pt-5 sm:px-6 sm:pt-6">
           <h2
             id="join-modal-title"
-            className="m-0 font-(family-name:--font-display) text-[1.875rem] leading-none font-bold tracking-[-0.01em] text-(--ink)"
+            className="m-0 font-(family-name:--font-display) text-[1.625rem] leading-none font-bold tracking-[-0.01em] text-(--ink) sm:text-[1.875rem]"
           >
             Únete con un alias
           </h2>
-          <p className="mt-2.5 text-[0.9375rem] leading-6 text-(--muted)">
+          <p className="mt-2 text-sm leading-6 text-(--muted) sm:mt-2.5 sm:text-[0.9375rem]">
             Así te verán en la clasificación y en la pantalla del evento.
           </p>
         </div>
 
-        <div className="space-y-4 px-6 pt-4 pb-6">
+        <div className="space-y-4 px-5 pt-4 pb-5 sm:px-6 sm:pb-6">
           {liveInstances.length > 0 && (
             <ul className="flex flex-wrap gap-2">
               {liveInstances.map((inst) => (
                 <li
                   key={inst.id}
-                  className="inline-flex min-h-7 items-center gap-2 rounded-(--radius-sm) border border-(--line-strong) bg-(--surface-2) px-2.5 py-1 text-sm text-(--ink)"
+                  className="inline-flex min-h-7 max-w-full items-center gap-2 rounded-(--radius-sm) border border-(--line-strong) bg-(--surface-2) px-2.5 py-1 text-sm text-(--ink)"
                 >
                   <span
                     className="h-2 w-2 shrink-0 rounded-full"
                     style={{ background: TYPE_DOTS[inst.type] }}
                     aria-hidden="true"
                   />
-                  {TYPE_LABELS[inst.type]} · {inst.title}
+                  <span className="truncate">
+                    {TYPE_LABELS[inst.type]} · {inst.title}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -134,6 +136,8 @@ export function JoinModal({
                 placeholder="ej. Ana"
                 autoFocus
                 autoComplete="nickname"
+                autoCapitalize="words"
+                enterKeyHint="go"
                 className="min-h-12 w-full rounded-(--radius-sm) border border-(--line-strong) bg-(--surface-2) px-4 py-3 text-base text-(--ink) transition-colors placeholder:text-(--muted)/70 hover:border-(--muted) focus:border-(--ochre)"
               />
               <span className="mt-2 block font-mono text-xs text-(--muted)">
@@ -151,19 +155,19 @@ export function JoinModal({
               </p>
             )}
 
-            <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
+            <div className="flex flex-col-reverse gap-2.5 pt-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
               <button
                 type="button"
                 onClick={onDismiss}
                 disabled={submitting}
-                className="nb nb--ghost"
+                className="nb nb--ghost w-full touch-manipulation sm:w-auto"
               >
                 <span className="nb__label">Cerrar</span>
               </button>
               <button
                 type="submit"
                 disabled={submitting || !aliasOk}
-                className="nb nb--primary grow sm:grow-0"
+                className="nb nb--primary w-full touch-manipulation sm:w-auto"
               >
                 <span className="nb__label">
                   {submitting ? "Conectando..." : "Conectarme"}

@@ -272,7 +272,7 @@ export function MiniGamesRoot({ slug }: Props) {
 
       {step === "joined" && uid && realtimeLive.length > 0 && (
         <div
-          className="fixed inset-x-0 bottom-0 z-40 max-h-[70vh] overflow-y-auto border-t-2 border-(--ochre) bg-(--surface-1) p-4 shadow-[0_-24px_60px_-20px_rgb(0_0_0/0.7)]"
+          className="fixed inset-x-0 bottom-0 z-40 max-h-[75dvh] overflow-y-auto overscroll-contain border-t-2 border-(--ochre) bg-(--surface-1) p-3.5 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-24px_60px_-20px_rgb(0_0_0/0.7)] sm:p-4"
           role="region"
           aria-label="Juegos en tiempo real"
           aria-live="assertive"
