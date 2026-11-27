@@ -10,7 +10,8 @@ export class TtlCache<V> {
 
   constructor(
     private readonly ttlMs: number,
-    private readonly now: () => number = () => Date.now()
+    private readonly now: () => number = () => Date.now(),
+    private readonly maxEntries = Number.POSITIVE_INFINITY
   ) {}
 
   get(key: string): V | undefined {
@@ -24,7 +25,27 @@ export class TtlCache<V> {
   }
 
   set(key: string, value: V): void {
-    this.entries.set(key, { value, expiresAt: this.now() + this.ttlMs });
+    const currentNow = this.now();
+    if (
+      !this.entries.has(key) &&
+      this.entries.size >= this.maxEntries
+    ) {
+      this.prune(currentNow);
+    }
+    this.entries.set(key, { value, expiresAt: currentNow + this.ttlMs });
+  }
+
+  private prune(currentNow: number): void {
+    for (const [entryKey, entry] of this.entries) {
+      if (currentNow >= entry.expiresAt) {
+        this.entries.delete(entryKey);
+      }
+    }
+    while (this.entries.size >= this.maxEntries) {
+      const oldestKey = this.entries.keys().next().value;
+      if (oldestKey === undefined) break;
+      this.entries.delete(oldestKey);
+    }
   }
 
   async getOrLoad(

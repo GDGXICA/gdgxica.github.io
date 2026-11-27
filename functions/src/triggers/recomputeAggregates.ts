@@ -8,7 +8,7 @@ import { AggregateCoalescer } from "../services/aggregateCoalescer";
 import { getOrLoadInstance } from "../services/minigameCache";
 
 const LEADERBOARD_LIMIT = 10;
-const SHARD_COUNT = 10;
+const SHARD_COUNT = 20;
 
 const DEFAULT_COALESCE_MS =
   process.env.FUNCTIONS_EMULATOR === "true" ? 0 : 250;
@@ -212,6 +212,7 @@ export async function recomputeRouletteAggregateFromJoin(
 export const onMinigameResponseWritten = onDocumentWritten(
   {
     document: "events/{slug}/minigames/{id}/responses/{respId}",
+    memory: "512MiB",
     concurrency: 80,
     cpu: 1,
   },
@@ -222,6 +223,7 @@ export const onMinigameResponseWritten = onDocumentWritten(
 export const onMinigameParticipantCreated = onDocumentCreated(
   {
     document: "events/{slug}/minigames/{id}/participants/{uid}",
+    memory: "512MiB",
     concurrency: 80,
     cpu: 1,
   },

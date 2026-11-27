@@ -96,6 +96,7 @@ app.use(
     // only decides which headers to attach for callers let through.
     origin: (origin, callback) =>
       callback(null, !origin || isAllowedOrigin(origin)),
+    exposedHeaders: ["X-Server-Time-Ms"],
   })
 );
 app.use(express.json({ limit: "1mb" }));
@@ -201,7 +202,7 @@ const writeLimiter = rateLimit({
 // bypassable. We pin this limiter to the IP only.
 const joinLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 500,
+  max: 1500,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip ?? "unknown")}`,

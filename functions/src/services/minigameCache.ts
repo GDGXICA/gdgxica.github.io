@@ -2,10 +2,19 @@ import { TtlCache } from "./ttlCache";
 
 export type CachedInstanceData = Record<string, unknown> | null;
 export type CachedQuizAnswers = Record<string, string> | null;
+export interface CachedLiveInstanceEntry {
+  id: string;
+  data: Record<string, unknown>;
+}
 
 const instanceCache = new TtlCache<CachedInstanceData>(1500);
+const liveInstancesCache = new TtlCache<CachedLiveInstanceEntry[]>(1500);
 const quizSecretCache = new TtlCache<CachedQuizAnswers>(60_000);
-const participantMembershipCache = new TtlCache<boolean>(60_000);
+const participantMembershipCache = new TtlCache<boolean>(
+  60_000,
+  () => Date.now(),
+  2000
+);
 
 function instanceKey(slug: string, id: string): string {
   return `${slug}:${id}`;
@@ -74,14 +83,27 @@ export function markParticipantJoined(
   participantMembershipCache.set(participantKey(slug, id, uid), true);
 }
 
+export function getOrLoadLiveInstances(
+  slug: string,
+  loader: () => Promise<CachedLiveInstanceEntry[]>
+): Promise<CachedLiveInstanceEntry[]> {
+  return liveInstancesCache.getOrLoad(slug, loader);
+}
+
+export function invalidateLiveInstancesCache(slug: string): void {
+  liveInstancesCache.invalidate(slug);
+}
+
 export function invalidateInstanceCache(slug: string, id: string): void {
   const key = instanceKey(slug, id);
   instanceCache.invalidate(key);
   quizSecretCache.invalidate(key);
+  liveInstancesCache.invalidate(slug);
 }
 
 export function clearMinigameCaches(): void {
   instanceCache.clear();
+  liveInstancesCache.clear();
   quizSecretCache.clear();
   participantMembershipCache.clear();
 }

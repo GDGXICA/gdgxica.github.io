@@ -101,4 +101,20 @@ describe("TtlCache", () => {
     resolveFresh(fresh);
     expect(await Promise.all([p1, p2, p3])).toEqual([fresh, fresh, fresh]);
   });
+
+  it("evicts expired and oldest entries when maxEntries is reached", () => {
+    let now = 1000;
+    const cache = new TtlCache<string>(500, () => now, 2);
+    cache.set("a", "1");
+    cache.set("b", "2");
+    cache.set("c", "3");
+    expect(cache.get("a")).toBeUndefined();
+    expect(cache.get("b")).toBe("2");
+    expect(cache.get("c")).toBe("3");
+
+    now = 1600;
+    cache.set("d", "4");
+    expect(cache.get("b")).toBeUndefined();
+    expect(cache.get("d")).toBe("4");
+  });
 });

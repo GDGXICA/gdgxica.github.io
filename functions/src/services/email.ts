@@ -1,4 +1,4 @@
-import nodemailer, { type Transporter } from "nodemailer";
+import type { Transporter } from "nodemailer";
 import { GMAIL_USER, GMAIL_APP_PASSWORD } from "../config";
 
 // Single transporter reused across invocations within a warm instance.
@@ -9,8 +9,12 @@ let transporter: Transporter | null = null;
 // Exported so credentialEmail.ts sends through the SAME pooled connection.
 // A second transport would authenticate separately and reintroduce exactly
 // the "454-4.7.0 Too many login attempts" failure the pool exists to avoid.
-export function getTransporter(): Transporter {
+export async function getTransporter(): Promise<Transporter> {
   if (transporter) return transporter;
+  const nodemailerModule = await import("nodemailer");
+  const nodemailer =
+    (nodemailerModule as unknown as { default?: typeof nodemailerModule })
+      .default ?? nodemailerModule;
   // Pool a single authenticated connection across messages. Without
   // pooling, every sendMail opens TCP+TLS+AUTH from scratch; with the
   // batch handler running multiple workers in parallel that triggers
@@ -61,7 +65,8 @@ async function sendPlain(
   bodyHtml: string,
   bodyText: string
 ) {
-  await getTransporter().sendMail({
+  const client = await getTransporter();
+  await client.sendMail({
     from: `"${FROM_NAME}" <${GMAIL_USER.value()}>`,
     to,
     subject: singleLine(subject),
