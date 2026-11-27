@@ -6,6 +6,7 @@ interface CacheEntry<V> {
 export class TtlCache<V> {
   private readonly entries = new Map<string, CacheEntry<V>>();
   private readonly inflight = new Map<string, Promise<V>>();
+  private readonly generations = new Map<string, number>();
 
   constructor(
     private readonly ttlMs: number,
@@ -37,27 +38,46 @@ export class TtlCache<V> {
     const pending = this.inflight.get(key);
     if (pending) return pending;
 
+    const gen = this.generations.get(key) ?? 0;
     const promise = loader()
       .then((value) => {
-        if (shouldCache(value)) {
+        if ((this.generations.get(key) ?? 0) === gen && shouldCache(value)) {
           this.set(key, value);
         }
         return value;
       })
       .finally(() => {
-        this.inflight.delete(key);
+        if (this.inflight.get(key) === promise) {
+          this.inflight.delete(key);
+        }
       });
 
     this.inflight.set(key, promise);
     return promise;
   }
 
+  reloadIfStale(
+    key: string,
+    staleValue: V,
+    loader: () => Promise<V>,
+    shouldCache: (value: V) => boolean = () => true
+  ): Promise<V> {
+    const entry = this.entries.get(key);
+    if (entry && Object.is(entry.value, staleValue)) {
+      this.invalidate(key);
+    }
+    return this.getOrLoad(key, loader, shouldCache);
+  }
+
   invalidate(key: string): void {
+    this.generations.set(key, (this.generations.get(key) ?? 0) + 1);
     this.entries.delete(key);
+    this.inflight.delete(key);
   }
 
   clear(): void {
     this.entries.clear();
     this.inflight.clear();
+    this.generations.clear();
   }
 }

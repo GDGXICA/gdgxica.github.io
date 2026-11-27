@@ -27,6 +27,20 @@ export function getOrLoadInstance(
   );
 }
 
+export function reloadInstanceIfStale(
+  slug: string,
+  id: string,
+  staleValue: CachedInstanceData,
+  loader: () => Promise<CachedInstanceData>
+): Promise<CachedInstanceData> {
+  return instanceCache.reloadIfStale(
+    instanceKey(slug, id),
+    staleValue,
+    loader,
+    (value) => value !== null
+  );
+}
+
 export function getOrLoadQuizAnswers(
   slug: string,
   id: string,

@@ -58,4 +58,47 @@ describe("TtlCache", () => {
     ).toBe(true);
     expect(loader).toHaveBeenCalledTimes(2);
   });
+
+  it("does not cache stale inflight result if invalidated before completion", async () => {
+    const cache = new TtlCache<string>(1000);
+    let resolveStale!: (value: string) => void;
+    const staleLoader = vi.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          resolveStale = resolve;
+        })
+    );
+    const freshLoader = vi.fn(async () => "q3");
+
+    const stalePromise = cache.getOrLoad("inst", staleLoader);
+    cache.invalidate("inst");
+    resolveStale("q2");
+
+    expect(await stalePromise).toBe("q2");
+    expect(await cache.getOrLoad("inst", freshLoader)).toBe("q3");
+    expect(freshLoader).toHaveBeenCalledTimes(1);
+  });
+
+  it("coalesces concurrent reloadIfStale calls into a single fresh load", async () => {
+    const cache = new TtlCache<{ q: string }>(1000);
+    const stale = { q: "q2" };
+    const fresh = { q: "q3" };
+    cache.set("inst", stale);
+
+    let resolveFresh!: (value: { q: string }) => void;
+    const loader = vi.fn(
+      () =>
+        new Promise<{ q: string }>((resolve) => {
+          resolveFresh = resolve;
+        })
+    );
+
+    const p1 = cache.reloadIfStale("inst", stale, loader);
+    const p2 = cache.reloadIfStale("inst", stale, loader);
+    const p3 = cache.reloadIfStale("inst", stale, loader);
+    expect(loader).toHaveBeenCalledTimes(1);
+
+    resolveFresh(fresh);
+    expect(await Promise.all([p1, p2, p3])).toEqual([fresh, fresh, fresh]);
+  });
 });
