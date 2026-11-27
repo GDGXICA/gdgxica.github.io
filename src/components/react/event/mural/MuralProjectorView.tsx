@@ -1,7 +1,8 @@
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { MuralPhoto } from "@/lib/mural";
 import { HeroQr } from "../HeroQr";
-import { CameraIcon, FullscreenIcon } from "../icons";
+import { QrLightbox } from "../QrLightbox";
+import { CameraIcon, ExpandIcon, FullscreenIcon, QrIcon } from "../icons";
 import { RibbonWall } from "./RibbonWall";
 import { Spotlight } from "./Spotlight";
 import { photoAspect } from "./ribbons";
@@ -49,18 +50,7 @@ export function MuralProjectorView({
   const { immersive, toggle } = useFullscreen();
   const idle = useIdle(IDLE_MS);
   const reducedMotion = usePrefersReducedMotion();
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() !== "f") return;
-      if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) {
-        return;
-      }
-      void toggle();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [toggle]);
+  const [qrExpanded, setQrExpanded] = useState(false);
 
   const title = settings.headline || headline || eventName;
   const invite = settingsLoading ? "none" : settings.state;
@@ -96,6 +86,35 @@ export function MuralProjectorView({
 
   const empty = !loading && photos.every((p) => broken.has(p.id));
   const waiting = !empty && (!settled || wallPhotos.length === 0);
+  const canExpandQr = !empty && invite === "open" && Boolean(qrDataUrl);
+  const isQrOpen = qrExpanded && canExpandQr;
+  const closeQr = useCallback(() => setQrExpanded(false), []);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) {
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      const key = event.key.toLowerCase();
+      if (key === "f") {
+        void toggle();
+      } else if (key === "q" && canExpandQr) {
+        setQrExpanded((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [toggle, canExpandQr]);
   const controls = `transition-opacity duration-300 ${
     idle ? "pointer-events-none opacity-0" : "opacity-100"
   }`;
@@ -141,7 +160,7 @@ export function MuralProjectorView({
                 photos={wallPhotos}
                 aspects={aspects}
                 reducedMotion={reducedMotion}
-                paused={Boolean(spotlight.current)}
+                paused={Boolean(spotlight.current) || isQrOpen}
                 inset={reducedMotion && !immersive}
                 onBroken={markBroken}
               />
@@ -187,37 +206,65 @@ export function MuralProjectorView({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => void toggle()}
-            className={`ml-auto hidden shrink-0 items-center gap-2 rounded-full border border-white/15 bg-black/75 px-4 py-2.5 text-sm font-medium text-white/85 backdrop-blur-xl hover:border-white/35 hover:bg-black/90 sm:flex ${controls}`}
+          <div
+            className={`ml-auto flex shrink-0 items-center gap-2 ${controls}`}
           >
-            <FullscreenIcon size={16} exit={false} />
-            Pantalla completa
-            <kbd className="rounded border border-white/25 px-1.5 font-mono text-xs text-white/65">
-              F
-            </kbd>
-          </button>
+            {canExpandQr && (
+              <button
+                type="button"
+                onClick={() => setQrExpanded(true)}
+                aria-label="Agrandar QR"
+                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/75 px-4 py-2.5 text-sm font-medium text-white/85 backdrop-blur-xl transition-colors hover:border-white/35 hover:bg-black/90"
+              >
+                <QrIcon size={16} />
+                <span>QR</span>
+                <kbd className="hidden rounded border border-white/25 px-1.5 font-mono text-xs text-white/65 sm:inline">
+                  Q
+                </kbd>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => void toggle()}
+              className="hidden items-center gap-2 rounded-full border border-white/15 bg-black/75 px-4 py-2.5 text-sm font-medium text-white/85 backdrop-blur-xl transition-colors hover:border-white/35 hover:bg-black/90 sm:flex"
+            >
+              <FullscreenIcon size={16} exit={false} />
+              Pantalla completa
+              <kbd className="rounded border border-white/25 px-1.5 font-mono text-xs text-white/65">
+                F
+              </kbd>
+            </button>
+          </div>
         </header>
       )}
 
       {!empty && !immersive && invite === "open" && (
-        <footer
-          className={`absolute right-6 bottom-6 z-20 flex items-center gap-5 p-3 pl-6 ${hudCard}`}
-        >
-          <div className="text-right">
-            <p className="font-(family-name:--font-display) text-xl font-bold text-white">
-              Sube tu foto
-            </p>
-            <p className="mt-0.5 font-mono text-sm text-white/75">
-              {displayUrl}
-            </p>
-          </div>
-          <img
-            src={qrDataUrl}
-            alt="QR para subir fotos al mural"
-            className="h-32 w-32 rounded-xl bg-white p-1.5"
-          />
+        <footer className={`absolute right-6 bottom-6 z-20 ${hudCard}`}>
+          <button
+            type="button"
+            onClick={() => setQrExpanded(true)}
+            aria-label="Ampliar QR del mural"
+            className="group flex cursor-pointer items-center gap-5 rounded-2xl p-3 pl-6 text-right transition-colors hover:bg-white/[0.05] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ochre)"
+          >
+            <div>
+              <p className="font-(family-name:--font-display) text-xl font-bold text-white">
+                Sube tu foto
+              </p>
+              <p className="mt-0.5 font-mono text-sm text-white/75">
+                {displayUrl}
+              </p>
+              <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-2.5 py-0.5 font-mono text-[11px] text-white/80 transition-colors group-hover:border-(--ochre)/50 group-hover:text-(--ochre)">
+                <ExpandIcon size={12} />
+                Ampliar · Q
+              </span>
+            </div>
+            <img
+              src={qrDataUrl}
+              alt="QR para subir fotos al mural"
+              className="h-32 w-32 rounded-xl bg-white p-1.5 transition-transform group-hover:scale-[1.03] motion-reduce:transition-none"
+            />
+          </button>
         </footer>
       )}
 
@@ -230,17 +277,23 @@ export function MuralProjectorView({
       )}
 
       {!empty && immersive && invite === "open" && (
-        <aside
-          className={`absolute right-6 bottom-6 z-30 flex flex-col items-center gap-2 p-3 ${hudCard}`}
-        >
-          <img
-            src={qrDataUrl}
-            alt="QR para subir fotos al mural"
-            className="h-[15vh] w-[15vh] rounded-xl bg-white p-1.5"
-          />
-          <p className="font-mono text-xs font-semibold tracking-wider text-white/85 uppercase">
-            Sube tu foto
-          </p>
+        <aside className={`absolute right-6 bottom-6 z-30 ${hudCard}`}>
+          <button
+            type="button"
+            onClick={() => setQrExpanded(true)}
+            aria-label="Ampliar QR del mural"
+            className="group flex cursor-pointer flex-col items-center gap-2 rounded-2xl p-3 transition-colors hover:bg-white/[0.05] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ochre)"
+          >
+            <img
+              src={qrDataUrl}
+              alt="QR para subir fotos al mural"
+              className="h-[15vh] w-[15vh] rounded-xl bg-white p-1.5 transition-transform group-hover:scale-[1.03] motion-reduce:transition-none"
+            />
+            <span className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold tracking-wider text-white/85 uppercase group-hover:text-(--ochre)">
+              Sube tu foto
+              <ExpandIcon size={12} />
+            </span>
+          </button>
         </aside>
       )}
 
@@ -251,16 +304,44 @@ export function MuralProjectorView({
       )}
 
       {!empty && immersive && (
-        <button
-          type="button"
-          onClick={() => void toggle()}
-          aria-label="Salir de pantalla completa"
-          className={`absolute top-5 right-5 z-30 flex items-center gap-2 rounded-full border border-white/20 bg-black/75 px-4 py-2 text-sm text-white/85 backdrop-blur-xl hover:bg-black/90 ${controls}`}
+        <div
+          className={`absolute top-5 right-5 z-30 flex items-center gap-2 ${controls}`}
         >
-          <FullscreenIcon size={16} exit />
-          Salir
-        </button>
+          {canExpandQr && (
+            <button
+              type="button"
+              onClick={() => setQrExpanded(true)}
+              aria-label="Agrandar QR"
+              className="flex items-center gap-2 rounded-full border border-white/20 bg-black/75 px-4 py-2 text-sm text-white/85 backdrop-blur-xl transition-colors hover:bg-black/90"
+            >
+              <QrIcon size={16} />
+              <span>QR</span>
+              <kbd className="rounded border border-white/25 px-1.5 font-mono text-xs text-white/65">
+                Q
+              </kbd>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => void toggle()}
+            aria-label="Salir de pantalla completa"
+            className="flex items-center gap-2 rounded-full border border-white/20 bg-black/75 px-4 py-2 text-sm text-white/85 backdrop-blur-xl transition-colors hover:bg-black/90"
+          >
+            <FullscreenIcon size={16} exit />
+            Salir
+          </button>
+        </div>
       )}
+
+      <QrLightbox
+        open={isQrOpen}
+        qrDataUrl={qrDataUrl}
+        url={uploadUrl}
+        caption="Sube tu foto al mural"
+        subtitle={title}
+        alt="QR ampliado para subir fotos al mural"
+        onClose={closeQr}
+      />
     </div>
   );
 }

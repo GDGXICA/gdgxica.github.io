@@ -159,11 +159,11 @@ export function PollOverlay({
 
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <p className="m-0 font-mono text-xs font-semibold tracking-wider text-(--muted) uppercase">
           Pregunta {Math.max(1, currentQuestionIndex + 1)} de {questions.length}
         </p>
-        <div className="mt-2.5 flex gap-1.5" aria-hidden="true">
+        <div className="mt-2 flex gap-1.5 sm:mt-2.5" aria-hidden="true">
           {questions.map((item, index) => (
             <span
               key={item.id}
@@ -175,13 +175,13 @@ export function PollOverlay({
             />
           ))}
         </div>
-        <h2 className="mt-5 mb-0 font-mono text-xs font-medium tracking-wider text-(--muted) uppercase">
+        <h2 className="mt-4 mb-0 font-mono text-xs font-medium tracking-wider text-(--muted) uppercase sm:mt-5">
           {title}
         </h2>
-        <p className="mt-1.5 font-(family-name:--font-display) text-[clamp(1.375rem,1.1rem+1.3vw,2rem)] leading-tight font-bold text-balance text-(--ink)">
+        <p className="mt-1.5 font-(family-name:--font-display) text-[clamp(1.25rem,1.05rem+1.3vw,2rem)] leading-tight font-bold text-balance text-(--ink)">
           {question.prompt}
         </p>
-        <p className="mt-2 text-sm text-(--muted)">
+        <p className="mt-1.5 text-sm text-(--muted) sm:mt-2">
           {closed
             ? "Resultados finales de la encuesta"
             : votedOptionId
@@ -201,7 +201,7 @@ export function PollOverlay({
         </p>
       )}
 
-      <ul className="space-y-3">
+      <ul className="space-y-2.5 sm:space-y-3">
         {question.options.map((opt) => {
           const count = counts[`${questionId}:${opt.id}`] ?? 0;
           const pct =
@@ -215,7 +215,7 @@ export function PollOverlay({
             return (
               <li
                 key={opt.id}
-                className={`relative min-h-16 overflow-hidden rounded-xl border bg-(--surface-2) px-4 py-4 ${
+                className={`relative min-h-14 overflow-hidden rounded-xl border bg-(--surface-2) px-3.5 py-3.5 sm:min-h-16 sm:px-4 sm:py-4 ${
                   isMine ? "border-(--ochre)" : "border-(--line)"
                 }`}
               >
@@ -227,21 +227,21 @@ export function PollOverlay({
                   style={{ width: `${pct}%` }}
                 />
                 <div className="relative flex items-center justify-between gap-3">
-                  <span className="flex min-w-0 items-center gap-2 font-semibold break-words text-(--ink)">
+                  <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 font-semibold break-words text-(--ink)">
                     {isMine && (
                       <CheckIcon
                         size={16}
                         className="shrink-0 text-(--ochre)"
                       />
                     )}
-                    <span>{opt.label}</span>
+                    <span className="min-w-0 break-words">{opt.label}</span>
                     {isMine && (
-                      <span className="ml-1 text-xs font-medium text-(--ochre)">
+                      <span className="rounded-full bg-(--ochre)/20 px-2 py-0.5 text-[11px] font-semibold text-(--ochre)">
                         Tu voto
                       </span>
                     )}
                   </span>
-                  <span className="shrink-0 font-mono text-sm font-semibold text-(--ink) tabular-nums">
+                  <span className="shrink-0 font-mono text-xs font-semibold text-(--ink) tabular-nums sm:text-sm">
                     {count} · {pct}%
                   </span>
                 </div>
@@ -256,7 +256,7 @@ export function PollOverlay({
                 onClick={() => vote(opt.id)}
                 disabled={submitting}
                 aria-busy={isPending}
-                className={`flex min-h-16 w-full items-center justify-between gap-3 rounded-xl border bg-(--surface-2) px-5 py-4 text-left text-base font-semibold text-(--ink) transition-[border-color,background-color,transform] hover:border-(--ochre)/60 hover:bg-(--surface-3) active:scale-[0.99] disabled:cursor-default motion-reduce:transition-none sm:text-lg ${
+                className={`flex min-h-14 w-full touch-manipulation items-center justify-between gap-3 rounded-xl border bg-(--surface-2) px-4 py-3.5 text-left text-[0.9375rem] font-semibold text-(--ink) transition-[border-color,background-color,transform] select-none hover:border-(--ochre)/60 hover:bg-(--surface-3) active:scale-[0.99] disabled:cursor-default motion-reduce:transition-none sm:min-h-16 sm:px-5 sm:py-4 sm:text-lg ${
                   isPending
                     ? "border-(--ochre) ring-2 ring-(--ochre)"
                     : "border-(--line-strong) disabled:opacity-50"

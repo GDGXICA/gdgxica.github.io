@@ -109,6 +109,7 @@ export function WordCloudView({
       setSentCount(next);
       writeSentCount(slug, instanceId, next);
       setInput("");
+      navigator.vibrate?.(10);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No pudimos enviar.");
     } finally {
@@ -140,13 +141,16 @@ export function WordCloudView({
                 setError(null);
               }}
               placeholder="Tu palabra..."
+              autoComplete="off"
+              autoCapitalize="sentences"
+              enterKeyHint="send"
               className="min-h-12 flex-1 rounded-xl border border-(--line-strong) bg-(--surface-2) px-4 py-2.5 text-base text-(--ink) transition-colors placeholder:text-(--muted)/70 hover:border-(--muted) focus:border-(--ochre) disabled:opacity-50"
               disabled={remaining === 0}
             />
             <button
               type="submit"
               disabled={submitting || remaining === 0 || trimmed.length === 0}
-              className="nb nb--primary disabled:opacity-45 sm:min-w-40"
+              className="nb nb--primary w-full touch-manipulation disabled:opacity-45 sm:w-auto sm:min-w-40"
             >
               <span className="nb__label">
                 {submitting ? "Enviando..." : "Enviar"}
@@ -178,7 +182,7 @@ export function WordCloudView({
         </p>
       )}
 
-      <div className="rounded-2xl border border-(--line) bg-(--night) px-4 py-6 sm:px-6 sm:py-8">
+      <div className="overflow-hidden rounded-2xl border border-(--line) bg-(--night) px-4 py-6 sm:px-6 sm:py-8">
         {loading && (
           <p className="text-center text-sm text-(--muted)">Cargando nube...</p>
         )}
@@ -188,12 +192,12 @@ export function WordCloudView({
           </p>
         )}
         {!loading && words.length > 0 && (
-          <ul className="flex flex-wrap items-baseline justify-center gap-x-5 gap-y-2.5">
+          <ul className="flex flex-wrap items-baseline justify-center gap-x-4 gap-y-2 sm:gap-x-5 sm:gap-y-2.5">
             {words.map((w) => {
               const ratio = Math.log(w.count + 1) / Math.log(maxCount + 1);
-              const fontSize = Math.max(
-                MIN_FONT_REM,
-                MIN_FONT_REM + ratio * SCALE_PER_LOG * 2
+              const fontSize = Math.min(
+                2,
+                Math.max(MIN_FONT_REM, MIN_FONT_REM + ratio * SCALE_PER_LOG * 2)
               );
               const tone =
                 ratio > 0.75
@@ -204,7 +208,7 @@ export function WordCloudView({
               return (
                 <li
                   key={w.id}
-                  className={`animate-stage-pop-in tracking-[-0.015em] ${tone}`}
+                  className={`animate-stage-pop-in max-w-full text-center tracking-[-0.015em] [overflow-wrap:anywhere] ${tone}`}
                   style={{ fontSize: `${fontSize}rem`, lineHeight: 1.2 }}
                 >
                   {w.text}

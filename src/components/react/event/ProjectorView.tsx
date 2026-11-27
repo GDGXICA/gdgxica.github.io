@@ -6,13 +6,14 @@ import { TYPE_DOTS } from "./JoinModal";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
-  CloseIcon,
+  ExpandIcon,
   FullscreenIcon,
   GameTypeIcon,
   QrIcon,
   VolumeOffIcon,
   VolumeOnIcon,
 } from "./icons";
+import { QrLightbox } from "./QrLightbox";
 import { useFullscreen } from "./mural/useFullscreen";
 import { useIdle } from "./mural/useIdle";
 import { ProjectorBingo } from "./projector/ProjectorBingo";
@@ -77,10 +78,25 @@ export function ProjectorView({ slug, eventName, joinUrl, qrDataUrl }: Props) {
     };
   }, [selectedJoinUrl, joinUrl, qrDataUrl]);
 
-  // Keyboard shortcuts for presenter: F fullscreen, Q toggle QR, Escape closes QR.
+  const closeQr = useCallback(() => setQrExpanded(false), []);
+
+  useEffect(() => {
+    setFocusMode(false);
+  }, [gameId]);
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) {
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
         return;
       }
       const key = event.key.toLowerCase();
@@ -88,8 +104,6 @@ export function ProjectorView({ slug, eventName, joinUrl, qrDataUrl }: Props) {
         void toggleFullscreen();
       } else if (key === "q" && selectedQr) {
         setQrExpanded((prev) => !prev);
-      } else if (key === "escape") {
-        setQrExpanded(false);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -177,7 +191,7 @@ export function ProjectorView({ slug, eventName, joinUrl, qrDataUrl }: Props) {
             </span>
           </button>
 
-          {hasActiveGame && (
+          {(selectedQr || hasActiveGame) && (
             <button
               type="button"
               onClick={() => setQrExpanded(true)}
@@ -209,102 +223,154 @@ export function ProjectorView({ slug, eventName, joinUrl, qrDataUrl }: Props) {
         </div>
       </header>
 
-      {/* Lobby selector when no ?game= */}
       {!gameId && (
-        <main className="mx-auto grid w-full max-w-[1480px] flex-1 items-start gap-8 px-5 py-8 sm:px-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12">
-          <div>
-            <p className="font-mono text-xs font-semibold tracking-[0.2em] text-(--ochre) uppercase sm:text-sm">
-              Panel de proyección
-            </p>
-            <h2 className="mt-2 font-(family-name:--font-display) text-3xl font-bold tracking-tight text-white sm:text-5xl">
-              Elige una dinámica para proyectar
-            </h2>
-            <p className="mt-3 text-base text-white/65 sm:text-lg">
-              Enlace para participantes:{" "}
-              <span className="font-mono break-all text-white">{joinUrl}</span>
-            </p>
-
-            {liveInstances.length === 0 ? (
-              <div className="mt-10 rounded-3xl border border-dashed border-white/20 bg-[#07090e] px-8 py-14 text-center">
-                <p className="text-xl text-white/75 sm:text-2xl">
-                  Cuando una dinámica esté en vivo, aparecerá aquí.
+        <main className="mx-auto flex w-full max-w-[1440px] flex-1 items-center px-5 py-8 sm:px-8 lg:py-12">
+          <div className="grid w-full items-center gap-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(360px,430px)] lg:gap-14">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="font-mono text-xs font-semibold tracking-[0.22em] text-(--ochre) uppercase sm:text-sm">
+                  Panel de proyección
                 </p>
-              </div>
-            ) : (
-              <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                {liveInstances.map((item) => (
-                  <a
-                    key={item.id}
-                    href={`?game=${encodeURIComponent(item.id)}`}
-                    onClick={(e) => {
-                      if (
-                        e.metaKey ||
-                        e.ctrlKey ||
-                        e.shiftKey ||
-                        e.altKey ||
-                        e.button !== 0
-                      ) {
-                        return;
-                      }
-                      e.preventDefault();
-                      navigateToGame(item.id);
-                    }}
-                    className="group relative flex min-h-36 flex-col justify-between overflow-hidden rounded-3xl border border-white/15 bg-[#0b0d13] p-6 text-white no-underline transition-colors hover:border-white/40 hover:bg-[#121622]"
-                  >
+                {liveInstances.length > 0 && (
+                  <span className="bg-google-green/15 inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 font-mono text-xs text-green-300">
                     <span
+                      className="bg-google-green h-1.5 w-1.5 rounded-full"
                       aria-hidden="true"
-                      className="absolute inset-y-0 left-0 w-1.5"
-                      style={{ backgroundColor: TYPE_DOTS[item.type] }}
                     />
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="inline-flex items-center gap-2 font-mono text-xs font-semibold tracking-[0.16em] text-white/70 uppercase">
-                        <GameTypeIcon
-                          type={item.type}
-                          size={16}
-                          style={{ color: TYPE_DOTS[item.type] }}
-                        />
-                        {TYPE_LABELS[item.type]}
-                      </span>
-                      <span className="bg-google-green/15 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-xs text-green-300">
-                        <span
-                          className="bg-google-green h-1.5 w-1.5 rounded-full"
-                          aria-hidden="true"
-                        />
-                        En vivo
-                      </span>
-                    </div>
-                    <div className="mt-5 flex items-end justify-between gap-4">
-                      <span className="font-(family-name:--font-display) text-2xl leading-tight font-bold break-words sm:text-3xl">
-                        {item.title}
-                      </span>
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 text-(--ochre) transition-transform group-hover:translate-x-1 motion-reduce:transition-none">
-                        <ArrowRightIcon size={18} />
-                      </span>
-                    </div>
-                  </a>
-                ))}
+                    {liveInstances.length}{" "}
+                    {liveInstances.length === 1 ? "activa" : "activas"}
+                  </span>
+                )}
               </div>
+
+              <h2 className="mt-3 font-(family-name:--font-display) text-3xl leading-[1.06] font-bold tracking-tight text-white sm:text-5xl lg:text-[3.25rem]">
+                Elige una dinámica para proyectar
+              </h2>
+
+              <p className="mt-4 flex flex-wrap items-center gap-2 text-sm text-white/65 sm:text-base">
+                <span>Enlace para participantes:</span>
+                <span className="rounded-full border border-white/15 bg-white/[0.04] px-3.5 py-1 font-mono text-xs break-all text-white sm:text-sm">
+                  {joinUrl}
+                </span>
+              </p>
+
+              {liveInstances.length === 0 ? (
+                <div className="mt-8 rounded-3xl border border-dashed border-white/20 bg-[#07090e] px-8 py-14 text-center">
+                  <p className="text-xl text-white/75 sm:text-2xl">
+                    Cuando una dinámica esté en vivo, aparecerá aquí.
+                  </p>
+                </div>
+              ) : (
+                <div
+                  className={`mt-8 grid gap-4 ${
+                    liveInstances.length > 4 ? "sm:grid-cols-2" : "grid-cols-1"
+                  }`}
+                >
+                  {liveInstances.map((item) => (
+                    <a
+                      key={item.id}
+                      href={`?game=${encodeURIComponent(item.id)}`}
+                      onClick={(e) => {
+                        if (
+                          e.metaKey ||
+                          e.ctrlKey ||
+                          e.shiftKey ||
+                          e.altKey ||
+                          e.button !== 0
+                        ) {
+                          return;
+                        }
+                        e.preventDefault();
+                        navigateToGame(item.id);
+                      }}
+                      className="group relative flex items-center justify-between gap-5 overflow-hidden rounded-3xl border border-white/15 bg-[#0b0d13] px-6 py-5 pl-7 text-white no-underline transition-all hover:border-white/40 hover:bg-[#111521] sm:px-7 sm:py-6 sm:pl-8"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-y-0 left-0 w-1.5"
+                        style={{ backgroundColor: TYPE_DOTS[item.type] }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          <span className="inline-flex items-center gap-2 font-mono text-xs font-semibold tracking-[0.16em] text-white/75 uppercase">
+                            <GameTypeIcon
+                              type={item.type}
+                              size={16}
+                              style={{ color: TYPE_DOTS[item.type] }}
+                            />
+                            {TYPE_LABELS[item.type]}
+                          </span>
+                          <span className="bg-google-green/15 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-[11px] text-green-300">
+                            <span
+                              className="bg-google-green h-1.5 w-1.5 rounded-full"
+                              aria-hidden="true"
+                            />
+                            En vivo
+                          </span>
+                        </div>
+                        <p className="mt-2.5 font-(family-name:--font-display) text-2xl leading-tight font-bold break-words text-white sm:text-3xl">
+                          {item.title}
+                        </p>
+                      </div>
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/[0.03] text-(--ochre) transition-all group-hover:translate-x-1 group-hover:border-(--ochre)/60 group-hover:bg-(--ochre)/15 motion-reduce:transition-none">
+                        <ArrowRightIcon size={20} />
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {selectedQr && (
+              <aside className="rounded-[2rem] border border-white/15 bg-[#0b0d13] p-6 text-center shadow-[0_32px_90px_-24px_rgba(0,0,0,0.95)] sm:p-7">
+                <div
+                  aria-hidden="true"
+                  className="mb-5 flex h-1.5 w-full overflow-hidden rounded-full"
+                >
+                  <span className="bg-google-blue flex-1" />
+                  <span className="bg-google-red flex-1" />
+                  <span className="bg-google-yellow flex-1" />
+                  <span className="bg-google-green flex-1" />
+                </div>
+
+                <p className="font-mono text-xs font-semibold tracking-[0.22em] text-(--ochre) uppercase sm:text-sm">
+                  Únete ahora
+                </p>
+                <p className="mt-1 text-sm text-white/65">
+                  Escanea con tu celular para participar
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => setQrExpanded(true)}
+                  aria-label="Ampliar código QR"
+                  className="group relative mx-auto mt-5 block aspect-square w-full max-w-[300px] cursor-pointer rounded-2xl bg-white p-4 transition-transform hover:scale-[1.015] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--ochre) motion-reduce:transition-none"
+                >
+                  <img
+                    src={selectedQr}
+                    alt="QR para unirse a los juegos"
+                    className="h-full w-full object-contain"
+                  />
+                </button>
+
+                <p className="mt-4 font-mono text-xs break-all text-white/80 sm:text-sm">
+                  {joinUrl.replace(/^https?:\/\//, "")}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => setQrExpanded(true)}
+                  className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-white/20 bg-white/[0.05] px-4 text-sm font-medium text-white transition-colors hover:border-white/45 hover:bg-white/12"
+                >
+                  <ExpandIcon size={16} className="text-(--ochre)" />
+                  <span>Ampliar QR</span>
+                  <kbd className="rounded border border-white/25 px-1.5 font-mono text-[11px] text-white/70">
+                    Q
+                  </kbd>
+                </button>
+              </aside>
             )}
           </div>
-
-          {/* Side QR Panel in Lobby */}
-          {selectedQr && (
-            <aside className="rounded-3xl border border-white/15 bg-[#0b0d13] p-6 text-center">
-              <p className="font-mono text-xs font-semibold tracking-[0.2em] text-(--ochre) uppercase">
-                Únete ahora
-              </p>
-              <div className="mx-auto mt-4 aspect-square w-full max-w-[260px] rounded-2xl bg-white p-3">
-                <img
-                  src={selectedQr}
-                  alt="QR para unirse a los juegos"
-                  className="h-full w-full object-contain"
-                />
-              </div>
-              <p className="mt-4 font-mono text-xs break-all text-white/75">
-                {joinUrl.replace(/^https?:\/\//, "")}
-              </p>
-            </aside>
-          )}
         </main>
       )}
 
@@ -330,23 +396,37 @@ export function ProjectorView({ slug, eventName, joinUrl, qrDataUrl }: Props) {
         <main className="mx-auto flex w-full max-w-[1520px] flex-1 flex-col px-5 py-6 sm:px-8 sm:py-8">
           <article className="flex min-w-0 flex-1 flex-col">
             {activeInstance.type === "poll" && activeInstance.config && (
-              <ProjectorPoll slug={slug} instance={activeInstance} />
+              <ProjectorPoll
+                key={activeInstance.id}
+                slug={slug}
+                instance={activeInstance}
+              />
             )}
             {activeInstance.type === "quiz" && activeInstance.config && (
               <ProjectorQuiz
+                key={activeInstance.id}
                 slug={slug}
                 instance={activeInstance}
                 onFocusModeChange={setFocusMode}
               />
             )}
             {activeInstance.type === "wordcloud" && (
-              <ProjectorWordCloud slug={slug} instance={activeInstance} />
+              <ProjectorWordCloud
+                key={activeInstance.id}
+                slug={slug}
+                instance={activeInstance}
+              />
             )}
             {activeInstance.type === "bingo" && (
-              <ProjectorBingo slug={slug} instance={activeInstance} />
+              <ProjectorBingo
+                key={activeInstance.id}
+                slug={slug}
+                instance={activeInstance}
+              />
             )}
             {activeInstance.type === "roulette" && (
               <ProjectorRoulette
+                key={activeInstance.id}
                 slug={slug}
                 instance={activeInstance}
                 onFocusModeChange={setFocusMode}
@@ -389,38 +469,16 @@ export function ProjectorView({ slug, eventName, joinUrl, qrDataUrl }: Props) {
         </footer>
       )}
 
-      {/* Fullscreen QR Overlay */}
-      {qrExpanded && selectedQr && (
-        <div
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-black/95 p-6 backdrop-blur-sm sm:p-8"
-          onClick={() => setQrExpanded(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-label="QR ampliado"
-        >
-          <button
-            type="button"
-            onClick={() => setQrExpanded(false)}
-            className="absolute top-5 right-5 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/30 bg-black/80 px-4 text-sm font-medium text-white hover:bg-white/10 sm:top-6 sm:right-8"
-            aria-label="Cerrar QR grande"
-          >
-            <CloseIcon size={16} />
-            Cerrar
-          </button>
-          <p className="font-mono text-sm tracking-[0.2em] text-(--ochre) uppercase">
-            Escanea para unirte
-          </p>
-          <div className="aspect-square w-full max-w-[min(58vh,560px)] rounded-3xl bg-white p-5 sm:p-6">
-            <img
-              src={selectedQr}
-              alt="QR de unión ampliado"
-              className="h-full w-full object-contain"
-            />
-          </div>
-          <p className="max-w-full rounded-full border border-white/15 bg-white/[0.05] px-5 py-2 text-center font-mono text-sm break-all text-white/90 sm:text-xl">
-            {selectedJoinUrl}
-          </p>
-        </div>
+      {selectedQr && (
+        <QrLightbox
+          open={qrExpanded}
+          qrDataUrl={selectedQr}
+          url={selectedJoinUrl}
+          caption="Escanea para unirte"
+          subtitle={activeInstance ? activeInstance.title : eventName}
+          alt="QR de unión ampliado"
+          onClose={closeQr}
+        />
       )}
     </div>
   );

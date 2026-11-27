@@ -255,6 +255,7 @@ export function ProjectorRoulette({
 
     return Array.from({ length: count }, (_, i) => ({
       index: i,
+      uid: showLabelsOnWheel ? (poolNames[i]?.id ?? null) : null,
       label: showLabelsOnWheel ? (poolNames[i]?.label ?? "") : "",
       fill: colors[i].fill,
       text: colors[i].text,
@@ -329,17 +330,18 @@ export function ProjectorRoulette({
     const winnerId = instance.lastSpinWinnerId ?? `spin-${currentSpinCount}`;
     const slots = Math.max(wheelSlices.length, 4);
     const step = 360 / slots;
-    const targetIdx =
+    const matchedIdx =
       eligibleCount <= MAX_WHEEL_SEGMENTS &&
       liveEligible.length > 0 &&
       liveEligible.length <= MAX_WHEEL_SEGMENTS
-        ? Math.max(
-            0,
-            wheelSlices.findIndex(
-              (s) => s.label && s.label === instance.lastSpinWinnerAlias
-            )
+        ? wheelSlices.findIndex(
+            (s) =>
+              (s.uid !== null && s.uid === winnerId) ||
+              (s.label && s.label === instance.lastSpinWinnerAlias)
           )
-        : slotIndexForId(winnerId, slots);
+        : -1;
+    const targetIdx =
+      matchedIdx >= 0 ? matchedIdx : slotIndexForId(winnerId, slots);
     const targetAngle = -((targetIdx + 0.5) * step);
 
     if (reducedMotion) {

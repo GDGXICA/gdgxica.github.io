@@ -159,4 +159,26 @@ describe("InstanceCard", () => {
     fireEvent.click(screen.getByRole("button", { name: /Confirmar/i }));
     expect(onDelete).toHaveBeenCalledTimes(1);
   });
+
+  it("shows confirmation text after copying the game URL", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    render(
+      <InstanceCard
+        instance={makeInstance()}
+        onSetState={vi.fn()}
+        onAdvanceQuiz={vi.fn()}
+        onDelete={vi.fn()}
+        busy={false}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Copiar URL/i }));
+    expect(await screen.findByText("¡Copiado!")).toBeInTheDocument();
+    expect(writeText).toHaveBeenCalledWith(
+      expect.stringContaining("/events/ev/jugar?game=i1")
+    );
+  });
 });

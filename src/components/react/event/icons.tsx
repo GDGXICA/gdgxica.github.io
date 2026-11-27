@@ -130,6 +130,14 @@ export function QrIcon({ size = 18, ...props }: IconProps) {
   );
 }
 
+export function ExpandIcon({ size = 18, ...props }: IconProps) {
+  return (
+    <svg {...base(size, props)}>
+      <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+    </svg>
+  );
+}
+
 export function UsersIcon({ size = 18, ...props }: IconProps) {
   return (
     <svg {...base(size, props)}>

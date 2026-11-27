@@ -11,13 +11,19 @@ const { title } = Astro.props;
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#070b16" />
     <title>{title}</title>
     <link rel="icon" type="image/png" href="/favicon.png" />
   </head>
-  <body class="theme-night dark min-h-screen"><slot /></body>
+  <body
+    class="theme-night dark min-h-dvh overscroll-y-none [-webkit-tap-highlight-color:transparent]"
+    ><slot /></body
+  >
 </html>
 
 <!-- What the islands need beyond utilities: the survey dimension line under

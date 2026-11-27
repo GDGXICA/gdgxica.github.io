@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { getServerNowMs } from "@/lib/serverClock";
 import { TYPE_COLORS, TYPE_LABELS } from "../minigame-templates/types";
 import {
   MODE_LABELS,
@@ -81,6 +82,8 @@ export function InstanceCard({
     instance.state !== "scheduled" &&
     onOpenModeration;
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
+  const copyTimerRef = useRef<number | null>(null);
 
   const isQuiz = instance.type === "quiz";
   const isPoll = instance.type === "poll";
@@ -111,7 +114,7 @@ export function InstanceCard({
   const isOnLastQuestion = isQuiz && currentQ >= totalQuestions;
   const quizLimitSec = activeQuizQuestionLimitSec(instance);
   const quizStartedMs = startedAtMillis(instance.currentQuestionStartedAt);
-  const [nowMs, setNowMs] = useState(() => Date.now());
+  const [nowMs, setNowMs] = useState(() => getServerNowMs());
   const quizRemainingSec =
     isQuiz &&
     instance.state === "live" &&
@@ -126,14 +129,37 @@ export function InstanceCard({
       : null;
 
   useEffect(() => {
-    setNowMs(Date.now());
+    setNowMs(getServerNowMs());
   }, [quizStartedMs, currentQ]);
 
   useEffect(() => {
     if (quizRemainingSec === null || quizRemainingSec <= 0) return;
-    const timer = window.setTimeout(() => setNowMs(Date.now()), 1000);
+    const timer = window.setTimeout(() => setNowMs(getServerNowMs()), 1000);
     return () => window.clearTimeout(timer);
   }, [quizRemainingSec, nowMs]);
+
+  useEffect(
+    () => () => {
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+    },
+    []
+  );
+
+  async function handleCopyUrl() {
+    const url = `${window.location.origin}/events/${encodeURIComponent(instance.eventSlug)}/jugar?game=${encodeURIComponent(instance.id)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedUrl(true);
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+      copyTimerRef.current = window.setTimeout(() => setCopiedUrl(false), 1800);
+    } catch {
+      setCopiedUrl(false);
+    }
+  }
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
@@ -171,7 +197,7 @@ export function InstanceCard({
             </p>
           )}
           {isPoll && (
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               Pregunta {currentQ} de {pollQuestions}
             </p>
           )}
@@ -206,7 +232,7 @@ export function InstanceCard({
           href={`/events/${encodeURIComponent(instance.eventSlug)}/jugar?game=${encodeURIComponent(instance.id)}`}
           target="_blank"
           rel="noreferrer"
-          className="rounded-lg border border-blue-300 px-3 py-1.5 text-sm text-blue-700"
+          className="rounded-lg border border-blue-300 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-50 dark:border-blue-500/60 dark:text-blue-300 dark:hover:bg-blue-900/20"
         >
           Abrir juego
         </a>
@@ -214,20 +240,16 @@ export function InstanceCard({
           href={`/events/${encodeURIComponent(instance.eventSlug)}/projector?game=${encodeURIComponent(instance.id)}`}
           target="_blank"
           rel="noreferrer"
-          className="rounded-lg border border-purple-300 px-3 py-1.5 text-sm text-purple-700"
+          className="rounded-lg border border-purple-300 px-3 py-1.5 text-sm text-purple-700 hover:bg-purple-50 dark:border-purple-500/60 dark:text-purple-300 dark:hover:bg-purple-900/20"
         >
           Abrir proyector
         </a>
         <button
           type="button"
-          onClick={() =>
-            navigator.clipboard.writeText(
-              `${window.location.origin}/events/${encodeURIComponent(instance.eventSlug)}/jugar?game=${encodeURIComponent(instance.id)}`
-            )
-          }
-          className="rounded-lg border px-3 py-1.5 text-sm"
+          onClick={() => void handleCopyUrl()}
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
         >
-          Copiar URL
+          {copiedUrl ? "¡Copiado!" : "Copiar URL"}
         </button>
         {instance.state === "scheduled" && (
           <>
@@ -311,7 +333,7 @@ export function InstanceCard({
                 type="button"
                 onClick={() => onAdvancePoll()}
                 disabled={busy || currentQ >= pollQuestions}
-                className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
               >
                 ⏭ Avanzar pregunta
               </button>

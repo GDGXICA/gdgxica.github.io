@@ -61,13 +61,13 @@ export function ProjectorWordCloud({ slug, instance }: Props) {
         </span>
       </div>
 
-      <div className="flex flex-1 items-center justify-center rounded-3xl border border-white/12 bg-[#07090e] p-8 sm:p-12">
+      <div className="flex flex-1 items-center justify-center overflow-hidden rounded-3xl border border-white/12 bg-[#07090e] p-8 sm:p-12">
         {words.length === 0 ? (
           <p className="text-center text-2xl text-white/55">
             Aún no hay palabras enviadas.
           </p>
         ) : (
-          <ul className="flex flex-wrap items-baseline justify-center gap-x-8 gap-y-4">
+          <ul className="flex max-w-full flex-wrap items-baseline justify-center gap-x-8 gap-y-4">
             {words.map((w, index) => {
               const ratio = Math.log(w.count + 1) / Math.log(maxCount + 1);
               const fontSize = Math.max(
@@ -77,7 +77,7 @@ export function ProjectorWordCloud({ slug, instance }: Props) {
               return (
                 <li
                   key={w.id}
-                  className={`animate-stage-pop-in tracking-tight ${toneForWord(ratio, index)}`}
+                  className={`animate-stage-pop-in max-w-full text-center tracking-tight [overflow-wrap:anywhere] ${toneForWord(ratio, index)}`}
                   style={{ fontSize: `${fontSize}rem`, lineHeight: 1.08 }}
                 >
                   {w.text}

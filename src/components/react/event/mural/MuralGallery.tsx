@@ -85,7 +85,7 @@ export function MuralGallery({ slug, eventName }: Props) {
               data-fancybox="mural"
               href={photo.downloadUrl ?? undefined}
               data-caption={alias || undefined}
-              className="group relative block overflow-hidden rounded-xl bg-(--surface-1) ring-1 ring-white/10"
+              className="group relative block max-w-full min-w-0 overflow-hidden rounded-xl bg-(--surface-1) ring-1 ring-white/10"
               style={{
                 flex: `${ratio} 1 calc(${ratio} * var(--row))`,
                 aspectRatio: String(ratio),

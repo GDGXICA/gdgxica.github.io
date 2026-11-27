@@ -553,4 +553,59 @@ describe("ProjectorView", () => {
     fireEvent.click(audioBtn);
     expect(audioBtn).toBeInTheDocument();
   });
+
+  it("expands and closes the QR lightbox from the lobby via click, Q, and Escape", () => {
+    mocks.useLiveMinigames.mockReturnValue({
+      loading: false,
+      liveInstances: [],
+      error: null,
+    });
+    renderProjector();
+
+    expect(screen.queryByRole("dialog", { name: "QR ampliado" })).toBeNull();
+
+    fireEvent.click(screen.getByLabelText("Ampliar código QR"));
+    expect(
+      screen.getByRole("dialog", { name: "QR ampliado" })
+    ).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "QR ampliado" })).toBeNull();
+
+    fireEvent.keyDown(window, { key: "q" });
+    expect(
+      screen.getByRole("dialog", { name: "QR ampliado" })
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Cerrar QR grande"));
+    expect(screen.queryByRole("dialog", { name: "QR ampliado" })).toBeNull();
+  });
+
+  it("uses singular grammar when a poll has exactly one response", () => {
+    mocks.useLiveMinigames.mockReturnValue({
+      loading: false,
+      liveInstances: [
+        {
+          id: "i-poll-1",
+          type: "poll",
+          mode: "realtime",
+          state: "live",
+          title: "Encuesta rápida",
+          order: 0,
+          config: {
+            question: "¿Listos?",
+            options: [{ id: "a", label: "Sí" }],
+          },
+        },
+      ],
+      error: null,
+    });
+    mocks.useAggregates.mockReturnValue({
+      aggregates: { optionCounts: { "main:a": 1 } },
+      loading: false,
+      error: null,
+    });
+    renderProjector();
+    expect(screen.getByText("1 respuesta registrada")).toBeInTheDocument();
+  });
 });

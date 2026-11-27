@@ -5,10 +5,10 @@ import type { LiveInstance } from "../types";
 import { useBingoWinners, type BingoWinner } from "../useBingoWinners";
 
 const BALL_COLORS = [
-  "bg-google-blue",
-  "bg-google-red",
+  "bg-google-blue text-white",
+  "bg-google-red text-white",
   "bg-google-yellow text-[#070b16]",
-  "bg-google-green",
+  "bg-google-green text-white",
 ];
 
 const BALL_COLORS_SOFT = [
@@ -102,11 +102,11 @@ function ProjectorBingoClassic({ slug, instance }: Props) {
             {current ? (
               <div
                 key={drawKey}
-                className={`animate-bingo-ball-drop flex h-52 w-52 items-center justify-center rounded-full border-4 border-white/80 p-5 text-center text-white shadow-[0_24px_60px_-10px_rgba(0,0,0,0.9)] ${ballColor(
+                className={`animate-bingo-ball-drop flex h-52 w-52 items-center justify-center rounded-full border-4 border-white/80 p-5 text-center shadow-[0_24px_60px_-10px_rgba(0,0,0,0.9)] ${ballColor(
                   drawCount - 1
                 )}`}
               >
-                <span className="font-(family-name:--font-display) text-3xl leading-tight font-bold break-words">
+                <span className="line-clamp-3 font-(family-name:--font-display) text-3xl leading-tight font-bold [overflow-wrap:anywhere] hyphens-auto">
                   {current}
                 </span>
               </div>
@@ -142,7 +142,7 @@ function ProjectorBingoClassic({ slug, instance }: Props) {
                       true
                     )}`}
                   >
-                    <span className="text-[0.72rem] leading-tight font-bold break-words">
+                    <span className="line-clamp-3 text-[0.72rem] leading-tight font-bold [overflow-wrap:anywhere] hyphens-auto">
                       {term}
                     </span>
                   </li>

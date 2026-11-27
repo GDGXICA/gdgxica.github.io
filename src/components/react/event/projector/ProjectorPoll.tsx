@@ -107,7 +107,8 @@ export function ProjectorPoll({ slug, instance }: Props) {
           </ul>
 
           <p className="font-mono text-lg text-white/65 tabular-nums">
-            {total} respuesta{total !== 1 ? "s" : ""} registradas
+            {total} respuesta{total !== 1 ? "s" : ""} registrada
+            {total !== 1 ? "s" : ""}
           </p>
         </>
       )}

@@ -217,16 +217,16 @@ export function MuralUploadRoot({ slug, headline }: Props) {
   }
 
   return (
-    <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,31rem)] lg:gap-20">
+    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,31rem)] lg:gap-20">
       <div className="lg:sticky lg:top-28">
         <p className="n-mono m-0 text-xs font-semibold tracking-[0.2em] text-(--ochre) uppercase">
           Mural en vivo
         </p>
-        <h1 className="mt-2 mb-0 font-(family-name:--font-display) text-[clamp(2.25rem,1.5rem+3vw,4.25rem)] leading-[0.96] font-bold tracking-[-0.02em] text-balance text-(--ink)">
+        <h1 className="mt-2 mb-0 font-(family-name:--font-display) text-[clamp(1.85rem,1.25rem+3vw,4.25rem)] leading-[0.98] font-bold tracking-[-0.02em] text-balance text-(--ink)">
           {settings.headline || headline}
         </h1>
 
-        <p className="mt-4 max-w-[46ch] text-[0.9375rem] text-(--muted) sm:mt-6 sm:text-base">
+        <p className="mt-3 max-w-[46ch] text-sm text-(--muted) sm:mt-6 sm:text-base">
           Tus fotos aparecen en la pantalla grande del evento.{" "}
           <strong className="font-semibold text-(--ink)">
             Una persona de la organización revisa cada foto antes de que se vea
@@ -277,10 +277,13 @@ export function MuralUploadRoot({ slug, headline }: Props) {
               value={alias}
               onChange={(e) => setAlias(e.target.value)}
               placeholder="Cómo quieres que aparezca"
+              autoComplete="name"
+              autoCapitalize="words"
+              enterKeyHint="done"
               className="min-h-12 w-full rounded-xl border border-(--line-strong) bg-(--surface-2) px-3.5 py-2.5 text-base text-(--ink) transition-colors placeholder:text-(--muted)/70 hover:border-(--muted) focus:border-(--ochre)"
             />
 
-            <label className="mt-5 flex min-h-11 cursor-pointer items-start gap-3 text-[0.9375rem] leading-6 text-(--ink)">
+            <label className="mt-5 flex min-h-11 cursor-pointer touch-manipulation items-start gap-3 text-[0.9375rem] leading-6 text-(--ink) select-none">
               <input
                 type="checkbox"
                 checked={consent}
@@ -311,7 +314,7 @@ export function MuralUploadRoot({ slug, headline }: Props) {
               type="button"
               disabled={!canUpload}
               onClick={() => fileInput.current?.click()}
-              className="nb nb--primary mt-6 w-full"
+              className="nb nb--primary mt-6 w-full touch-manipulation"
             >
               <span className="nb__label">
                 {mine.length > 0 ? "Subir más fotos" : "Elegir fotos"}
@@ -402,10 +405,9 @@ export function MuralUploadRoot({ slug, headline }: Props) {
         />
       </div>
 
-      {/* Accessible Removal Request Modal (replaces window.prompt) */}
       {removalTarget && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="removal-modal-title"
@@ -421,7 +423,7 @@ export function MuralUploadRoot({ slug, headline }: Props) {
               }
             }}
           />
-          <div className="n-panel n-marks animate-stage-pop-in relative z-10 w-full max-w-md p-6 shadow-2xl">
+          <div className="n-panel n-marks animate-stage-pop-in relative z-10 max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto p-5 shadow-2xl sm:p-6">
             <div className="flex items-start justify-between gap-3">
               <h2
                 id="removal-modal-title"
@@ -437,7 +439,7 @@ export function MuralUploadRoot({ slug, headline }: Props) {
                   setRemovalTarget(null);
                   setRemovalNote("");
                 }}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-(--muted) hover:bg-(--surface-2) hover:text-(--ink)"
+                className="flex h-10 w-10 touch-manipulation items-center justify-center rounded-lg text-(--muted) hover:bg-(--surface-2) hover:text-(--ink)"
               >
                 <CloseIcon size={18} />
               </button>
@@ -461,7 +463,7 @@ export function MuralUploadRoot({ slug, headline }: Props) {
               />
             </label>
 
-            <div className="mt-5 flex flex-wrap justify-end gap-3">
+            <div className="mt-5 flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end sm:gap-3">
               <button
                 type="button"
                 disabled={Boolean(busyId)}
@@ -469,7 +471,7 @@ export function MuralUploadRoot({ slug, headline }: Props) {
                   setRemovalTarget(null);
                   setRemovalNote("");
                 }}
-                className="nb nb--ghost"
+                className="nb nb--ghost w-full touch-manipulation sm:w-auto"
               >
                 <span className="nb__label">Cancelar</span>
               </button>
@@ -477,7 +479,7 @@ export function MuralUploadRoot({ slug, headline }: Props) {
                 type="button"
                 disabled={Boolean(busyId)}
                 onClick={() => void confirmRemoval()}
-                className="nb nb--primary"
+                className="nb nb--primary w-full touch-manipulation sm:w-auto"
               >
                 <span className="nb__label">
                   {busyId ? "Enviando…" : "Solicitar retirada"}

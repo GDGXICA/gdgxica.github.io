@@ -199,7 +199,7 @@ export function BingoCardView({
       )}
 
       <div
-        className="grid gap-2"
+        className="grid gap-1.5 sm:gap-2"
         style={{ gridTemplateColumns: `repeat(${CARD_SIZE}, minmax(0, 1fr))` }}
         role="grid"
         aria-label="Cartón de bingo"
@@ -218,7 +218,7 @@ export function BingoCardView({
               disabled={isLocked}
               aria-pressed={isMarked}
               aria-label={isLocked ? `${term} (aún no cantado)` : term}
-              className={`flex aspect-square items-center justify-center rounded-xl border p-1.5 text-center text-[0.8125rem] leading-tight font-semibold transition-[background-color,border-color,transform] enabled:active:scale-[0.96] disabled:opacity-55 sm:p-2 sm:text-[0.9375rem] ${
+              className={`flex aspect-square min-h-13 touch-manipulation items-center justify-center rounded-xl border p-1.5 text-center text-[0.75rem] leading-[1.15] font-semibold transition-[background-color,border-color,transform] select-none enabled:active:scale-[0.96] disabled:opacity-55 sm:p-2 sm:text-[0.9375rem] sm:leading-tight ${
                 isMarked
                   ? isWinning
                     ? "border-(--ochre) bg-(--ochre) text-(--ochre-ink)"
@@ -228,7 +228,9 @@ export function BingoCardView({
                     : "border-(--line) bg-(--surface-2) text-(--muted) hover:border-(--line-strong) hover:bg-(--surface-3) hover:text-(--ink)"
               }`}
             >
-              <span className="line-clamp-3 break-words">{term}</span>
+              <span className="line-clamp-3 [overflow-wrap:anywhere] hyphens-auto">
+                {term}
+              </span>
             </button>
           );
         })}
@@ -239,7 +241,7 @@ export function BingoCardView({
           type="button"
           onClick={claim}
           disabled={claiming}
-          className="nb nb--primary mt-5 w-full disabled:opacity-60"
+          className="nb nb--primary sticky bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-20 mt-5 w-full touch-manipulation shadow-[0_12px_32px_-8px_rgb(0_0_0/0.8)] disabled:opacity-60"
         >
           <span className="nb__label">
             {claiming ? "Cantando..." : "¡BINGO!"}
