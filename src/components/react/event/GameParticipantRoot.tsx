@@ -11,6 +11,7 @@ import { signInAnonymouslyIfNeeded } from "@/lib/firebase";
 import {
   clearStoredGuestSession,
   ensureMinigameSession,
+  getStoredGuestSession,
 } from "@/lib/guestSession";
 import type { PollConfig, QuizConfig } from "../admin/minigame-templates/types";
 import { TYPE_LABELS } from "../admin/minigame-templates/types";
@@ -161,6 +162,12 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
         });
         if (!result.success || !result.data) {
           return { success: false, error: result.error };
+        }
+        const refreshedGuest = getStoredGuestSession();
+        if (refreshedGuest) {
+          setUid((prev) =>
+            prev === refreshedGuest.uid ? prev : refreshedGuest.uid
+          );
         }
         const canonical = result.data.alias;
         setAlias(canonical);
