@@ -1,6 +1,10 @@
 import { getIdToken } from "./auth";
 import { getAppCheckToken } from "./firebase";
-import { getGuestSessionToken } from "./guestSession";
+import {
+  clearStoredGuestSession,
+  ensureMinigameSession,
+  getGuestSessionToken,
+} from "./guestSession";
 import { mockApi } from "./mock-api";
 import { recordServerClockSample } from "./serverClock";
 
@@ -199,17 +203,27 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function extractEventSlugFromPath(path: string): string | null {
+  const match = /^\/events\/([^/]+)\//.exec(path);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 async function singleRequest<T>(
   method: string,
   path: string,
   body: unknown,
   options: RequestOptions
-): Promise<{ response: ApiResponse<T>; retryable: boolean }> {
+): Promise<{
+  response: ApiResponse<T>;
+  retryable: boolean;
+  usedGuestToken?: boolean;
+}> {
   const controller = new AbortController();
   let timeout: ReturnType<typeof setTimeout> | undefined;
   const timedOut = new Promise<{
     response: ApiResponse<T>;
     retryable: boolean;
+    usedGuestToken?: boolean;
   }>((resolve) => {
     if (options.timeoutMs !== undefined) {
       timeout = setTimeout(() => {
@@ -229,11 +243,13 @@ async function singleRequest<T>(
   const operation = (async (): Promise<{
     response: ApiResponse<T>;
     retryable: boolean;
+    usedGuestToken?: boolean;
   }> => {
     try {
-      const token = options.participantAuth
-        ? (getGuestSessionToken() ?? (await getIdToken()))
-        : await getIdToken();
+      const guestToken = options.participantAuth
+        ? getGuestSessionToken()
+        : null;
+      const token = guestToken ?? (await getIdToken());
       if (!token) {
         return {
           response: { success: false, error: "Not authenticated" },
@@ -284,12 +300,14 @@ async function singleRequest<T>(
             ...(Array.isArray(data?.missing) ? { missing: data.missing } : {}),
           },
           retryable: isRetryableStatus(res.status),
+          usedGuestToken: Boolean(guestToken),
         };
       }
 
       return {
         response: (await res.json()) as ApiResponse<T>,
         retryable: false,
+        usedGuestToken: Boolean(guestToken),
       };
     } catch (err) {
       return {
@@ -326,15 +344,33 @@ async function request<T>(
     success: false,
     error: "No se pudo conectar con el servidor.",
   };
+  let refreshedGuestSession = false;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const { response, retryable } = await singleRequest<T>(
+    const { response, retryable, usedGuestToken } = await singleRequest<T>(
       method,
       path,
       body,
       options
     );
     lastResult = response;
+    if (
+      !response.success &&
+      response.status === 401 &&
+      usedGuestToken &&
+      !refreshedGuestSession
+    ) {
+      refreshedGuestSession = true;
+      clearStoredGuestSession();
+      const slug = extractEventSlugFromPath(path);
+      if (slug) {
+        const renewed = await ensureMinigameSession(slug);
+        if (renewed) {
+          attempt -= 1;
+          continue;
+        }
+      }
+    }
     if (response.success || !retryable || attempt === maxRetries) {
       return response;
     }

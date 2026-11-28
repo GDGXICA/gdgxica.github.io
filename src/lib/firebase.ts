@@ -178,12 +178,15 @@ export async function getFirestore() {
       let db: import("firebase/firestore").Firestore;
       try {
         db = initializeFirestore(app, {
-          localCache: window.location.pathname.startsWith("/admin")
-            ? persistentLocalCache({
-                tabManager: persistentMultipleTabManager(),
-              })
-            : memoryLocalCache(),
-          experimentalAutoDetectLongPolling: true,
+          localCache:
+            !USE_EMULATOR && window.location.pathname.startsWith("/admin")
+              ? persistentLocalCache({
+                  tabManager: persistentMultipleTabManager(),
+                })
+              : memoryLocalCache(),
+          ...(USE_EMULATOR
+            ? { experimentalForceLongPolling: true }
+            : { experimentalAutoDetectLongPolling: true }),
         });
       } catch {
         // Throws in Safari private mode (no IndexedDB) and if something
