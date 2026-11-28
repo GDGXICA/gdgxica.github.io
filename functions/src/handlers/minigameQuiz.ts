@@ -235,8 +235,16 @@ export async function finishQuestion({
     throw new Error("Quiz configuration unavailable");
   }
   const deadline = startedAtMillis + question.timeLimitSec * 1000;
-  if (Date.now() < deadline) {
-    throw new Error("Question deadline not reached");
+  const earlyMs = deadline - Date.now();
+  if (earlyMs > 0) {
+    // Cloud Tasks can occasionally dispatch a few hundred milliseconds early
+    // due to clock skew. Waiting out a short skew avoids throwing and incurring
+    // a multi-second retry backoff right when the projector expects the reveal.
+    if (earlyMs <= 500) {
+      await sleep(earlyMs + 50);
+    } else {
+      throw new Error("Question deadline not reached");
+    }
   }
 
   const lockResult = await db.runTransaction(async (tx) => {
@@ -361,11 +369,21 @@ export async function finishQuestion({
   await finalizeBatch.commit();
 }
 
+const parsedQuizMinInstances = Number.parseInt(
+  process.env.MINIGAME_MIN_INSTANCES ?? "0",
+  10
+);
+const quizFinishMinInstances =
+  Number.isFinite(parsedQuizMinInstances) && parsedQuizMinInstances > 0
+    ? Math.min(parsedQuizMinInstances, 5)
+    : 0;
+
 export const finishQuizQuestion = onTaskDispatched<FinishPayload>(
   {
     region: "us-central1",
     memory: "512MiB",
     cpu: 1,
+    minInstances: quizFinishMinInstances,
     retryConfig: { maxAttempts: 5, minBackoffSeconds: 2 },
   },
   async (request) => finishQuestion(request.data)

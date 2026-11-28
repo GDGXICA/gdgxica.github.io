@@ -70,10 +70,32 @@ export function QuizOverlay({
   );
   const questionId = question?.id ?? null;
   const questionTimeLimitSec = question?.timeLimitSec ?? null;
+  const submittingRef = useRef(false);
   const activeQuestionIdRef = useRef<string | null>(questionId);
   activeQuestionIdRef.current = questionId;
   const initialQuestionIdRef = useRef<string | null>(questionId);
   const restoredInitialRef = useRef(justJoined);
+
+  const readCachedReceipt = (qId: string | null): string | null => {
+    if (!qId) return null;
+    try {
+      return window.sessionStorage.getItem(
+        `gdg_quiz_vote_${uid}_${slug}_${instanceId}_${qId}`
+      );
+    } catch {
+      return null;
+    }
+  };
+  const writeCachedReceipt = (qId: string, optId: string) => {
+    try {
+      window.sessionStorage.setItem(
+        `gdg_quiz_vote_${uid}_${slug}_${instanceId}_${qId}`,
+        optId
+      );
+    } catch {
+      return;
+    }
+  };
 
   const startedMs = currentQuestionStartedAt
     ? currentQuestionStartedAt.seconds * 1000 +
@@ -87,9 +109,14 @@ export function QuizOverlay({
   }, []);
 
   useEffect(() => {
-    setReceipt(null);
+    const cached =
+      !justJoined && initialQuestionIdRef.current === questionId
+        ? readCachedReceipt(questionId)
+        : null;
+    setReceipt(cached);
     setPendingOptionId(null);
     setSubmitting(false);
+    submittingRef.current = false;
     setError(null);
     setTimerExpired(
       Boolean(
@@ -99,12 +126,21 @@ export function QuizOverlay({
         getServerNowMs() - startedMs >= questionTimeLimitSec * 1000
       )
     );
-  }, [questionId, startedMs, questionTimeLimitSec]);
+  }, [
+    questionId,
+    startedMs,
+    questionTimeLimitSec,
+    slug,
+    instanceId,
+    justJoined,
+  ]);
 
   useEffect(() => {
     if (
       !questionId ||
       !uid ||
+      receipt ||
+      uid.startsWith("g_") ||
       restoredInitialRef.current ||
       initialQuestionIdRef.current !== questionId
     ) {
@@ -127,7 +163,9 @@ export function QuizOverlay({
           activeQuestionIdRef.current === questionId &&
           snap.exists()
         ) {
-          setReceipt((snap.data() as { optionId: string }).optionId);
+          const optId = (snap.data() as { optionId: string }).optionId;
+          writeCachedReceipt(questionId, optId);
+          setReceipt(optId);
         }
       } catch {
         return;
@@ -136,7 +174,7 @@ export function QuizOverlay({
     return () => {
       cancelled = true;
     };
-  }, [slug, instanceId, uid, questionId]);
+  }, [slug, instanceId, uid, questionId, receipt]);
 
   useEffect(() => {
     const target = participant?.quizScore ?? 0;
@@ -330,9 +368,18 @@ export function QuizOverlay({
     ) ?? 0;
 
   async function answer(optionId: string) {
-    if (!question || answered || submitting || timerExpired) return;
+    if (
+      !question ||
+      answered ||
+      submitting ||
+      submittingRef.current ||
+      timerExpired
+    ) {
+      return;
+    }
     navigator.vibrate?.(12);
     const targetQuestionId = question.id;
+    submittingRef.current = true;
     setSubmitting(true);
     setPendingOptionId(optionId);
     setError(null);
@@ -349,6 +396,7 @@ export function QuizOverlay({
         result.status === 409 ||
         result.error === "already_answered"
       ) {
+        writeCachedReceipt(targetQuestionId, optionId);
         setReceipt(optionId);
       } else {
         setError(answerErrorMessage(result.error));
@@ -364,6 +412,7 @@ export function QuizOverlay({
       if (activeQuestionIdRef.current === targetQuestionId) {
         setPendingOptionId(null);
         setSubmitting(false);
+        submittingRef.current = false;
       }
     }
   }
@@ -473,13 +522,13 @@ export function QuizOverlay({
                 timerExpired ||
                 submitting
               }
-              className={`relative min-h-15 touch-manipulation overflow-hidden rounded-xl border border-l-4 bg-(--surface-2) p-3.5 text-left text-[0.9375rem] font-semibold text-(--ink) transition-[transform,background-color,opacity] select-none enabled:hover:bg-(--surface-3) enabled:active:scale-[0.98] disabled:cursor-default motion-reduce:transition-none sm:min-h-20 sm:p-4 sm:text-lg ${
+              className={`relative min-h-15 touch-manipulation overflow-hidden rounded-xl border border-l-4 p-3.5 text-left text-[0.9375rem] font-semibold text-(--ink) transition-[transform,background-color,opacity,border-color] select-none enabled:hover:bg-(--surface-3) enabled:active:scale-[0.98] disabled:cursor-default motion-reduce:transition-none sm:min-h-20 sm:p-4 sm:text-lg ${
                 selected
-                  ? "border-(--ochre) ring-2 ring-(--ochre)"
+                  ? "border-(--ochre) bg-(--ochre)/15 ring-2 ring-(--ochre)"
                   : revealedAnswer && correct
-                    ? "border-(--g-green) ring-2 ring-(--g-green)/70"
-                    : "border-(--line-strong)"
-              } ${(revealedAnswer && !correct) || (submitting && !isPending) ? "opacity-45" : ""}`}
+                    ? "border-(--g-green) bg-(--surface-2) ring-2 ring-(--g-green)/70"
+                    : "border-(--line-strong) bg-(--surface-2)"
+              } ${(revealedAnswer && !correct) || ((submitting || answered) && !selected && !revealedAnswer) ? "opacity-45" : ""}`}
               style={{ borderLeftColor: color }}
             >
               {revealedAnswer && (
@@ -502,11 +551,24 @@ export function QuizOverlay({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block break-words">{opt.label}</span>
-                  {(revealedAnswer || isPending) && (
+                  {(revealedAnswer || selected) && (
                     <span className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs">
                       {isPending && (
-                        <span className="font-mono font-semibold text-(--ochre)">
+                        <span
+                          aria-hidden="true"
+                          className="inline-flex items-center gap-1 font-mono font-semibold text-(--ochre)"
+                        >
+                          <CheckIcon size={13} />
                           Enviando…
+                        </span>
+                      )}
+                      {!isPending && !revealedAnswer && selected && (
+                        <span
+                          aria-hidden="true"
+                          className="inline-flex items-center gap-1 font-mono font-semibold text-(--ochre)"
+                        >
+                          <CheckIcon size={13} />
+                          Marcada
                         </span>
                       )}
                       {revealedAnswer && correct && (

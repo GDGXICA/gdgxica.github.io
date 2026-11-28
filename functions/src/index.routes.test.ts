@@ -102,6 +102,7 @@ const AUDITED_ROUTES = [
   "POST /api/events/:slug/minigames/:id/quiz/answer",
   "POST /api/events/:slug/minigames/:id/poll/answer",
   "DELETE /api/events/:slug/minigames/:id",
+  "POST /api/events/:slug/minigames/session",
   "POST /api/events/:slug/minigames/join",
   "POST /api/events/:slug/credentials",
   "PATCH /api/events/:slug/credentials/:id/image",

@@ -8,9 +8,18 @@ import { AggregateCoalescer } from "../services/aggregateCoalescer";
 import { getOrLoadInstance } from "../services/minigameCache";
 
 const LEADERBOARD_LIMIT = 10;
-const SHARD_COUNT = 20;
+const SHARD_COUNT = 40;
 
-const DEFAULT_COALESCE_MS = process.env.FUNCTIONS_EMULATOR === "true" ? 0 : 250;
+const DEFAULT_COALESCE_MS = process.env.FUNCTIONS_EMULATOR === "true" ? 0 : 400;
+
+const parsedTriggerMinInstances = Number.parseInt(
+  process.env.MINIGAME_MIN_INSTANCES ?? "0",
+  10
+);
+const triggerMinInstances =
+  Number.isFinite(parsedTriggerMinInstances) && parsedTriggerMinInstances > 0
+    ? Math.min(parsedTriggerMinInstances, 5)
+    : 0;
 
 export let pollCoalescer = new AggregateCoalescer(DEFAULT_COALESCE_MS);
 export let rouletteCoalescer = new AggregateCoalescer(DEFAULT_COALESCE_MS);
@@ -109,6 +118,45 @@ async function flushPollAggregate(slug: string, id: string): Promise<void> {
     });
   }
 
+  if (typeof db.runTransaction === "function") {
+    await db.runTransaction(async (tx) => {
+      const existingSnap = await tx.get(aggregateRef);
+      const existing = existingSnap.data() as
+        | {
+            optionCounts?: Record<string, number>;
+            totalResponses?: number;
+          }
+        | undefined;
+      const existingCounts = existing?.optionCounts ?? {};
+      const mergedCounts: Record<string, number> = { ...existingCounts };
+      let changed = false;
+
+      for (const [key, count] of Object.entries(optionCounts)) {
+        const prev = existingCounts[key] ?? 0;
+        if (count > prev) {
+          mergedCounts[key] = count;
+          changed = true;
+        }
+      }
+      const prevTotal = existing?.totalResponses ?? 0;
+      const nextTotal = Math.max(prevTotal, totalResponses);
+      if (nextTotal > prevTotal) changed = true;
+
+      if (!changed && !payload.leaderboard) return;
+
+      tx.set(
+        aggregateRef,
+        {
+          ...payload,
+          optionCounts: mergedCounts,
+          totalResponses: nextTotal,
+        },
+        { merge: true }
+      );
+    });
+    return;
+  }
+
   await aggregateRef.set(payload, { merge: true });
 }
 
@@ -162,6 +210,62 @@ async function flushParticipantAggregate(
   for (const shardDoc of shardsSnap.docs) {
     const shard = shardDoc.data() as { count?: number };
     totalParticipants += shard.count ?? 0;
+  }
+
+  if (typeof db.runTransaction === "function") {
+    await db.runTransaction(async (tx) => {
+      const aggSnap = await tx.get(aggregateRef);
+      const existing = aggSnap.data() as
+        | {
+            totalParticipants?: number;
+            eligibleCount?: number;
+            winners?: unknown[];
+          }
+        | undefined;
+      const prevTotal = existing?.totalParticipants ?? 0;
+      const nextTotal = Math.max(prevTotal, totalParticipants);
+
+      if (type === "quiz") {
+        if (
+          nextTotal === prevTotal &&
+          existing?.totalParticipants !== undefined
+        ) {
+          return;
+        }
+        tx.set(
+          aggregateRef,
+          {
+            totalParticipants: nextTotal,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+        return;
+      }
+
+      const winners = Array.isArray(existing?.winners)
+        ? existing.winners.length
+        : 0;
+      const eligibleCount = Math.max(0, nextTotal - winners);
+      if (
+        nextTotal === prevTotal &&
+        existing?.totalParticipants !== undefined &&
+        existing?.eligibleCount === eligibleCount
+      ) {
+        return;
+      }
+
+      tx.set(
+        aggregateRef,
+        {
+          totalParticipants: nextTotal,
+          eligibleCount,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    });
+    return;
   }
 
   if (type === "quiz") {
@@ -227,6 +331,8 @@ export const onMinigameResponseWritten = onDocumentWritten(
     memory: "512MiB",
     concurrency: 80,
     cpu: 1,
+    minInstances: triggerMinInstances,
+    maxInstances: 10,
   },
   (event) =>
     recomputeAggregatesFromEvent(event as unknown as ResponseWriteEvent)
@@ -238,6 +344,8 @@ export const onMinigameParticipantCreated = onDocumentCreated(
     memory: "512MiB",
     concurrency: 80,
     cpu: 1,
+    minInstances: triggerMinInstances,
+    maxInstances: 10,
   },
   (event) =>
     recomputeRouletteAggregateFromJoin(

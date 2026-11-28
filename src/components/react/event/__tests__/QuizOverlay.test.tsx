@@ -45,6 +45,7 @@ const config = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  sessionStorage.clear();
   mocks.getFirestore.mockResolvedValue({});
   mocks.getDoc.mockResolvedValue({ exists: () => false });
   mocks.answerQuizQuestion.mockResolvedValue({ success: true });
@@ -236,5 +237,27 @@ describe("QuizOverlay", () => {
     );
     expect(screen.getByText(/Respuesta registrada/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Gemini" })).toBeDisabled();
+  });
+
+  it("ignores slow cold-start clock samples so tight server clock offset is preserved", () => {
+    const base = Date.now();
+    // Tight 120ms RTT sample: server matches client
+    recordServerClockSample(base, base, 120);
+    // Slow 3500ms cold-start sample skewed by +2000ms must be ignored
+    recordServerClockSample(base + 2000, base, 3500);
+    render(
+      <QuizOverlay
+        slug="evt"
+        instanceId="inst"
+        uid="u1"
+        alias="Ana"
+        title="Quiz"
+        config={config}
+        currentQuestionIndex={0}
+        currentQuestionStartedAt={{ seconds: base / 1000 }}
+        justJoined
+      />
+    );
+    expect(screen.getByRole("button", { name: "Gemini" })).toBeEnabled();
   });
 });

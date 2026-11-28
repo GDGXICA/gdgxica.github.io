@@ -1,13 +1,32 @@
 let clockOffsetMs = 0;
 let sampled = false;
+let bestRttMs = Number.POSITIVE_INFINITY;
 
 export function recordServerClockSample(
   serverTimeMs: number,
-  clientMidMs: number = Date.now()
+  clientMidMs: number = Date.now(),
+  rttMs: number = Number.POSITIVE_INFINITY
 ): void {
   if (!Number.isFinite(serverTimeMs) || !Number.isFinite(clientMidMs)) return;
+  const validRtt = Number.isFinite(rttMs) && rttMs >= 0 ? rttMs : null;
+
+  // Never let a slow cold-start or congested request overwrite a tighter
+  // NTP-like sample; a 3s cold start can skew clientMidMs by ~1.5s and
+  // lock quiz buttons early.
+  if (
+    sampled &&
+    validRtt !== null &&
+    bestRttMs < 800 &&
+    validRtt > Math.max(1_000, bestRttMs * 1.5)
+  ) {
+    return;
+  }
+
   clockOffsetMs = Math.round(serverTimeMs - clientMidMs);
   sampled = true;
+  if (validRtt !== null && validRtt < bestRttMs) {
+    bestRttMs = validRtt;
+  }
 }
 
 export function hasServerClockSample(): boolean {
@@ -25,6 +44,7 @@ export function getServerNowMs(): number {
 export function resetServerClockOffset(): void {
   clockOffsetMs = 0;
   sampled = false;
+  bestRttMs = Number.POSITIVE_INFINITY;
 }
 
 export async function syncServerClock(): Promise<void> {
@@ -38,12 +58,13 @@ export async function syncServerClock(): Promise<void> {
       signal: controller.signal,
     });
     const endedAt = Date.now();
+    const rttMs = endedAt - startedAt;
     const mid = Math.round((startedAt + endedAt) / 2);
     const header = res.headers?.get("X-Server-Time-Ms");
     if (header) {
       const parsed = Number(header);
       if (Number.isFinite(parsed)) {
-        recordServerClockSample(parsed, mid);
+        recordServerClockSample(parsed, mid, rttMs);
         return;
       }
     }
@@ -53,7 +74,7 @@ export async function syncServerClock(): Promise<void> {
     } | null;
     const bodyTime = json?.data?.serverTimeMs;
     if (typeof bodyTime === "number" && Number.isFinite(bodyTime)) {
-      recordServerClockSample(bodyTime, mid);
+      recordServerClockSample(bodyTime, mid, rttMs);
     }
   } catch {
     return;

@@ -21,6 +21,14 @@ interface SampleParticipant {
   alias: string;
 }
 
+interface WheelSlice {
+  index: number;
+  uid: string | null;
+  label: string;
+  fill: string;
+  text: string;
+}
+
 const WHEEL_PALETTE = [
   { fill: "#2463eb", text: "#ffffff" }, // Google Blue
   { fill: "#ef4444", text: "#ffffff" }, // Google Red
@@ -122,7 +130,7 @@ export function ProjectorRoulette({
               db,
               `events/${slug}/minigames/${instance.id}/participants`
             ),
-            limit(MAX_WHEEL_SEGMENTS)
+            limit(MAX_WHEEL_SEGMENTS * 2)
           )
         );
         if (cancelled) return;
@@ -150,6 +158,7 @@ export function ProjectorRoulette({
 
   const [revealedSpinCount, setRevealedSpinCount] = useState(currentSpinCount);
   const [rotation, setRotation] = useState(0);
+  const [lockedSlices, setLockedSlices] = useState<WheelSlice[] | null>(null);
   const [celebrating, setCelebrating] = useState(false);
   const [summaryMode, setSummaryMode] = useState(
     () =>
@@ -219,10 +228,16 @@ export function ProjectorRoulette({
   // just-picked winner back into the slice list when we ALREADY have other
   // participant names loaded — otherwise a single winner name on an unlabeled
   // wheel would spoil the result while spinning!
-  const wheelSlices = useMemo(() => {
+  const computedWheelSlices = useMemo<WheelSlice[]>(() => {
+    // Exclude any winner from strictly earlier spins so back-to-back spins
+    // never keep a previous winner on the wheel even before Firestore refetches.
+    const priorWinnerIds = new Set(
+      winners.filter((w) => w.spinNumber < currentSpinCount).map((w) => w.uid)
+    );
     const poolNames: { id: string; label: string }[] = [];
     const seen = new Set<string>();
     for (const p of liveEligible) {
+      if (priorWinnerIds.has(p.uid)) continue;
       if (!seen.has(p.uid)) {
         seen.add(p.uid);
         poolNames.push({ id: p.uid, label: p.alias });
@@ -232,6 +247,7 @@ export function ProjectorRoulette({
       poolNames.length > 0 &&
       instance.lastSpinWinnerId &&
       instance.lastSpinWinnerAlias &&
+      !priorWinnerIds.has(instance.lastSpinWinnerId) &&
       !seen.has(instance.lastSpinWinnerId)
     ) {
       seen.add(instance.lastSpinWinnerId);
@@ -262,11 +278,20 @@ export function ProjectorRoulette({
     }));
   }, [
     liveEligible,
+    winners,
+    currentSpinCount,
     eligibleCount,
     revealedWinner,
     instance.lastSpinWinnerId,
     instance.lastSpinWinnerAlias,
   ]);
+
+  // Freeze the slice array for the entire duration of a spin + winner
+  // celebration so Firestore's async refresh of `sampleEligible` (which
+  // removes the winner from eligible docs ~50ms after spin starts) can NEVER
+  // shift slice indices underneath the rotating wheel and cause the top
+  // pointer to land on the wrong name.
+  const wheelSlices = lockedSlices ?? computedWheelSlices;
 
   const tickerPool = useMemo(() => {
     const names = liveEligible.map((p) => p.alias).filter(Boolean);
@@ -302,6 +327,7 @@ export function ProjectorRoulette({
     if (currentSpinCount < revealedSpinCount) {
       setRevealedSpinCount(currentSpinCount);
       activeSpinStartedRef.current = currentSpinCount;
+      setLockedSlices(null);
       setSummaryMode(false);
       setCelebrating(false);
     }
@@ -327,19 +353,19 @@ export function ProjectorRoulette({
     setSummaryMode(false);
     setCelebrating(false);
 
+    // Snapshot the wheel slices for this spin so mid-spin Firestore updates
+    // cannot shift names under the landing angle.
+    const slicesForSpin = computedWheelSlices;
+    setLockedSlices(slicesForSpin);
+
     const winnerId = instance.lastSpinWinnerId ?? `spin-${currentSpinCount}`;
-    const slots = Math.max(wheelSlices.length, 4);
+    const slots = Math.max(slicesForSpin.length, 4);
     const step = 360 / slots;
-    const matchedIdx =
-      eligibleCount <= MAX_WHEEL_SEGMENTS &&
-      liveEligible.length > 0 &&
-      liveEligible.length <= MAX_WHEEL_SEGMENTS
-        ? wheelSlices.findIndex(
-            (s) =>
-              (s.uid !== null && s.uid === winnerId) ||
-              (s.label && s.label === instance.lastSpinWinnerAlias)
-          )
-        : -1;
+    const matchedIdx = slicesForSpin.findIndex(
+      (s) =>
+        (s.uid !== null && s.uid === winnerId) ||
+        (s.label !== "" && s.label === instance.lastSpinWinnerAlias)
+    );
     const targetIdx =
       matchedIdx >= 0 ? matchedIdx : slotIndexForId(winnerId, slots);
     const targetAngle = -((targetIdx + 0.5) * step);
@@ -411,8 +437,7 @@ export function ProjectorRoulette({
     currentSpinCount,
     instance.lastSpinWinnerId,
     instance.lastSpinWinnerAlias,
-    wheelSlices,
-    liveEligible.length,
+    computedWheelSlices,
     reducedMotion,
     targetWinners,
     tickerPool,
