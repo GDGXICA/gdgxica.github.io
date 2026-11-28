@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { signInAnonymouslyIfNeeded } from "@/lib/firebase";
+import { ensureMinigameSession } from "@/lib/guestSession";
 import type { PollConfig, QuizConfig } from "../admin/minigame-templates/types";
 import { BingoCardView } from "./BingoCardView";
 import { JoinModal } from "./JoinModal";
@@ -59,6 +60,14 @@ export function MiniGamesRoot({ slug }: Props) {
     let cancelled = false;
     (async () => {
       try {
+        const guest = await ensureMinigameSession(slug);
+        if (guest) {
+          if (!cancelled) {
+            setUid(guest.uid);
+            setAuthReady(true);
+          }
+          return;
+        }
         const user = await signInAnonymouslyIfNeeded();
         if (!cancelled) {
           setUid(user?.uid ?? null);
@@ -71,7 +80,7 @@ export function MiniGamesRoot({ slug }: Props) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [slug]);
 
   // Instance IDs the participant has a Firestore participant doc for.
   // /join only creates docs for currently-live instances, so if the quiz

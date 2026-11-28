@@ -137,6 +137,7 @@ export const AUDIT_ACTIONS = [
   "minigame_instance.roulette.spin",
   "minigame_instance.bingo.draw",
   "minigame_participant.join",
+  "minigame_participant.session",
   "minigame_participant.bingo.claim",
   "minigame_word.hide",
   "minigame_word.unhide",

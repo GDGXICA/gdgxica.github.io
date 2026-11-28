@@ -8,6 +8,10 @@ import {
 } from "react";
 import { api } from "@/lib/api";
 import { signInAnonymouslyIfNeeded } from "@/lib/firebase";
+import {
+  clearStoredGuestSession,
+  ensureMinigameSession,
+} from "@/lib/guestSession";
 import type { PollConfig, QuizConfig } from "../admin/minigame-templates/types";
 import { TYPE_LABELS } from "../admin/minigame-templates/types";
 import { JoinModal, TYPE_DOTS } from "./JoinModal";
@@ -75,29 +79,74 @@ export function GameParticipantRoot({ slug, eventName }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    signInAnonymouslyIfNeeded()
-      .then((user) => {
+    (async () => {
+      try {
+        const guest = await ensureMinigameSession(slug);
+        if (guest) {
+          if (!cancelled) {
+            setUid(guest.uid);
+            setAuthReady(true);
+          }
+          return;
+        }
+        const user = await signInAnonymouslyIfNeeded();
         if (!cancelled) {
           setUid(user?.uid ?? null);
-          if (!user)
+          if (!user) {
             setAuthError(
               "No pudimos iniciar la sesión del juego. Recarga la página."
             );
+          }
           setAuthReady(true);
         }
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) {
           setAuthError(
             "No pudimos iniciar la sesión del juego. Recarga la página."
           );
           setAuthReady(true);
         }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  // Bingo and WordCloud write directly to Firestore (which requires Firebase
+  // Auth rules). Upgrade transparently only when opening those game types.
+  useEffect(() => {
+    if (
+      !instance ||
+      (instance.type !== "bingo" && instance.type !== "wordcloud") ||
+      !uid?.startsWith("g_")
+    ) {
+      return;
+    }
+    let cancelled = false;
+    signInAnonymouslyIfNeeded()
+      .then((user) => {
+        if (!cancelled && user?.uid) {
+          clearStoredGuestSession();
+          setUid(user.uid);
+        }
+      })
+      .catch(() => {
+        return;
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [instance?.type, uid]);
+
+  // Prefetch the active game's lazy chunk while the user enters their alias
+  // or while /join is in flight so rendering after join has 0ms chunk stall.
+  useEffect(() => {
+    if (!instance?.type) return;
+    if (instance.type === "poll") void import("./PollOverlay");
+    else if (instance.type === "quiz") void import("./QuizOverlay");
+    else if (instance.type === "roulette") void import("./RouletteView");
+  }, [instance?.type]);
 
   const join = useCallback(
     async (name: string) => {

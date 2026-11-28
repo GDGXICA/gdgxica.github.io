@@ -42,15 +42,35 @@ export function PollOverlay({
         : null
       : (questions[currentQuestionIndex] ?? null);
   const questionId = question?.id ?? "main";
-  const [votedOptionId, setVotedOptionId] = useState<string | null>(null);
-  const showBars = Boolean(votedOptionId) || closed;
-  const { aggregates } = useAggregates(
-    showBars ? slug : null,
-    showBars ? instanceId : null
+  const storageKey = `gdg_poll_vote_${uid}_${slug}_${instanceId}_${questionId}`;
+  const readCachedVote = (key: string): string | null => {
+    try {
+      return window.sessionStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  };
+  const writeCachedVote = (key: string, optId: string) => {
+    try {
+      window.sessionStorage.setItem(key, optId);
+    } catch {
+      return;
+    }
+  };
+
+  const [votedOptionId, setVotedOptionId] = useState<string | null>(() =>
+    justJoined ? null : readCachedVote(storageKey)
   );
   const [pendingOptionId, setPendingOptionId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const activeVoteId = votedOptionId ?? pendingOptionId;
+  const showBars = Boolean(activeVoteId) || closed;
+  const { aggregates } = useAggregates(
+    showBars ? slug : null,
+    showBars ? instanceId : null
+  );
+  const submittingRef = useRef(false);
   const activeQuestionIdRef = useRef(questionId);
   activeQuestionIdRef.current = questionId;
   const initialQuestionIdRef = useRef<string | null>(
@@ -59,17 +79,25 @@ export function PollOverlay({
   const restoredInitialRef = useRef(justJoined);
 
   useEffect(() => {
-    setVotedOptionId(null);
+    const cached =
+      !justJoined && initialQuestionIdRef.current === questionId
+        ? readCachedVote(
+            `gdg_poll_vote_${uid}_${slug}_${instanceId}_${questionId}`
+          )
+        : null;
+    setVotedOptionId(cached);
     setPendingOptionId(null);
     setSubmitting(false);
+    submittingRef.current = false;
     setError(null);
-  }, [questionId]);
+  }, [questionId, uid, slug, instanceId, justJoined]);
 
   const hasQuestion = Boolean(question);
   useEffect(() => {
     if (
       !hasQuestion ||
       !uid ||
+      votedOptionId ||
       restoredInitialRef.current ||
       initialQuestionIdRef.current !== questionId
     ) {
@@ -89,7 +117,10 @@ export function PollOverlay({
         if (cancelled || activeQuestionIdRef.current !== questionId) return;
         if (snap.exists()) {
           const data = snap.data() as { optionId?: string } | undefined;
-          if (data?.optionId) setVotedOptionId(data.optionId);
+          if (data?.optionId) {
+            writeCachedVote(storageKey, data.optionId);
+            setVotedOptionId(data.optionId);
+          }
         }
       } catch {
         return;
@@ -98,18 +129,43 @@ export function PollOverlay({
     return () => {
       cancelled = true;
     };
-  }, [slug, instanceId, uid, hasQuestion, questionId]);
+  }, [
+    slug,
+    instanceId,
+    uid,
+    hasQuestion,
+    questionId,
+    votedOptionId,
+    storageKey,
+  ]);
 
-  const counts = aggregates?.optionCounts ?? {};
+  const rawCounts = aggregates?.optionCounts ?? {};
+  const counts: Record<string, number> = { ...rawCounts };
+  if (activeVoteId) {
+    const myKey = `${questionId}:${activeVoteId}`;
+    if ((counts[myKey] ?? 0) === 0) {
+      counts[myKey] = 1;
+    }
+  }
   const totalForQuestion = (question?.options ?? []).reduce(
     (sum, opt) => sum + (counts[`${questionId}:${opt.id}`] ?? 0),
     0
   );
 
   async function vote(optionId: string) {
-    if (!question || votedOptionId || submitting || closed) return;
+    if (
+      !question ||
+      votedOptionId ||
+      submitting ||
+      submittingRef.current ||
+      closed
+    ) {
+      return;
+    }
     navigator.vibrate?.(10);
     const targetQuestionId = questionId;
+    const targetKey = `gdg_poll_vote_${uid}_${slug}_${instanceId}_${targetQuestionId}`;
+    submittingRef.current = true;
     setSubmitting(true);
     setPendingOptionId(optionId);
     setError(null);
@@ -126,6 +182,7 @@ export function PollOverlay({
         result.status === 409 ||
         result.error === "already_answered"
       ) {
+        writeCachedVote(targetKey, optionId);
         setVotedOptionId(optionId);
         return;
       }
@@ -137,6 +194,7 @@ export function PollOverlay({
       if (activeQuestionIdRef.current === targetQuestionId) {
         setPendingOptionId(null);
         setSubmitting(false);
+        submittingRef.current = false;
       }
     }
   }
@@ -209,7 +267,7 @@ export function PollOverlay({
             totalForQuestion > 0
               ? Math.round((count / totalForQuestion) * 100)
               : 0;
-          const isMine = votedOptionId === opt.id;
+          const isMine = activeVoteId === opt.id;
           const isPending = pendingOptionId === opt.id;
 
           if (showBars) {
@@ -217,12 +275,14 @@ export function PollOverlay({
               <li
                 key={opt.id}
                 className={`relative min-h-14 overflow-hidden rounded-xl border bg-(--surface-2) px-3.5 py-3.5 sm:min-h-16 sm:px-4 sm:py-4 ${
-                  isMine ? "border-(--ochre)" : "border-(--line)"
+                  isMine
+                    ? "border-(--ochre) ring-1 ring-(--ochre)/50"
+                    : "border-(--line)"
                 }`}
               >
                 <div
                   aria-hidden="true"
-                  className={`absolute inset-y-0 left-0 transition-[width] duration-500 motion-reduce:transition-none ${
+                  className={`absolute inset-y-0 left-0 transition-[width] duration-300 motion-reduce:transition-none ${
                     isMine ? "bg-(--ochre)/25" : "bg-(--surface-3)"
                   }`}
                   style={{ width: `${pct}%` }}
@@ -238,7 +298,7 @@ export function PollOverlay({
                     <span className="min-w-0 break-words">{opt.label}</span>
                     {isMine && (
                       <span className="rounded-full bg-(--ochre)/20 px-2 py-0.5 text-[11px] font-semibold text-(--ochre)">
-                        Tu voto
+                        {isPending ? "Enviando…" : "Tu voto"}
                       </span>
                     )}
                   </span>

@@ -1,5 +1,6 @@
 import { getIdToken } from "./auth";
 import { getAppCheckToken } from "./firebase";
+import { getGuestSessionToken } from "./guestSession";
 import { mockApi } from "./mock-api";
 import { recordServerClockSample } from "./serverClock";
 
@@ -32,6 +33,7 @@ interface ApiResponse<T> {
 interface RequestOptions {
   timeoutMs?: number;
   appCheck?: boolean;
+  participantAuth?: boolean;
   retries?: number;
   retryDelayMs?: number;
 }
@@ -229,7 +231,9 @@ async function singleRequest<T>(
     retryable: boolean;
   }> => {
     try {
-      const token = await getIdToken();
+      const token = options.participantAuth
+        ? (getGuestSessionToken() ?? (await getIdToken()))
+        : await getIdToken();
       if (!token) {
         return {
           response: { success: false, error: "Not authenticated" },
@@ -251,13 +255,15 @@ async function singleRequest<T>(
         body: body ? JSON.stringify(body) : undefined,
       });
 
+      const endedAt = Date.now();
       const serverTimeHeader = res.headers?.get("X-Server-Time-Ms");
       if (serverTimeHeader) {
         const parsedServerMs = Number(serverTimeHeader);
         if (Number.isFinite(parsedServerMs)) {
           recordServerClockSample(
             parsedServerMs,
-            Math.round((requestStartedAt + Date.now()) / 2)
+            Math.round((requestStartedAt + endedAt) / 2),
+            endedAt - requestStartedAt
           );
         }
       }
@@ -521,7 +527,12 @@ const realApi = {
       "POST",
       `/events/${encodeURIComponent(slug)}/minigames/${id}/quiz/answer`,
       { questionId, optionId },
-      { timeoutMs: 10_000, retries: 2, retryDelayMs: 350 }
+      {
+        timeoutMs: 10_000,
+        retries: 2,
+        retryDelayMs: 350,
+        participantAuth: true,
+      }
     ),
   answerPollQuestion: (
     slug: string,
@@ -533,12 +544,17 @@ const realApi = {
       "POST",
       `/events/${encodeURIComponent(slug)}/minigames/${id}/poll/answer`,
       { questionId, optionId },
-      { timeoutMs: 10_000, retries: 2, retryDelayMs: 350 }
+      {
+        timeoutMs: 10_000,
+        retries: 2,
+        retryDelayMs: 350,
+        participantAuth: true,
+      }
     ),
   removeMinigameFromEvent: (slug: string, id: string) =>
     request("DELETE", `/events/${encodeURIComponent(slug)}/minigames/${id}`),
 
-  // Public participant join (anon-friendly)
+  // Public participant join (guest-session or anon-friendly)
   joinEventMinigames: (
     slug: string,
     data: { alias: string; instanceId?: string }
@@ -555,6 +571,7 @@ const realApi = {
       timeoutMs: 10_000,
       retries: 2,
       retryDelayMs: 350,
+      participantAuth: true,
     }),
 
   // Public credential submission (anon-friendly).

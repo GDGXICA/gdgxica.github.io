@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import * as admin from "firebase-admin";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getFunctions } from "firebase-admin/functions";
+import { logger } from "firebase-functions";
 import { auditEntryFor, writeAuditLog } from "../utils/audit";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { safeError } from "../middleware/validate";
@@ -438,7 +439,7 @@ export async function quizAdvance(req: Request, res: Response) {
     await batch.commit();
     invalidateInstanceCache(slug, id);
 
-    await Promise.allSettled([
+    const [enqueueResult] = await Promise.allSettled([
       getFunctions()
         .taskQueue("finishQuizQuestion")
         .enqueue(
@@ -463,6 +464,17 @@ export async function quizAdvance(req: Request, res: Response) {
         req
       ),
     ]);
+    if (enqueueResult.status === "rejected") {
+      logger.warn(
+        "finishQuizQuestion enqueue failed; inline fallback will score on advance/close",
+        {
+          slug,
+          id,
+          questionId: question.id,
+          err: enqueueResult.reason,
+        }
+      );
+    }
 
     res.json({
       success: true,

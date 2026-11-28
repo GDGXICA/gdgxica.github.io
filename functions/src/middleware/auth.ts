@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import * as admin from "firebase-admin";
 import { logger } from "firebase-functions";
 import { recordSecurityEvent } from "../utils/securityAudit";
+import { isGuestToken, verifyGuestToken } from "../services/guestSession";
 import {
   GLOBAL_SCOPE,
   effectivePermissions,
@@ -285,6 +286,75 @@ export function requirePermission(
  */
 export function requireAuth() {
   return async (req: Request, res: Response, next: NextFunction) => {
+    const token = await verifyBearer(req, res);
+    if (!token) return;
+
+    (req as AuthenticatedRequest).user = {
+      uid: token.uid,
+      email: token.email,
+      emailVerified: token.emailVerified,
+      displayName: token.displayName,
+      photoURL: token.photoURL,
+      role: null,
+      status: "active",
+      permissions: new Set(),
+      scope: GLOBAL_SCOPE,
+    };
+    next();
+  };
+}
+
+/**
+ * Autentica participantes públicos de los minijuegos (encuesta, quiz, ruleta).
+ *
+ * Acepta tanto tokens de Firebase Auth (administradores o sesiones anónimas
+ * previas) como tokens de invitado firmados con HMAC (`guest.<payload>.<sig>`).
+ * Así 300+ asistentes compartiendo el mismo Wi-Fi del evento nunca chocan con
+ * el límite de 100 registros anónimos/hora por IP de Firebase Auth.
+ */
+export function requireParticipantAuth() {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      res.status(401).json({ success: false, error: "No token provided" });
+      return;
+    }
+
+    const rawToken = authHeader.split("Bearer ")[1];
+    if (isGuestToken(rawToken)) {
+      try {
+        const guest = await verifyGuestToken(rawToken);
+        if (!guest) {
+          recordSecurityEvent({
+            event: "security.auth.invalid_token",
+            details: { hadHeader: true, kind: "guest" },
+            req,
+          });
+          res.status(401).json({ success: false, error: "Invalid token" });
+          return;
+        }
+        (req as AuthenticatedRequest).user = {
+          uid: guest.uid,
+          email: "",
+          emailVerified: false,
+          displayName: "",
+          photoURL: "",
+          role: null,
+          status: "active",
+          permissions: new Set(),
+          scope: GLOBAL_SCOPE,
+        };
+        next();
+        return;
+      } catch (err) {
+        logger.error("Fallo al verificar sesión de invitado", { err });
+        res
+          .status(503)
+          .json({ success: false, error: "Auth temporarily unavailable" });
+        return;
+      }
+    }
+
     const token = await verifyBearer(req, res);
     if (!token) return;
 

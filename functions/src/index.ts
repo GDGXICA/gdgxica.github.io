@@ -5,7 +5,11 @@ import express from "express";
 import cors from "cors";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { GITHUB_TOKEN, GMAIL_USER, GMAIL_APP_PASSWORD } from "./config";
-import { requirePermission, requireAuth } from "./middleware/auth";
+import {
+  requirePermission,
+  requireAuth,
+  requireParticipantAuth,
+} from "./middleware/auth";
 import { isAllowedOrigin, rejectDisallowedOrigin } from "./middleware/cors";
 import { safeError, validateParamId } from "./middleware/validate";
 import { verifyAppCheck } from "./middleware/appCheck";
@@ -69,6 +73,7 @@ import * as locations from "./handlers/locations";
 import * as minigameTemplates from "./handlers/minigameTemplates";
 import * as minigameInstances from "./handlers/minigameInstances";
 import * as minigameJoin from "./handlers/minigameJoin";
+import { createGuestSession } from "./services/guestSession";
 import * as minigameWords from "./handlers/minigameWords";
 import * as minigameRoulette from "./handlers/minigameRoulette";
 import * as minigameBingo from "./handlers/minigameBingo";
@@ -856,7 +861,7 @@ app.post(
 );
 app.post(
   "/api/events/:slug/minigames/:id/quiz/answer",
-  requireAuth(),
+  requireParticipantAuth(),
   slugP,
   vid,
   quizAnswerLimiter,
@@ -865,7 +870,7 @@ app.post(
 );
 app.post(
   "/api/events/:slug/minigames/:id/poll/answer",
-  requireAuth(),
+  requireParticipantAuth(),
   slugP,
   vid,
   quizAnswerLimiter,
@@ -881,10 +886,19 @@ app.delete(
   minigameInstances.remove
 );
 
-// Public participant join — accepts any Firebase token (incl. anon).
+// Stateless HMAC guest session for minigame participants (avoids Firebase Auth's
+// 100 anonymous sign-ups/hour/IP cap on shared event venue Wi-Fi).
+app.post(
+  "/api/events/:slug/minigames/session",
+  slugP,
+  joinLimiter,
+  createGuestSession
+);
+
+// Public participant join — accepts Firebase tokens (incl. anon) or signed guest sessions.
 app.post(
   "/api/events/:slug/minigames/join",
-  requireAuth(),
+  requireParticipantAuth(),
   slugP,
   joinLimiter,
   validateBody(minigameJoinSchema),
@@ -1268,6 +1282,8 @@ app.use(
   }
 );
 
+// Default scale-to-zero outside events; override with API_MIN_INSTANCES=2
+// during live 300-user events to eliminate cold starts.
 const parsedMinInstances = Number.parseInt(
   process.env.API_MIN_INSTANCES ?? "0",
   10
@@ -1282,8 +1298,9 @@ export const api = onRequest(
     secrets: [GITHUB_TOKEN, GMAIL_USER, GMAIL_APP_PASSWORD],
     invoker: "public",
     timeoutSeconds: 300,
-    memory: "512MiB",
-    concurrency: 80,
+    memory: "1GiB",
+    cpu: 2,
+    concurrency: 150,
     minInstances: apiMinInstances,
     // Techo de instancias concurrentes. Gen2 usa 100 por defecto, y sin límite
     // tres cosas escalan a la vez sin freno: el coste de un ataque, las

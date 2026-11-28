@@ -23,6 +23,7 @@ import {
   getOrLoadInstance,
   getOrLoadLiveInstances,
   markParticipantJoined,
+  reloadInstanceIfStale,
 } from "../services/minigameCache";
 
 interface BingoConfig {
@@ -106,14 +107,24 @@ export async function join(req: Request, res: Response) {
     }>;
 
     if (targetInstanceId) {
-      const singleData = (await getOrLoadInstance(
+      const loadSingle = async () => {
+        const singleSnap = await minigamesCol.doc(targetInstanceId).get();
+        return singleSnap.exists ? (singleSnap.data() ?? null) : null;
+      };
+      let rawSingle = await getOrLoadInstance(
         slug,
         targetInstanceId,
-        async () => {
-          const singleSnap = await minigamesCol.doc(targetInstanceId).get();
-          return singleSnap.exists ? (singleSnap.data() ?? null) : null;
-        }
-      )) as InstanceData | null;
+        loadSingle
+      );
+      if ((rawSingle as InstanceData | null)?.state !== "live") {
+        rawSingle = await reloadInstanceIfStale(
+          slug,
+          targetInstanceId,
+          rawSingle,
+          loadSingle
+        );
+      }
+      const singleData = rawSingle as InstanceData | null;
       targetDocs =
         singleData?.state === "live"
           ? [

@@ -41,6 +41,7 @@ const config = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  sessionStorage.clear();
   mocks.getFirestore.mockResolvedValue({});
   mocks.getDoc.mockResolvedValue({ exists: () => false });
   mocks.answerPollQuestion.mockResolvedValue({ success: true });
@@ -179,5 +180,25 @@ describe("PollOverlay", () => {
     await waitFor(() =>
       expect(mocks.useAggregates).toHaveBeenLastCalledWith("evt", "poll")
     );
+  });
+
+  it("shows bars optimistically on tap before the server responds and rolls back on failure", async () => {
+    let resolveVote!: (value: { success: boolean; error?: string }) => void;
+    mocks.answerPollQuestion.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveVote = resolve;
+      })
+    );
+    renderPoll(0);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Sí" }));
+    // Immediately marks vote and shows optimistic count (1 · 100%) without waiting
+    expect(screen.getByText("Enviando…")).toBeInTheDocument();
+    expect(screen.getByText(/1 · 100%/)).toBeInTheDocument();
+    expect(mocks.useAggregates).toHaveBeenLastCalledWith("evt", "poll");
+
+    // Rolls back cleanly if the server rejects the vote
+    resolveVote({ success: false, error: "not_live" });
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sí" })).toBeEnabled();
   });
 });
