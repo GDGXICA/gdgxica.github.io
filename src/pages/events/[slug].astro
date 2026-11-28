@@ -8,6 +8,7 @@ import ScheduleCard from "@/components/ScheduleCard.astro";
 import TrackTabSchedule from "@/components/TrackTabSchedule.astro";
 import SpeakerCard from "@/components/SpeakerCard.astro";
 import {
+  ArrowRight,
   ArrowUpRight,
   Calendar,
   CalendarPlus,
@@ -21,6 +22,7 @@ import { COLIBRI_STROKE, colibriPath, colibriViewBox } from "@/lib/colibri";
 import { getEventDates, googleCalendarUrl } from "@/utils/eventDates";
 import { hourRange, shortVenue, surveyDate } from "@/utils/eventShort";
 import { publicImageSize } from "@/utils/imageSize";
+import { getGcpCreditsConfig } from "@/data/gcpCredits";
 
 export async function getStaticPaths() {
   const events = await getCollection("events");
@@ -150,20 +152,9 @@ const tracks =
       }))
     : []);
 
-// A finished event no longer takes registrations: it shows who came instead.
 const isPast = event.data.status.type === "completed";
 const canRegister = !isPast && Boolean(event.data.registerFormLink);
 
-// Never negative: a data entry with more registrations than seats (or a stale
-// `maxParticipants`) must read as "sold out", not as "-12 lugares disponibles".
-const spotsLeft = Math.max(
-  0,
-  event.data.maxParticipants - event.data.participants
-);
-const spotsLabel =
-  spotsLeft === 0
-    ? "Cupos agotados"
-    : `${spotsLeft} ${spotsLeft === 1 ? "lugar disponible" : "lugares disponibles"}`;
 const seatsPercent =
   event.data.maxParticipants > 0
     ? Math.min(
@@ -215,10 +206,42 @@ const paragraphs = event.data.largeDescription
   .filter(Boolean);
 
 const colibri = colibriPath();
+const gcpCredits = getGcpCreditsConfig(event.id);
+const eventTools = [
+  ...(gcpCredits
+    ? [
+        {
+          href: `/events/${event.id}/creditos`,
+          title: "Créditos de Google Cloud",
+          note: `Canjea tu cupón · ${gcpCredits.creditsPeriodLabel}`,
+          until: gcpCredits.viewClosesAt,
+        },
+      ]
+    : []),
+  ...(event.data.credential?.enabled
+    ? [
+        {
+          href: `/events/${event.id}/credencial`,
+          title: "Crea tu credencial",
+          note: "Tarjeta personalizada del evento",
+        },
+      ]
+    : []),
+  ...(event.data.mural?.enabled
+    ? [
+        {
+          href: `/events/${event.id}/fotos`,
+          title: "Fotos de la comunidad",
+          note: "Mural de fotos de los asistentes",
+        },
+      ]
+    : []),
+];
+const showLiveGames = !isPast;
+const showEventHub = showLiveGames || eventTools.length > 0;
 ---
 
 <Layout {...metadata}>
-  <!-- ======== head: name, readout and poster ======== -->
   <header class="ev-head" aria-labelledby="ev-title">
     <div class="ev-head__grid" aria-hidden="true"></div>
     <div class="n-container ev-head__inner">
@@ -324,7 +347,10 @@ const colibri = colibriPath();
         <div class="ev-actions">
           {
             canRegister && (
-              <NButton href={event.data.registerFormLink}>
+              <NButton
+                href={event.data.registerFormLink}
+                class="ev-actions__primary"
+              >
                 Regístrate gratis
               </NButton>
             )
@@ -365,31 +391,82 @@ const colibri = colibriPath();
             eventHashtags={JSON.stringify(event.data.tags)}
             eventOrganization="Google Developer Group Ica"
           />
-          {
-            /* Only for events that opt into the credential block in
-               gdg-ica-data. The route does not exist otherwise — the page's
-               getStaticPaths filters on the same flag — so an
-               unconditional link would 404. */
-            event.data.credential?.enabled && (
-              <NButton variant="ghost" href={`/events/${event.id}/credencial`}>
-                Crea tu credencial
-              </NButton>
-            )
-          }
-          {
-            event.data.mural?.enabled && (
-              <NButton variant="ghost" href={`/events/${event.id}/fotos`}>
-                Ver las fotos
-              </NButton>
-            )
-          }
         </div>
       </section>
     </div>
   </header>
 
-  <!-- ======== body: the programme and the practical side ======== -->
-  <div class="n-container ev-body">
+  <div
+    class:list={[
+      "n-container",
+      "ev-body",
+      { "ev-body--no-hub": !showEventHub },
+    ]}
+  >
+    {
+      showEventHub && (
+        <aside
+          class="ev-hub n-panel n-marks"
+          aria-label="Experiencias y accesos del evento"
+        >
+          {showLiveGames && (
+            <div class="ev-play">
+              <svg
+                class="ev-play__glyph"
+                viewBox={colibriViewBox(10)}
+                aria-hidden="true"
+              >
+                <path
+                  d={colibri}
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width={COLIBRI_STROKE}
+                  stroke-linejoin="round"
+                  stroke-linecap="round"
+                />
+              </svg>
+              <div class="ev-play__text">
+                <h2 id="play-title" class="ev-play__title">
+                  Dinámicas en vivo
+                </h2>
+                <p class="ev-play__note">
+                  Quiz, bingo y ruleta en vivo desde tu celular.
+                </p>
+              </div>
+              <NButton
+                variant="ghost"
+                size="sm"
+                href={`/events/${event.id}/jugar`}
+                class="ev-play__cta"
+              >
+                Entrar a los juegos
+              </NButton>
+            </div>
+          )}
+
+          {eventTools.length > 0 && (
+            <nav class="ev-tools" aria-label="Accesos del evento">
+              <ul class="ev-tools__list">
+                {eventTools.map((tool) => (
+                  <li data-gcp-credits-until={tool.until}>
+                    <a href={tool.href} class="ev-tool">
+                      <span class="ev-tool__copy">
+                        <span class="ev-tool__title">{tool.title}</span>
+                        <span class="ev-tool__note">{tool.note}</span>
+                      </span>
+                      <span class="ev-tool__arrow" aria-hidden="true">
+                        <ArrowRight size={17} stroke-width={2} />
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
+        </aside>
+      )
+    }
+
     <div class="ev-main">
       <section class="ev-sec" aria-labelledby="sec-about">
         <h2 id="sec-about" class="n-head ev-h2">Acerca del evento</h2>
@@ -626,73 +703,8 @@ const colibri = colibriPath();
           </section>
         )
       }
-
-      <!-- Last in the column so it can stay in view beside the agenda and
-           the speakers once the rest of the column has scrolled past. -->
-      <section
-        class="ev-panel ev-reg n-panel n-marks"
-        aria-labelledby="side-reg"
-      >
-        <h2 id="side-reg" class="ev-panel__title">
-          {isPast ? "Asistencia" : "Registro"}
-        </h2>
-        <p class="ev-reg__price">{isPast ? "Evento realizado" : "Gratuito"}</p>
-        <p class="ev-reg__spots n-mono">
-          {
-            isPast
-              ? `${event.data.participants} ${event.data.participants === 1 ? "persona registrada" : "personas registradas"}`
-              : spotsLabel
-          }
-        </p>
-        {
-          !isPast && seatsPercent !== null && (
-            <span
-              class="ev-bar"
-              role="img"
-              aria-label={`${seatsPercent}% de los cupos tomados`}
-            >
-              <span style={`width: ${seatsPercent}%`} />
-            </span>
-          )
-        }
-        {
-          canRegister && (
-            <NButton href={event.data.registerFormLink} class="ev-wide">
-              Regístrate gratis
-            </NButton>
-          )
-        }
-      </section>
     </aside>
   </div>
-
-  <!-- ======== live games ======== -->
-  <section class="n-container ev-play-wrap" aria-labelledby="play-title">
-    <div class="ev-play n-panel">
-      <svg
-        class="ev-play__glyph"
-        viewBox={colibriViewBox(10)}
-        aria-hidden="true"
-      >
-        <path
-          d={colibri}
-          fill="none"
-          stroke="currentColor"
-          stroke-width={COLIBRI_STROKE}
-          stroke-linejoin="round"
-          stroke-linecap="round"></path>
-      </svg>
-      <div class="ev-play__text">
-        <h2 id="play-title" class="ev-play__title">Dinámicas en vivo</h2>
-        <p class="ev-play__note">
-          Participa en los juegos de este evento desde una pantalla dedicada.
-        </p>
-      </div>
-      <NButton variant="ghost" href={`/events/${event.id}/jugar`}>
-        Entrar a los juegos
-      </NButton>
-    </div>
-  </section>
 
   <script>
     if (new URLSearchParams(window.location.search).get("play") === "1") {
@@ -705,6 +717,16 @@ const colibri = colibriPath();
     // The calendar menu is a native <details>: close it on Escape (focus
     // back on its summary) and on a click anywhere outside it.
     document.addEventListener("astro:page-load", () => {
+      const creditsBtn = document.querySelector<HTMLElement>(
+        "[data-gcp-credits-until]"
+      );
+      if (creditsBtn) {
+        const closesAt = Date.parse(creditsBtn.dataset.gcpCreditsUntil ?? "");
+        if (Number.isFinite(closesAt) && Date.now() >= closesAt) {
+          creditsBtn.hidden = true;
+        }
+      }
+
       const menu = document.querySelector<HTMLDetailsElement>("[data-cal]");
       if (!menu || menu.dataset.ready) return;
       menu.dataset.ready = "true";
@@ -723,15 +745,12 @@ const colibri = colibriPath();
 </Layout>
 
 <style>
-  /* ---- head ---- */
   .ev-head {
     position: relative;
     border-bottom: 1px solid var(--line);
     isolation: isolate;
   }
 
-  /* The survey grid of the inner pages, fading out towards the copy. Its
-     own clip, so the calendar menu can overhang the head. */
   .ev-head__grid {
     position: absolute;
     z-index: -1;
@@ -783,7 +802,6 @@ const colibri = colibriPath();
     line-height: 1.02;
   }
 
-  /* A dimension line under the name, as on a survey drawing. */
   .ev-head__dim {
     display: flex;
     align-items: center;
@@ -819,7 +837,6 @@ const colibri = colibriPath();
     color: var(--muted);
   }
 
-  /* The poster, whole, on a plate. */
   .ev-plate {
     position: relative;
     grid-area: plate;
@@ -840,7 +857,6 @@ const colibri = colibriPath();
     object-fit: contain;
   }
 
-  /* ---- readout ---- */
   .ev-readout {
     grid-area: readout;
     align-self: start;
@@ -900,21 +916,25 @@ const colibri = colibriPath();
   }
 
   .ev-actions {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.75rem;
     margin-top: 1.25rem;
     padding-top: 1.25rem;
     border-top: 1px solid var(--line);
   }
 
-  /* Each row of keys fills the panel's width, whatever wraps where. The
-     share island's wrapper is display: contents, so its button is the item. */
-  .ev-actions > :global(*),
-  .ev-actions :global(astro-island > .nb) {
-    flex: 1 1 auto;
+  .ev-actions :global(.ev-actions__primary) {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 
+  .ev-actions :global(astro-island) {
+    display: contents;
+  }
+
+  .ev-actions :global(astro-island > .nb),
+  .ev-cal,
   .ev-cal summary {
     width: 100%;
   }
@@ -928,6 +948,12 @@ const colibri = colibriPath();
     .ev-facts > div:nth-child(odd) {
       padding-left: 0;
       border-left: 0;
+    }
+  }
+
+  @container (max-width: 24rem) {
+    .ev-actions {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 
@@ -991,15 +1017,25 @@ const colibri = colibriPath();
     color: var(--muted);
   }
 
-  /* ---- body ---- */
   .ev-body {
     display: grid;
+    grid-template-areas:
+      "main hub"
+      "main side";
     grid-template-columns: minmax(0, 1fr) minmax(19rem, 23rem);
-    gap: clamp(2.5rem, 5vw, 5.5rem);
+    grid-template-rows: auto 1fr;
+    column-gap: clamp(2.5rem, 5vw, 5.5rem);
+    row-gap: 1rem;
     padding-block: clamp(3rem, 2rem + 3vw, 5rem) var(--section-gap);
   }
 
+  .ev-body--no-hub {
+    grid-template-areas: "main side";
+    grid-template-rows: auto;
+  }
+
   .ev-main {
+    grid-area: main;
     min-width: 0;
   }
 
@@ -1092,8 +1128,8 @@ const colibri = colibriPath();
     object-fit: contain;
   }
 
-  /* ---- sidebar ---- */
   .ev-side {
+    grid-area: side;
     display: flex;
     min-width: 0;
     flex-direction: column;
@@ -1201,86 +1237,144 @@ const colibri = colibriPath();
     width: 100%;
   }
 
-  /* Registration: last in the column, held in view on wide screens. */
-  .ev-reg {
-    position: sticky;
-    top: 5.5rem;
-  }
-
-  .ev-reg__price {
-    margin: 0;
-    font-size: clamp(1.6rem, 1.3rem + 1vw, 2rem);
-    font-weight: 600;
-    letter-spacing: -0.025em;
-    line-height: 1.1;
-  }
-
-  .ev-reg__spots {
-    margin: 0.4rem 0 0;
-    color: var(--muted);
-  }
-
-  .ev-reg .ev-bar {
-    margin-top: 0.75rem;
-  }
-
-  .ev-reg > :global(.nb) {
-    margin-top: 1.25rem;
-  }
-
-  /* ---- live games ---- */
-  .ev-play-wrap {
-    padding-bottom: var(--section-gap);
+  .ev-hub {
+    grid-area: hub;
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--surface-1);
   }
 
   .ev-play {
     position: relative;
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1.5rem 3rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
     overflow: hidden;
-    padding: clamp(1.5rem, 1rem + 2vw, 2.75rem);
-    padding-left: clamp(1.5rem, 1rem + 2vw, 2.75rem);
+    padding: 1.25rem 1.35rem;
   }
 
   .ev-play__glyph {
     position: absolute;
     z-index: 0;
-    top: 50%;
-    right: clamp(12rem, 22vw, 20rem);
-    width: clamp(9rem, 14vw, 13rem);
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 5.5rem;
     color: var(--ochre);
-    opacity: 0.35;
+    opacity: 0.24;
     pointer-events: none;
-    transform: translateY(-50%) rotate(-8deg);
+    transform: rotate(-8deg);
   }
 
   .ev-play__text,
-  .ev-play > :global(.nb) {
+  .ev-play :global(.ev-play__cta) {
     position: relative;
     z-index: 1;
   }
 
   .ev-play__text {
-    max-width: 36rem;
+    max-width: 24rem;
+    padding-right: 4rem;
   }
 
   .ev-play__title {
     margin: 0;
-    font-size: clamp(1.6rem, 1.25rem + 1.2vw, 2.25rem);
-    font-weight: 600;
-    letter-spacing: -0.025em;
-    line-height: 1.1;
+    font-family: var(--font-display);
+    font-size: clamp(1.35rem, 1.15rem + 0.6vw, 1.65rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
   }
 
   .ev-play__note {
-    margin: 0.6rem 0 0;
+    margin: 0.35rem 0 0;
     color: var(--muted);
+    font-size: var(--step-small);
+    line-height: 1.4;
   }
 
-  /* ---- narrower screens ---- */
+  .ev-play :global(.ev-play__cta) {
+    width: 100%;
+  }
+
+  .ev-tools {
+    border-top: 1px solid var(--line);
+    background: rgb(18 27 47 / 0.88);
+  }
+
+  .ev-hub > .ev-tools:first-child {
+    border-top: 0;
+  }
+
+  .ev-tools__list {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .ev-tools__list > li[hidden] {
+    display: none;
+  }
+
+  .ev-tools__list > li + li {
+    border-top: 1px solid var(--line);
+  }
+
+  .ev-tool {
+    display: flex;
+    width: 100%;
+    min-height: 3.75rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1.35rem;
+    color: var(--ink);
+    text-decoration: none;
+    transition: background-color 160ms ease;
+  }
+
+  .ev-tool:hover {
+    background: var(--surface-3);
+  }
+
+  .ev-tool:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .ev-tool__copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .ev-tool__title {
+    font-size: 0.96875rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .ev-tool__note {
+    color: var(--muted);
+    font-size: 0.84375rem;
+    line-height: 1.3;
+  }
+
+  .ev-tool__arrow {
+    display: inline-flex;
+    flex: none;
+    color: var(--ochre);
+    transition: transform 200ms var(--ease-out);
+  }
+
+  .ev-tool:hover .ev-tool__arrow {
+    transform: translateX(4px);
+  }
+
   @media (max-width: 1100px) {
     .ev-body {
       grid-template-columns: minmax(0, 1fr) minmax(17rem, 20rem);
@@ -1307,28 +1401,25 @@ const colibri = colibriPath();
     }
 
     .ev-body {
+      grid-template-areas:
+        "hub"
+        "main"
+        "side";
       grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto;
+      row-gap: 2.5rem;
     }
 
-    /* Back in the flow, still the anchor for its corner marks. */
-    .ev-reg {
-      position: relative;
-      top: auto;
-    }
-
-    .ev-play__glyph {
-      right: -1.5rem;
-      opacity: 0.2;
+    .ev-body--no-hub {
+      grid-template-areas:
+        "main"
+        "side";
     }
   }
 
   @media (max-width: 560px) {
-    .ev-actions > :global(*) {
-      flex: 1 1 100%;
-    }
-
-    .ev-actions :global(.nb) {
-      width: 100%;
+    .ev-actions {
+      grid-template-columns: minmax(0, 1fr);
     }
 
     .ev-cal__menu {
@@ -1336,13 +1427,19 @@ const colibri = colibriPath();
       min-width: 0;
     }
 
-    .ev-play > :global(.nb) {
-      width: 100%;
+    .ev-play__text {
+      padding-right: 0;
     }
 
-    /* No room beside the text for the figure on a phone. */
     .ev-play__glyph {
       display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ev-tool,
+    .ev-tool__arrow {
+      transition: none;
     }
   }
 </style>
