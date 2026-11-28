@@ -81,7 +81,12 @@
           "destination": "/events/:slug*",
           "type": 301
         },
-        { "source": "/eventos", "destination": "/events", "type": 301 }
+        { "source": "/eventos", "destination": "/events", "type": 301 },
+        {
+          "source": "/gcp",
+          "destination": "/events/devfest-2026/creditos",
+          "type": 302
+        }
       ],
       "rewrites": [
         {
